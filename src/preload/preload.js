@@ -160,6 +160,14 @@ const CHANNELS = Object.freeze({
   LICENSE_EDIT: 'license:edit',
   LICENSE_TERMINATE: 'license:terminate',
   LICENSE_LIST_OWNERS: 'license:list-owners',
+  // Free forever plan (1.0.27)
+  LICENSE_CHOOSE_FREE: 'license:choose-free',
+  PLAN_USAGE: 'plan:usage',
+  PLAN_ACK_FREE_WELCOME: 'plan:ack-free-welcome',
+  PLAN_SET_OPENABLE: 'plan:set-openable',
+  PLAN_LIMIT_HIT: 'plan:limit-hit', // main -> renderer push
+  PARTNER_DEALS_LIST: 'partner-deals:list',
+  PARTNER_DEALS_OPEN: 'partner-deals:open',
   PAYMENT_CONFIG_GET: 'payment:config-get',
   PAYMENT_CONFIG_SET: 'payment:config-set',
   PAYMENT_CONFIG_VALIDATE: 'payment:config-validate',
@@ -630,7 +638,22 @@ const api = Object.freeze({
     backendInfo: () => invoke(CHANNELS.LICENSE_BACKEND_INFO),
     edit: (payload) => invoke(CHANNELS.LICENSE_EDIT, payload),
     terminate: (payload) => invoke(CHANNELS.LICENSE_TERMINATE, payload),
-    listOwners: () => invoke(CHANNELS.LICENSE_LIST_OWNERS)
+    listOwners: () => invoke(CHANNELS.LICENSE_LIST_OWNERS),
+    chooseFree: () => invoke(CHANNELS.LICENSE_CHOOSE_FREE)
+  }),
+  // Free forever plan (1.0.27): counters, the day 8 screen, the "choose which profiles open" list, the upgrade
+  // prompt event and the partner deals card.
+  plan: Object.freeze({
+    usage: () => invoke(CHANNELS.PLAN_USAGE),
+    ackFreeWelcome: () => invoke(CHANNELS.PLAN_ACK_FREE_WELCOME),
+    setOpenable: (ids) => invoke(CHANNELS.PLAN_SET_OPENABLE, { ids }),
+    onLimit: (callback) => {
+      const listener = (_event, data) => { try { callback(data); } catch (e) { /* ignore */ } };
+      ipcRenderer.on(CHANNELS.PLAN_LIMIT_HIT, listener);
+      return () => ipcRenderer.removeListener(CHANNELS.PLAN_LIMIT_HIT, listener);
+    },
+    partnerDeals: () => invoke(CHANNELS.PARTNER_DEALS_LIST),
+    openPartnerDeal: (id) => invoke(CHANNELS.PARTNER_DEALS_OPEN, { id })
   }),
   payments: Object.freeze({
     getConfig: () => invoke(CHANNELS.PAYMENT_CONFIG_GET),

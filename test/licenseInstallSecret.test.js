@@ -15,7 +15,8 @@ const CLIENT = fs.readFileSync(path.join(ROOT, 'src', 'main', 'licenseClient.js'
 test('the client sends the install secret on license and redeem, and no email', () => {
   // The app version and install channel ride along so the owner's admin shows which version each
   // install runs and where it was installed from.
-  assert.match(CLIENT, /license: \(\{ installId, installSecret \}\) => postJson\('\/v1\/license', \{ tenantId: tenantConfig\(\)\.tenantId, installId, installSecret, machineHash: machineHash\(\), appVersion: appVersion\(\), channel: installChannel\(\) \}\)/);
+  // usage (1.0.27) rides along for the server's daily Free check; still no email.
+  assert.match(CLIENT, /license: \(\{ installId, installSecret, usage \}\) => postJson\('\/v1\/license', \{ tenantId: tenantConfig\(\)\.tenantId, installId, installSecret, machineHash: machineHash\(\), appVersion: appVersion\(\), channel: installChannel\(\), \.\.\.\(usage \? \{ usage \} : \{\}\) \}\)/);
   assert.match(CLIENT, /redeem: \(\{ code, installId, installSecret \}\) => postJson\('\/v1\/redeem', \{ tenantId: tenantConfig\(\)\.tenantId, code, installId, installSecret \}\)/);
 });
 
@@ -28,7 +29,7 @@ test('the install secret is stored sealed and returned with the install id', () 
 });
 
 test('every licensing call passes the authenticated install', () => {
-  assert.match(IPC, /licenseClient\.api\.license\(\{ installId: install\.installId, installSecret: install\.installSecret \}\)/);
+  assert.match(IPC, /licenseClient\.api\.license\(\{ installId: install\.installId, installSecret: install\.installSecret, usage: await planUsageReport\(\) \}\)/);
   assert.match(IPC, /licenseClient\.api\.redeem\(\{ code: code\.trim\(\)\.toUpperCase\(\), installId: install\.installId, installSecret: install\.installSecret \}\)/);
   assert.ok(!/const installId = await ensureBackendInstall\(\)/.test(IPC), 'no caller may treat the result as a bare id');
 });

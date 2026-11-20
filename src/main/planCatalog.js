@@ -36,6 +36,8 @@ function normalizeLimits(l) {
   return { seats: int(l.seats), maxParallel: int(l.maxParallel), auditExport: Boolean(l.auditExport) };
 }
 
+const isFreePlan = (p, key) => String(p.tier || '').toLowerCase() === 'free' || /^free$/i.test(key);
+
 const isTrialPlan = (p, key) => String(p.kind || '').toLowerCase() === 'trial'
   || String(p.tier || '').toLowerCase() === 'trial'
   || /^(free-)?trial$/i.test(key);
@@ -45,6 +47,9 @@ function normalizeServerPlan(p) {
   if (!p || typeof p !== 'object' || p.active === false) return null;
   const key = String(p.key || '').trim();
   if (!KEY_RE.test(key)) return null;
+  // The Free plan (1.0.27, GET /v1/plans/public?include=free) is not a card to buy: the Billing page shows it as
+  // its own column from the licence limits, so it is left out of this list.
+  if (isFreePlan(p, key)) return null;
   const name = String(p.name || '').trim().slice(0, 60);
   if (!name) return null;
   const trial = isTrialPlan(p, key);

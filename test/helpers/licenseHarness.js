@@ -41,7 +41,10 @@ const FUNCTIONS = [
   'readSignupCache', 'writeSignupCache', 'signupInstallKey', 'hasPaidLease', 'signupDecide', 'recordSignupVerified',
   'signupDeferral', 'mayConfirmSignup', 'accountSignupStatus', 'requireTenantSignup', 'accountConfirmStart',
   'accountConfirmCheck', 'syncOwnerAccount', 'accountConfirmLater', 'requirePurchaser',
-  'tenantCheckoutMethods', 'listPaymentMethods', 'startCheckout', 'storeSalesOpen', 'storeSubscriptionSeen', 'storeStatus', 'storePurchase'
+  'tenantCheckoutMethods', 'listPaymentMethods', 'startCheckout', 'storeSalesOpen', 'storeSubscriptionSeen', 'storeStatus', 'storePurchase',
+  // Free forever plan (1.0.27).
+  'readFreePlanState', 'planUsageReport', 'currentPlanLimits', 'savedProfileCount', 'savedProfileIds', 'assertPlanProfileCapacity',
+  'assertPlanCanLaunch', 'assertPlanAllows', 'planAllows', 'getPlanUsage', 'chooseFreePlan', 'ackFreeWelcome', 'setFreeOpenableProfiles'
 ];
 
 function billingConstants() {
@@ -67,7 +70,7 @@ const SOURCE = [
 ].join('\n\n');
 
 // A tiny Prisma stand-in: just the calls the extracted functions make.
-function fakeDb({ members = [], licenses = [], settings }) {
+function fakeDb({ members = [], licenses = [], settings, profiles = [] }) {
   let nextLicenseId = licenses.reduce((m, l) => Math.max(m, l.id), 0) + 1;
   let nextMemberId = members.reduce((m, x) => Math.max(m, x.id), 0) + 1;
   const now = () => new Date();
@@ -95,17 +98,21 @@ function fakeDb({ members = [], licenses = [], settings }) {
       create: async ({ data }) => { const l = { id: nextLicenseId++, createdAt: now(), purchaseCode: null, ...data }; licenses.push(l); return { ...l }; },
       update: async ({ where, data }) => { const l = licenses.find((x) => x.id === where.id); Object.assign(l, data); return { ...l }; }
     },
+    profile: {
+      count: async () => profiles.length,
+      findMany: async () => profiles.map((p) => ({ id: p.id }))
+    },
     setting: {
       findUnique: async ({ where }) => (settings.has(where.key) ? { key: where.key, value: JSON.stringify(settings.get(where.key)) } : null)
     }
   };
 }
 
-// opts: { tenant, members, licenses, settings: {k: v}, api, activeMemberId, verifyLease, licenseIssue,
+// opts: { tenant, members, licenses, profiles: [{ id }], sessions: [profileId], settings: {k: v}, api, activeMemberId, verifyLease, licenseIssue,
 //   checkoutProviders, store: { isStoreInstall, available, status } }
 function buildMain(opts = {}) {
   const settings = new Map(Object.entries(opts.settings || {}));
-  const db = fakeDb({ members: opts.members || [], licenses: opts.licenses || [], settings });
+  const db = fakeDb({ members: opts.members || [], licenses: opts.licenses || [], settings, profiles: opts.profiles || [] });
   const audits = [];
   const realClient = require(path.join(ROOT, 'src', 'main', 'licenseClient.js'));
   const calls = [];
@@ -148,6 +155,8 @@ function buildMain(opts = {}) {
     planCatalog: require(path.join(ROOT, 'src', 'main', 'planCatalog.js')),
     licensePolicy: require(path.join(ROOT, 'src', 'main', 'licensePolicy.js')),
     tierPolicy: require(path.join(ROOT, 'src', 'main', 'tierPolicy.js')),
+    freePlan: require(path.join(ROOT, 'src', 'main', 'freePlan.js')),
+    listAllSessions: () => (opts.sessions || []).map((id) => ({ sessionId: String(id) })),
     licenseClient,
     secretStore: { seal: (s) => `sealed:${s}`, open: (s) => (String(s).startsWith('sealed:') ? String(s).slice(7) : '') },
     getPrisma: () => db,

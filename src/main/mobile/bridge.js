@@ -305,6 +305,11 @@ class MobileBridge {
       case 'profile.start':
       case 'profile.stop':
       case 'profile.restart':
+        // Free plan (1.0.27): phones and the web app view profiles and answer AI requests; opening and stopping
+        // is part of Pro. 'limit' tells the client to show its upgrade line.
+        if (typeof this.host.remoteControlAllowed === 'function' && !(await this.host.remoteControlAllowed())) {
+          return { ok: false, code: 'limit', message: 'Upgrade to Pro to open profiles from your phone.' };
+        }
         return this._profiles(cmd);
       case 'approval.answer': {
         const approval = this.host.approvals.get(cmd.approvalId);

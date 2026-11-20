@@ -64,7 +64,7 @@ function onApprovalEvent(fn) {
 // Pending approvals, for listeners that are not the window (no member filter here: callers filter).
 function approvalsManager() { return state.approvals; }
 
-function configure({ toolDeps, host: h, inlineWaitMs, approvalTimeoutMs }) {
+function configure({ toolDeps, host: h, inlineWaitMs, approvalTimeoutMs, quota = null }) {
   state.host = h;
   state.toolDeps = toolDeps;
   state.approvals = new ApprovalManager({ emit, timeoutMs: approvalTimeoutMs });
@@ -84,7 +84,9 @@ function configure({ toolDeps, host: h, inlineWaitMs, approvalTimeoutMs }) {
       memory: state.memory,
       tracker: state.tracker,
       jobs: state.jobs,
-      limiter: state.limiter
+      limiter: state.limiter,
+      // The plan's AI actions a day (Free: 25), counted in main: { take() -> { ok, error? } }. None = unlimited.
+      quota
     }
   });
   state.mcp = new McpHttpHandler({

@@ -126,6 +126,8 @@ function registerMobileIpc(registerHandler, mobile, host) {
   registerHandler(MOBILE_CHANNELS.SYNC_SET_PROFILE, async (p) => {
     await requireOwner('Only the Owner can choose which profiles sync with phones.');
     const input = obj(p);
+    // Phone profile sync is part of Pro (Free plan, 1.0.27): it can only be switched off on Free.
+    if (input.enabled && typeof host.assertPlanAllows === 'function') await host.assertPlanAllows('sync');
     return mobile.setProfileSync(input.profileId, Boolean(input.enabled), { removeFromCloud: Boolean(input.removeFromCloud) });
   });
   registerHandler(MOBILE_CHANNELS.SYNC_SET_PROXY_PASSWORD, async (p) => {
@@ -133,7 +135,11 @@ function registerMobileIpc(registerHandler, mobile, host) {
     const input = obj(p);
     return mobile.setProxyPasswordSync(input.profileId, Boolean(input.enabled));
   });
-  registerHandler(MOBILE_CHANNELS.SYNC_NOW, async () => { await requireAdmin(); return mobile.syncNow(); });
+  registerHandler(MOBILE_CHANNELS.SYNC_NOW, async () => {
+    await requireAdmin();
+    if (typeof host.assertPlanAllows === 'function') await host.assertPlanAllows('sync');
+    return mobile.syncNow();
+  });
   registerHandler(MOBILE_CHANNELS.SYNC_REMOVE_ALL, async () => { await requireOwner('Only the Owner can remove synced profiles from the cloud.'); return mobile.removeAllFromCloud(); });
 }
 

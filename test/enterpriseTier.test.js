@@ -205,8 +205,13 @@ test('license:get carries the plan limits on every path', () => {
   assert.equal((body.match(/return withPlanLimits\(/g) || []).length, 3, 'exempt, backend lease and local licence');
   const src = fnBody('function withPlanLimits(');
   const withPlanLimits = new Function('tierPolicy', `${src}\nreturn withPlanLimits;`)(tierPolicy);
-  assert.deepEqual(withPlanLimits({ type: 'paid', tier: 'pro', state: 'paid' }).limits, { tier: 'pro', seats: 3, maxParallel: 3, auditExport: false });
-  assert.deepEqual(withPlanLimits({ type: 'source-owner', tier: 'enterprise', isExempt: true }).limits, { tier: 'enterprise', seats: 25, maxParallel: 10, auditExport: true });
+  const paidExtras = { profiles: null, aiActionsPerDay: null, runningCap: null, sync: true, phoneControl: true, partnerDeals: false };
+  assert.deepEqual(withPlanLimits({ type: 'paid', tier: 'pro', state: 'paid' }).limits, { tier: 'pro', seats: 3, maxParallel: 3, auditExport: false, ...paidExtras });
+  assert.deepEqual(withPlanLimits({ type: 'source-owner', tier: 'enterprise', isExempt: true }).limits, { tier: 'enterprise', seats: 25, maxParallel: 10, auditExport: true, ...paidExtras });
+  // Free forever (1.0.27): the renderer shows the same caps main enforces.
+  assert.deepEqual(withPlanLimits({ type: 'free', tier: 'free', state: 'free' }).limits, {
+    tier: 'free', seats: 1, maxParallel: 1, auditExport: false, profiles: 25, aiActionsPerDay: 25, runningCap: 1, sync: false, phoneControl: false, partnerDeals: true
+  });
 });
 
 // ---- plan cards ------------------------------------------------------------------------------

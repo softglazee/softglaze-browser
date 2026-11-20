@@ -83,6 +83,8 @@ const { relay } = require('./remoteRelay');
 const { runParallelMacro } = require('./parallelRunner');
 const teamPolicy = require('./teamPolicy');
 const tierPolicy = require('./tierPolicy');
+const freePlan = require('./freePlan');
+const partnerDeals = require('./partnerDeals');
 const { CloudSyncEngine, resolveWorkspaceSalt } = require('./cloudSync');
 const syncTransport = require('./syncTransport');
 const syncPolicy = require('./syncPolicy');
@@ -310,6 +312,14 @@ const CHANNELS = Object.freeze({
   LICENSE_EDIT: 'license:edit',
   LICENSE_TERMINATE: 'license:terminate',
   LICENSE_LIST_OWNERS: 'license:list-owners',
+  // Free forever plan (1.0.27)
+  LICENSE_CHOOSE_FREE: 'license:choose-free',
+  PLAN_USAGE: 'plan:usage',
+  PLAN_ACK_FREE_WELCOME: 'plan:ack-free-welcome',
+  PLAN_SET_OPENABLE: 'plan:set-openable',
+  PLAN_LIMIT_HIT: 'plan:limit-hit', // main -> renderer push
+  PARTNER_DEALS_LIST: 'partner-deals:list',
+  PARTNER_DEALS_OPEN: 'partner-deals:open',
   PAYMENT_CONFIG_GET: 'payment:config-get',
   PAYMENT_CONFIG_SET: 'payment:config-set',
   PAYMENT_CONFIG_VALIDATE: 'payment:config-validate',
@@ -529,6 +539,8 @@ function registerHandler(channel, handler) {
       return { ok: true, data };
     } catch (error) {
       console.error(`[IPC:${channel}]`, error);
+      // A plan limit (Free) opens the upgrade prompt with the price, wherever the action came from.
+      if (error && error.code === freePlan.PLAN_LIMIT_CODE && error.planLimit) emitPlanLimit(error.planLimit);
       return { ok: false, error: toIpcError(error) };
     }
   });
@@ -8610,6 +8622,8 @@ async function launchProfileNow(payload) {
 
   // A banned owner tree cannot launch; enforced in main, not just the renderer.
   await assertNotBanned();
+  // Free: one profile open at a time, and only the profiles chosen to open (freePlan.js).
+  await assertPlanCanLaunch(id);
 
   // Block a concurrent launch by a different member (lock-when-in-use).
   const launcher = await getActiveMember();
@@ -9412,9 +9426,11 @@ async function commitProfileImport(payload, event) {
       emit({ phase: 'item', index: processed, total, title: item.title, ok: false, level: 'error', message: `[ERROR] Row ${item.row} failed: ${message}` });
       // The profile limit: no later row can be created either, so the import stops here. (At the proxy
       // limit only rows with a new custom proxy fail; the others still import.)
-      if (error && error.code === 'LIMIT_REACHED' && error.limitKind !== 'proxy') {
+      // The Free plan's 25 saved profiles stop it the same way (the import is capped at the plan limit).
+      const planCap = error && error.code === freePlan.PLAN_LIMIT_CODE && error.limitKind === 'profile';
+      if ((error && error.code === 'LIMIT_REACHED' && error.limitKind !== 'proxy') || planCap) {
         const left = total - processed;
-        result.stoppedAtLimit = { row: item.row, notImported: left + 1 };
+        result.stoppedAtLimit = { row: item.row, notImported: left + 1, ...(planCap ? { plan: 'free', limit: error.planLimit.limit } : {}) };
         if (left > 0) log('warn', `[WARN] Import stopped: the profile limit was reached, so ${left} more row${left === 1 ? ' was' : 's were'} not imported.`);
         break;
       }
@@ -11326,6 +11342,8 @@ function limitError(kind, max) {
 // Block a create when the active member is at their granted quota. No active
 // member (single-user mode) or SUPER_ADMIN => unrestricted. -1 => unlimited.
 async function assertWithinLimit(kind) {
+  // The plan's own cap comes first and covers single-user mode too (Free: 25 saved profiles).
+  if (kind === 'profiles') await assertPlanProfileCapacity(1);
   const m = await getActiveMember();
   if (!m || m.role === 'SUPER_ADMIN') return;
   const perms = permissions.effectivePermissions(m);
@@ -13444,6 +13462,7 @@ async function assertSeatAvailable(reactivateId) {
   const members = await db.member.findMany({ select: { id: true, status: true, parentMemberId: true } });
   const { ok, usage } = teamPolicy.canTakeSeat(members, ownerId, lic, { reactivateId });
   if (!ok) {
+    if (lic && lic.type === 'free') throw freePlan.planLimitError('seats', { limit: usage.total, used: usage.used });
     const e = new Error(seatLimitMessage(usage));
     e.code = 'SEAT_LIMIT';
     throw e;
@@ -13583,6 +13602,8 @@ async function unlockCloudSync(passphrase) {
 async function syncConfigure(payload) {
   await requireOwnerOrSuper('configure cloud sync');
   const input = requireObject(payload);
+  // Cloud sync is part of Pro; on Free it can only be switched off.
+  if (input.enabled !== false) await assertPlanAllows('sync');
   const prev = await readCloudSyncConfig();
 
   const baseUrl = input.baseUrl !== undefined ? String(input.baseUrl || '').trim().replace(/\/+$/, '') : prev.baseUrl;
@@ -13733,6 +13754,7 @@ async function createProfileFromRemote(remoteState) {
 
 async function syncRun(payload) {
   await requireOwnerOrSuper('run cloud sync');
+  await assertPlanAllows('sync');
   const c = await readCloudSyncConfig();
   if (!cloudSyncConfigured(c)) return { ok: false, skipped: true, reason: 'Cloud sync is not configured.' };
   if (!c.enabled) return { ok: false, skipped: true, reason: 'Cloud sync is disabled.' };
@@ -13992,8 +14014,11 @@ async function getBillingPlans() {
     daysLeftTrial: lic.daysLeftTrial ?? null,
     // Who may start the free trial from the Billing page: anyone not exempt and not
     // already on a paid plan (best-effort, local - see the Licenses panel note).
-    canStartTrial: !lic.isExempt && !lic.isPaid,
-    canManage: await isCertifiedSuperAdmin(me)
+    canStartTrial: !lic.isExempt && !lic.isPaid && !(lic.isFree && lic.trialUsed),
+    canManage: await isCertifiedSuperAdmin(me),
+    // Free forever (1.0.27): the Billing page shows Free as the current plan and a comparison table.
+    isFree: Boolean(lic.isFree),
+    freeLimits: tierPolicy.limitsForLicense({ type: 'free', freeLimits: ((await readFreePlanState()) || {}).limits || null })
   };
 }
 
@@ -14204,11 +14229,42 @@ async function licenseView(lic) {
     const d = tenantTrial.localDecision(lic, await tenantTrialCutover(), effectiveNow);
     if (d.kind === 'none') {
       const ownerStatus = await syncOwnerBanState(lic.ownerMemberId ?? null, false);
-      return tenantTrial.noPlanView({ trialUsed: d.trialUsed, adminBlocked: ownerStatus === 'banned', clockTamper: tampered, plan: PLAN });
+      if (ownerStatus === 'banned') return tenantTrial.noPlanView({ trialUsed: d.trialUsed, adminBlocked: true, clockTamper: tampered, plan: PLAN });
+      // Free forever (1.0.27): a workspace whose trial was used (or whose owner chose Free on the plan step)
+      // is on Free, unless the server says its licence was revoked or refunded.
+      const fs = await readFreePlanState();
+      const lock = freePlan.lockReasonOf(fs);
+      if (lock) return freePlan.lockedView({ lockReason: lock, clockTamper: tampered, plan: PLAN });
+      if (d.trialUsed || await readSetting('freeChosen', false)) {
+        return freePlan.freeView({ limits: fs && fs.limits, endedFrom: d.trialUsed ? 'trial' : null, clockTamper: tampered, plan: PLAN, trialUsed: d.trialUsed });
+      }
+      return tenantTrial.noPlanView({ trialUsed: d.trialUsed, adminBlocked: false, clockTamper: tampered, plan: PLAN });
     }
     lic = d.lic;
   }
   const st = licensePolicy.computeLicenseState({ type: lic.type, trialEndsAt: lic.trialEndsAt, now: effectiveNow, graceDays: GRACE_DAYS });
+  // Free forever (1.0.27): an ended trial goes to Free at once (no grace, no lock); an ended paid term keeps its
+  // grace days (renewal reminders) and then goes to Free. Only a licence the server reports as revoked or
+  // refunded stays locked; an admin block on the owner is handled below as before.
+  const trialEnded = String(lic.type || '').toLowerCase() === 'trial' && (st.isGrace || st.isBanned);
+  if ((trialEnded || st.isBanned) && lic.trialEndsAt != null) {
+    const fs = tenantConfig().enabled ? await readFreePlanState() : null;
+    const lock = freePlan.lockReasonOf(fs);
+    const ownerStatusFree = await syncOwnerBanState(lic.ownerMemberId ?? null, Boolean(lock));
+    if (!lock && ownerStatusFree !== 'banned') {
+      return freePlan.freeView({
+        limits: fs && fs.limits,
+        endedFrom: String(lic.type || '').toLowerCase() === 'paid' ? 'paid' : 'trial',
+        endedAt: st.endsAt,
+        clockTamper: tampered,
+        plan: PLAN,
+        trialUsed: true
+      });
+    }
+    if (lock && ownerStatusFree === 'banned') {
+      return { ...freePlan.lockedView({ lockReason: lock, clockTamper: tampered, plan: PLAN }), type: lic.type, purchaseCode: lic.purchaseCode || null };
+    }
+  }
   const ownerStatus = await syncOwnerBanState(lic.ownerMemberId ?? null, st.isBanned);
   const banned = st.isBanned || ownerStatus === 'banned';
   return {
@@ -14314,7 +14370,9 @@ async function refreshBackendLease() {
   try {
     const install = await ensureBackendInstall();
     if (!install) return null;
-    const res = await licenseClient.api.license({ installId: install.installId, installSecret: install.installSecret });
+    const res = await licenseClient.api.license({ installId: install.installId, installSecret: install.installSecret, usage: await planUsageReport() });
+    // What the server says about Free (1.0.27): its limits, and whether a revoked or refunded licence locks.
+    await writeSetting('freePlanState', freePlan.stateFromServer(res || {}, Date.now())).catch(() => {});
     if (!res || !res.lease) {
       // No active licence server-side. A still-valid trial lease is kept: it ends on its own, and this
       // endpoint may list only paid licences.
@@ -14382,7 +14440,14 @@ async function backendLicenseInfo() {
 // caps main enforces.
 function withPlanLimits(view) {
   const l = tierPolicy.limitsForLicense(view);
-  return { ...view, limits: { tier: l.tier, seats: l.seats, maxParallel: l.maxParallel, auditExport: l.auditExport } };
+  return {
+    ...view,
+    limits: {
+      tier: l.tier, seats: l.seats, maxParallel: l.maxParallel, auditExport: l.auditExport,
+      profiles: l.profiles, aiActionsPerDay: l.aiActionsPerDay, runningCap: l.runningCap,
+      sync: l.sync, phoneControl: l.phoneControl, partnerDeals: l.partnerDeals
+    }
+  };
 }
 
 async function getLicense() {
@@ -14431,10 +14496,192 @@ async function getLicense() {
 // ended one (the paid term belongs to the other computer).
 function withLicenseReason(view, reason) {
   const out = { ...view, reason: reason || null };
-  if (reason === 'machine_mismatch' && (out.isPaid || out.state === 'paid')) {
-    Object.assign(out, { state: 'banned', status: 'banned', isPaid: false, isBanned: true });
+  if (reason === 'machine_mismatch' && (out.isPaid || out.state === 'paid' || out.isFree)) {
+    // Free does not unlock a workspace whose data was copied from another computer either.
+    Object.assign(out, { state: 'banned', status: 'banned', isPaid: false, isFree: false, isBanned: true });
   }
   return out;
+}
+
+// ---- Free forever plan (1.0.27, freePlan.js) ----
+
+// The server's last word on Free for this install: { free, lockReason, limits, usageFlags, at } or null.
+async function readFreePlanState() {
+  const v = await readSetting('freePlanState', null);
+  return v && typeof v === 'object' ? v : null;
+}
+
+// Sent with each licence refresh, so the server can check the Free limits once a day.
+async function planUsageReport() {
+  try {
+    return {
+      aiActionsToday: freePlan.aiActionsUsed(await readSetting('aiActionsToday', null)),
+      profiles: await savedProfileCount(),
+      running: listAllSessions().length
+    };
+  } catch (_) { return undefined; }
+}
+
+// The limits of the effective licence (tierPolicy.limitsForLicense of license:get).
+async function currentPlanLimits() {
+  return tierPolicy.limitsForLicense(await getLicense());
+}
+
+// Saved profiles in the workspace (the trash does not count). Free caps the whole workspace.
+async function savedProfileCount() {
+  return getPrisma().profile.count({ where: { deletedAt: null } });
+}
+
+async function savedProfileIds() {
+  return (await getPrisma().profile.findMany({ where: { deletedAt: null }, select: { id: true }, orderBy: { id: 'asc' } })).map((r) => r.id);
+}
+
+// Refuses a new profile past the plan's saved-profile limit (Free: 25). want = profiles about to be made.
+async function assertPlanProfileCapacity(want = 1) {
+  const l = await currentPlanLimits();
+  if (l.profiles == null) return;
+  const used = await savedProfileCount();
+  if (!freePlan.profileCapacity({ limit: l.profiles, used, want }).allowed) {
+    const e = freePlan.planLimitError('profiles', { limit: l.profiles, used });
+    e.limitKind = 'profile'; // a batch import stops here, as at a member's own profile limit
+    throw e;
+  }
+}
+
+// Refuses a launch past Free's limits: one profile open at a time and, coming down from Pro with more profiles
+// than Free opens, only the profiles the owner chose. An already open profile is never refused.
+async function assertPlanCanLaunch(profileId) {
+  const l = await currentPlanLimits();
+  const pid = String(profileId);
+  const open = listAllSessions();
+  if (open.some((s) => String(s.sessionId) === pid)) return;
+  if (l.runningCap != null && open.length >= l.runningCap) {
+    throw freePlan.planLimitError('running', { limit: l.runningCap, used: open.length });
+  }
+  if (l.profiles != null) {
+    const ids = await savedProfileIds();
+    const r = freePlan.canOpenProfile({ profileId: Number(profileId), profileIds: ids, chosen: await readSetting('freeOpenableProfiles', []), limit: l.profiles });
+    if (!r.allowed) {
+      const e = freePlan.planLimitError('openable', { limit: l.profiles, used: ids.length });
+      e.planLimit.needsChoice = r.needsChoice;
+      throw e;
+    }
+  }
+}
+
+// Plan features Free leaves out: 'sync' (cloud sync, phone profile sync) and 'phoneControl' (open or stop a
+// profile from a phone or the web app).
+async function assertPlanAllows(feature) {
+  const l = await currentPlanLimits();
+  if (feature === 'sync' && l.sync === false) throw freePlan.planLimitError('sync');
+  if (feature === 'phoneControl' && l.phoneControl === false) throw freePlan.planLimitError('phone');
+}
+
+async function planAllows(feature) {
+  try { await assertPlanAllows(feature); return true; } catch (e) { if (e && e.code === freePlan.PLAN_LIMIT_CODE) return false; throw e; }
+}
+
+// One SoftGlaze AI / Developer API tool call. Counted on every plan (the server sees real use), refused on Free
+// once the day's actions are used. Serialised, so parallel calls cannot both read the same count.
+let aiQuotaChain = Promise.resolve();
+function takeAiActionQuota() {
+  const run = aiQuotaChain.then(async () => {
+    const l = await currentPlanLimits();
+    const r = freePlan.takeAiAction(await readSetting('aiActionsToday', null), { limit: l.aiActionsPerDay, nowMs: Date.now() });
+    if (!r.allowed) {
+      emitPlanLimit({ kind: 'ai', limit: r.limit, used: r.used });
+      return { ok: false, error: freePlan.planLimitError('ai', { limit: r.limit, used: r.used }).message };
+    }
+    await writeSetting('aiActionsToday', r.next);
+    return { ok: true };
+  });
+  aiQuotaChain = run.catch(() => {});
+  return run;
+}
+
+// Tells every window that a plan limit was hit, so the upgrade prompt opens with the price (AppShell).
+function emitPlanLimit(info) {
+  const data = { kind: info.kind, limit: info.limit ?? null, used: info.used ?? null, needsChoice: Boolean(info.needsChoice) };
+  try { for (const w of BrowserWindow.getAllWindows()) { try { w.webContents.send(CHANNELS.PLAN_LIMIT_HIT, data); } catch (e) { /* window gone */ } } } catch (e) { /* no windows (tests) */ }
+}
+
+// Counters for the renderer: "24 of 25 profiles", "1 of 1 running", "3 of 25 AI actions today".
+async function getPlanUsage() {
+  const view = await getLicense();
+  const l = tierPolicy.limitsForLicense(view);
+  const profiles = await savedProfileCount();
+  const ids = l.profiles != null && profiles > l.profiles ? await savedProfileIds() : null;
+  const chosen = ids ? freePlan.chosenOpenable(await readSetting('freeOpenableProfiles', []), ids, l.profiles) : null;
+  return {
+    plan: view.type === 'free' ? 'free' : (view.tier || 'pro'),
+    isFree: view.type === 'free',
+    limits: { profiles: l.profiles, runningCap: l.runningCap, seats: l.seats, aiActionsPerDay: l.aiActionsPerDay, sync: l.sync, phoneControl: l.phoneControl, partnerDeals: l.partnerDeals },
+    profiles: { used: profiles, limit: l.profiles },
+    running: { used: listAllSessions().length, limit: l.runningCap },
+    aiActions: { used: freePlan.aiActionsUsed(await readSetting('aiActionsToday', null)), limit: l.aiActionsPerDay },
+    openable: ids ? { needsChoice: chosen.length === 0, chosen, limit: l.profiles, total: ids.length } : null,
+    showFreeWelcome: freePlan.shouldShowFreeWelcome(view, await readSetting('freeWelcomeSeen', false))
+  };
+}
+
+// The plan step's "Continue on Free" (tenant builds): the workspace goes to Free without a trial.
+async function chooseFreePlan() {
+  const me = await getActiveMember();
+  if (me && me.role !== 'OWNER' && me.role !== 'SUPER_ADMIN') {
+    const err = new Error('Only the workspace Owner can choose the plan.'); err.code = 'FORBIDDEN'; throw err;
+  }
+  await writeSetting('freeChosen', true);
+  return getLicense();
+}
+
+async function ackFreeWelcome() {
+  await writeSetting('freeWelcomeSeen', new Date().toISOString());
+  return { ok: true };
+}
+
+// "Choose which profiles can open" on Free (more saved profiles than Free opens). ids: at most the Free limit.
+async function setFreeOpenableProfiles(payload) {
+  const me = await getActiveMember();
+  if (me && me.role !== 'OWNER' && me.role !== 'SUPER_ADMIN') {
+    const err = new Error('Only the workspace Owner can choose which profiles open on Free.'); err.code = 'FORBIDDEN'; throw err;
+  }
+  const input = requireObject(payload);
+  const l = await currentPlanLimits();
+  const wanted = Array.isArray(input.ids) ? input.ids : [];
+  if (l.profiles != null && wanted.length > l.profiles) throw new Error(`Choose at most ${l.profiles} profiles.`);
+  const chosen = freePlan.chosenOpenable(wanted, await savedProfileIds(), l.profiles);
+  await writeSetting('freeOpenableProfiles', chosen);
+  return { chosen };
+}
+
+// The partner deals card (Free only): GET /v1/partner-deals from our own server, cached for an hour. No
+// third-party code runs in the app; a deal opens in the system browser and the click is counted on our server.
+const PARTNER_DEALS_TTL_MS = 60 * 60 * 1000;
+let partnerDealsCache = null; // { at, deals }
+async function listPartnerDeals() {
+  const l = await currentPlanLimits();
+  if (!l.partnerDeals) return { deals: [], shown: false };
+  if (!tenantConfig().enabled) return { deals: [], shown: false };
+  if (!partnerDealsCache || Date.now() - partnerDealsCache.at > PARTNER_DEALS_TTL_MS) {
+    try {
+      const res = await licenseClient.api.partnerDeals();
+      partnerDealsCache = { at: Date.now(), deals: partnerDeals.normalizeDeals(res) };
+    } catch (_) {
+      partnerDealsCache = { at: Date.now() - PARTNER_DEALS_TTL_MS + 5 * 60 * 1000, deals: partnerDealsCache ? partnerDealsCache.deals : [] };
+    }
+  }
+  const deals = partnerDeals.pickDeals(partnerDealsCache.deals, { count: 3, seed: freePlan.dayKey() });
+  return { deals, shown: deals.length > 0, disclosure: partnerDeals.DISCLOSURE };
+}
+
+async function openPartnerDeal(payload) {
+  const input = requireObject(payload);
+  const id = String(input.id || '');
+  const deal = (partnerDealsCache ? partnerDealsCache.deals : []).find((d) => d.id === id);
+  if (!deal) throw new Error('This offer is no longer available.');
+  licenseClient.api.partnerDealClick(deal.id).catch(() => {});
+  await require('electron').shell.openExternal(deal.url);
+  return { opened: true };
 }
 
 // Main-side licence gate: refuse a profile launch when the owner tree is banned, never trusting
@@ -16776,6 +17023,8 @@ function buildMobileHost() {
         });
       },
       startProfile: (id) => launchProfile({ id }),
+      // Free: a phone or the web app may view and approve, not open or stop profiles (freePlan.js).
+      remoteControlAllowed: () => planAllows('phoneControl'),
       async stopProfile(id) {
         await requirePermission('profiles.launch');
         await assertCanAccessProfile(Number(id));
@@ -16871,6 +17120,7 @@ function buildMobileHost() {
 function buildMobileIpcHost() {
   return {
     getWindowMember: () => getActiveMember(),
+    assertPlanAllows: (feature) => assertPlanAllows(feature),
     membersExist: async () => (await getPrisma().member.count()) > 0,
     ownerId: async () => {
       const o = await getPrisma().member.findFirst({ where: { role: 'OWNER' }, orderBy: { id: 'asc' }, select: { id: true } });
@@ -17211,6 +17461,12 @@ function registerIpcHandlers() {
   registerHandler(CHANNELS.LICENSE_EDIT, editLicense);
   registerHandler(CHANNELS.LICENSE_TERMINATE, terminateLicense);
   registerHandler(CHANNELS.LICENSE_LIST_OWNERS, listOwnerLicenses);
+  registerHandler(CHANNELS.LICENSE_CHOOSE_FREE, chooseFreePlan);
+  registerHandler(CHANNELS.PLAN_USAGE, getPlanUsage);
+  registerHandler(CHANNELS.PLAN_ACK_FREE_WELCOME, ackFreeWelcome);
+  registerHandler(CHANNELS.PLAN_SET_OPENABLE, setFreeOpenableProfiles);
+  registerHandler(CHANNELS.PARTNER_DEALS_LIST, listPartnerDeals);
+  registerHandler(CHANNELS.PARTNER_DEALS_OPEN, openPartnerDeal);
   registerHandler(CHANNELS.PAYMENT_CONFIG_GET, getPaymentConfig);
   registerHandler(CHANNELS.PAYMENT_CONFIG_SET, setPaymentConfig);
   registerHandler(CHANNELS.PAYMENT_CONFIG_VALIDATE, validatePaymentConfig);
@@ -17286,7 +17542,7 @@ function registerIpcHandlers() {
 
   // Softglaze Pro - the loopback server for the Developer API (/api/v1) and SoftGlaze AI (/mcp).
   // Both go through the AI tool registry, acting as the token's member. Off by default.
-  ai.configure({ toolDeps: buildAiToolDeps(), host: buildAiHost() });
+  ai.configure({ toolDeps: buildAiToolDeps(), host: buildAiHost(), quota: { take: () => takeAiActionQuota() } });
   localApi.configure({
     ai,
     readConfig: () => readSetting('localApi', { enabled: false, port: localApi.DEFAULT_PORT }),

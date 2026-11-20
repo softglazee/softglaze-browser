@@ -77,7 +77,8 @@ test('plans/public is a GET with the tenant id and no body', async () => {
   reply = () => [200, [{ key: 'pro', name: 'Pro', amount: 500 }]];
   const r = await client.api.plans();
   assert.equal(requests[0].method, 'GET');
-  assert.equal(requests[0].url, '/v1/plans/public?tenantId=tenant_test');
+  // include=free (1.0.27): the Free plan is listed too; older apps never ask for it.
+  assert.equal(requests[0].url, '/v1/plans/public?tenantId=tenant_test&include=free');
   assert.equal(requests[0].body, null);
   assert.equal(r[0].key, 'pro');
 });

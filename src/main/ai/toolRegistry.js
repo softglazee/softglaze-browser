@@ -293,6 +293,11 @@ class ToolRegistry {
     if (!parsed.success) return refuse('BAD_ARGS', `Invalid arguments for ${name}: ${zodMessage(parsed.error)}`, 'error');
     const args = parsed.data;
     if (!this.services.limiter.take(token.id)) return refuse('RATE_LIMIT', 'Too many calls from this token in the last minute. Wait a moment and try again.');
+    // The plan's AI actions a day (Free: 25; Pro and Enterprise unlimited). Every call that gets this far counts.
+    if (this.services.quota && typeof this.services.quota.take === 'function') {
+      const q = await this.services.quota.take(name, token);
+      if (q && q.ok === false) return refuse('PLAN_LIMIT', q.error || 'The AI actions included in your plan for today are used.');
+    }
 
     const ac = new AbortController();
     const onAbort = () => { try { ac.abort(); } catch (e) { /* ignore */ } };
@@ -346,7 +351,7 @@ class ToolRegistry {
       });
     } catch (e) {
       const code = (e && e.code) || 'ERROR';
-      const denied = code === 'FORBIDDEN' || code === 'DENIED' || code === 'LIMIT_REACHED' || code === 'PROFILE_LOCKED' || code === 'CONCURRENCY_LIMIT';
+      const denied = code === 'FORBIDDEN' || code === 'DENIED' || code === 'LIMIT_REACHED' || code === 'PLAN_LIMIT' || code === 'PROFILE_LOCKED' || code === 'CONCURRENCY_LIMIT';
       const error = scrubText((e && e.message) || 'The tool failed.');
       await audit(denied ? 'denied' : 'error', { summary, args, approval, error });
       return { ok: false, code, error };
