@@ -104,6 +104,8 @@ router.post('/', asyncHandler(async (req, res) => {
       if (!inst) gErr['grant.installId'] = 'unknown install';
       else if (inst.customerId && inst.customerId !== customer.id) gErr['grant.installId'] = 'that install belongs to another customer';
     }
+    // The Free plan grants no licence (Free is "no licence"): a grant needs a paid tier.
+    if (!g.tier && plan && plan.tier === 'free') gErr['grant.tier'] = 'the free plan grants no licence; give tier pro or enterprise';
     if (Object.keys(gErr).length) return invalid(res, gErr);
   }
   const dup = await prisma.payment.findFirst({ where: { tenantId, provider: 'manual', method: b.method, providerRef: reference } });

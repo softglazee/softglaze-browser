@@ -265,7 +265,7 @@ test('plans: CRUD with price history; the public endpoint serves them (cents) an
 
   const team = await admin('POST', '/plans', { body: { key: 'team', name: 'Team', tier: 'enterprise', amount: 9900, limits: { seats: 50 }, sortOrder: 3 } });
   assert.equal(team.status, 201);
-  assert.deepEqual(team.json.plan.effectiveLimits, { seats: 50, maxParallel: 10, auditExport: true });
+  assert.deepEqual(team.json.plan.effectiveLimits, { seats: 50, maxParallel: 10, auditExport: true, profiles: null, devices: 10, aiActionsPerDay: null, sync: true, phoneControl: true, partnerDeals: false });
   assert.equal((await admin('POST', '/plans', { body: { key: 'team', name: 'x', amount: 1 } })).json.error, 'plan_exists');
   assert.equal((await admin('POST', '/plans', { body: { key: 'Bad Key', name: '', amount: 9.99 } })).status, 400);
   await admin('PATCH', '/plans/team', { body: { active: false } });

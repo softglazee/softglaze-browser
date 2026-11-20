@@ -426,7 +426,7 @@ async function storeSession(db, tenant, install, { settings }) {
   const products = [];
   for (const [productId, planKey] of Object.entries(productPlans)) {
     const plan = await planRow(db, tenant.id, planKey);
-    if (!plan || !plan.active) continue;
+    if (!plan || !plan.active || plan.tier === 'free') continue;
     products.push({ productId, plan: plan.key, tier: plan.tier, name: plan.name });
   }
   const creds = await api.loadCredentials(db, tenant.id);

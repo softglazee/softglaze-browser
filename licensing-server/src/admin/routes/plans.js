@@ -50,7 +50,7 @@ router.patch('/:key', asyncHandler(async (req, res) => {
   delete body.key;
   const note = body.note;
   delete body.note;
-  const { data, errors } = validatePlan(body, { partial: true });
+  const { data, errors } = validatePlan(body, { partial: true, current: before });
   if (errors) return invalid(res, errors);
   if (!Object.keys(data).length) return res.json({ plan: view(before), changed: [] });
   const { plan } = await upsertPlan(prisma, tenantId, { key: before.key, ...data }, { actor: req.admin.actor, note });
