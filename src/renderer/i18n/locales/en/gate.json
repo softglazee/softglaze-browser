@@ -268,7 +268,7 @@
       },
       "phone": {
         "term": "Phone",
-        "detail": "On Pro, AI actions can wait until you allow them on your phone"
+        "detail": "AI actions can wait until you allow them on your phone, on every plan"
       }
     }
   },
