@@ -3,8 +3,8 @@
 "Continue with LinkedIn" works like "Continue with Google" (docs/GOOGLE-SIGNIN.md) and "Continue with Facebook"
 (docs/FACEBOOK-SIGNIN.md): every app (desktop, phone, web) sends the browser to this server, the server sends it to
 LinkedIn, LinkedIn comes back to **one** callback on this server, and the app gets a one-time code only it can trade
-(PKCE). The client secret never leaves the server. Button order in every app: Google, Facebook, LinkedIn, GitHub,
-then email.
+(PKCE). The client secret never leaves the server. Button order in every app: Google, Microsoft, Facebook,
+LinkedIn, GitHub, then email.
 
 Code: `src/auth/providers/linkedin.js`. Tests: `test/linkedinSignIn.test.js`.
 

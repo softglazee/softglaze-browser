@@ -109,7 +109,7 @@ test.before(async () => {
 });
 test.after(() => H.stop());
 
-test('providers: LinkedIn is listed only when both keys are set, after Google and Facebook', async () => {
+test('providers: LinkedIn is listed only when both keys are set, after Google, Microsoft and Facebook', async () => {
   assert.deepEqual((await call('GET', `/auth/providers?tenantId=${T}`)).json.providers, ['linkedin']);
   delete process.env.LINKEDIN_CLIENT_SECRET;
   assert.deepEqual((await call('GET', '/v1/mobile/auth/providers')).json.providers, []);
@@ -117,9 +117,10 @@ test('providers: LinkedIn is listed only when both keys are set, after Google an
   process.env.LINKEDIN_CLIENT_SECRET = SECRET;
   process.env.GOOGLE_CLIENT_ID = 'g'; process.env.GOOGLE_CLIENT_SECRET = 's';
   process.env.FACEBOOK_APP_ID = '1'; process.env.FACEBOOK_APP_SECRET = 's';
+  process.env.MICROSOFT_CLIENT_ID = 'm'; process.env.MICROSOFT_CLIENT_SECRET = 's';
   process.env.GITHUB_CLIENT_ID = 'h'; process.env.GITHUB_CLIENT_SECRET = 's';
-  assert.deepEqual((await call('GET', '/v1/web/auth/providers')).json.providers, ['google', 'facebook', 'linkedin', 'github']);
-  for (const k of ['GOOGLE_CLIENT_ID', 'GOOGLE_CLIENT_SECRET', 'FACEBOOK_APP_ID', 'FACEBOOK_APP_SECRET', 'GITHUB_CLIENT_ID', 'GITHUB_CLIENT_SECRET']) delete process.env[k];
+  assert.deepEqual((await call('GET', '/v1/web/auth/providers')).json.providers, ['google', 'microsoft', 'facebook', 'linkedin', 'github']);
+  for (const k of ['GOOGLE_CLIENT_ID', 'GOOGLE_CLIENT_SECRET', 'FACEBOOK_APP_ID', 'FACEBOOK_APP_SECRET', 'MICROSOFT_CLIENT_ID', 'MICROSOFT_CLIENT_SECRET', 'GITHUB_CLIENT_ID', 'GITHUB_CLIENT_SECRET']) delete process.env[k];
 });
 
 test('the authorization URL: LinkedIn endpoint, our redirect, openid profile email, state, nonce, PKCE (LINKEDIN_PKCE=off drops it)', async () => {

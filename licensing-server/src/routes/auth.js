@@ -2,17 +2,17 @@
 // One-click sign-in (app 1.0.26). The flow and the security checks are described in src/auth/flow.js.
 //
 // Browser leg (HTML pages, never JSON):
-//   GET /auth/start?provider=github|google|facebook|linkedin&tenant=<tenantId>&app_redirect=softglaze://auth|http://127.0.0.1:<port>/auth
+//   GET /auth/start?provider=github|google|microsoft|facebook|linkedin&tenant=<tenantId>&app_redirect=softglaze://auth|http://127.0.0.1:<port>/auth
 //       &code_challenge=<S256>&code_challenge_method=S256&state=<app state>[&auth_type=rerequest]  -> 302 to the provider
 //       (auth_type=rerequest: Facebook asks again for the email permission the person declined)
-//   GET /auth/callback/github|google|facebook|linkedin?code&state  -> the app's redirect with ?code=<one-time code>&state=<app state>,
+//   GET /auth/callback/github|google|microsoft|facebook|linkedin?code&state  -> the app's redirect with ?code=<one-time code>&state=<app state>,
 //       or ?error=cancelled|email_not_verified|email_missing|disposable_email|failed&state=<app state>
 //       (email_missing: a Facebook account that shared no email and is not linked yet; the app offers
 //       "Allow email access", Google or email). The same callback serves
 //       the phone and web clients (src/routes/mobileAuth.js, webAuth.js): their AuthState names the client
 //       and the result goes to that client's redirect with a plain 302.
 // App calls (JSON, install-authenticated like /v1/account: tenantId, installId, installSecret):
-//   GET  /auth/providers?tenantId=..                       -> { providers: ['google', 'facebook', 'linkedin', 'github'], email: true }
+//   GET  /auth/providers?tenantId=..                       -> { providers: ['google', 'microsoft', 'facebook', 'linkedin', 'github'], email: true }
 //        (only the providers whose keys are set on the server)
 //   POST /auth/exchange { code, codeVerifier, expectCustomerId? } -> the sign-in (below), or 400 invalid_grant,
 //        403 email_not_verified, 409 account_mismatch

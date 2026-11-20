@@ -2,9 +2,9 @@
 // The web app (client softglaze-web), mounted at /v1/web/auth. A public client: PKCE S256, no client secret, its
 // redirect is <origin>/auth/callback for an origin in WEB_APP_ORIGINS, and CORS answers only those origins.
 //
-//   GET  /v1/web/auth/providers                    -> { providers: ['google', 'facebook', 'linkedin', 'github'], email: true }
+//   GET  /v1/web/auth/providers                    -> { providers: ['google', 'microsoft', 'facebook', 'linkedin', 'github'], email: true }
 //   GET  /v1/web/auth/authorize ?client_id=softglaze-web&redirect_uri=https://app.softglaze.com/auth/callback
-//        &response_type=code&state&code_challenge&code_challenge_method=S256&provider=google|facebook|linkedin|github[&auth_type=rerequest]
+//        &response_type=code&state&code_challenge&code_challenge_method=S256&provider=google|microsoft|facebook|linkedin|github[&auth_type=rerequest]
 //        -> 302 to the provider, then to redirect_uri?code=..&state=.. (or ?error=..&state=..)
 //   POST /v1/web/auth/token
 //        { grant_type: 'authorization_code', client_id, redirect_uri, code, code_verifier }

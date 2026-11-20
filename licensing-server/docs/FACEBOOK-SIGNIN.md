@@ -163,4 +163,4 @@ It must answer `{"url":"https://api.softglaze.com/auth/facebook/deletion-status?
 ## 6. Brand
 
 The buttons follow Meta's brand rules: Facebook blue `#1877F2` background, the white "f" logo, the text
-"Continue with Facebook", the logo unaltered. They sit under "Continue with Google" and above "Continue with LinkedIn" in every app.
+"Continue with Facebook", the logo unaltered. They sit under "Continue with Google" and "Continue with Microsoft" and above "Continue with LinkedIn" in every app.

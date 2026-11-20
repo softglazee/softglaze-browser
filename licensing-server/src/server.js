@@ -14,6 +14,13 @@ app.set('trust proxy', (addr, i) => i < trustHops());
 
 app.get('/health', (req, res) => res.json({ ok: true, service: 'softglaze-licensing', time: new Date().toISOString() }));
 
+// Microsoft publisher domain verification (docs/MICROSOFT-SIGNIN.md): only while MICROSOFT_CLIENT_ID is set.
+app.get('/.well-known/microsoft-identity-association.json', (req, res) => {
+  const id = require('./auth/providers/microsoft').clientId();
+  if (!id) return res.status(404).json({ error: 'Not found.' });
+  res.set('Cache-Control', 'no-store').json({ associatedApplications: [{ applicationId: id }] });
+});
+
 // Raw-body webhooks first (signature verification) — providers may burst, so not
 // rate-limited here; authenticity is enforced by per-tenant signature checks.
 app.use('/v1/webhooks', require('./routes/webhooks'));

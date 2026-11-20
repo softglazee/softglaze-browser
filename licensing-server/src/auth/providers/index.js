@@ -14,19 +14,23 @@
 //   emailOptional            (Facebook) the profile may come without an email: such a sign-in only works for a
 //                            person who already linked this provider id (src/auth/flow.js, error email_missing)
 // Google (src/auth/providers/google.js) is OpenID Connect: PKCE + nonce, ID token signature, iss, aud, exp,
-// nonce and email_verified checked. Microsoft would follow the same pattern (personal accounts need care with
-// email verification). Sign in with Apple is not configured yet: the phone's authorize endpoint answers
+// nonce and email_verified checked. Sign in with Apple is not configured yet: the phone's authorize endpoint answers
 // provider_not_configured for it (src/routes/mobileAuth.js). Facebook (src/auth/providers/facebook.js) is the
 // Facebook Login code flow with PKCE, appsecret_proof and a Data Deletion Request Callback (src/auth/facebookDeletion.js).
 // LinkedIn (src/auth/providers/linkedin.js) is Sign In with LinkedIn using OpenID Connect: ID token signature, iss,
-// aud and exp checked, userinfo for the email, only email_verified addresses used.
+// aud and exp checked, userinfo for the email, only email_verified addresses used. Microsoft
+// (src/auth/providers/microsoft.js) is the identity platform v2.0 "common" authority (personal and work or school
+// accounts): PKCE + nonce, the tid-templated issuer, and an email trusted only for personal accounts or xms_edov.
 const github = require('./github');
 const google = require('./google');
 const facebook = require('./facebook');
 const linkedin = require('./linkedin');
+const microsoft = require('./microsoft');
 
 // The order is the order of the buttons the apps show.
-const PROVIDERS = Object.freeze({ [google.id]: google, [facebook.id]: facebook, [linkedin.id]: linkedin, [github.id]: github });
+const PROVIDERS = Object.freeze({
+  [google.id]: google, [microsoft.id]: microsoft, [facebook.id]: facebook, [linkedin.id]: linkedin, [github.id]: github
+});
 
 function getProvider(id) {
   return typeof id === 'string' && Object.prototype.hasOwnProperty.call(PROVIDERS, id) ? PROVIDERS[id] : null;
