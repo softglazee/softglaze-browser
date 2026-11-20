@@ -1,7 +1,7 @@
 {
   "choose": {
-    "title": "Welcome to SoftGlaze",
-    "subtitle": "Sign in to create your workspace. No password needed.",
+    "title": "Create your free account",
+    "subtitle": "Use an account you already have. No new password.",
     "google": "Continue with Google",
     "microsoft": "Continue with Microsoft",
     "facebook": "Continue with Facebook",
@@ -9,12 +9,16 @@
     "allowEmail": "Allow email access and try Facebook again",
     "github": "Continue with GitHub",
     "email": "Continue with email",
-    "or": "or",
-    "moreOptions": "More options",
-    "moreOptionsHint": "Create the workspace with a name and password instead",
+    "moreOptions": "Set up with a password",
+    "moreOptionsHint": "Prefer a name and password?",
     "privacy": "We receive only your name and your verified email address.",
     "haveAccount": "Already have a workspace on this computer?",
-    "logIn": "Log in"
+    "logIn": "Sign in with its password",
+    "signInTitle": "Sign in to SoftGlaze",
+    "signInSubtitle": "Use the account you signed up with. If your plan is on another computer, you can move it here.",
+    "entryLabel": "New or returning",
+    "entryNew": "New account",
+    "entryReturning": "I have an account"
   },
   "unlock": {
     "title": "Welcome back",

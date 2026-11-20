@@ -9,66 +9,34 @@
     "unavailable": "Este dispositivo no puede guardar un inicio de sesión de forma segura (el cifrado del sistema no está disponible), así que se te pedirá que inicies sesión de nuevo en el próximo arranque."
   },
   "brand": {
-    "tagline": "Multiperfil",
-    "bullets": {
-      "fingerprints": "Huellas digitales únicas y consistentes por perfil",
-      "proxy": "Un proxy dedicado para cada identidad",
-      "localFirst": "Local primero - tu espacio de trabajo se guarda en este dispositivo"
-    },
-    "heroLine1": "Ejecuta cientos de identidades.",
-    "heroLine2": "Cada una, por separado.",
-    "heroBody": "Un navegador multiperfil para equipos que prioriza lo local. Cada perfil mantiene sus propias cookies, almacenamiento, proxy y configuración de huella digital.",
-    "footer": "© {{year}} SoftGlaze · Espacio de trabajo local",
-    "trust": {
-      "local": "Local primero",
-      "encrypted": "Bloqueo del espacio",
-      "private": "Sin telemetría"
-    },
-    "slides": {
-      "security": {
-        "title": "Seguridad de datos robusta",
-        "body": "Tus perfiles, cookies y datos de navegación se quedan en este dispositivo, y las semillas 2FA y las claves de proveedores se sellan con el llavero del sistema."
-      },
-      "fingerprint": {
-        "title": "Huellas consistentes",
-        "body": "Cada perfil incluye una huella única y consistente: canvas, WebGL, fuentes, audio y hardware."
-      },
-      "proxy": {
-        "title": "Un proxy para cada identidad",
-        "body": "Asigna una identidad de red dedicada a cada perfil y rota con confianza."
-      },
-      "automation": {
-        "title": "Automatización que ahorra tiempo",
-        "body": "Calienta cookies, genera perfiles en lote y orquesta todo a escala."
-      }
-    }
+    "footer": "© {{year}} SoftGlaze · Espacio de trabajo local"
   },
   "license": {
     "machineMismatch": "Esta licencia está registrada en otro ordenador. Transfiérela a este PC o pide a tu administrador que la restablezca."
   },
   "pay": {
     "noMethods": "La compra dentro de la aplicación está en pausa mientras añadimos un nuevo proveedor de pago. Escribe a support@softglaze.com para comprar con factura y luego introduce tu código de compra.",
-    "submitted": "Pago enviado - un administrador lo revisará y activará tu plan en breve.",
+    "submitted": "Pago enviado. Un administrador lo revisará y activará tu plan en breve.",
     "manualBadge": "Manual",
     "continueTo": "Continuar a {{label}}",
     "openPaymentLink": "Abrir enlace de pago",
     "referencePlaceholder": "Referencia de pago / ID de transacción",
-    "submitForApproval": "He pagado - enviar para aprobación"
+    "submitForApproval": "Ya he pagado, enviar para aprobación"
   },
   "banned": {
     "blockedHeading": "Tu cuenta está bloqueada",
     "endedHeading": "Tu suscripción ha terminado",
-    "blockedBodyNamed": "{{name}}, tu cuenta ha sido bloqueada por un administrador. Por favor, contáctalo para restaurar el acceso - tus datos están a salvo.",
-    "blockedBody": "Tu cuenta ha sido bloqueada por un administrador. Por favor, contáctalo para restaurar el acceso - tus datos están a salvo.",
-    "endedBodyNamed": "{{name}}, tu prueba gratuita y tu periodo de gracia han terminado. Renueva para desbloquear tu espacio de trabajo - tus perfiles y datos están a salvo y esperando.",
-    "endedBody": "Tu prueba gratuita y tu periodo de gracia han terminado. Renueva para desbloquear tu espacio de trabajo - tus perfiles y datos están a salvo y esperando.",
+    "blockedBodyNamed": "{{name}}, tu cuenta ha sido bloqueada por un administrador. Contáctalo para restaurar el acceso. Tus datos están a salvo.",
+    "blockedBody": "Tu cuenta ha sido bloqueada por un administrador. Contáctalo para restaurar el acceso. Tus datos están a salvo.",
+    "endedBodyNamed": "{{name}}, tu prueba gratuita y tu periodo de gracia han terminado. Renueva para volver a abrir tu espacio de trabajo. Tus perfiles y datos están a salvo y te esperan.",
+    "endedBody": "Tu prueba gratuita y tu periodo de gracia han terminado. Renueva para volver a abrir tu espacio de trabajo. Tus perfiles y datos están a salvo y te esperan.",
     "haveCode": "¿Tienes un código de compra?",
     "needHelp": "¿Necesitas ayuda? Contacta con tu administrador.",
     "signOut": "Cerrar sesión"
   },
   "register": {
     "title": "Crea tu cuenta",
-    "subtitle": "Esta es tu cuenta maestra - la propietaria del espacio de trabajo.",
+    "subtitle": "Esta es tu cuenta maestra, la propietaria del espacio de trabajo.",
     "firstName": "Nombre",
     "lastName": "Apellidos",
     "email": "Correo electrónico",
@@ -94,7 +62,7 @@
     "title": "Verifica tu correo electrónico",
     "subtitlePrefix": "Introduce el código de 6 dígitos enviado a",
     "subtitleSuffix": ".",
-    "devModePrefix": "Modo de desarrollo - todavía no se envía ningún correo. Tu código es",
+    "devModePrefix": "Modo de desarrollo: todavía no se envía ningún correo. Tu código es",
     "devModeSuffix": ".",
     "verifyCreate": "Verificar y crear cuenta",
     "resendIn": "Reenviar código en {{count}}s",
@@ -138,10 +106,10 @@
     "trialHighlight": "prueba gratuita de 7 días",
     "subtitleSuffix": ". Empieza ahora o activa un plan de pago.",
     "startTrialTitle": "Iniciar prueba gratuita de 7 días",
-    "startTrialSubtitle": "Sin pago ahora - explóralo todo.",
+    "startTrialSubtitle": "Sin pago ahora. Todas las funciones están abiertas.",
     "activatePaid": "Activar un plan de pago ahora",
     "haveCode": "¿Tienes un código de compra?",
-    "skip": "Omitir - iniciar la prueba",
+    "skip": "Omitir e iniciar la prueba",
     "tenantTitle": "Tu cuenta está lista",
     "tenantSubtitle": "Inicia tu prueba gratuita o elige un plan.",
     "tenantTrialSubtitle": "Acceso completo, sin pago. Una prueba gratuita por equipo y correo.",
@@ -158,7 +126,7 @@
     "password": "Contraseña",
     "forgot": "¿Olvidaste?",
     "passwordPlaceholder": "Contraseña maestra",
-    "forgotBody": "Tu contraseña maestra no se puede recuperar en una instalación local - nunca sale de este dispositivo. Si se pierde, el espacio de trabajo debe restablecerse desde Configuración.",
+    "forgotBody": "Tu contraseña maestra no se puede recuperar en una instalación local, porque nunca sale de este dispositivo. Si se pierde, el espacio de trabajo tiene que restablecerse desde Configuración.",
     "signIn": "Iniciar sesión",
     "noAccount": "¿No tienes una cuenta?",
     "newHere": "¿Nuevo en SoftGlaze?",
@@ -236,7 +204,7 @@
     "verificationFailed": "La verificación falló.",
     "incorrectPassword": "Contraseña incorrecta.",
     "couldNotSignIn": "No se pudo iniciar sesión.",
-    "superSetupRequired": "Aún no se ha establecido ninguna credencial de Super Admin - crea una abajo.",
+    "superSetupRequired": "Aún no se ha establecido ninguna credencial de Super Admin. Crea una abajo.",
     "invalidSuperCredentials": "Credenciales de Super Admin no válidas.",
     "couldNotCreateSuper": "No se pudieron crear las credenciales de Super Admin.",
     "enterInviteCode": "Introduce tu código de invitación.",
@@ -249,9 +217,9 @@
     "paymentNotStarted": "No se pudo iniciar el pago.",
     "couldNotSubmitPayment": "No se pudo enviar tu pago.",
     "enterWorkspacePassword": "Introduce tu contraseña del espacio de trabajo.",
-    "dbStillLocked": "La base de datos sigue bloqueada - inténtalo de nuevo.",
+    "dbStillLocked": "La base de datos sigue bloqueada. Inténtalo de nuevo.",
     "dbMissing": "Falta el archivo cifrado de la base de datos. Restaura desde una copia de seguridad del espacio de trabajo para recuperarlo.",
-    "dbUnlockFailed": "Contraseña incorrecta - o el archivo está dañado.",
+    "dbUnlockFailed": "Contraseña incorrecta, o el archivo está dañado.",
     "couldNotUnlockDb": "No se pudo desbloquear la base de datos.",
     "trialFailed": "No se pudo iniciar la prueba gratuita."
   },
@@ -274,5 +242,39 @@
     "SIGNUP_USE_CASE": "Elige para qué vas a usar SoftGlaze.",
     "SIGNUP_USE_CASE_OTHER": "Cuéntanos en pocas palabras para qué vas a usar SoftGlaze.",
     "CONFIRM_OFFLINE": "Conéctate a internet para confirmar tu correo."
+  },
+  "panel": {
+    "label": "Acerca de SoftGlaze",
+    "freePlan": "Plan gratuito",
+    "profilesUnit": "perfiles de navegador",
+    "freeBody": "Sin tarjeta, y el plan gratuito no caduca. También puedes probar Pro gratis durante 7 días.",
+    "returnLabel": "Tu espacio de trabajo",
+    "returnTitle": "Tus perfiles están en este equipo",
+    "returnBody": "Inicia sesión para abrirlos. Cada perfil guarda sus propias cookies, almacenamiento, proxy y huella digital.",
+    "exampleCaption": "Ejemplo de la página Perfiles",
+    "direct": "Directo",
+    "facts": {
+      "fingerprint": {
+        "term": "Huella digital",
+        "detail": "Canvas, WebGL, fuentes, audio y hardware, propios de cada perfil e iguales en cada inicio"
+      },
+      "proxy": {
+        "term": "Proxy",
+        "detail": "Usa los tuyos: HTTP, HTTPS, SOCKS4 o SOCKS5, uno por perfil"
+      },
+      "storage": {
+        "term": "Almacenamiento",
+        "detail": "Las cookies, las sesiones y el historial se quedan en este equipo"
+      },
+      "phone": {
+        "term": "Teléfono",
+        "detail": "Con Pro, las acciones de IA pueden esperar a que las permitas en tu teléfono"
+      }
+    }
+  },
+  "controls": {
+    "language": "Idioma: {{lang}}",
+    "toLight": "Cambiar al tema claro",
+    "toDark": "Cambiar al tema oscuro"
   }
 }

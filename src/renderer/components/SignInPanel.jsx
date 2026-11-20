@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { ArrowLeft, ArrowRight, Loader2, Mail, ShieldCheck, ExternalLink, Check } from 'lucide-react';
+import { ArrowLeft, ArrowRight, Loader2, Mail, ExternalLink, Check } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { softglazeApi } from '@/lib/softglazeApi.js';
 import { getStoredLang } from '@/lib/lang.js';
@@ -11,24 +11,28 @@ import { signInErrorText, providerButtons, PROVIDER_NAMES, offerEmailRerequest, 
 // workspace after Sign out ('unlock'), and by Settings > Account ('link'). Main does the work and keeps the
 // session token; this only draws the steps.
 
-const inputCls = 'w-full h-10 bg-background/60 border border-border rounded-lg px-3 text-[13px] text-foreground outline-none focus:border-primary focus:ring-2 focus:ring-primary/25 transition-all placeholder:text-muted-dark disabled:opacity-70';
-const labelCls = 'block text-[11px] font-medium text-muted mb-1.5';
-const bigBtn = 'w-full h-11 rounded-xl font-semibold text-[13.5px] flex items-center justify-center gap-2.5 transition-all duration-200 disabled:opacity-60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50';
+// 16 px text and 44 px height in inputs and buttons (readable, and easy to hit). Flat colours, no glow.
+const inputCls = 'w-full h-11 bg-input-background border border-border-strong rounded-lg px-3.5 text-[16px] text-foreground outline-none focus:border-primary focus:ring-2 focus:ring-primary/25 transition-colors placeholder:text-muted-dark disabled:opacity-70';
+const labelCls = 'block text-[13px] font-medium text-foreground mb-1.5';
+const bigBtn = 'w-full h-11 rounded-lg font-semibold text-[15px] flex items-center justify-center gap-2.5 transition-colors duration-150 disabled:opacity-60';
 // GitHub's own colours follow the theme: dark button on the light theme, light button on the dark one.
-const githubBtn = `${bigBtn} bg-foreground text-background hover:opacity-90 shadow-sm`;
+const githubBtn = `${bigBtn} bg-foreground text-background hover:opacity-90`;
 // Google's own light button (branding guidelines): white, a thin grey border, dark text and the four-colour G, in
 // both themes. The colours are the --google-btn-* tokens in index.css.
-const googleBtn = `${bigBtn} border border-[var(--google-btn-border)] bg-[var(--google-btn-bg)] text-[var(--google-btn-fg)] hover:bg-[var(--google-btn-hover)] shadow-sm`;
+const googleBtn = `${bigBtn} border border-[var(--google-btn-border)] bg-[var(--google-btn-bg)] text-[var(--google-btn-fg)] hover:bg-[var(--google-btn-hover)]`;
 // Microsoft's sign-in button: light variant (white, #8C8C8C border, #5E5E5E text) on the light theme, dark variant
 // (#2F2F2F, white text) on the dark theme. The colours are the --microsoft-btn-* tokens.
-const microsoftBtn = `${bigBtn} border border-[var(--microsoft-btn-border)] bg-[var(--microsoft-btn-bg)] text-[var(--microsoft-btn-fg)] hover:bg-[var(--microsoft-btn-hover)] shadow-sm`;
+const microsoftBtn = `${bigBtn} border border-[var(--microsoft-btn-border)] bg-[var(--microsoft-btn-bg)] text-[var(--microsoft-btn-fg)] hover:bg-[var(--microsoft-btn-hover)]`;
 // Meta's brand button: Facebook blue, the white "f" logo, white text. The colours are the --facebook-btn-* tokens.
-const facebookBtn = `${bigBtn} bg-[var(--facebook-btn-bg)] text-[var(--facebook-btn-fg)] hover:bg-[var(--facebook-btn-hover)] shadow-sm`;
+const facebookBtn = `${bigBtn} bg-[var(--facebook-btn-bg)] text-[var(--facebook-btn-fg)] hover:bg-[var(--facebook-btn-hover)]`;
 // LinkedIn's brand button: LinkedIn blue, the white "in" logo, white text. The colours are the --linkedin-btn-* tokens.
-const linkedinBtn = `${bigBtn} bg-[var(--linkedin-btn-bg)] text-[var(--linkedin-btn-fg)] hover:bg-[var(--linkedin-btn-hover)] shadow-sm`;
-const emailBtn = `${bigBtn} border border-border bg-background/60 text-foreground hover:bg-secondary`;
-const primaryBtn = 'mt-5 w-full h-11 rounded-xl bg-gradient-to-b from-primary to-primary-hover text-white font-semibold text-[13px] flex items-center justify-center gap-2 disabled:opacity-60 shadow-glow transition-all duration-200';
-const linkBtn = 'text-[12px] text-muted-dark hover:text-primary transition-colors disabled:opacity-60';
+const linkedinBtn = `${bigBtn} bg-[var(--linkedin-btn-bg)] text-[var(--linkedin-btn-fg)] hover:bg-[var(--linkedin-btn-hover)]`;
+const emailBtn = `${bigBtn} border border-border-strong bg-transparent text-foreground hover:bg-secondary`;
+const primaryBtn = 'mt-5 w-full h-11 rounded-lg bg-[var(--auth-cta)] hover:bg-[var(--auth-cta-hover)] text-primary-foreground font-semibold text-[15px] flex items-center justify-center gap-2 disabled:opacity-60 transition-colors duration-150';
+const linkBtn = 'min-h-11 inline-flex items-center justify-center text-[14px] text-muted-foreground hover:text-foreground underline-offset-4 hover:underline transition-colors disabled:opacity-60 disabled:no-underline';
+const inlineLink = 'font-semibold text-foreground underline underline-offset-4 decoration-border-strong hover:decoration-primary';
+// Our text: the default size for every sentence on these screens.
+const bodyCls = 'text-[15px] text-muted-foreground leading-relaxed';
 
 export function GithubMark({ className = 'w-[18px] h-[18px]' }) {
   return (
@@ -96,7 +100,10 @@ export function ProviderMark({ provider, className }) {
 
 // purpose: 'signup' | 'unlock' | 'link'. info: signin.info() ({ tenant, providers, account }). lockedEmail: the
 // workspace's own address (unlock). onDone(result) after a successful sign-in. onMoreOptions: the old form.
-export default function SignInPanel({ purpose, info, lockedEmail = '', onDone, onMoreOptions, compact = false, heading = true }) {
+// entry / onEntry (Gate, purpose 'signup'): 'new' | 'returning'. Only the words change: one-click sign-in creates
+// the account or finds the existing one, so both doors call the same sign-in. onPasswordLogin: the password screen
+// for a workspace made with a password (shown on the 'returning' door).
+export default function SignInPanel({ purpose, info, lockedEmail = '', onDone, onMoreOptions, compact = false, heading = true, entry = 'new', onEntry = null, onPasswordLogin = null }) {
   const { t } = useTranslation('signin');
   const { t: tg } = useTranslation('gate');
   const [step, setStep] = useState('choose'); // choose | email | code | waiting
@@ -170,18 +177,23 @@ export default function SignInPanel({ purpose, info, lockedEmail = '', onDone, o
     }
   }
 
-  const titleCls = compact ? 'font-display text-[16px] font-semibold tracking-tight' : 'font-display text-[20px] font-semibold tracking-tight';
-  const errBox = err ? <p role="alert" className="text-[12px] text-red-400 mt-3 leading-relaxed">{err}</p> : null;
+  const titleCls = compact ? 'font-display text-[18px] font-semibold tracking-tight' : 'font-display text-[28px] [@media(max-height:800px)]:text-[24px] leading-tight font-semibold tracking-tight';
+  const subCls = compact ? 'text-[14px] text-muted-foreground mt-1 leading-relaxed' : `${bodyCls} mt-2`;
+  const errBox = err ? <p role="alert" className="mt-4 rounded-lg border border-destructive/40 bg-destructive/10 px-3.5 py-2.5 text-[14px] leading-relaxed text-[var(--auth-error-fg)]">{err}</p> : null;
 
   if (step === 'waiting') {
+    const name = PROVIDER_NAMES[provider] || provider;
     return (
       <div aria-live="polite">
-        <div className="w-11 h-11 rounded-xl bg-primary/10 text-primary grid place-items-center mb-4"><ProviderMark provider={provider} className="w-5 h-5" /></div>
         <h2 className={titleCls}>{t('waiting.title')}</h2>
-        <p className="text-[12.5px] text-muted mt-1 leading-relaxed">{t('waiting.body', { provider: PROVIDER_NAMES[provider] || provider })}</p>
-        <div className="mt-5 flex items-center gap-2.5 text-[12.5px] text-muted"><Loader2 className="w-4 h-4 animate-spin text-primary shrink-0" /> <span className="min-w-0">{t('waiting.status', { provider: PROVIDER_NAMES[provider] || provider })}</span></div>
-        <div className="mt-5 flex flex-col gap-2.5">
-          <button type="button" onClick={() => startProvider(provider, 'auto')} className={emailBtn}><ExternalLink className="w-4 h-4" /> {t('waiting.reopen')}</button>
+        <p className={subCls}>{t('waiting.body', { provider: name })}</p>
+        <div className="mt-6 flex items-center gap-3 rounded-lg border border-border-strong px-3.5 py-3 text-[14px] text-foreground">
+          <ProviderMark provider={provider} className="w-5 h-5 shrink-0" />
+          <span className="min-w-0 flex-1">{t('waiting.status', { provider: name })}</span>
+          <Loader2 className="w-4 h-4 animate-spin text-muted-foreground shrink-0" aria-hidden="true" />
+        </div>
+        <div className="mt-4 flex flex-col gap-1">
+          <button type="button" onClick={() => startProvider(provider, 'auto')} className={emailBtn}><ExternalLink className="w-4 h-4" aria-hidden="true" /> {t('waiting.reopen')}</button>
           <button type="button" onClick={() => startProvider(provider, 'loopback')} className={linkBtn}>{t('waiting.anotherWay')}</button>
           <button type="button" onClick={cancelProvider} className={linkBtn}>{t('waiting.cancel')}</button>
         </div>
@@ -192,37 +204,36 @@ export default function SignInPanel({ purpose, info, lockedEmail = '', onDone, o
   if (step === 'email' || step === 'code') {
     return (
       <div>
-        <button type="button" onClick={() => { setStep(step === 'code' && !lockedEmail ? 'email' : 'choose'); setErr(''); }} className="text-[12px] text-muted hover:text-foreground flex items-center gap-1.5 mb-5">
-          <ArrowLeft className="w-3.5 h-3.5" /> {step === 'code' && !lockedEmail ? t('email.change') : t('back')}
+        <button type="button" onClick={() => { setStep(step === 'code' && !lockedEmail ? 'email' : 'choose'); setErr(''); }} className="-ml-1 mb-4 min-h-11 px-1 inline-flex items-center gap-1.5 text-[14px] text-muted-foreground hover:text-foreground">
+          <ArrowLeft className="w-4 h-4" aria-hidden="true" /> {step === 'code' && !lockedEmail ? t('email.change') : t('back')}
         </button>
-        <div className="w-11 h-11 rounded-xl bg-primary/10 text-primary grid place-items-center mb-4"><Mail className="w-5 h-5" /></div>
         {step === 'email' ? (
           <form noValidate onSubmit={sendCode}>
             <h2 className={titleCls}>{t('email.title')}</h2>
-            <p className="text-[12.5px] text-muted mt-1 mb-5">{t('email.subtitle')}</p>
+            <p className={`${subCls} mb-6`}>{t('email.subtitle')}</p>
             <label htmlFor={`si-${purpose}-email`} className={labelCls}>{t('email.label')}</label>
             <input id={`si-${purpose}-email`} type="email" autoComplete="email" autoFocus={!lockedEmail} disabled={Boolean(lockedEmail)}
               className={inputCls} value={email} onChange={(e) => setEmail(e.target.value)} placeholder={t('email.placeholder')} />
             {errBox}
-            <button type="submit" disabled={busy || !email.trim()} className={primaryBtn}>
-              {busy ? <Loader2 className="w-4 h-4 animate-spin" /> : <>{t('email.send')} <ArrowRight className="w-4 h-4" /></>}
+            <button type="submit" disabled={busy || !email.trim()} aria-busy={busy} className={primaryBtn}>
+              {busy ? <Loader2 className="w-4 h-4 animate-spin" aria-hidden="true" /> : <>{t('email.send')} <ArrowRight className="w-4 h-4" aria-hidden="true" /></>}
             </button>
           </form>
         ) : (
           <form noValidate onSubmit={verify}>
             <h2 className={titleCls}>{t('email.codeTitle')}</h2>
-            <p className="text-[12.5px] text-muted mt-1 mb-5 break-words">{t('email.codeBody', { email: email.trim().toLowerCase() })}</p>
+            <p className={`${subCls} mb-6 break-words`}>{t('email.codeBody', { email: email.trim().toLowerCase() })}</p>
             <label htmlFor={`si-${purpose}-code`} className={labelCls}>{t('email.codeLabel')}</label>
             <input id={`si-${purpose}-code`} inputMode="numeric" autoComplete="one-time-code" autoFocus maxLength={6}
-              className={`${inputCls} h-12 text-center font-mono text-[20px] tracking-[0.5em]`}
+              className={`${inputCls} h-14 text-center font-mono text-[24px] tracking-[0.5em]`}
               value={code} onChange={(e) => { const v = sixDigits(e.target.value); setCode(v); if (v.length === 6) verify(null, v); }} />
-            {devCode && <p className="mt-3 px-3 py-2 rounded-lg bg-primary/10 border border-primary/30 text-[12px] text-primary">{t('email.devCode', { code: devCode })}</p>}
-            {!devCode && <p className="mt-3 text-[11.5px] text-muted-dark leading-relaxed">{t('email.checkSpam')}</p>}
+            {devCode && <p className="mt-3 px-3.5 py-2.5 rounded-lg bg-primary/10 border border-primary/30 text-[14px] text-foreground">{t('email.devCode', { code: devCode })}</p>}
+            {!devCode && <p className="mt-3 text-[14px] text-muted-foreground leading-relaxed">{t('email.checkSpam')}</p>}
             {errBox}
-            <button type="submit" disabled={busy || code.length !== 6} className={primaryBtn}>
-              {busy ? <Loader2 className="w-4 h-4 animate-spin" /> : <>{t('email.verify')} <Check className="w-4 h-4" /></>}
+            <button type="submit" disabled={busy || code.length !== 6} aria-busy={busy} className={primaryBtn}>
+              {busy ? <Loader2 className="w-4 h-4 animate-spin" aria-hidden="true" /> : <>{t('email.verify')} <Check className="w-4 h-4" aria-hidden="true" /></>}
             </button>
-            <button type="button" onClick={() => sendCode()} disabled={resendIn > 0 || busy} className={`mt-3 w-full ${linkBtn}`}>
+            <button type="button" onClick={() => sendCode()} disabled={resendIn > 0 || busy} className={`mt-2 w-full ${linkBtn}`}>
               {resendIn > 0 ? t('email.resendIn', { count: resendIn }) : t('email.resend')}
             </button>
           </form>
@@ -231,15 +242,26 @@ export default function SignInPanel({ purpose, info, lockedEmail = '', onDone, o
     );
   }
 
+  const returning = purpose === 'signup' && entry === 'returning';
   return (
     <div>
+      {purpose === 'signup' && onEntry && (
+        <div role="group" aria-label={t('choose.entryLabel')} className="mb-6 [@media(max-height:800px)]:mb-4 grid grid-cols-2 gap-1 rounded-lg border border-border-strong p-1">
+          {['new', 'returning'].map((k) => (
+            <button key={k} type="button" aria-pressed={entry === k} onClick={() => { if (entry !== k) { setErr(''); setRerequest(false); onEntry(k); } }}
+              className={`h-10 rounded-md text-[14px] font-semibold transition-colors ${entry === k ? 'bg-elevated text-foreground shadow-[inset_0_0_0_1px_var(--border-strong)]' : 'text-muted-foreground hover:text-foreground'}`}>
+              {k === 'new' ? t('choose.entryNew') : t('choose.entryReturning')}
+            </button>
+          ))}
+        </div>
+      )}
       {heading && purpose === 'signup' && (
         <>
-          <h1 className={titleCls}>{t('choose.title')}</h1>
-          <p className="text-[12.5px] text-muted mt-1 mb-6">{t('choose.subtitle')}</p>
+          <h1 className={titleCls}>{returning ? t('choose.signInTitle') : t('choose.title')}</h1>
+          <p className={`${subCls} mb-6 [@media(max-height:800px)]:mb-4`}>{returning ? t('choose.signInSubtitle') : t('choose.subtitle')}</p>
         </>
       )}
-      <div className="flex flex-col gap-3">
+      <div className="flex flex-col gap-2.5">
         {buttons.includes('google') && (
           <button type="button" onClick={() => startProvider('google', 'auto')} className={googleBtn}>
             <GoogleMark /> {t('choose.google')}
@@ -266,28 +288,34 @@ export default function SignInPanel({ purpose, info, lockedEmail = '', onDone, o
           </button>
         )}
         <button type="button" onClick={() => { setErr(''); setStep('email'); }} className={emailBtn}>
-          <Mail className="w-[18px] h-[18px]" /> {t('choose.email')}
+          <Mail className="w-[18px] h-[18px]" aria-hidden="true" /> {t('choose.email')}
         </button>
       </div>
-      {errBox}
-      {rerequest && buttons.includes('facebook') && (
-        <button type="button" onClick={() => startProvider('facebook', 'auto', true)} className={`${linkBtn} mt-2 underline underline-offset-2`}>
-          {t('choose.allowEmail')}
-        </button>
+      {(err || (rerequest && buttons.includes('facebook'))) && (
+        // Facebook shared no email: the way out (ask Facebook again) sits inside the message that explains it.
+        <div className="mt-4 rounded-lg border border-destructive/40 bg-destructive/10 px-3.5 py-2.5">
+          {err && <p role="alert" className="m-0 text-[14px] leading-relaxed text-[var(--auth-error-fg)]">{err}</p>}
+          {rerequest && buttons.includes('facebook') && (
+            <button type="button" onClick={() => startProvider('facebook', 'auto', true)} className={`${inlineLink} mt-1 min-h-11 inline-flex items-center gap-2 text-[14px]`}>
+              <FacebookMark className="w-[18px] h-[18px]" /> {t('choose.allowEmail')}
+            </button>
+          )}
+        </div>
       )}
-      {onMoreOptions && (
-        <>
-          <div className="flex items-center gap-3 my-5" aria-hidden="true">
-            <span className="h-px flex-1 bg-border" /><span className="text-[11px] uppercase tracking-wider text-muted-dark">{t('choose.or')}</span><span className="h-px flex-1 bg-border" />
-          </div>
-          <button type="button" onClick={onMoreOptions} className="w-full text-center group">
-            <span className="block text-[12.5px] font-semibold text-primary group-hover:text-primary-hover">{t('choose.moreOptions')}</span>
-            <span className="block text-[11px] text-muted-dark mt-0.5">{t('choose.moreOptionsHint')}</span>
-          </button>
-        </>
+      {!returning && onMoreOptions && (
+        <p className="mt-5 text-[14px] text-muted-foreground">
+          {t('choose.moreOptionsHint')}{' '}
+          <button type="button" onClick={onMoreOptions} className={`${inlineLink} min-h-11 align-middle`}>{t('choose.moreOptions')}</button>
+        </p>
+      )}
+      {returning && onPasswordLogin && (
+        <p className="mt-5 text-[14px] text-muted-foreground">
+          {t('choose.haveAccount')}{' '}
+          <button type="button" onClick={onPasswordLogin} className={`${inlineLink} min-h-11 align-middle`}>{t('choose.logIn')}</button>
+        </p>
       )}
       {!compact && purpose === 'signup' && (
-        <p className="text-[11px] text-muted-dark mt-5 flex items-center justify-center gap-1.5 text-center"><ShieldCheck className="w-3.5 h-3.5 shrink-0" /> {t('choose.privacy')}</p>
+        <p className="text-[13px] text-muted-foreground mt-1 leading-relaxed">{t('choose.privacy')}</p>
       )}
     </div>
   );
@@ -313,13 +341,13 @@ export function UseCaseStep({ onDone }) {
 
   return (
     <form noValidate onSubmit={save}>
-      <h1 className="font-display text-[20px] font-semibold tracking-tight">{t('useCase.title')}</h1>
-      <p className="text-[12.5px] text-muted mt-1 mb-5">{t('useCase.subtitle')}</p>
+      <h1 className="font-display text-[28px] leading-tight font-semibold tracking-tight">{t('useCase.title')}</h1>
+      <p className={`${bodyCls} mt-2 mb-5`}>{t('useCase.subtitle')}</p>
       <fieldset>
         <legend className="sr-only">{t('useCase.title')}</legend>
         <div className="grid gap-2">
           {USE_CASES.map((k) => (
-            <label key={k} className={`flex items-center gap-3 rounded-lg border px-3 py-2.5 cursor-pointer text-[12.5px] transition-colors ${useCase === k ? 'border-primary bg-primary/10 text-foreground' : 'border-border hover:bg-secondary text-foreground'}`}>
+            <label key={k} className={`flex items-center gap-3 rounded-lg border px-3 min-h-11 cursor-pointer text-[14px] transition-colors ${useCase === k ? 'border-primary bg-primary/10 text-foreground' : 'border-border hover:bg-secondary text-foreground'}`}>
               <input type="radio" name="usecase" value={k} checked={useCase === k} onChange={() => setUseCase(k)} className="accent-[var(--primary)]" />
               <span className="min-w-0">{tg(`lead.useCases.${k}`)}</span>
             </label>
@@ -332,11 +360,11 @@ export function UseCaseStep({ onDone }) {
           <input id="uc-other" maxLength={LEAD_LIMITS.useCaseOther} className={inputCls} value={other} onChange={(e) => setOther(e.target.value)} placeholder={tg('lead.useCaseOtherPlaceholder')} />
         </div>
       )}
-      {err && <p role="alert" className="text-[12px] text-red-400 mt-3">{err}</p>}
+      {err && <p role="alert" className="text-[14px] text-[var(--auth-error-fg)] mt-3">{err}</p>}
       <button type="submit" disabled={busy || !useCase} className={primaryBtn}>
         {busy ? <Loader2 className="w-4 h-4 animate-spin" /> : <>{t('useCase.continue')} <ArrowRight className="w-4 h-4" /></>}
       </button>
-      <button type="button" onClick={onDone} disabled={busy} className={`mt-3 w-full ${linkBtn}`}>{t('useCase.skip')}</button>
+      <button type="button" onClick={onDone} disabled={busy} className={`mt-2 w-full ${linkBtn}`}>{t('useCase.skip')}</button>
     </form>
   );
 }
@@ -373,7 +401,7 @@ export function MoveLicenceCard({ onMoved }) {
     <div className="mb-4 rounded-lg border border-primary/40 bg-primary/5 p-3.5">
       <span className="block text-[13px] font-semibold">{t('move.title')}</span>
       <p className="text-[11.5px] text-muted mt-0.5 leading-relaxed">{tb('store.result.inUse')}</p>
-      {err && <p role="alert" className="text-[12px] text-red-400 mt-2 leading-relaxed">{err}</p>}
+      {err && <p role="alert" className="text-[14px] text-[var(--auth-error-fg)] mt-2 leading-relaxed">{err}</p>}
       <button type="button" onClick={move} disabled={busy} className="mt-3 w-full h-10 rounded-lg bg-primary hover:bg-primary-hover text-white font-semibold text-[13px] flex items-center justify-center gap-2 disabled:opacity-60">
         {busy ? <Loader2 className="w-4 h-4 animate-spin" /> : tb('store.moveHere')}
       </button>

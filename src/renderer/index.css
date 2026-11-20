@@ -276,6 +276,24 @@
   animation: shimmerText 6s linear infinite;
 }
 
+/* ------------------------------------------------------------------ */
+/*  Sign-in / sign-up (Gate): the form column and the product panel     */
+/*  (components/AuthProductPanel.jsx). Flat surfaces, no glow.           */
+/* ------------------------------------------------------------------ */
+:root, .dark { --auth-proxy-chip: #7cb3fb; --auth-error-fg: #fca5a5; --auth-cta: #2563eb; --auth-cta-hover: #1d4ed8; }
+.light { --auth-proxy-chip: #1d4ed8; --auth-error-fg: #b91c1c; }
+/* --auth-cta: a primary button dark enough for white text (5.2:1) in both themes. Inside the sign-in screens the
+   secondary and dimmest greys are a step darker on the light theme so 13-15 px text passes WCAG AA. */
+.auth-screen { --muted-dim: #7d8699; }
+.light .auth-screen { --muted-foreground: #526073; --muted-dim: #66758a; }
+/* Short windows (the app's minimum is 1180 x 720): tighter panel so nothing scrolls. */
+@media (max-height: 800px) {
+  .auth-panel { gap: 1.25rem; padding-top: 1.5rem; padding-bottom: 1.5rem; }
+  .auth-facts dt, .auth-facts dd { padding-top: 0.45rem; padding-bottom: 0.45rem; }
+}
+/* Narrow windows: the example table drops its "Last used" column before it would crowd. */
+@media (max-width: 1240px) { .auth-col-used { display: none; } }
+
 /* Respect reduced-motion: freeze the ambient auth animations. */
 @media (prefers-reduced-motion: reduce) {
   .animate-float-slow, .animate-float-slower, .animate-aurora, .auth-grid { animation: none !important; }

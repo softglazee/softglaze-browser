@@ -9,66 +9,34 @@
     "unavailable": "This device can't securely store a login (OS encryption is unavailable), so you'll be asked to sign in again next launch."
   },
   "brand": {
-    "tagline": "Multi-Profile",
-    "bullets": {
-      "fingerprints": "Unique, consistent fingerprints per profile",
-      "proxy": "A dedicated proxy for every identity",
-      "localFirst": "Local-first - your workspace is stored on this device"
-    },
-    "heroLine1": "Run hundreds of identities.",
-    "heroLine2": "Keep every one separate.",
-    "heroBody": "A local-first multi-profile browser for teams. Every profile keeps its own cookies, storage, proxy and fingerprint settings.",
-    "footer": "© {{year}} SoftGlaze · Local workspace",
-    "trust": {
-      "local": "Local-first",
-      "encrypted": "Workspace lock",
-      "private": "Zero telemetry"
-    },
-    "slides": {
-      "security": {
-        "title": "Robust data security",
-        "body": "Your profiles, cookies and browsing data stay on this device, and 2FA seeds and provider keys are sealed with your system keychain."
-      },
-      "fingerprint": {
-        "title": "Consistent fingerprints",
-        "body": "Every profile ships a unique, consistent fingerprint: canvas, WebGL, fonts, audio, and hardware."
-      },
-      "proxy": {
-        "title": "A proxy for every identity",
-        "body": "Bind a dedicated network identity to each profile and rotate with confidence."
-      },
-      "automation": {
-        "title": "Time-saving automation",
-        "body": "Warm cookies, generate profiles in bulk, and orchestrate everything at scale."
-      }
-    }
+    "footer": "© {{year}} SoftGlaze · Local workspace"
   },
   "license": {
     "machineMismatch": "This licence is registered to a different computer. Move it to this PC or ask your administrator to reset it."
   },
   "pay": {
     "noMethods": "Buying inside the app is paused while we add a new payment provider. Email support@softglaze.com to buy by invoice, then enter your purchase code.",
-    "submitted": "Payment submitted - an administrator will review it and activate your plan shortly.",
+    "submitted": "Payment submitted. An administrator will review it and activate your plan shortly.",
     "manualBadge": "Manual",
     "continueTo": "Continue to {{label}}",
     "openPaymentLink": "Open payment link",
     "referencePlaceholder": "Payment reference / transaction ID",
-    "submitForApproval": "I’ve paid - submit for approval"
+    "submitForApproval": "I’ve paid, submit for approval"
   },
   "banned": {
     "blockedHeading": "Your account is blocked",
     "endedHeading": "Your subscription has ended",
-    "blockedBodyNamed": "{{name}}, your account has been blocked by an administrator. Please contact them to restore access - your data is safe.",
-    "blockedBody": "Your account has been blocked by an administrator. Please contact them to restore access - your data is safe.",
-    "endedBodyNamed": "{{name}}, your free trial and grace period are over. Renew to unlock your workspace - your profiles and data are safe and waiting.",
-    "endedBody": "Your free trial and grace period are over. Renew to unlock your workspace - your profiles and data are safe and waiting.",
+    "blockedBodyNamed": "{{name}}, your account has been blocked by an administrator. Please contact them to restore access. Your data is safe.",
+    "blockedBody": "Your account has been blocked by an administrator. Please contact them to restore access. Your data is safe.",
+    "endedBodyNamed": "{{name}}, your free trial and grace period are over. Renew to open your workspace again. Your profiles and data are safe and waiting.",
+    "endedBody": "Your free trial and grace period are over. Renew to open your workspace again. Your profiles and data are safe and waiting.",
     "haveCode": "Have a purchase code?",
     "needHelp": "Need help? Contact your administrator.",
     "signOut": "Sign out"
   },
   "register": {
     "title": "Create your account",
-    "subtitle": "This is your master account - the owner of the workspace.",
+    "subtitle": "This is your master account, the owner of the workspace.",
     "firstName": "First name",
     "lastName": "Last name",
     "email": "Email",
@@ -94,7 +62,7 @@
     "title": "Verify your email",
     "subtitlePrefix": "Enter the 6-digit code sent to",
     "subtitleSuffix": ".",
-    "devModePrefix": "Dev mode - no email is actually sent yet. Your code is",
+    "devModePrefix": "Dev mode: no email is actually sent yet. Your code is",
     "devModeSuffix": ".",
     "verifyCreate": "Verify & create account",
     "resendIn": "Resend code in {{count}}s",
@@ -138,10 +106,10 @@
     "trialHighlight": "7-day free trial",
     "subtitleSuffix": ". Start now, or activate a paid plan.",
     "startTrialTitle": "Start 7-day free trial",
-    "startTrialSubtitle": "No payment now - explore everything.",
+    "startTrialSubtitle": "No payment now. Every feature is open.",
     "activatePaid": "Activate a paid plan now",
     "haveCode": "Have a purchase code?",
-    "skip": "Skip - start the trial",
+    "skip": "Skip and start the trial",
     "tenantTitle": "Your account is ready",
     "tenantSubtitle": "Start your free trial, or choose a plan.",
     "tenantTrialSubtitle": "Full access, no payment. One free trial per computer and email.",
@@ -158,7 +126,7 @@
     "password": "Password",
     "forgot": "Forgot?",
     "passwordPlaceholder": "Master password",
-    "forgotBody": "Your master password isn't recoverable on a local install - it never leaves this device. If it's lost, the workspace has to be reset from Settings.",
+    "forgotBody": "Your master password isn't recoverable on a local install, because it never leaves this device. If it's lost, the workspace has to be reset from Settings.",
     "signIn": "Sign in",
     "noAccount": "Don't have an account?",
     "newHere": "New to SoftGlaze?",
@@ -236,7 +204,7 @@
     "verificationFailed": "Verification failed.",
     "incorrectPassword": "Incorrect password.",
     "couldNotSignIn": "Could not sign in.",
-    "superSetupRequired": "No Super Admin credential is set yet - create one below.",
+    "superSetupRequired": "No Super Admin credential is set yet. Create one below.",
     "invalidSuperCredentials": "Invalid Super Admin credentials.",
     "couldNotCreateSuper": "Could not create Super Admin credentials.",
     "enterInviteCode": "Enter your invite code.",
@@ -249,9 +217,9 @@
     "paymentNotStarted": "Payment could not be started.",
     "couldNotSubmitPayment": "Could not submit your payment.",
     "enterWorkspacePassword": "Enter your workspace password.",
-    "dbStillLocked": "The database is still locked - please try again.",
+    "dbStillLocked": "The database is still locked. Please try again.",
     "dbMissing": "The encrypted database file is missing. Restore from a workspace backup to recover.",
-    "dbUnlockFailed": "Incorrect password - or the file is corrupted.",
+    "dbUnlockFailed": "Incorrect password, or the file is corrupted.",
     "couldNotUnlockDb": "Could not unlock the database.",
     "trialFailed": "Could not start the free trial."
   },
@@ -274,5 +242,39 @@
     "SIGNUP_USE_CASE": "Choose what you will use SoftGlaze for.",
     "SIGNUP_USE_CASE_OTHER": "Tell us in a few words what you will use SoftGlaze for.",
     "CONFIRM_OFFLINE": "Connect to the internet to confirm your email."
+  },
+  "panel": {
+    "label": "About SoftGlaze",
+    "freePlan": "Free plan",
+    "profilesUnit": "browser profiles",
+    "freeBody": "No card needed, and the Free plan does not run out. You can also try Pro free for 7 days.",
+    "returnLabel": "Your workspace",
+    "returnTitle": "Your profiles are on this computer",
+    "returnBody": "Sign in to open them. Each profile keeps its own cookies, storage, proxy and fingerprint.",
+    "exampleCaption": "Example of the Profiles page",
+    "direct": "Direct",
+    "facts": {
+      "fingerprint": {
+        "term": "Fingerprint",
+        "detail": "Canvas, WebGL, fonts, audio and hardware, set per profile and kept the same on every launch"
+      },
+      "proxy": {
+        "term": "Proxy",
+        "detail": "Bring your own: HTTP, HTTPS, SOCKS4 or SOCKS5, one per profile"
+      },
+      "storage": {
+        "term": "Storage",
+        "detail": "Cookies, logins and history stay on this computer"
+      },
+      "phone": {
+        "term": "Phone",
+        "detail": "On Pro, AI actions can wait until you allow them on your phone"
+      }
+    }
+  },
+  "controls": {
+    "language": "Language: {{lang}}",
+    "toLight": "Switch to the light theme",
+    "toDark": "Switch to the dark theme"
   }
 }
