@@ -12,7 +12,7 @@ import phoneLight from '@/assets/signin/phone-light.webp';
 import teamDark from '@/assets/signin/team-dark.webp';
 import teamLight from '@/assets/signin/team-light.webp';
 
-// The right side of the sign-in and sign-up screens (Gate): a product tour of real SoftGlaze screens.
+// The left side of the sign-in and sign-up screens (Gate): a product tour of real SoftGlaze screens.
 // The images are screenshots of the real app pages (Profiles, a profile's Fingerprint tab, an AI approval,
 // Members) and of the web app's Approvals screen on a phone, rendered from the real components with demo
 // data (documentation IP ranges, example addresses). Light and dark sets follow the app theme.
@@ -139,7 +139,7 @@ export default function AuthProductPanel() {
       onMouseEnter={() => setHover(true)} onMouseLeave={() => setHover(false)}
       onFocus={() => setFocusIn(true)} onBlur={(e) => { if (!e.currentTarget.contains(e.relatedTarget)) setFocusIn(false); }}
       onKeyDown={onKeyDown}
-      className="auth-panel auth-brand relative hidden min-[960px]:flex flex-col overflow-hidden px-10 xl:px-14 pt-12 pb-10 text-[var(--auth-panel-fg)]"
+      className="auth-panel auth-brand relative hidden min-[960px]:flex min-[960px]:order-1 flex-col overflow-hidden px-10 xl:px-14 pt-12 pb-10 text-[var(--auth-panel-fg)]"
     >
       <p className="text-[13px] font-medium text-[var(--auth-panel-muted)]">{t('panel.trust')}</p>
 

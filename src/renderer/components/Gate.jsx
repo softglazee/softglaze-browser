@@ -990,18 +990,19 @@ export default function Gate({ children }) {
     );
   }
 
-  // Two columns: the form on the left (no floating card), the product panel on the right (AuthProductPanel).
+  // Two columns: the product slider on the left (AuthProductPanel), the form on the right, centred in its column.
+  // The form stays first in the DOM (keyboard and screen readers reach it first); CSS order puts it on the right.
   return (
-    <div className="auth-screen h-screen w-full bg-background text-foreground font-sans grid min-[960px]:grid-cols-[minmax(440px,46%)_1fr] overflow-hidden">
-      <main className="flex flex-col min-h-0 overflow-y-auto">
-        <header className="flex items-center justify-between gap-3 box-content max-w-[400px] px-8 xl:px-14 pt-6 [@media(max-height:800px)]:pt-4">
+    <div className="auth-screen h-screen w-full bg-background text-foreground font-sans grid min-[960px]:grid-cols-[1fr_minmax(440px,46%)] overflow-hidden">
+      <main className="flex flex-col min-h-0 overflow-y-auto min-[960px]:order-2">
+        <header className="flex items-center justify-between gap-3 box-content max-w-[400px] w-full mx-auto px-8 xl:px-14 pt-6 [@media(max-height:800px)]:pt-4">
           <div className="flex items-center gap-2.5">
             <img src="/logos/app-source-512.png" alt="" className="w-8 h-8 object-contain" draggable={false} />
             <span className="font-display font-semibold tracking-tight text-[17px]">SoftGlaze</span>
           </div>
           <ThemeLangControls />
         </header>
-        <div className="flex-1 flex items-start px-8 xl:px-14 pt-[clamp(0.5rem,6vh,4rem)] pb-6 [@media(max-height:800px)]:pt-1">
+        <div className="flex-1 flex items-center justify-center px-8 xl:px-14 py-6 [@media(max-height:800px)]:py-2">
           <div className="w-full max-w-[400px] animate-fade-in">
             <div>
 
@@ -1360,7 +1361,7 @@ export default function Gate({ children }) {
             </div>
           </div>
         </div>
-        <footer className="box-content max-w-[400px] flex flex-wrap items-center justify-between gap-x-6 px-8 xl:px-14 pb-3 text-[13px] text-muted-foreground">
+        <footer className="box-content max-w-[400px] w-full mx-auto flex flex-wrap items-center justify-between gap-x-6 px-8 xl:px-14 pb-3 text-[13px] text-muted-foreground">
           <span className="py-3">{t('brand.footer', { year: new Date().getFullYear() })}</span>
           {showSuper && <SuperLink />}
         </footer>
