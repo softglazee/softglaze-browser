@@ -26,16 +26,17 @@ export function showProvider(info, provider) {
 export function showGithub(info) { return showProvider(info, 'github'); }
 export function showGoogle(info) { return showProvider(info, 'google'); }
 export function showFacebook(info) { return showProvider(info, 'facebook'); }
+export function showLinkedin(info) { return showProvider(info, 'linkedin'); }
 
 // The provider buttons to draw, in the app's order (Google first, as most people have a Google account, then
-// Facebook, then GitHub).
-export const PROVIDER_ORDER = Object.freeze(['google', 'facebook', 'github']);
+// Facebook, LinkedIn and GitHub).
+export const PROVIDER_ORDER = Object.freeze(['google', 'facebook', 'linkedin', 'github']);
 export function providerButtons(info) {
   return PROVIDER_ORDER.filter((p) => showProvider(info, p));
 }
 
 // The name shown in "Continue in your browser" texts.
-export const PROVIDER_NAMES = Object.freeze({ google: 'Google', facebook: 'Facebook', github: 'GitHub' });
+export const PROVIDER_NAMES = Object.freeze({ google: 'Google', facebook: 'Facebook', linkedin: 'LinkedIn', github: 'GitHub' });
 
 // A Facebook sign-in that shared no email: the panel offers "Allow email access" (Facebook asks again).
 export function offerEmailRerequest(err) {
@@ -58,9 +59,9 @@ export function moveErrorKey(err) {
   return err && err.code === 'MOVE_LIMIT' ? 'store.result.moveLimit' : null;
 }
 
-// Settings > Account rows: one per method, Google, Facebook, GitHub, then the email code.
+// Settings > Account rows: one per method, Google, Facebook, LinkedIn, GitHub, then the email code.
 export function methodRows(methods) {
-  const order = { google: 0, facebook: 1, github: 2, email: 3 };
+  const order = { google: 0, facebook: 1, linkedin: 2, github: 3, email: 4 };
   const list = Array.isArray(methods) ? methods.filter((m) => m && Object.prototype.hasOwnProperty.call(order, m.provider)) : [];
   return list.slice().sort((a, b) => order[a.provider] - order[b.provider]).map((m) => ({
     provider: m.provider,

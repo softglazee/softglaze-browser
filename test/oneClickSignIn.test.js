@@ -46,7 +46,7 @@ test('PKCE, the start URL and the protocol result are built and read exactly', (
   assert.throws(() => auth.startUrl({ apiBaseUrl: 'https://api.softglaze.com', tenantId: 't', provider: 'myspace', appRedirect: 'softglaze://auth', codeChallenge: p.challenge, state: st }));
   const g = new URL(auth.startUrl({ apiBaseUrl: 'https://api.softglaze.com', tenantId: 't1', provider: 'google', appRedirect: 'softglaze://auth', codeChallenge: p.challenge, state: st }));
   assert.equal(g.searchParams.get('provider'), 'google');
-  assert.deepEqual(auth.PROVIDERS, ['google', 'facebook', 'github']);
+  assert.deepEqual(auth.PROVIDERS, ['google', 'facebook', 'linkedin', 'github']);
   const fbUrl = new URL(auth.startUrl({ apiBaseUrl: 'https://api.softglaze.com', tenantId: 't1', provider: 'facebook', appRedirect: 'softglaze://auth', codeChallenge: p.challenge, state: st }));
   assert.equal(fbUrl.searchParams.get('provider'), 'facebook');
   assert.equal(fbUrl.searchParams.get('auth_type'), null);
@@ -311,6 +311,17 @@ test('Continue with Facebook: between Google and GitHub, signs in like Google; n
   assert.equal(r.provider, 'facebook');
   h.server.api.authExchange = async () => { throw httpErr(403, 'email_missing'); };
   await assert.rejects(h.svc.start({ provider: 'facebook', purpose: 'link' }), (e) => e.code === 'SIGNIN_EMAIL_MISSING');
+});
+
+test('Continue with LinkedIn: after Facebook, before GitHub; signs in like Google; an unverified email is refused', async () => {
+  const h = harness();
+  h.server.providers = ['github', 'linkedin', 'facebook', 'google'];
+  assert.deepEqual((await h.svc.info()).providers, ['google', 'facebook', 'linkedin', 'github']);
+  const r = await h.svc.start({ provider: 'linkedin', purpose: 'signup' });
+  assert.equal(r.outcome, 'created');
+  assert.equal(r.provider, 'linkedin');
+  h.server.api.authExchange = async () => { throw httpErr(403, 'email_not_verified'); };
+  await assert.rejects(h.svc.start({ provider: 'linkedin', purpose: 'link' }), (e) => e.code === 'SIGNIN_EMAIL_NOT_VERIFIED');
 });
 
 test('Continue with GitHub on a new workspace: the Owner from the verified name and email, opened with a sealed key', async () => {
@@ -679,10 +690,11 @@ test('renderer rules and texts (en and es)', async () => {
   assert.equal(f.canOfferMove({ state: 'elsewhere' }), true);
   assert.equal(f.canOfferMove({ state: 'store' }), false);
   assert.equal(f.moveErrorKey({ code: 'MOVE_LIMIT' }), 'store.result.moveLimit');
-  assert.deepEqual(f.methodRows([{ provider: 'email', email: 'a@x' }, { provider: 'google' }, { provider: 'github', login: 'a' }, { provider: 'facebook' }, { provider: 'myspace' }]).map((m) => m.provider), ['google', 'facebook', 'github', 'email']);
+  assert.deepEqual(f.methodRows([{ provider: 'email', email: 'a@x' }, { provider: 'google' }, { provider: 'github', login: 'a' }, { provider: 'facebook' }, { provider: 'linkedin' }, { provider: 'myspace' }]).map((m) => m.provider), ['google', 'facebook', 'linkedin', 'github', 'email']);
   assert.equal(f.showGoogle({ tenant: true, providers: ['google', 'github'] }), true);
   assert.equal(f.showGoogle({ tenant: true, providers: ['github'] }), false, 'server without Google keys: hidden');
-  assert.deepEqual(f.providerButtons({ tenant: true, providers: ['github', 'google', 'facebook', 'myspace'] }), ['google', 'facebook', 'github'], 'known providers, Google first');
+  assert.deepEqual(f.providerButtons({ tenant: true, providers: ['github', 'linkedin', 'google', 'facebook', 'myspace'] }), ['google', 'facebook', 'linkedin', 'github'], 'known providers, Google first');
+  assert.equal(f.showLinkedin({ tenant: true, providers: ['google'] }), false, 'server without LinkedIn keys: hidden');
   assert.equal(f.showFacebook({ tenant: true, providers: ['google'] }), false, 'server without Facebook keys: hidden');
   assert.equal(f.offerEmailRerequest({ code: 'SIGNIN_EMAIL_MISSING' }), true);
   assert.equal(f.offerEmailRerequest({ code: 'SIGNIN_FAILED' }), false);

@@ -9,7 +9,7 @@ const PROTOCOL = 'softglaze';
 const PROTOCOL_REDIRECT = 'softglaze://auth';
 // Sign-in providers the app knows, in button order. A button appears only when the server lists the provider in
 // GET /auth/providers (its keys are set there). Microsoft would be added the same way.
-const PROVIDERS = Object.freeze(['google', 'facebook', 'github']);
+const PROVIDERS = Object.freeze(['google', 'facebook', 'linkedin', 'github']);
 // Errors the server may send back with the redirect (licensing-server/src/auth/flow.js).
 // email_missing: a Facebook account that shared no email and is not linked yet (the panel offers "Allow email access").
 const RESULT_ERRORS = Object.freeze(['cancelled', 'email_not_verified', 'email_missing', 'disposable_email', 'failed']);

@@ -65,6 +65,11 @@
   --facebook-btn-bg: #1877f2;
   --facebook-btn-fg: #ffffff;
   --facebook-btn-hover: #166fe5;
+  /* "Continue with LinkedIn": LinkedIn's brand button in both themes (LinkedIn blue #0A66C2, white "in" logo and
+     white text). */
+  --linkedin-btn-bg: #0a66c2;
+  --linkedin-btn-fg: #ffffff;
+  --linkedin-btn-hover: #004182;
 }
 
 /* LIGHT - a clean, high-contrast complement (Figma ships dark only) */
