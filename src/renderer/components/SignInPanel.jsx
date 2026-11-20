@@ -4,10 +4,10 @@ import { useTranslation } from 'react-i18next';
 import { softglazeApi } from '@/lib/softglazeApi.js';
 import { getStoredLang } from '@/lib/lang.js';
 import { USE_CASES, LEAD_LIMITS } from '@/lib/signupLead.mjs';
-import { signInErrorText, showGithub, sixDigits, canOfferMove, moveErrorKey } from '@/lib/signInFlow.mjs';
+import { signInErrorText, providerButtons, PROVIDER_NAMES, sixDigits, canOfferMove, moveErrorKey } from '@/lib/signInFlow.mjs';
 
-// One-click sign-in (1.0.26): "Continue with GitHub" (the system browser, then back to the app) and "Continue
-// with email" (a 6-digit code). Used by the Gate for a new workspace (purpose 'signup') and for a one-click
+// One-click sign-in (1.0.26): "Continue with Google" and "Continue with GitHub" (the system browser, then back to
+// the app) and "Continue with email" (a 6-digit code). Used by the Gate for a new workspace (purpose 'signup') and for a one-click
 // workspace after Sign out ('unlock'), and by Settings > Account ('link'). Main does the work and keeps the
 // session token; this only draws the steps.
 
@@ -16,6 +16,9 @@ const labelCls = 'block text-[11px] font-medium text-muted mb-1.5';
 const bigBtn = 'w-full h-11 rounded-xl font-semibold text-[13.5px] flex items-center justify-center gap-2.5 transition-all duration-200 disabled:opacity-60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50';
 // GitHub's own colours follow the theme: dark button on the light theme, light button on the dark one.
 const githubBtn = `${bigBtn} bg-foreground text-background hover:opacity-90 shadow-sm`;
+// Google's own light button (branding guidelines): white, a thin grey border, dark text and the four-colour G, in
+// both themes. The colours are the --google-btn-* tokens in index.css.
+const googleBtn = `${bigBtn} border border-[var(--google-btn-border)] bg-[var(--google-btn-bg)] text-[var(--google-btn-fg)] hover:bg-[var(--google-btn-hover)] shadow-sm`;
 const emailBtn = `${bigBtn} border border-border bg-background/60 text-foreground hover:bg-secondary`;
 const primaryBtn = 'mt-5 w-full h-11 rounded-xl bg-gradient-to-b from-primary to-primary-hover text-white font-semibold text-[13px] flex items-center justify-center gap-2 disabled:opacity-60 shadow-glow transition-all duration-200';
 const linkBtn = 'text-[12px] text-muted-dark hover:text-primary transition-colors disabled:opacity-60';
@@ -26,6 +29,22 @@ export function GithubMark({ className = 'w-[18px] h-[18px]' }) {
       <path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0016 8c0-4.42-3.58-8-8-8z" />
     </svg>
   );
+}
+
+// The Google "G" exactly as Google ships it for sign-in buttons (do not recolour or redraw it).
+export function GoogleMark({ className = 'w-[18px] h-[18px]' }) {
+  return (
+    <svg viewBox="0 0 48 48" aria-hidden="true" className={className}>
+      <path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z" />
+      <path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z" />
+      <path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z" />
+      <path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.15 1.45-4.92 2.3-8.16 2.3-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z" />
+    </svg>
+  );
+}
+
+export function ProviderMark({ provider, className }) {
+  return provider === 'google' ? <GoogleMark className={className} /> : <GithubMark className={className} />;
 }
 
 // purpose: 'signup' | 'unlock' | 'link'. info: signin.info() ({ tenant, providers, account }). lockedEmail: the
@@ -40,9 +59,10 @@ export default function SignInPanel({ purpose, info, lockedEmail = '', onDone, o
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState('');
   const [resendIn, setResendIn] = useState(0);
-  const attempt = useRef(0); // only the newest GitHub attempt may change the screen
+  const [provider, setProvider] = useState('github'); // the provider of the browser sign-in in progress
+  const attempt = useRef(0); // only the newest provider attempt may change the screen
   const live = useRef(true);
-  const github = showGithub(info);
+  const buttons = providerButtons(info);
 
   useEffect(() => () => { live.current = false; }, []);
   useEffect(() => { if (lockedEmail) setEmail(lockedEmail); }, [lockedEmail]);
@@ -52,11 +72,12 @@ export default function SignInPanel({ purpose, info, lockedEmail = '', onDone, o
     return () => clearInterval(id);
   }, [resendIn]);
 
-  async function startGithub(mode) {
+  async function startProvider(which, mode) {
     const mine = ++attempt.current;
+    setProvider(which);
     setErr(''); setStep('waiting');
     try {
-      const r = await softglazeApi.signin.start('github', purpose, mode);
+      const r = await softglazeApi.signin.start(which, purpose, mode);
       if (!live.current || mine !== attempt.current) return;
       onDone(r);
     } catch (e) {
@@ -66,7 +87,7 @@ export default function SignInPanel({ purpose, info, lockedEmail = '', onDone, o
     }
   }
 
-  async function cancelGithub() {
+  async function cancelProvider() {
     attempt.current += 1;
     setStep('choose'); setErr('');
     try { await softglazeApi.signin.cancel(); } catch (_) { /* nothing pending */ }
@@ -107,14 +128,14 @@ export default function SignInPanel({ purpose, info, lockedEmail = '', onDone, o
   if (step === 'waiting') {
     return (
       <div aria-live="polite">
-        <div className="w-11 h-11 rounded-xl bg-primary/10 text-primary grid place-items-center mb-4"><GithubMark className="w-5 h-5" /></div>
+        <div className="w-11 h-11 rounded-xl bg-primary/10 text-primary grid place-items-center mb-4"><ProviderMark provider={provider} className="w-5 h-5" /></div>
         <h2 className={titleCls}>{t('waiting.title')}</h2>
-        <p className="text-[12.5px] text-muted mt-1 leading-relaxed">{t('waiting.body', { provider: 'GitHub' })}</p>
-        <div className="mt-5 flex items-center gap-2.5 text-[12.5px] text-muted"><Loader2 className="w-4 h-4 animate-spin text-primary shrink-0" /> <span className="min-w-0">{t('waiting.status', { provider: 'GitHub' })}</span></div>
+        <p className="text-[12.5px] text-muted mt-1 leading-relaxed">{t('waiting.body', { provider: PROVIDER_NAMES[provider] || provider })}</p>
+        <div className="mt-5 flex items-center gap-2.5 text-[12.5px] text-muted"><Loader2 className="w-4 h-4 animate-spin text-primary shrink-0" /> <span className="min-w-0">{t('waiting.status', { provider: PROVIDER_NAMES[provider] || provider })}</span></div>
         <div className="mt-5 flex flex-col gap-2.5">
-          <button type="button" onClick={() => startGithub('auto')} className={emailBtn}><ExternalLink className="w-4 h-4" /> {t('waiting.reopen')}</button>
-          <button type="button" onClick={() => startGithub('loopback')} className={linkBtn}>{t('waiting.anotherWay')}</button>
-          <button type="button" onClick={cancelGithub} className={linkBtn}>{t('waiting.cancel')}</button>
+          <button type="button" onClick={() => startProvider(provider, 'auto')} className={emailBtn}><ExternalLink className="w-4 h-4" /> {t('waiting.reopen')}</button>
+          <button type="button" onClick={() => startProvider(provider, 'loopback')} className={linkBtn}>{t('waiting.anotherWay')}</button>
+          <button type="button" onClick={cancelProvider} className={linkBtn}>{t('waiting.cancel')}</button>
         </div>
       </div>
     );
@@ -171,8 +192,13 @@ export default function SignInPanel({ purpose, info, lockedEmail = '', onDone, o
         </>
       )}
       <div className="flex flex-col gap-3">
-        {github && (
-          <button type="button" onClick={() => startGithub('auto')} className={githubBtn}>
+        {buttons.includes('google') && (
+          <button type="button" onClick={() => startProvider('google', 'auto')} className={googleBtn}>
+            <GoogleMark /> {t('choose.google')}
+          </button>
+        )}
+        {buttons.includes('github') && (
+          <button type="button" onClick={() => startProvider('github', 'auto')} className={githubBtn}>
             <GithubMark /> {t('choose.github')}
           </button>
         )}

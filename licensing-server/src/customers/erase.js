@@ -36,6 +36,7 @@ async function eraseCustomer(db, tenantId, customerId) {
     await tx.emailVerification.deleteMany({ where: { tenantId, OR: [{ customerId: c.id }, { emailKey: c.emailKey }] } });
     await tx.identity.deleteMany({ where });
     await tx.authSession.deleteMany({ where });
+    await tx.mobileDevice.deleteMany({ where });
     await tx.emailOutbox.deleteMany({ where: { tenantId, OR: [{ customerId: c.id }, { toEmail: c.email }] } });
     await tx.customerEvent.updateMany({ where: { tenantId, customerId: c.id, type: 'status' }, data: { customerId: anon } });
     await tx.customerEvent.deleteMany({ where: { tenantId, customerId: c.id } });

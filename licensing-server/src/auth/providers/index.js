@@ -1,27 +1,30 @@
 'use strict';
-// The sign-in providers this server can run (GET /auth/start?provider=<id>). Each module exports:
-//   id                       the provider name in URLs, Identity.provider and the app ('github')
+// The sign-in providers this server can run (GET /auth/start?provider=<id>, and the phone and web authorize
+// endpoints). Each module exports:
+//   id                       the provider name in URLs, Identity.provider and the apps ('github', 'google')
 //   configured()             true when its keys are in the environment; otherwise /auth/start answers 503
 //   authorizeUrl({ state, codeChallenge, redirectUri, nonce })
 //                            where the browser goes; `state` and the S256 `codeChallenge` are this server's own
-//                            (src/auth/flow.js), `nonce` is for OpenID Connect providers
+//                            (src/auth/flow.js), `nonce` is the browser nonce (OpenID Connect providers send a
+//                            value derived from it and check it in the ID token)
 //   completeSignIn({ code, codeVerifier, redirectUri, nonce })
 //                            -> { providerUserId, email, emailVerified, name, login }, or throws ProviderError
 //                            ('email_not_verified' | 'provider_error'). Only a verified email is ever linked.
-// Adding Google or Microsoft (next version): a module with the same four members using the OpenID Connect
-// authorization code flow with PKCE, sending `nonce` in the authorize request and checking the ID token's
-// signature, audience, issuer and nonce in completeSignIn; email_verified must be true (Microsoft personal
-// accounts need the extra care noted in the plan). Then add it below, its keys to .env.example and
-// docs/DEPLOY.md, and its button in the app. Routes, linking and sessions need no change.
+// Google (src/auth/providers/google.js) is OpenID Connect: PKCE + nonce, ID token signature, iss, aud, exp,
+// nonce and email_verified checked. Microsoft would follow the same pattern (personal accounts need care with
+// email verification). Sign in with Apple is not configured yet: the phone's authorize endpoint answers
+// provider_not_configured for it (src/routes/mobileAuth.js).
 const github = require('./github');
+const google = require('./google');
 
-const PROVIDERS = Object.freeze({ [github.id]: github });
+// The order is the order of the buttons the apps show.
+const PROVIDERS = Object.freeze({ [google.id]: google, [github.id]: github });
 
 function getProvider(id) {
   return typeof id === 'string' && Object.prototype.hasOwnProperty.call(PROVIDERS, id) ? PROVIDERS[id] : null;
 }
 
-// The providers whose keys are set, for the app's first screen (GET /auth/providers).
+// The providers whose keys are set, for the apps' first screen (GET /auth/providers).
 function availableProviders() {
   return Object.values(PROVIDERS).filter((p) => p.configured()).map((p) => p.id);
 }

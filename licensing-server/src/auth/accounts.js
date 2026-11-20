@@ -14,7 +14,8 @@ const { createCustomer, addEvent, claimUnboundLicences, linkInstallRecords, reco
 const pickLeaseLicence = (...args) => require('../licensing').pickLeaseLicence(...args);
 const { TRANSFER_LIMIT, TRANSFER_WINDOW_MS } = require('../machineBinding');
 const { ms } = require('../util/time');
-const { randomToken, sha256Hex, isOpaqueToken } = require('./tokens');
+const { sha256Hex, isOpaqueToken } = require('./tokens');
+const { createSession, isLive, slide } = require('./sessions');
 
 const err = (status, error, message, extra = {}) => ({ status, body: { error, message, ...extra } });
 
@@ -54,11 +55,10 @@ async function resolveCustomer(db, tenantId, provider, profile) {
   return { identity, customer: null, how: 'new', parsed, providerUserId };
 }
 
-// Writes the sign-in: customer (created, restored or updated), Identity, install link, session and the
-// `signed_in` event. `resolved` comes from resolveCustomer. -> the response body.
-async function applySignIn(db, tenant, install, provider, profile, resolved, { ipHash = null, now = Date.now(), settings, attached = false }) {
-  const tenantId = tenant.id;
-  const at = new Date(now);
+// The account part of a verified sign-in, shared by the desktop, the phone and the web: the customer (created,
+// restored or updated) and the sign-in method (Identity). `resolved` comes from resolveCustomer.
+// -> { customer, identity, restored }.
+async function linkAccount(db, tenantId, provider, profile, resolved, { at, firstSeenAt = null }) {
   const { parsed, providerUserId } = resolved;
   const name = cleanName(profile.name);
   let customer = resolved.customer;
@@ -66,7 +66,7 @@ async function applySignIn(db, tenant, install, provider, profile, resolved, { i
     try {
       customer = await createCustomer(db, tenantId, {
         email: parsed.email, emailKey: parsed.emailKey, source: 'app', emailVerifiedAt: at, name,
-        firstSeenAt: install.createdAt || at, lastSeenAt: at
+        firstSeenAt: firstSeenAt || at, lastSeenAt: at
       });
     } catch (e) {
       if (!e || e.code !== 'P2002') throw e;
@@ -103,17 +103,23 @@ async function applySignIn(db, tenant, install, provider, profile, resolved, { i
       identity = await db.identity.findUnique({ where: { tenantId_provider_providerUserId: { tenantId, provider, providerUserId } } });
     }
   }
+  return { customer, identity, restored, login: idData.login };
+}
+
+// Writes the sign-in: customer (created, restored or updated), Identity, install link, session and the
+// `signed_in` event. `resolved` comes from resolveCustomer. -> the response body.
+async function applySignIn(db, tenant, install, provider, profile, resolved, { ipHash = null, now = Date.now(), settings, attached = false }) {
+  const tenantId = tenant.id;
+  const at = new Date(now);
+  const linked = await linkAccount(db, tenantId, provider, profile, resolved, { at, firstSeenAt: install.createdAt || at });
+  const { customer, identity, restored } = linked;
 
   if (!attached) await attachInstall(db, tenantId, install, customer, { at, now, settings });
-  const token = randomToken(32);
-  await db.authSession.create({
-    data: {
-      tenantId, customerId: customer.id, installId: install.id, identityId: identity ? identity.id : null, provider,
-      emailKey: customer.emailKey, tokenHash: sha256Hex(token), ipHash, createdAt: at, lastUsedAt: at
-    }
+  const { token } = await createSession(db, {
+    tenantId, customer, identityId: identity ? identity.id : null, provider, kind: 'desktop', installId: install.id, ipHash, now
   });
   await addEvent(db, tenantId, customer.id, 'signed_in', { provider, installId: install.id, linked: resolved.how }, at);
-  if (resolved.how !== 'identity') await addEvent(db, tenantId, customer.id, 'signin_linked', { provider, login: idData.login }, at);
+  if (resolved.how !== 'identity') await addEvent(db, tenantId, customer.id, 'signin_linked', { provider, login: linked.login }, at);
   if (restored) await addEvent(db, tenantId, customer.id, 'restored', { by: 'signin' }, at);
 
   const fresh = await db.customer.findUnique({ where: { id: customer.id } });
@@ -127,6 +133,28 @@ async function applySignIn(db, tenant, install, provider, profile, resolved, { i
     methods: await methodsFor(db, tenantId, fresh),
     licence: await licenceState(db, tenantId, fresh.id, install.id, now)
   };
+}
+
+// A verified sign-in from the phone or the web app (no install): account, method, a `mobile` or `web` session
+// and the events. `gate(resolved)` may refuse before anything is written (the phone limit): it returns
+// { status, body } to refuse or null. -> { status, body } on refusal, else { ok: true, customer, session, how }.
+async function accountSignIn(db, tenant, provider, profile, { kind, clientId, ipHash = null, userAgent = null, now = Date.now(), gate = null }) {
+  const resolved = await resolveCustomer(db, tenant.id, provider, profile);
+  if (resolved.error) return err(403, 'email_not_verified', 'Your sign-in did not give us a verified email address.');
+  if (gate) {
+    const refused = await gate(resolved);
+    if (refused) return refused;
+  }
+  const at = new Date(now);
+  const { customer, identity, restored, login } = await linkAccount(db, tenant.id, provider, profile, resolved, { at });
+  const session = await createSession(db, {
+    tenantId: tenant.id, customer, identityId: identity ? identity.id : null, provider, kind, clientId, ipHash, userAgent, now
+  });
+  await addEvent(db, tenant.id, customer.id, 'signed_in', { provider, client: clientId, linked: resolved.how }, at);
+  if (resolved.how !== 'identity') await addEvent(db, tenant.id, customer.id, 'signin_linked', { provider, login }, at);
+  if (restored) await addEvent(db, tenant.id, customer.id, 'restored', { by: 'signin' }, at);
+  const fresh = await db.customer.findUnique({ where: { id: customer.id } });
+  return { ok: true, customer: fresh, session, how: resolved.how };
 }
 
 // One sign-in from a verified provider profile. `expectCustomerId` (the workspace's own account, when the app
@@ -179,22 +207,25 @@ function movesLeft(lic, now) { return Math.max(0, TRANSFER_LIMIT - moveWindow(li
 
 // --- Sessions ---
 
-// The live session of this install for its customer, or null.
-async function findSession(db, tenant, install, token) {
+// The live desktop session of this install for its customer, or null. A session with an end (made from this
+// release on) is refused after it; a legacy one (expiresAt NULL) never ends.
+async function findSession(db, tenant, install, token, { now = Date.now() } = {}) {
   if (!isOpaqueToken(token)) return null;
   const row = await db.authSession.findUnique({ where: { tokenHash: sha256Hex(token) } });
-  if (!row || row.tenantId !== tenant.id || row.installId !== install.id || row.revokedAt) return null;
+  if (!row || row.tenantId !== tenant.id || row.installId !== install.id || !isLive(row, now)) return null;
+  if (row.kind && row.kind !== 'desktop') return null;
   if (!install.customerId || row.customerId !== install.customerId) return null;
   return row;
 }
 
 // POST /auth/me -> { signedIn: true, email, name, methods } (401 session_invalid otherwise).
 async function sessionInfo(db, tenant, install, token, { now = Date.now() } = {}) {
-  const s = await findSession(db, tenant, install, token);
+  const s = await findSession(db, tenant, install, token, { now });
   if (!s) return err(401, 'session_invalid', 'Sign in again.');
   const c = await db.customer.findUnique({ where: { id: s.customerId } });
   if (!c || c.deletedAt) return err(401, 'session_invalid', 'Sign in again.');
-  await db.authSession.update({ where: { id: s.id }, data: { lastUsedAt: new Date(now) } }).catch(() => {});
+  if (s.expiresAt) await slide(db, s, now);
+  else await db.authSession.update({ where: { id: s.id }, data: { lastUsedAt: new Date(now) } }).catch(() => {});
   return {
     status: 200,
     body: {
@@ -279,6 +310,6 @@ async function signedInOnInstall(db, tenantId, installId, customerId, emailKey) 
 }
 
 module.exports = {
-  attachInstall, resolveCustomer, applySignIn, signIn, methodsFor, licenceState, movesLeft, findSession, sessionInfo,
+  attachInstall, resolveCustomer, linkAccount, applySignIn, accountSignIn, signIn, methodsFor, licenceState, movesLeft, findSession, sessionInfo,
   logout, saveProfile, moveLicence, signedInOnInstall, cleanName
 };

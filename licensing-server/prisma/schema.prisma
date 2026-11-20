@@ -48,6 +48,7 @@ model Tenant {
   authStates        AuthState[]
   authCodes         AuthCode[]
   authSessions      AuthSession[]
+  mobileDevices     MobileDevice[]
 }
 
 model TenantPaymentConfig {
@@ -303,6 +304,9 @@ model EmailVerification {
   useCase          String?   @db.VarChar(40)
   useCaseOther     String?   @db.VarChar(200)
   codeHash         String    @db.VarChar(64)
+  // Phone and web sign-in by email code (src/auth/mobile.js): SHA-256 of the challengeId the client holds.
+  // Those rows have installId "" (there is no install); desktop rows leave this NULL.
+  challengeHash    String?   @unique @db.VarChar(64)
   attempts         Int       @default(0)
   expiresAt        DateTime
   verifiedAt       DateTime?
@@ -607,6 +611,9 @@ model AuthState {
   codeChallenge String    @db.VarChar(64) // the app's PKCE S256 challenge
   appState      String    @db.VarChar(128) // returned to the app, which checks it
   appRedirect   String    @db.VarChar(100) // softglaze://auth or http://127.0.0.1:<port>/auth
+  // NULL = the desktop app; "softglaze-mobile" or "softglaze-web" for the phone and web clients, whose
+  // redirect is checked against that client's own allow-list (src/auth/tokens.js checkClientRedirect).
+  clientId      String?   @db.VarChar(40)
   ipHash        String?   @db.VarChar(64)
   expiresAt     DateTime
   usedAt        DateTime?
@@ -654,9 +661,44 @@ model AuthSession {
   createdAt  DateTime  @default(now())
   lastUsedAt DateTime?
   revokedAt  DateTime?
+  // Accounts across desktop, phone and web (src/auth/sessions.js). kind: desktop | mobile | web. Phone and web
+  // sessions have installId "" (no install). expiresAt NULL = a session made before expiry existed (legacy
+  // desktop, never expires); new sessions slide: desktop 180 days, mobile 30 days, web 30 days (the refresh
+  // token). Web sessions also have a short-lived access token (tokenHash, accessExpiresAt) and a rotating
+  // refresh token (refreshHash; the one before it in prevRefreshHash, so a replayed old one ends the session).
+  kind            String    @default("desktop") @db.VarChar(10)
+  clientId        String?   @db.VarChar(40)
+  expiresAt       DateTime?
+  accessExpiresAt DateTime?
+  refreshHash     String?   @unique @db.VarChar(64)
+  prevRefreshHash String?   @db.VarChar(64)
+  userAgent       String?   @db.VarChar(200)
 
   tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
 
   @@index([tenantId, installId, customerId])
+  @@index([tenantId, customerId])
+  @@index([prevRefreshHash])
+}
+
+// A phone signed in to an account (SoftGlaze mobile app): one row per phone sign-in, tied to its AuthSession.
+// No push token and no keys. Active = revokedAt NULL and its session live; counted against the account's
+// phone limit (MOBILE_PHONES_ALLOWED). installationId is the app's own random id when it sends one, so signing
+// in again on the same phone replaces the old row instead of using a second slot.
+model MobileDevice {
+  id             String    @id @default(cuid())
+  tenantId       String
+  customerId     String    @db.VarChar(40)
+  authSessionId  String    @unique @db.VarChar(40)
+  platform       String    @db.VarChar(10) // ios | android | web
+  model          String?   @db.VarChar(100)
+  appVersion     String?   @db.VarChar(40)
+  installationId String?   @db.VarChar(64)
+  createdAt      DateTime  @default(now())
+  lastSeenAt     DateTime?
+  revokedAt      DateTime?
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
   @@index([tenantId, customerId])
 }

@@ -44,6 +44,18 @@ async function applyRetention(db, tenant, { now = Date.now(), settings }) {
   const dayAgo = new Date(now - DAY);
   out.signInRowsDeleted = (await db.authCode.deleteMany({ where: { tenantId, createdAt: { lt: dayAgo } } })).count
     + (await db.authState.deleteMany({ where: { tenantId, createdAt: { lt: dayAgo } } })).count;
+  // Phone and web sessions that ended more than 30 days ago (revoked, or past their end), with their phones.
+  // Desktop rows are kept: they are the sign-in history the admin shows and the trial ledger's proof.
+  const monthAgo = new Date(now - 30 * DAY);
+  const ended = await db.authSession.findMany({
+    where: { tenantId, kind: { in: ['mobile', 'web'] }, OR: [{ revokedAt: { lt: monthAgo } }, { expiresAt: { lt: monthAgo } }] },
+    select: { id: true }
+  });
+  if (ended.length) {
+    const ids = ended.map((r) => r.id);
+    await db.mobileDevice.deleteMany({ where: { tenantId, authSessionId: { in: ids } } });
+    out.signInRowsDeleted += (await db.authSession.deleteMany({ where: { tenantId, id: { in: ids } } })).count;
+  }
   return out;
 }
 

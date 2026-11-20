@@ -44,6 +44,9 @@ test('PKCE, the start URL and the protocol result are built and read exactly', (
   assert.deepEqual(Object.fromEntries(url.searchParams), { provider: 'github', tenant: 't1', app_redirect: 'softglaze://auth', code_challenge: p.challenge, code_challenge_method: 'S256', state: st });
   assert.throws(() => auth.startUrl({ apiBaseUrl: 'http://evil.example', tenantId: 't', provider: 'github', appRedirect: 'softglaze://auth', codeChallenge: p.challenge, state: st }));
   assert.throws(() => auth.startUrl({ apiBaseUrl: 'https://api.softglaze.com', tenantId: 't', provider: 'facebook', appRedirect: 'softglaze://auth', codeChallenge: p.challenge, state: st }));
+  const g = new URL(auth.startUrl({ apiBaseUrl: 'https://api.softglaze.com', tenantId: 't1', provider: 'google', appRedirect: 'softglaze://auth', codeChallenge: p.challenge, state: st }));
+  assert.equal(g.searchParams.get('provider'), 'google');
+  assert.deepEqual(auth.PROVIDERS, ['google', 'github']);
 
   const code = b64();
   assert.deepEqual(auth.parseProtocolUrl(`softglaze://auth?code=${code}&state=${st}`), { code, state: st });
@@ -170,7 +173,7 @@ function fakeServer() {
   };
   const guard = (name, args) => { s.calls.push({ name, args }); if (!s.online) throw Object.assign(new Error('getaddrinfo ENOTFOUND'), { network: true }); };
   s.api = {
-    authProviders: async () => { guard('providers'); return { providers: ['github'], email: true }; },
+    authProviders: async () => { guard('providers'); return { providers: s.providers || ['github'], email: true }; },
     authExchange: async (a) => {
       guard('exchange', a);
       const p = s.pending.get(a.code);
@@ -179,7 +182,7 @@ function fakeServer() {
       // The expected account is checked before anything is written.
       const existing = s.customers.find((x) => x.email === p.profile.email);
       if (a.expectCustomerId && (!existing || existing.id !== a.expectCustomerId)) throw httpErr(409, 'account_mismatch');
-      return signIn(customerFor(p.profile.email, p.profile.name), 'github', a.expectCustomerId, !existing);
+      return signIn(customerFor(p.profile.email, p.profile.name), p.provider || 'github', a.expectCustomerId, !existing);
     },
     authEmailStart: async (a) => { guard('emailStart', a); s.lastCode = '123456'; return { ok: true, sent: true }; },
     authEmailVerify: async (a) => {
@@ -197,7 +200,7 @@ function fakeServer() {
   // What the server does in the browser: GitHub signs the person in, a one-time code goes to the app.
   s.browser = (url, flowRef) => {
     const code = b64();
-    s.pending.set(code, { challenge: url.searchParams.get('code_challenge'), profile: { ...s.githubProfile } });
+    s.pending.set(code, { challenge: url.searchParams.get('code_challenge'), provider: url.searchParams.get('provider'), profile: { ...s.githubProfile } });
     flowRef.handleProtocolUrl(`${url.searchParams.get('app_redirect')}?code=${code}&state=${url.searchParams.get('state')}`);
   };
   return s;
@@ -277,6 +280,18 @@ function harness({ tenant = true, members = [], settings = {}, server = fakeServ
   h.memberLogout = () => { st.currentMemberId = null; S.set('currentMemberId', null); if (S.get('vault') && S.get('vault').enabled) { st.vaultLocked = true; st.vaultUnlockSource = null; } remembered.blob = null; };
   return h;
 }
+
+test('Continue with Google: listed in the app order when the server has its keys, signs in like GitHub', async () => {
+  const h = harness();
+  h.server.providers = ['github', 'google', 'facebook'];
+  assert.deepEqual((await h.svc.info()).providers, ['google', 'github'], 'known providers only, Google first');
+  const r = await h.svc.start({ provider: 'google', purpose: 'signup' });
+  assert.equal(r.outcome, 'created');
+  assert.equal(r.provider, 'google');
+  const ex = h.server.calls.find((c) => c.name === 'exchange');
+  assert.ok(ex, 'the code was traded with the server');
+  await assert.rejects(h.svc.start({ provider: 'facebook', purpose: 'link' }), (e) => /^SIGNIN_/.test(e.code));
+});
 
 test('Continue with GitHub on a new workspace: the Owner from the verified name and email, opened with a sealed key', async () => {
   const h = harness();
@@ -644,7 +659,11 @@ test('renderer rules and texts (en and es)', async () => {
   assert.equal(f.canOfferMove({ state: 'elsewhere' }), true);
   assert.equal(f.canOfferMove({ state: 'store' }), false);
   assert.equal(f.moveErrorKey({ code: 'MOVE_LIMIT' }), 'store.result.moveLimit');
-  assert.deepEqual(f.methodRows([{ provider: 'email', email: 'a@x' }, { provider: 'google' }, { provider: 'github', login: 'a' }]).map((m) => m.provider), ['github', 'email']);
+  assert.deepEqual(f.methodRows([{ provider: 'email', email: 'a@x' }, { provider: 'google' }, { provider: 'github', login: 'a' }, { provider: 'facebook' }]).map((m) => m.provider), ['google', 'github', 'email']);
+  assert.equal(f.showGoogle({ tenant: true, providers: ['google', 'github'] }), true);
+  assert.equal(f.showGoogle({ tenant: true, providers: ['github'] }), false, 'server without Google keys: hidden');
+  assert.deepEqual(f.providerButtons({ tenant: true, providers: ['github', 'google', 'facebook'] }), ['google', 'github'], 'known providers, Google first');
+  assert.deepEqual(f.providerButtons({ tenant: false, providers: ['google'] }), []);
   assert.equal(f.sixDigits(' 12-34 567 '), '123456');
 
   const keys = (o, p = '') => Object.entries(o).flatMap(([k, v]) => (v && typeof v === 'object' ? keys(v, `${p}${k}.`) : [`${p}${k}`])).sort();

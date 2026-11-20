@@ -1,5 +1,6 @@
 'use strict';
-// One-click sign-in (1.0.26): "Continue with GitHub" and "Continue with email" (a 6-digit code, no password).
+// One-click sign-in (1.0.26): "Continue with Google", "Continue with GitHub" and "Continue with email" (a 6-digit
+// code, no password).
 // What main does with a verified sign-in, for three purposes:
 //
 //   signup  a new workspace: the Owner is created from the verified name and email (no long form) and the
@@ -15,10 +16,11 @@
 // it. The Owner can still add a password (Settings > Account), which then works offline too.
 //
 // Tenant builds sign in at our licensing server (licensing-server/src/auth/). Base builds (no server) have no
-// GitHub button; "Continue with email" uses the local code (SMTP, or shown in the app as at today's sign-up).
+// Google or GitHub button; "Continue with email" uses the local code (SMTP, or shown in the app as at today's sign-up).
 // Every dependency is passed in, so tests run the real logic against fakes (test/oneClickSignIn.test.js).
 const crypto = require('node:crypto');
 const { mapServerError } = require('./serverErrors');
+const { PROVIDERS } = require('./oneClickAuth');
 
 const PURPOSES = Object.freeze(['signup', 'unlock', 'link']);
 const EMAIL_RE = /^[^@\s]+@[^@\s]+\.[^@\s]+$/;
@@ -29,7 +31,7 @@ const MESSAGES = Object.freeze({
   SIGNIN_EXPIRED: 'This sign-in expired or was already used. Please try again.',
   SIGNIN_ACCOUNT_MISMATCH: 'This workspace belongs to a different SoftGlaze account. Sign in with the account you created it with.',
   SIGNIN_EMAIL_MISMATCH: 'Use the email address of this workspace.',
-  SIGNIN_EMAIL_NOT_VERIFIED: 'Your GitHub account has no verified primary email. Verify it on GitHub, or continue with email.',
+  SIGNIN_EMAIL_NOT_VERIFIED: 'The account you signed in with has no verified email address. Verify it there (on GitHub: Settings > Emails), or continue with email.',
   SIGNIN_DISPOSABLE_EMAIL: 'Please use a permanent email address.',
   SIGNIN_UNAVAILABLE: 'This sign-in is not available yet. Continue with email, or use More options.',
   SIGNIN_FAILED: "The sign-in didn't finish. Try again in a minute.",
@@ -91,15 +93,15 @@ function createOneClickSignIn(d) {
   const tenant = () => Boolean(d.tenantConfig().enabled);
   let providersCache = null; // { at, list }
 
-  // The providers our server offers ([] in base builds, when the server does not answer, or before the owner
-  // set the GitHub keys).
+  // The providers our server offers, in the app's button order ([] in base builds, when the server does not
+  // answer, or before the owner set a provider's keys there).
   async function providers({ fresh = false } = {}) {
     if (!tenant()) return [];
     if (!fresh && providersCache && now() - providersCache.at < PROVIDERS_TTL_MS) return providersCache.list;
     let list = [];
     try {
       const r = await d.api.authProviders();
-      list = Array.isArray(r && r.providers) ? r.providers.filter((p) => p === 'github') : [];
+      list = Array.isArray(r && r.providers) ? PROVIDERS.filter((p) => r.providers.includes(p)) : [];
     } catch (_) { list = []; }
     providersCache = { at: now(), list };
     return list;
@@ -175,11 +177,11 @@ function createOneClickSignIn(d) {
     return (await workspaceAccount()).customerId;
   }
 
-  // --- Provider sign-in (GitHub) ---
+  // --- Provider sign-in (Google, GitHub) ---
   async function start({ provider, purpose, mode } = {}) {
     await assertPurpose(purpose);
     if (!tenant()) throw coded('SIGNIN_UNAVAILABLE');
-    if (provider !== 'github') throw coded('SIGNIN_UNAVAILABLE');
+    if (!PROVIDERS.includes(provider)) throw coded('SIGNIN_UNAVAILABLE');
     const inst = await install();
     const expectCustomerId = await expectedCustomer(purpose);
     const got = await d.flow.begin(provider, { mode: mode === 'loopback' ? 'loopback' : 'auto' });

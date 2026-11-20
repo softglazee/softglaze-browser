@@ -208,7 +208,7 @@ router.get('/:id', asyncHandler(async (req, res) => {
     // One-click sign-in (app 1.0.26): the linked methods, plus "email" when the email is verified, and the
     // latest sign-ins (never the session token, only where and when).
     signInMethods: await methodsFor(prisma, tenantId, c),
-    signIns: sessions.map((s) => ({ id: s.id, provider: s.provider, installId: s.installId, at: s.createdAt, lastUsedAt: s.lastUsedAt, revokedAt: s.revokedAt })),
+    signIns: sessions.map((s) => ({ id: s.id, provider: s.provider, kind: s.kind || 'desktop', client: s.clientId || null, installId: s.installId || null, at: s.createdAt, lastUsedAt: s.lastUsedAt, expiresAt: s.expiresAt || null, revokedAt: s.revokedAt })),
     identities: identities.map((i) => ({ id: i.id, provider: i.provider, email: i.email, login: i.login, emailVerified: i.emailVerified, linkedAt: i.createdAt, lastUsedAt: i.lastUsedAt })),
     timeline
   });

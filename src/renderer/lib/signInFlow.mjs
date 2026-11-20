@@ -19,10 +19,21 @@ export function signInErrorText(t, tGate, err, fallbackKey = 'errors.SIGNIN_FAIL
   return (err && err.message) || t(fallbackKey);
 }
 
-// The GitHub button needs a licensing server that has GitHub keys (GET /auth/providers).
-export function showGithub(info) {
-  return Boolean(info && info.tenant && Array.isArray(info.providers) && info.providers.includes('github'));
+// A provider's button needs a licensing server that has that provider's keys (GET /auth/providers).
+export function showProvider(info, provider) {
+  return Boolean(info && info.tenant && Array.isArray(info.providers) && info.providers.includes(provider));
 }
+export function showGithub(info) { return showProvider(info, 'github'); }
+export function showGoogle(info) { return showProvider(info, 'google'); }
+
+// The provider buttons to draw, in the app's order (Google first, as most people have a Google account).
+export const PROVIDER_ORDER = Object.freeze(['google', 'github']);
+export function providerButtons(info) {
+  return PROVIDER_ORDER.filter((p) => showProvider(info, p));
+}
+
+// The name shown in "Continue in your browser" texts.
+export const PROVIDER_NAMES = Object.freeze({ google: 'Google', github: 'GitHub' });
 
 // Where the Gate goes after a sign-in: the optional use-case question once after a one-click sign-up when the
 // account has no answer yet, else the licence check.
@@ -40,10 +51,10 @@ export function moveErrorKey(err) {
   return err && err.code === 'MOVE_LIMIT' ? 'store.result.moveLimit' : null;
 }
 
-// Settings > Account rows: one per method, GitHub first.
+// Settings > Account rows: one per method, Google, then GitHub, then the email code.
 export function methodRows(methods) {
-  const list = Array.isArray(methods) ? methods.filter((m) => m && (m.provider === 'github' || m.provider === 'email')) : [];
-  const order = { github: 0, email: 1 };
+  const order = { google: 0, github: 1, email: 2 };
+  const list = Array.isArray(methods) ? methods.filter((m) => m && Object.prototype.hasOwnProperty.call(order, m.provider)) : [];
   return list.slice().sort((a, b) => order[a.provider] - order[b.provider]).map((m) => ({
     provider: m.provider,
     email: m.email || null,
