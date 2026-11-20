@@ -17,7 +17,8 @@
     "trial": "Prueba",
     "trialDaysLeft": "Prueba · quedan {{days}} d",
     "graceDaysLeft": "Gracia · quedan {{days}} d",
-    "subscriptionEnded": "Suscripción finalizada"
+    "subscriptionEnded": "Suscripción finalizada",
+    "free": "Plan Gratis"
   },
   "backend": {
     "licensedVerified": "Con licencia y verificado",
@@ -30,7 +31,8 @@
     "title": "Plan actual",
     "sourceOwnerAllFeatures": "Propietario del código · todas las funciones",
     "paid": "de pago",
-    "freeTrial": "prueba gratuita"
+    "freeTrial": "prueba gratuita",
+    "freeForever": "Plan Gratis · gratis para siempre"
   },
   "grace": {
     "message_one": "Tu {{kind}} ha finalizado - queda {{count}} día de gracia. Renueva abajo para no perder el acceso.",

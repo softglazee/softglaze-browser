@@ -14,6 +14,7 @@ import { measuredMs, speedOf } from '@/lib/proxyBuckets.mjs';
 import { countryName } from '@/lib/countries.mjs';
 import { deadFreeIds, filterFreeProxies, freeCountryCounts, freeStatusOf, protocolOf } from '@/lib/freeProxies.mjs';
 import { formatDateTime } from '@/lib/utils.js';
+import { PartnerDealsCard } from '@/components/FreePlan.jsx';
 
 // Free public proxies on their own page, apart from the paid pool: search, check, filter, delete.
 // They are stored as provider 'free' proxies, which every paid view leaves out.
@@ -274,6 +275,8 @@ export default function FreeProxiesPage() {
           </>
         )}
       />
+      {/* Free plan only: offers from our own server, opened in the system browser (PartnerDealsCard hides itself otherwise). */}
+      <PartnerDealsCard className="mb-6 max-w-3xl" />
 
       <div role="note" className="flex gap-3 rounded-xl border border-warning/30 bg-warning/10 px-4 py-3 text-xs text-warning">
         <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" aria-hidden="true" />

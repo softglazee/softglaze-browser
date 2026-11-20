@@ -60,8 +60,8 @@
     "endedHeading": "Your subscription has ended",
     "blockedBodyNamed": "{{name}}, your account has been blocked by an administrator. Please contact them to restore access - your data is safe.",
     "blockedBody": "Your account has been blocked by an administrator. Please contact them to restore access - your data is safe.",
-    "endedBodyNamed": "{{name}}, your free trial and grace period are over. Renew to unlock your workspace - your profiles and data are safe and waiting.",
-    "endedBody": "Your free trial and grace period are over. Renew to unlock your workspace - your profiles and data are safe and waiting.",
+    "endedBodyNamed": "{{name}}, this licence is no longer active (refunded, revoked or registered to another computer). Choose a plan to unlock your workspace. Your profiles and data are safe and waiting.",
+    "endedBody": "This licence is no longer active (refunded, revoked or registered to another computer). Choose a plan to unlock your workspace. Your profiles and data are safe and waiting.",
     "haveCode": "Have a purchase code?",
     "needHelp": "Need help? Contact your administrator.",
     "signOut": "Sign out"
@@ -148,7 +148,10 @@
     "choosePlan": "Or choose a plan",
     "verifyTitle": "Confirm your email",
     "verifyBody": "We sent a 6-digit code to {{email}}. Enter it to start the free trial.",
-    "verifyStart": "Confirm and start the trial"
+    "verifyStart": "Confirm and start the trial",
+    "continueFreeTitle": "Continue on Free",
+    "continueFreeSubtitle": "Free forever: 25 profiles, 1 running at a time. Upgrade any time.",
+    "trialUsedFree": "The free trial was already used on this computer or email. You can keep going on the Free plan."
   },
   "login": {
     "welcomeBackNamed": "Welcome back, {{name}}",

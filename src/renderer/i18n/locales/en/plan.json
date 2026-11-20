@@ -1,0 +1,97 @@
+{
+  "upgrade": {
+    "title": {
+      "profiles": "You've reached the Free plan's {{limit}} profiles",
+      "running": "Free runs {{limit}} profile at a time",
+      "openable": "This profile is not one of your {{limit}} on Free",
+      "seats": "Team members are part of Pro",
+      "ai": "Today's {{limit}} AI actions are used",
+      "sync": "Cloud sync is part of Pro",
+      "phone": "Opening profiles from your phone is part of Pro",
+      "generic": "This is part of Pro"
+    },
+    "body": {
+      "profiles": "Your {{used}} profiles are safe. Upgrade to Pro for unlimited profiles, or delete one to make room.",
+      "running": "Close the open profile to start another, or upgrade to Pro to run 3 at once.",
+      "openable": "Every profile is kept. On Free you choose which {{limit}} can be opened; Pro opens them all.",
+      "seats": "The Free plan is for one person. Pro includes 3 team members, Enterprise 25.",
+      "ai": "Free includes {{limit}} AI actions a day; they reset tomorrow. Pro has unlimited AI actions.",
+      "sync": "Pro keeps your profiles in sync between your computers and your phone.",
+      "phone": "On Free your phone and the web app can view profiles and approve AI requests. Pro also opens and stops them.",
+      "generic": "Upgrade to Pro to use it."
+    },
+    "price": "Pro is {{price}} a month.",
+    "priceFallback": "Pro starts at US$5 a month.",
+    "upgradeButton": "Upgrade to Pro",
+    "chooseProfiles": "Choose profiles",
+    "notNow": "Not now"
+  },
+  "welcome": {
+    "title": "Your Pro trial has ended. You are now on the Free plan.",
+    "keepTitle": "You keep",
+    "keep": "All your profiles ({{limit}} can be opened), your proxies and fingerprints, the phone and web app.",
+    "proTitle": "Pro adds",
+    "pro": "Unlimited profiles, 3 running at once, team seats, cloud sync and unlimited AI actions, for {{price}} a month.",
+    "upgrade": "Upgrade to Pro",
+    "stay": "Continue on Free"
+  },
+  "counter": {
+    "freeBadge": "Free plan",
+    "profiles": "{{used}} of {{limit}} profiles",
+    "running": "{{used}} of {{limit}} running",
+    "ai": "{{used}} of {{limit}} AI actions today",
+    "upgrade": "Upgrade"
+  },
+  "choose": {
+    "title": "Choose which profiles can open",
+    "body": "On the Free plan {{limit}} of your {{total}} profiles can be opened. Every profile is kept; upgrade to Pro to open them all.",
+    "selected": "{{count}} of {{limit}} chosen",
+    "search": "Search profiles",
+    "save": "Save",
+    "cancel": "Cancel",
+    "saved": "Saved. These profiles can open on Free."
+  },
+  "billing": {
+    "currentFree": "Free plan",
+    "currentFreeBody": "Free forever, no card needed. Upgrade any time for more profiles, teams and unlimited AI actions.",
+    "currentBadge": "Current plan",
+    "compareTitle": "Compare plans",
+    "colFeature": "Feature",
+    "colFree": "Free",
+    "colPro": "Pro",
+    "colEnterprise": "Enterprise",
+    "rows": {
+      "profiles": "Profiles saved",
+      "running": "Profiles running at once",
+      "seats": "Seats (team members)",
+      "pcs": "PCs per account",
+      "fingerprints": "Own proxies, all fingerprint settings",
+      "ai": "AI and MCP automation",
+      "phone": "Phone and web app",
+      "sync": "Cloud sync between PCs",
+      "support": "Support"
+    },
+    "values": {
+      "unlimited": "Unlimited",
+      "unlimitedAudit": "Unlimited + audit export",
+      "yes": "Yes",
+      "no": "No",
+      "aiPerDay": "{{count}} actions a day",
+      "viewApprove": "View + approve AI requests",
+      "openStop": "+ open and stop profiles",
+      "teamApprovals": "+ team approvals",
+      "helpCentre": "Help centre",
+      "email": "Email",
+      "priorityEmail": "Priority email"
+    }
+  },
+  "deals": {
+    "title": "Recommended proxy deals",
+    "disclosure": "Partner offer. SoftGlaze may earn a commission.",
+    "code": "Code {{code}}",
+    "copyCode": "Copy code",
+    "copied": "Copied",
+    "open": "Get offer",
+    "hidden": "Pro and Enterprise never show partner offers."
+  }
+}

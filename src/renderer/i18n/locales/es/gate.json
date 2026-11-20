@@ -60,8 +60,8 @@
     "endedHeading": "Tu suscripción ha terminado",
     "blockedBodyNamed": "{{name}}, tu cuenta ha sido bloqueada por un administrador. Por favor, contáctalo para restaurar el acceso - tus datos están a salvo.",
     "blockedBody": "Tu cuenta ha sido bloqueada por un administrador. Por favor, contáctalo para restaurar el acceso - tus datos están a salvo.",
-    "endedBodyNamed": "{{name}}, tu prueba gratuita y tu periodo de gracia han terminado. Renueva para desbloquear tu espacio de trabajo - tus perfiles y datos están a salvo y esperando.",
-    "endedBody": "Tu prueba gratuita y tu periodo de gracia han terminado. Renueva para desbloquear tu espacio de trabajo - tus perfiles y datos están a salvo y esperando.",
+    "endedBodyNamed": "{{name}}, esta licencia ya no está activa (reembolsada, revocada o registrada en otro ordenador). Elige un plan para desbloquear tu espacio de trabajo. Tus perfiles y datos están a salvo y esperando.",
+    "endedBody": "Esta licencia ya no está activa (reembolsada, revocada o registrada en otro ordenador). Elige un plan para desbloquear tu espacio de trabajo. Tus perfiles y datos están a salvo y esperando.",
     "haveCode": "¿Tienes un código de compra?",
     "needHelp": "¿Necesitas ayuda? Contacta con tu administrador.",
     "signOut": "Cerrar sesión"
@@ -148,7 +148,10 @@
     "choosePlan": "O elige un plan",
     "verifyTitle": "Confirma tu correo electrónico",
     "verifyBody": "Hemos enviado un código de 6 dígitos a {{email}}. Introdúcelo para iniciar la prueba gratuita.",
-    "verifyStart": "Confirmar e iniciar la prueba"
+    "verifyStart": "Confirmar e iniciar la prueba",
+    "continueFreeTitle": "Seguir con el plan Gratis",
+    "continueFreeSubtitle": "Gratis para siempre: 25 perfiles, 1 abierto a la vez. Mejora cuando quieras.",
+    "trialUsedFree": "La prueba gratuita ya se usó en este ordenador o correo. Puedes seguir con el plan Gratis."
   },
   "login": {
     "welcomeBackNamed": "Bienvenido de nuevo, {{name}}",

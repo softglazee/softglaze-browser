@@ -157,7 +157,9 @@ test('rendered with each licence state, the shell shows at most one notice and n
   }
 
   const grace = renderToStaticMarkup(h(I18nextProvider, { i18n }, h(Shell, { license: STATES.trialGrace })));
-  assert.match(grace, /Your free trial has ended\./);
+  // 1.0.27: a trial ends into Free (only an old grace row still shows this banner), so it no longer threatens a lock.
+  assert.match(grace, /Your Pro trial has ended\./);
+  assert.doesNotMatch(grace, /lock/i);
   assert.match(grace, /2 days of grace left\./);
   assert.match(grace, />Subscribe</);
   assert.match(grace, /role="alert"/);
@@ -166,7 +168,7 @@ test('rendered with each licence state, the shell shows at most one notice and n
   assert.match(renew, /1 day of grace left\./);
   assert.match(renew, />Renew</);
   const ending = renderToStaticMarkup(h(I18nextProvider, { i18n }, h(Shell, { license: STATES.trial1 })));
-  assert.match(ending, /Free trial ends in 1 day\./);
+  assert.match(ending, /Your Pro trial ends in 1 day\. Then you move to the Free plan/);
   assert.match(ending, /aria-label="Dismiss"/);
   const chip = renderToStaticMarkup(h(I18nextProvider, { i18n }, h(Shell, { license: STATES.trial7 })));
   assert.match(chip, /Trial · 7 days left/);

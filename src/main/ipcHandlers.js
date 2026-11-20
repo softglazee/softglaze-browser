@@ -9431,6 +9431,7 @@ async function commitProfileImport(payload, event) {
       if ((error && error.code === 'LIMIT_REACHED' && error.limitKind !== 'proxy') || planCap) {
         const left = total - processed;
         result.stoppedAtLimit = { row: item.row, notImported: left + 1, ...(planCap ? { plan: 'free', limit: error.planLimit.limit } : {}) };
+        if (planCap) emitPlanLimit(error.planLimit); // the upgrade prompt, with the price
         if (left > 0) log('warn', `[WARN] Import stopped: the profile limit was reached, so ${left} more row${left === 1 ? ' was' : 's were'} not imported.`);
         break;
       }

@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import {
   Lock, ArrowRight, ArrowLeft, Loader2, ShieldCheck, Eye, EyeOff,
   Fingerprint, Globe, Mail, Clock, KeyRound, LogOut, Sparkles, CreditCard, AlertTriangle, Check,
-  Landmark, ExternalLink, Sun, Moon, ChevronDown, Zap, Store, RotateCcw
+  Landmark, ExternalLink, Sun, Moon, ChevronDown, Zap, Store, RotateCcw, Gift
 } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { softglazeApi } from '@/lib/softglazeApi.js';
@@ -881,6 +881,14 @@ export default function Gate({ children }) {
     catch (e) { setTrialCode(''); setTrialErr(trialNeedsCode(e) ? '' : errorText(t, e, 'errors.trialFailed')); setTrialBusy(false); }
   }
 
+  // Free forever (1.0.27): the plan step's "Continue on Free".
+  async function continueOnFree() {
+    if (busy) return;
+    setErr(''); setTrialErr(''); setBusy(true);
+    try { await softglazeApi.license.chooseFree(); setBusy(false); setPhase('licensing'); }
+    catch (e) { setTrialErr(e.message || t('errors.trialFailed')); setBusy(false); }
+  }
+
   async function redeemPlan() {
     setErr('');
     if (!planCode.trim()) return setErr(t('errors.enterPurchaseCode'));
@@ -1203,6 +1211,12 @@ export default function Gate({ children }) {
                 </button>
               )}
               {trialErr && <p role="alert" className="text-[12px] text-red-400 mt-2.5 leading-relaxed">{trialErr}</p>}
+              {/* Free forever (1.0.27): nobody has to start the trial or pay to use the app. */}
+              <button onClick={continueOnFree} disabled={busy} className="mt-2.5 w-full flex items-center gap-3 p-3.5 rounded-lg border border-border hover:bg-secondary transition-colors text-left disabled:opacity-70" data-testid="continue-free">
+                <Gift className="w-5 h-5 text-primary shrink-0" />
+                <span className="min-w-0 flex-1"><span className="block text-[13px] font-semibold">{t('plan.continueFreeTitle')}</span><span className="block text-[11.5px] text-muted-dark">{t('plan.continueFreeSubtitle')}</span></span>
+                <ArrowRight className="w-4 h-4 text-muted-dark" />
+              </button>
               {plans.length > 0 && (
                 <div className="mt-4 rounded-lg border border-border p-3 space-y-2.5">
                   <span className="block text-[12px] font-semibold text-foreground flex items-center gap-1.5"><CreditCard className="w-4 h-4 text-primary" /> {t('plan.choosePlan')}</span>

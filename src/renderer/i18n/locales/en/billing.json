@@ -17,7 +17,8 @@
     "trial": "Trial",
     "trialDaysLeft": "Trial · {{days}}d left",
     "graceDaysLeft": "Grace · {{days}}d left",
-    "subscriptionEnded": "Subscription ended"
+    "subscriptionEnded": "Subscription ended",
+    "free": "Free plan"
   },
   "backend": {
     "licensedVerified": "Licensed & verified",
@@ -30,7 +31,8 @@
     "title": "Current plan",
     "sourceOwnerAllFeatures": "Source owner · all features",
     "paid": "paid",
-    "freeTrial": "free trial"
+    "freeTrial": "free trial",
+    "freeForever": "Free plan · free forever"
   },
   "grace": {
     "message_one": "Your {{kind}} has ended - {{count}} grace day left. Renew below to avoid losing access.",

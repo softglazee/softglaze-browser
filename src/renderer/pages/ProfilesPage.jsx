@@ -36,6 +36,7 @@ import { SHOW_UNAPPLIED_SETTINGS } from '@/lib/unappliedSettings.mjs';
 import { parseTagInput, tagsToInput, proxyCheckView, rotationPoolIds, checkEditorCookies } from '@/lib/profileEditor.mjs';
 import { webrtcMode as webrtcModeOf, hardwareAccelerationChoice, chromeVersionPin, geolocationPermission, normalizeLocaleTag, parseMediaCounts, MEDIA_COUNT_MAX, parseFontList, fontOsKey, deviceNameError, macAddressError, userAgentWarning, webgpuInfoFromWebgl, webglSpoofed, webgpuChoice } from '@/lib/profileOptions.mjs';
 import { formatDate, formatDateTime } from '@/lib/utils.js';
+import { PlanCounters, usePlanUsage } from '@/components/FreePlan.jsx';
 import i18n from '@/i18n/index.js';
 import profilesEn from '@/i18n/locales/en/profiles.json';
 import profilesEs from '@/i18n/locales/es/profiles.json';
@@ -556,6 +557,7 @@ function ProxyReassignModal({ onClose, count, allProxies, proxyGroups, bulkBusy,
 }
 
 export default function ProfilesPage() {
+  const planUsage = usePlanUsage();
   const { t } = useTranslation('profiles');
   const { t: tc } = useTranslation('captcha');
   // Role-aware buttons: an action the member may not do is disabled with the role it needs. Row
@@ -2600,6 +2602,8 @@ export default function ProfilesPage() {
           </div>
         }
       />
+      {/* Free plan: "24 of 25 profiles" counters (nothing on Pro or Enterprise). */}
+      {planUsage && planUsage.isFree && <div className="-mt-3 mb-5"><PlanCounters usage={planUsage} /></div>}
 
       <div className="mb-6 grid grid-cols-1 sm:grid-cols-3 gap-4">
         <div

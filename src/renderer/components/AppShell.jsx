@@ -17,6 +17,7 @@ import { PROVIDERS } from '@/components/ProxyProviders.jsx';
 import { LicenseNoticeBanner, LicenseTrialChip } from '@/components/LicenseNotice.jsx';
 import { pickLicenseNotice } from '@/lib/licenseNotice.mjs';
 import AiApprovalDialog from '@/components/ai/AiApprovalDialog.jsx';
+import { PlanLimitPrompt, FreeWelcomeDialog, ChooseOpenableDialog } from '@/components/FreePlan.jsx';
 import { useAiApprovals } from '@/components/ai/AiApprovalsProvider.jsx';
 import { canManageAi } from '@/lib/aiCore.mjs';
 import { canManageVault } from '@/lib/memberPermissions.mjs';
@@ -167,6 +168,9 @@ export default function AppShell({ children }) {
   const [pw, setPw] = useState('');
   const [err, setErr] = useState('');
   const [counts, setCounts] = useState({ profiles: 0, sessions: 0 });
+  // Free forever plan (1.0.27): the day 8 screen once, and the "choose which profiles open" list.
+  const [freeWelcome, setFreeWelcome] = useState(null);
+  const [chooseOpen, setChooseOpen] = useState(false);
   const ref = useRef(null);
   const userBtnRef = useRef(null);
 
@@ -194,6 +198,12 @@ export default function AppShell({ children }) {
       } catch (e) { /* members API unavailable on older builds */ }
       finally { if (live) setMeLoaded(true); }
     })();
+    return () => { live = false; };
+  }, []);
+
+  useEffect(() => {
+    let live = true;
+    softglazeApi.plan.usage().then((u) => { if (live && u && u.showFreeWelcome) setFreeWelcome(u); }).catch(() => {});
     return () => { live = false; };
   }, []);
 
@@ -389,6 +399,9 @@ export default function AppShell({ children }) {
       </main>
       <ResilienceToasts />
       <AiApprovalDialog />
+      <PlanLimitPrompt onChooseProfiles={() => setChooseOpen(true)} />
+      {freeWelcome && <FreeWelcomeDialog usage={freeWelcome} onDone={() => setFreeWelcome(null)} />}
+      {chooseOpen && <ChooseOpenableDialog onClose={() => setChooseOpen(false)} />}
       <CommandPalette />
       <OnboardingWizard />
     </div>

@@ -12,6 +12,7 @@ import billingEn from '@/i18n/locales/en/billing.json';
 import { errorText } from '@/lib/signupFlow.mjs';
 import { isStoreMethod, storeOutcome, storePrice, storeDowngradeBlocked, methodsForPlan, sellablePlans, storeHasBothPeriods, STORE_POLL, MANAGE_SUBSCRIPTIONS_URL } from '@/lib/storePurchase.mjs';
 import { BILLING_PERIODS, hasBothPeriods, plansForPeriod, yearlyDeal, isCurrentPlan, initialPeriod } from '@/lib/planPeriods.mjs';
+import { FreePlanBillingSection } from '@/components/FreePlan.jsx';
 
 // The built-in plan catalog (main's DEFAULT_BILLING_PLANS) is English data. Its taglines and features
 // show in the UI language through billing.planText, matched on the exact English text; anything the
@@ -32,6 +33,7 @@ function statusTone(license, t) {
   if (license.isExempt) return { color: '#10b981', label: t('status.sourceOwner') };
   switch (license.state) {
     case 'paid': return { color: '#10b981', label: license.endsAt ? t('status.activeRenews', { date: new Date(license.endsAt).toLocaleDateString() }) : t('status.active') };
+    case 'free': return { color: '#3b82f6', label: t('status.free') };
     case 'trialing': return { color: '#3b82f6', label: t('status.trialDaysLeft', { days: license.daysLeftTrial }) };
     case 'grace': return { color: '#f59e0b', label: t('status.graceDaysLeft', { days: license.daysLeftGrace }) };
     case 'banned': return { color: '#ef4444', label: t('status.subscriptionEnded') };
@@ -290,7 +292,7 @@ export default function BillingPage() {
             <div>
               <h3 className="text-sm font-semibold text-foreground">{t('current.title')}</h3>
               <p className="text-xs text-muted-foreground capitalize">
-                {isExempt ? t('current.sourceOwnerAllFeatures') : `${currentTier} · ${isPaid ? t('current.paid') : (license?.isTrial ? t('current.freeTrial') : license?.state || '')}`}
+                {isExempt ? t('current.sourceOwnerAllFeatures') : (license?.isFree ? t('current.freeForever') : `${currentTier} · ${isPaid ? t('current.paid') : (license?.isTrial ? t('current.freeTrial') : license?.state || '')}`)}
               </p>
             </div>
           </div>
@@ -329,6 +331,9 @@ export default function BillingPage() {
           <p className="mt-4 text-[12px] text-emerald-400/90 flex items-center gap-1.5"><Crown className="w-3.5 h-3.5" /> {t('exempt.note')}</p>
         )}
       </div>
+
+      {/* Free forever plan (1.0.27): Free as the current plan and the comparison table. */}
+      {!isExempt && license && <FreePlanBillingSection freeLimits={plansInfo && plansInfo.freeLimits} isFree={Boolean(license.isFree)} />}
 
       {checkout && (
         <div className="rounded-xl border border-primary/30 bg-primary/5 p-5">

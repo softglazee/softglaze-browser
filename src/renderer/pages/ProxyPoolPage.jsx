@@ -32,6 +32,7 @@ import { usePermissions } from '@/lib/usePermissions.js';
 import { blacklistOf, countBuckets, measuredMs, proxyHealthOf, residentialOf, sortByLatency, speedOf } from '@/lib/proxyBuckets.mjs';
 import { formatDateTime } from '@/lib/utils.js';
 import { providerTagLabel, pulledProviderNames } from '@/lib/providerTags.mjs';
+import { PartnerDealsCard } from '@/components/FreePlan.jsx';
 
 const initialProxyForm = { id: null, name: '', type: 'HTTP', host: '', port: '', username: '', password: '' };
 
@@ -877,6 +878,8 @@ export default function ProxyPoolPage() {
           ) : null
         }
       />
+      {/* Free plan only: offers from our own server, opened in the system browser (PartnerDealsCard hides itself otherwise). */}
+      <PartnerDealsCard className="mb-6 max-w-3xl" />
 
       {/* Auto-closes ~5 s after the run; per-proxy results persist to health history */}
       {checkRun && (

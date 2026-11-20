@@ -60,6 +60,8 @@ import signinEn from './locales/en/signin.json';
 import signinEs from './locales/es/signin.json';
 import mobileEn from './locales/en/mobile.json';
 import mobileEs from './locales/es/mobile.json';
+import planEn from './locales/en/plan.json';
+import planEs from './locales/es/plan.json';
 
 export const LANG_KEY = 'softglaze-lang';
 
@@ -85,6 +87,8 @@ const NAMESPACES = [
   'signin',
   // Settings > Phones (the SoftGlaze phone companion)
   'mobile',
+  // Free forever plan: upgrade prompt, counters, day 8 screen, Billing compare table, partner deals
+  'plan',
 ];
 
 export function readStoredLang() {
@@ -109,7 +113,7 @@ i18n.use(initReactI18next).init({
       cmpModalsA: cmpModalsAEn, cmpModalsB: cmpModalsBEn, cmpModalsC: cmpModalsCEn,
       cmpOverlays: cmpOverlaysEn, cmpSettingsA: cmpSettingsAEn, cmpSettingsB: cmpSettingsBEn,
       cmpSettingsC: cmpSettingsCEn, cmpUi: cmpUiEn, captcha: captchaEn, scoreboard: scoreboardEn,
-      ai: aiEn, signin: signinEn, mobile: mobileEn,
+      ai: aiEn, signin: signinEn, mobile: mobileEn, plan: planEn,
     },
     es: {
       common: commonEs, proxies: proxiesEs, groups: groupsEs, extensions: extensionsEs,
@@ -119,7 +123,7 @@ i18n.use(initReactI18next).init({
       cmpModalsA: cmpModalsAEs, cmpModalsB: cmpModalsBEs, cmpModalsC: cmpModalsCEs,
       cmpOverlays: cmpOverlaysEs, cmpSettingsA: cmpSettingsAEs, cmpSettingsB: cmpSettingsBEs,
       cmpSettingsC: cmpSettingsCEs, cmpUi: cmpUiEs, captcha: captchaEs, scoreboard: scoreboardEs,
-      ai: aiEs, signin: signinEs, mobile: mobileEs,
+      ai: aiEs, signin: signinEs, mobile: mobileEs, plan: planEs,
     },
   },
   lng,
