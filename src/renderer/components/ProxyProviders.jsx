@@ -10,6 +10,7 @@ import { getLogo } from '@/lib/providerLogos.js';
 import { countryOptions } from '@/lib/countries.mjs';
 import { countBlankFor, countryForPool, geoForPool, lifeBlankLabel, lifeOptionsFor, stickyForPool } from '@/lib/gatewayPull.mjs';
 import i18n from '@/i18n/index.js';
+import cmpSettingsCEn from '@/i18n/locales/en/cmpSettingsC.json';
 import { fmtNumber } from '@/lib/intl.mjs';
 
 // PacketStream's dashboard Location list. Its password takes the country's dashboard name, and an

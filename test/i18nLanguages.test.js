@@ -76,7 +76,13 @@ test('English is bundled eagerly, other languages lazily, and the app renders af
   // No component bundles a non-English locale file on its own any more.
   const walk = (d) => fs.readdirSync(d, { withFileTypes: true }).flatMap((e) => (e.isDirectory() ? walk(path.join(d, e.name)) : [path.join(d, e.name)]));
   for (const f of walk(R).filter((f) => /\.(jsx?|mjs)$/.test(f))) {
-    assert.doesNotMatch(fs.readFileSync(f, 'utf8'), /from '@\/i18n\/locales\/(?!en\/)/, path.relative(R, f));
+    const src = fs.readFileSync(f, 'utf8');
+    assert.doesNotMatch(src, /from '@\/i18n\/locales\/(?!en\/)/, path.relative(R, f));
+    // An English JSON read directly (e.g. GEO_HINTS = cmpSettingsCEn.…) keeps its import.
+    for (const [, name] of src.matchAll(/\b([a-z]\w*En)\.\w/g)) {
+      if (/locales\/en\//.test(src) || new RegExp(`import ${name}\\b`).test(src)) continue;
+      if (!new RegExp(`(const|let|var|function)\\s+${name}\\b|\\b${name}\\s*[,)]|\\(\\s*${name}\\b`).test(src)) assert.fail(`${path.relative(R, f)} uses ${name} without importing it`);
+    }
   }
 });
 
