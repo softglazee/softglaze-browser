@@ -74,7 +74,7 @@ const BANNED_ANY = [
 ];
 // Words that are often fine ("block", "hidden", "restriction") but can be a banned meaning. Warnings.
 const BANNED_SOFT = [
-  { s: ['бан ', 'бана', 'баном', '封鎖', 'แบน', 'حظر', 'محظور', 'ปลอม', '隐形', '隱形'], why: 'ban/fake/stealth (check meaning)' },
+  { s: ['бан ', 'бана ', 'баном ','封鎖', 'แบน', 'حظر', 'محظور', 'ปลอม', '隐形', '隱形'], why: 'ban/fake/stealth (check meaning)' },
 ];
 
 // Placeholders a translation may leave out, by "<file>:<key>" (the UI shows the value elsewhere).
@@ -125,14 +125,16 @@ export function bannedHits(str) {
 // Devanagari...) only at the start of a word, so "обход" does not hit "необходимо" and "бан"
 // does not hit "Бангладеш" (the stem may still take endings: "обхода", "забанен").
 const NO_SPACE_SCRIPT = /[\p{Script=Han}\p{Script=Hiragana}\p{Script=Katakana}\p{Script=Thai}]/u;
-const termCache = new Map();
+const termCache = new Map(); // keyed by the raw term: a trailing space marks a whole word
 function containsTerm(str, term) {
   const t = term.trim();
   if (NO_SPACE_SCRIPT.test(t)) return str.toLowerCase().includes(t.toLowerCase());
-  let rx = termCache.get(t);
+  let rx = termCache.get(term);
   if (!rx) {
-    rx = new RegExp(`(?<![\\p{L}\\p{M}\\p{N}])${t.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}`, 'iu');
-    termCache.set(t, rx);
+    // "бан " (trailing space) is a whole word: it must also end there, so "банк" does not match.
+    const end = term.endsWith(' ') ? '(?![\\p{L}\\p{M}\\p{N}])' : '';
+    rx = new RegExp(`(?<![\\p{L}\\p{M}\\p{N}])${t.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}${end}`, 'iu');
+    termCache.set(term, rx);
   }
   return rx.test(str);
 }
