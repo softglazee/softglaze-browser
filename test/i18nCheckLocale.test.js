@@ -67,6 +67,14 @@ test('plural forms: missing required form is an error, foreign forms are rejecte
   const root = fixture('ru', { title: 'П', nested: base.nested, files_one: '{{count}} файл', files_few: '{{count}} файла', files_many: '{{count}} файлов', files_other: '{{count}} файла', long: 'Длинное предложение.' });
   const enOne = JSON.parse(fs.readFileSync(path.join(root, 'en', 'a.json'), 'utf8'));
   enOne.files_one = 'One file';
+  enOne.files_other = '{{count}} files in {{dir}}';
+  // Placeholders of any English sibling form are allowed in any form.
+  const ruData = JSON.parse(fs.readFileSync(path.join(root, 'ru', 'a.json'), 'utf8'));
+  ruData.files_one = '{{count}} файл в {{dir}}';
+  ruData.files_few = '{{count}} файла в {{dir}}';
+  ruData.files_many = '{{count}} файлов в {{dir}}';
+  ruData.files_other = '{{count}} файла в {{dir}}';
+  fs.writeFileSync(path.join(root, 'ru', 'a.json'), JSON.stringify(ruData, null, 2));
   fs.writeFileSync(path.join(root, 'en', 'a.json'), JSON.stringify(enOne, null, 2));
   assert.deepEqual(checkLocale('ru', { root }).errors, []);
 });
@@ -106,6 +114,12 @@ test('banned words, empty strings, BOM and broken JSON are errors; untranslated 
   assert.ok(bannedHits('匿名代理').length);
   assert.deepEqual(bannedHits('Banner settings for Bangladesh'), []);
   assert.deepEqual(bannedHits('Unbekannte Bandbreite'), []);
+  // Non-Latin terms match at the start of a word only.
+  assert.deepEqual(bannedHits('Бангладеш'), []);
+  assert.deepEqual(bannedHits('Это необходимо сделать'), []);
+  assert.ok(bannedHits('Обход защиты').length);
+  assert.ok(bannedHits('аккаунт забанен').length);
+  assert.ok(bannedHits('匿名代理').length, 'CJK still matches inside text');
 
   const bom = checkLocale('es', { root: fixture('es', null, { raw: '﻿{}' }) });
   assert.match(msgs(bom), /BOM/);

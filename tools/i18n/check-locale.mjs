@@ -114,20 +114,34 @@ export function bannedHits(str) {
     const m = str.match(b.rx);
     if (m) hits.push(`${b.why} ("${m[0]}")`);
   }
-  const lower = str.toLowerCase();
   for (const b of BANNED_ANY) {
-    const s = b.s.find((x) => lower.includes(x.toLowerCase()));
+    const s = b.s.find((x) => containsTerm(str, x));
     if (s) hits.push(`${b.why} ("${s.trim()}")`);
   }
   return hits;
 }
 
+// Scripts written without spaces (CJK, Thai) match anywhere; the others (Cyrillic, Arabic,
+// Devanagari...) only at the start of a word, so "обход" does not hit "необходимо" and "бан"
+// does not hit "Бангладеш" (the stem may still take endings: "обхода", "забанен").
+const NO_SPACE_SCRIPT = /[\p{Script=Han}\p{Script=Hiragana}\p{Script=Katakana}\p{Script=Thai}]/u;
+const termCache = new Map();
+function containsTerm(str, term) {
+  const t = term.trim();
+  if (NO_SPACE_SCRIPT.test(t)) return str.toLowerCase().includes(t.toLowerCase());
+  let rx = termCache.get(t);
+  if (!rx) {
+    rx = new RegExp(`(?<![\\p{L}\\p{M}\\p{N}])${t.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}`, 'iu');
+    termCache.set(t, rx);
+  }
+  return rx.test(str);
+}
+
 export function softBannedHits(str) {
   if (typeof str !== 'string') return [];
-  const lower = str.toLowerCase();
   const hits = [];
   for (const b of BANNED_SOFT) {
-    const s = b.s.find((x) => lower.includes(x.toLowerCase()));
+    const s = b.s.find((x) => containsTerm(str, x));
     if (s) hits.push(`${b.why} ("${s.trim()}")`);
   }
   return hits;
@@ -320,8 +334,20 @@ export function checkLocaleFile(code, enData, data, rel, problems) {
     const trSet = new Set(placeholders(value));
     const optional = OPTIONAL_PLACEHOLDERS[`${path.basename(rel)}:${key}`] || [];
     const realMissing = missingUnique.filter((x) => !trSet.has(x) && !optional.includes(x));
-    // A plural form may always show the number (Russian _one also covers 21, 31...).
-    const realExtra = extraUnique.filter((x) => !enSet.has(x) && !(isPluralKey && x === '{{count}}'));
+    // A plural form may use any placeholder of any English form of the same base key (Russian
+    // _one also covers 21, 31..., so it shows {{count}} even when English _one says "this profile").
+    const siblingSet = new Set();
+    if (isPluralKey) {
+      const m = String(p[p.length - 1]).match(PLURAL_RE);
+      const parent = p.slice(0, -1).join('.');
+      const pre = parent ? `${parent}.` : '';
+      for (const suf of PLURAL_SUFFIXES) {
+        const v = enFlat.get(`${pre}${m[1]}_${suf}`);
+        if (typeof v === 'string') for (const ph of placeholders(v)) siblingSet.add(ph);
+      }
+      siblingSet.add('{{count}}');
+    }
+    const realExtra = extraUnique.filter((x) => !enSet.has(x) && !siblingSet.has(x));
     if (realMissing.length) problems.error(rel, `${key}: missing placeholder(s) ${realMissing.join(' ')}`);
     if (realExtra.length) problems.error(rel, `${key}: unknown placeholder(s) ${realExtra.join(' ')}`);
     const countOnly = [...missingUnique, ...extraUnique].filter((x) => enSet.has(x) && trSet.has(x));
