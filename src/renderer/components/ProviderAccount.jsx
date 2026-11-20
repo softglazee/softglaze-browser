@@ -112,7 +112,7 @@ export default function ProviderAccount({ providerKey }) {
           <Gauge className="w-3.5 h-3.5 text-muted-foreground" aria-hidden="true" /> {t('providerAccount.title')}
         </h3>
         {a && a.checkedAt && <span className="text-[12px] text-muted-foreground">{t('providerAccount.checkedAt', { time: formatDateTime(a.checkedAt) })}</span>}
-        <span className="ml-auto flex flex-wrap items-center gap-2">
+        <span className="ms-auto flex flex-wrap items-center gap-2">
           {dashboardUrl && (
             <a href={dashboardUrl} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1 text-[12.5px] font-medium text-primary hover:underline">
               {t('providerAccount.openDashboard')} <ExternalLink className="w-3.5 h-3.5" aria-hidden="true" />

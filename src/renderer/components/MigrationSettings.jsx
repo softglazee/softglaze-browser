@@ -136,7 +136,7 @@ export default function MigrationSettings() {
             <KeyRound className="w-4 h-4 text-muted-foreground" />
             <span className="text-[13px] font-semibold text-foreground">{t('migration.tokenSectionTitle', { platform: platform.label })}</span>
             {!platformWarning && (
-              <a href={platform.instructionsUrl} target="_blank" rel="noreferrer" className="ml-auto text-[11px] font-medium text-muted-foreground hover:text-foreground inline-flex items-center gap-1">
+              <a href={platform.instructionsUrl} target="_blank" rel="noreferrer" className="ms-auto text-[11px] font-medium text-muted-foreground hover:text-foreground inline-flex items-center gap-1">
                 <Globe2 className="w-3 h-3" /> {t('migration.instructions')}
               </a>
             )}

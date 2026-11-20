@@ -147,7 +147,7 @@ function ProviderCard({ provider, onChange, onError }) {
           style={{ background: enabled ? '#22c55e' : 'var(--switch-background, #3f3f46)' }}
           title={enabled ? t('ipProviders.disable') : t('ipProviders.enable')}
         >
-          <span className={`inline-block h-4.5 w-4.5 transform rounded-full bg-white shadow transition-transform ${enabled ? 'translate-x-5' : 'translate-x-1'}`} style={{ height: 18, width: 18 }} />
+          <span className={`inline-block h-4.5 w-4.5 transform rounded-full bg-white shadow transition-transform ${enabled ? 'translate-x-5 rtl:-translate-x-5' : 'translate-x-1 rtl:-translate-x-1'}`} style={{ height: 18, width: 18 }} />
         </button>
       </div>
 

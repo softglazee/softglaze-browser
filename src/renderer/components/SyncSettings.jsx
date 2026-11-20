@@ -123,7 +123,7 @@ export default function SyncSettings() {
 
       {status?.configured && !status?.unlocked && (
         <div className="mt-4">
-          <label className={labelCls}><Lock className="w-3 h-3 inline mr-1" />{t('sync.unlockLabel')}</label>
+          <label className={labelCls}><Lock className="w-3 h-3 inline me-1" />{t('sync.unlockLabel')}</label>
           <div className="flex items-center gap-2">
             <input type="password" className={inputCls + ' font-mono'} value={unlockPass} onChange={(e) => setUnlockPass(e.target.value)} placeholder={t('sync.unlockPlaceholder')} />
             <button onClick={unlock} disabled={busy === 'unlock' || !unlockPass} className="h-10 px-4 rounded-lg text-[12.5px] font-semibold bg-secondary hover:bg-secondary/70 text-foreground flex items-center gap-1.5 disabled:opacity-60">

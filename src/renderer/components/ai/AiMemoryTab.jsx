@@ -125,7 +125,7 @@ export default function AiMemoryTab({ lang }) {
               <PrimaryButton onClick={doSave} disabled={!dirty || usage.over || loading} isLoading={save.state === 'saving'}><Save className="h-4 w-4" /> {t('save')}</PrimaryButton>
               <Button variant="secondary" onClick={() => { setDraft(saved); setSave({ state: '', error: '' }); }} disabled={!dirty}><Undo2 className="h-4 w-4" /> {t('memory.discard')}</Button>
               <Button variant="ghost" onClick={() => setResetOpen(true)} disabled={loading || !mem}><RotateCcw className="h-4 w-4" /> {t('memory.reset')}</Button>
-              <span className="ml-auto inline-flex items-center gap-3">
+              <span className="ms-auto inline-flex items-center gap-3">
                 {dirty && save.state !== 'saving' && <span className="text-[12px]" style={toneText('warning')}>{t('memory.unsaved')}</span>}
                 <SaveNote state={save.state} error={save.error} />
               </span>

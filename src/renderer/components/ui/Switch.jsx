@@ -14,7 +14,7 @@ export default function Switch({ checked, onChange, disabled = false, label, cla
       style={{ background: checked ? 'var(--primary)' : 'var(--switch-background, var(--border))' }}
     >
       <span
-        className={`inline-block h-4 w-4 transform rounded-full bg-white shadow transition-transform ${checked ? 'translate-x-[18px]' : 'translate-x-0.5'}`}
+        className={`inline-block h-4 w-4 transform rounded-full bg-white shadow transition-transform ${checked ? 'translate-x-[18px] rtl:-translate-x-[18px]' : 'translate-x-0.5 rtl:-translate-x-0.5'}`}
       />
     </button>
   );

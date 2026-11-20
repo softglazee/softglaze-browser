@@ -159,7 +159,7 @@ export default function TrashPage() {
             disabled={trashItems.length === 0 || busy}
             className="bg-red-900/30 text-red-400 hover:bg-red-900/50 hover:text-red-300 border border-red-900/50 transition-colors disabled:opacity-50"
           >
-            <ArchiveX className="w-4 h-4 mr-2" />
+            <ArchiveX className="w-4 h-4 me-2" />
             {t('actions.emptyTrash')}
           </GuardedButton>
         }
@@ -179,13 +179,13 @@ export default function TrashPage() {
 
       <div className="flex flex-wrap justify-between items-center gap-3 mb-4">
         <div className="relative w-full sm:w-72">
-          <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
+          <Search className="w-4 h-4 absolute inset-s-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
           <input
             type="text"
             placeholder={t('toolbar.searchPlaceholder')}
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            className="w-full bg-secondary border border-border rounded-md pl-9 pr-3 py-2 text-[13px] text-foreground outline-none focus:border-blue-500 transition"
+            className="w-full bg-secondary border border-border rounded-md ps-9 pe-3 py-2 text-[13px] text-foreground outline-none focus:border-blue-500 transition"
           />
         </div>
       </div>
@@ -193,12 +193,12 @@ export default function TrashPage() {
       {selectedIds.size > 0 && (
         <div className="mb-4 flex items-center gap-3 rounded-lg border border-border bg-card px-4 py-3">
           <span className="text-[13px] text-foreground font-medium">{t('bulk.selected', { count: selectedIds.size })}</span>
-          <div className="flex gap-2 ml-auto">
+          <div className="flex gap-2 ms-auto">
             <GuardedButton deny={denyRestore} size="sm" disabled={busy} onClick={handleBulkRestore} className="bg-secondary hover:bg-secondary text-foreground border border-border">
-              <Undo2 className="w-3.5 h-3.5 mr-1.5" /> {t('actions.restore')}
+              <Undo2 className="w-3.5 h-3.5 me-1.5" /> {t('actions.restore')}
             </GuardedButton>
             <GuardedButton deny={denyPurge} size="sm" disabled={busy} onClick={handleBulkPurge} className="bg-red-900/30 text-red-400 hover:bg-red-900/50 border border-red-900/50">
-              <Trash2 className="w-3.5 h-3.5 mr-1.5" /> {t('actions.deleteForever')}
+              <Trash2 className="w-3.5 h-3.5 me-1.5" /> {t('actions.deleteForever')}
             </GuardedButton>
             <Button size="sm" variant="outline" disabled={busy} onClick={clearSelection} className="bg-secondary border-border text-foreground">{t('actions.clear')}</Button>
           </div>
@@ -211,14 +211,14 @@ export default function TrashPage() {
             {loading ? (
               <div className="flex items-center justify-center p-16"><Loader2 className="w-8 h-8 animate-spin text-blue-500" /></div>
             ) : (
-              <table className="w-full min-w-[800px] border-collapse text-left text-[13px]">
+              <table className="w-full min-w-[800px] border-collapse text-start text-[13px]">
                 <thead className="border-b border-border bg-secondary text-muted-foreground">
                   <tr>
                     <th className="px-5 py-3 w-10"><Checkbox checked={allSelected} onChange={toggleSelectAll} /></th>
                     <th className="px-5 py-3 font-medium">{t('table.profileName')}</th>
                     <th className="px-5 py-3 font-medium">{t('table.proxy')}</th>
                     <th className="px-5 py-3 font-medium">{t('table.deletedDate')}</th>
-                    <th className="px-5 py-3 font-medium text-right">{t('table.actions')}</th>
+                    <th className="px-5 py-3 font-medium text-end">{t('table.actions')}</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -258,7 +258,7 @@ export default function TrashPage() {
                               className="bg-secondary hover:bg-secondary text-foreground border border-border"
                               title={t('actions.restoreTitle')}
                             >
-                              <Undo2 className="w-3.5 h-3.5 mr-1.5" />
+                              <Undo2 className="w-3.5 h-3.5 me-1.5" />
                               {t('actions.restore')}
                             </GuardedButton>
                             <GuardedButton

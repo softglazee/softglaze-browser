@@ -173,7 +173,7 @@ export default function VendorScoreboard({ onSelect }) {
             aria-controls="vendor-scoreboard-body"
             title={open ? t('hide') : t('show')}
             onClick={toggle}
-            className="flex items-center gap-2 rounded text-left text-[15px] font-semibold text-foreground font-display outline-none focus-visible:ring-2 focus-visible:ring-primary"
+            className="flex items-center gap-2 rounded text-start text-[15px] font-semibold text-foreground font-display outline-none focus-visible:ring-2 focus-visible:ring-primary"
           >
             <ChevronDown className={cn('w-4 h-4 text-muted-foreground transition-transform', !open && '-rotate-90')} aria-hidden="true" />
             <Trophy className="w-4 h-4 text-primary" aria-hidden="true" />
@@ -207,7 +207,7 @@ export default function VendorScoreboard({ onSelect }) {
           {data && rows.length > 0 && (
             <>
               <div className="overflow-x-auto">
-                <table className="w-full border-collapse text-left text-[12.5px]">
+                <table className="w-full border-collapse text-start text-[12.5px]">
                   <thead className="bg-surface text-muted-foreground text-[11px] uppercase tracking-wide font-semibold border-b border-border">
                     <tr>
                       {COLUMNS.map((col) => {
@@ -218,13 +218,13 @@ export default function VendorScoreboard({ onSelect }) {
                             key={col.key}
                             scope="col"
                             aria-sort={active ? (sort.dir === 'asc' ? 'ascending' : 'descending') : 'none'}
-                            className={cn('px-3 py-2.5 align-bottom', col.align === 'right' && 'text-right')}
+                            className={cn('px-3 py-2.5 align-bottom', col.align === 'right' && 'text-end')}
                           >
                             <button
                               type="button"
                               onClick={() => sortBy(col)}
                               title={t('sortBy', { column: t(`col.${col.key}`) })}
-                              className={cn('inline-flex items-center gap-1 rounded uppercase tracking-wide outline-none hover:text-foreground focus-visible:ring-2 focus-visible:ring-primary', col.align === 'right' && 'flex-row-reverse text-right', active && 'text-foreground')}
+                              className={cn('inline-flex items-center gap-1 rounded uppercase tracking-wide outline-none hover:text-foreground focus-visible:ring-2 focus-visible:ring-primary', col.align === 'right' && 'flex-row-reverse text-end', active && 'text-foreground')}
                             >
                               {t(`col.${col.key}`)}
                               <SortIcon className={cn('w-3 h-3 shrink-0', !active && 'opacity-40')} aria-hidden="true" />
@@ -242,11 +242,11 @@ export default function VendorScoreboard({ onSelect }) {
                       const sites = r.topSites.map((s) => `${s.site} (${fmt.num(s.count)})`).join(', ');
                       return (
                         <tr key={r.key} className="hover:bg-secondary/60 transition-colors">
-                          <th scope="row" className="px-3 py-2 text-left font-normal">
+                          <th scope="row" className="px-3 py-2 text-start font-normal">
                             <span className="flex items-center gap-2.5">
                               <VendorTile r={r} />
                               {canOpen ? (
-                                <button type="button" onClick={() => onSelect(r.key)} title={t('openProvider', { name: label })} className="text-left text-[13px] font-medium text-foreground rounded outline-none hover:text-primary hover:underline focus-visible:ring-2 focus-visible:ring-primary">
+                                <button type="button" onClick={() => onSelect(r.key)} title={t('openProvider', { name: label })} className="text-start text-[13px] font-medium text-foreground rounded outline-none hover:text-primary hover:underline focus-visible:ring-2 focus-visible:ring-primary">
                                   {label}
                                 </button>
                               ) : (
@@ -255,34 +255,34 @@ export default function VendorScoreboard({ onSelect }) {
                             </span>
                           </th>
                           <td className="px-3 py-2"><ScorePill r={r} t={t} days={days} min={min} /></td>
-                          <td className="px-3 py-2 text-right tabular-nums">
+                          <td className="px-3 py-2 text-end tabular-nums">
                             {r.successPct != null ? <span className="text-foreground">{fmt.pct(r.successPct)}</span> : <NoData t={t} />}
                             <span className="block text-[11px] text-muted-foreground">{t('checks', { count: r.checks })}</span>
                           </td>
-                          <td className="px-3 py-2 text-right tabular-nums whitespace-nowrap">
+                          <td className="px-3 py-2 text-end tabular-nums whitespace-nowrap">
                             {r.medianMs != null ? t('ms', { ms: fmt.num(r.medianMs) }) : <NoData t={t} />}
                           </td>
-                          <td className="px-3 py-2 text-right tabular-nums">
+                          <td className="px-3 py-2 text-end tabular-nums">
                             {r.blocklistedPct != null
                               ? <span className="text-foreground" style={r.blocklistedPct > 0 ? toneText('danger') : undefined}>{fmt.pct(r.blocklistedPct)}</span>
                               : <NoData t={t} />}
                           </td>
-                          <td className="px-3 py-2 text-right tabular-nums">
+                          <td className="px-3 py-2 text-end tabular-nums">
                             {r.datacenterPct != null ? fmt.pct(r.datacenterPct) : <NoData t={t} />}
                           </td>
-                          <td className="px-3 py-2 text-right tabular-nums">
+                          <td className="px-3 py-2 text-end tabular-nums">
                             <span className="text-foreground" style={r.blocks > 0 ? toneText('warning') : undefined}>{fmt.num(r.blocks)}</span>
                             {sites && (
                               <span className="block w-0 min-w-full truncate text-[11px] text-muted-foreground" title={t('topSites', { sites })}>{sites}</span>
                             )}
                           </td>
-                          <td className="px-3 py-2 text-right tabular-nums">
+                          <td className="px-3 py-2 text-end tabular-nums">
                             {fmt.num(r.proxies)}
                             {r.workingPct != null && (
                               <span className="block text-[11px] text-muted-foreground">{t('working', { pct: fmt.pct(r.workingPct) })}</span>
                             )}
                           </td>
-                          <td className="px-3 py-2 text-right whitespace-nowrap text-muted-foreground">
+                          <td className="px-3 py-2 text-end whitespace-nowrap text-muted-foreground">
                             {r.lastCheckedAt
                               ? <time dateTime={r.lastCheckedAt} title={formatDateTime(r.lastCheckedAt)}>{fmt.when(r.lastCheckedAt)}</time>
                               : t('never')}
@@ -298,7 +298,7 @@ export default function VendorScoreboard({ onSelect }) {
                   <Info className="mt-0.5 w-3.5 h-3.5 shrink-0" aria-hidden="true" />
                   <span>{t('scoreHelp', { min })}</span>
                 </p>
-                {data.truncated && <p className="pl-5">{t('truncated', { max: fmt.num(data.maxEvents) })}</p>}
+                {data.truncated && <p className="ps-5">{t('truncated', { max: fmt.num(data.maxEvents) })}</p>}
               </div>
             </>
           )}

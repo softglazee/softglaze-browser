@@ -122,7 +122,7 @@ export default function PhonesSettings() {
                 {pairing.qrImage && <img src={pairing.qrImage} alt={t('pair.qrAlt')} className="w-[220px] h-[220px] rounded-lg border border-border self-center md:self-start bg-white" />}
                 <div className="min-w-0 flex-1 space-y-2">
                   <p className="text-[13px] font-semibold text-foreground">{t('pair.scanTitle')}</p>
-                  <ol className="list-decimal pl-5 text-[12.5px] text-muted-foreground space-y-1">
+                  <ol className="list-decimal ps-5 text-[12.5px] text-muted-foreground space-y-1">
                     <li>{t('pair.step1')}</li>
                     <li>{t('pair.step2')}</li>
                     <li>{t('pair.step3')}</li>
@@ -211,7 +211,7 @@ function ConfirmPairing({ t, pairing, members, me, secondsLeft, busy, onConfirm,
         <p className="text-[13px] font-semibold text-foreground">{t('confirm.title', { name: pairing.phone ? pairing.phone.name : '' })}</p>
         <p className="text-[12px] text-muted-foreground">{isBrowser ? t('confirm.helpBrowser') : t('confirm.help')}</p>
       </div>
-      <p className="font-mono text-3xl tracking-[0.3em] text-foreground text-center sm:text-left" aria-label={t('confirm.codeLabel', { code: sas.split('').join(' ') })}>
+      <p className="font-mono text-3xl tracking-[0.3em] text-foreground text-center sm:text-start" aria-label={t('confirm.codeLabel', { code: sas.split('').join(' ') })}>
         {sas.slice(0, 3)} {sas.slice(3)}
       </p>
       <p className="text-[12px] text-muted-foreground">{t('pair.expiresIn', { time: fmtSeconds(secondsLeft) })}</p>

@@ -58,7 +58,7 @@ export default function PreLaunchCheckModal({ items, onDecide, canStopAsking = t
           {items.map((it) => (
             <section key={it.profile.id} className="rounded border border-warning/30 bg-warning/5 px-4 py-3">
               <h3 className="truncate text-sm font-semibold text-foreground">{it.profile.title}</h3>
-              <ul className="mt-1.5 list-disc space-y-1 pl-4 text-xs leading-relaxed text-muted-foreground">
+              <ul className="mt-1.5 list-disc space-y-1 ps-4 text-xs leading-relaxed text-muted-foreground">
                 {it.issues.map((issue) => (
                   <li key={issue.key}>
                     {issueText(t, issue)}
@@ -82,12 +82,12 @@ export default function PreLaunchCheckModal({ items, onDecide, canStopAsking = t
           <Button size="sm" variant="ghost" disabled={busy} onClick={cancel}>{t('prelaunch.cancel')}</Button>
           {launchable && (
             <Button size="sm" variant="secondary" disabled={busy} onClick={() => decide(false)}>
-              <Play className="mr-1.5 h-3.5 w-3.5" aria-hidden="true" /> {t('prelaunch.launchAnyway')}
+              <Play className="me-1.5 h-3.5 w-3.5" aria-hidden="true" /> {t('prelaunch.launchAnyway')}
             </Button>
           )}
           {fixable && launchable && (
             <GuardedButton deny={denyFix} size="sm" variant="primary" disabled={busy} onClick={() => decide(true)}>
-              {busy ? <Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin" aria-hidden="true" /> : <Wand2 className="mr-1.5 h-3.5 w-3.5" aria-hidden="true" />}
+              {busy ? <Loader2 className="me-1.5 h-3.5 w-3.5 animate-spin" aria-hidden="true" /> : <Wand2 className="me-1.5 h-3.5 w-3.5" aria-hidden="true" />}
               {t('prelaunch.fixAndLaunch')}
             </GuardedButton>
           )}

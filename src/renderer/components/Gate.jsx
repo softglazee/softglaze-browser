@@ -28,7 +28,7 @@ function AuthAura() {
   return (
     <div aria-hidden className="pointer-events-none absolute inset-0 overflow-hidden">
       <div className="absolute -top-24 left-1/4 w-[26rem] h-[26rem] rounded-full bg-primary/10 blur-[130px] animate-float-slow" />
-      <div className="absolute -bottom-24 -right-16 w-96 h-96 rounded-full bg-accent/10 blur-[130px] animate-float-slower" />
+      <div className="absolute -bottom-24 -inset-e-16 w-96 h-96 rounded-full bg-accent/10 blur-[130px] animate-float-slower" />
     </div>
   );
 }
@@ -37,8 +37,8 @@ function PasswordInput({ value, onChange, placeholder, onKeyDown, autoFocus }) {
   const [show, setShow] = useState(false);
   return (
     <div className="relative">
-      <input type={show ? 'text' : 'password'} className={inputCls + ' pr-10'} value={value} onChange={onChange} placeholder={placeholder} onKeyDown={onKeyDown} autoFocus={autoFocus} />
-      <button type="button" tabIndex={-1} onClick={() => setShow((s) => !s)} className="absolute right-2.5 top-1/2 -translate-y-1/2 text-muted-dark hover:text-muted">
+      <input type={show ? 'text' : 'password'} className={inputCls + ' pe-10'} value={value} onChange={onChange} placeholder={placeholder} onKeyDown={onKeyDown} autoFocus={autoFocus} />
+      <button type="button" tabIndex={-1} onClick={() => setShow((s) => !s)} className="absolute inset-e-2.5 top-1/2 -translate-y-1/2 text-muted-dark hover:text-muted">
         {show ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
       </button>
     </div>
@@ -116,11 +116,11 @@ function LeadFields({ idPrefix, phone, setPhone, useCase, setUseCase, useCaseOth
       <div>
         <label htmlFor={id('usecase')} className={labelCls}>{t('lead.useCase')}</label>
         <div className="relative">
-          <select id={id('usecase')} required aria-required="true" className={inputCls + ' appearance-none pr-9 cursor-pointer' + (useCase ? '' : ' text-muted-dark')} value={useCase} onChange={(e) => setUseCase(e.target.value)}>
+          <select id={id('usecase')} required aria-required="true" className={inputCls + ' appearance-none pe-9 cursor-pointer' + (useCase ? '' : ' text-muted-dark')} value={useCase} onChange={(e) => setUseCase(e.target.value)}>
             <option value="" disabled className="bg-background text-muted-dark">{t('lead.useCasePlaceholder')}</option>
             {USE_CASES.map((k) => <option key={k} value={k} className="bg-background text-foreground">{t(`lead.useCases.${k}`)}</option>)}
           </select>
-          <ChevronDown aria-hidden className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-dark" />
+          <ChevronDown aria-hidden className="pointer-events-none absolute inset-e-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-dark" />
         </div>
       </div>
       {useCase === 'other' && (
@@ -178,7 +178,7 @@ function PlanPicker({ plans, selected, onSelect, storeInfo = null }) {
             role="radio"
             aria-checked={active}
             onClick={() => onSelect(p.id)}
-            className="relative flex flex-col justify-start text-left rounded-lg border px-3 py-2.5 transition-colors"
+            className="relative flex flex-col justify-start text-start rounded-lg border px-3 py-2.5 transition-colors"
             style={active
               ? { borderColor: 'color-mix(in srgb, var(--primary) 55%, transparent)', background: 'color-mix(in srgb, var(--primary) 8%, transparent)' }
               : { borderColor: 'var(--border)' }}
@@ -266,7 +266,7 @@ function CarouselPanel() {
   const slide = SLIDES[i];
   const Icon = slide.Icon;
   return (
-    <div className="relative hidden md:flex flex-col overflow-hidden border-r border-border">
+    <div className="relative hidden md:flex flex-col overflow-hidden border-e border-border">
       {SLIDES.map((s, idx) => (
         <div
           key={s.key}
@@ -276,8 +276,8 @@ function CarouselPanel() {
         />
       ))}
       <div aria-hidden className="absolute inset-0 auth-grid opacity-40" />
-      <div aria-hidden className="absolute -top-24 -left-20 w-96 h-96 rounded-full blur-[130px] animate-float-slow" style={{ background: `${slide.accent}40` }} />
-      <div aria-hidden className="absolute bottom-16 -right-16 w-80 h-80 rounded-full blur-[130px] animate-float-slower" style={{ background: `${slide.accent}33` }} />
+      <div aria-hidden className="absolute -top-24 -inset-s-20 w-96 h-96 rounded-full blur-[130px] animate-float-slow" style={{ background: `${slide.accent}40` }} />
+      <div aria-hidden className="absolute bottom-16 -inset-e-16 w-80 h-80 rounded-full blur-[130px] animate-float-slower" style={{ background: `${slide.accent}33` }} />
 
       <div className="relative flex items-center gap-3 p-9">
         <img src="/logos/app-source-512.png" alt="SoftGlaze" className="w-10 h-10 object-contain drop-shadow-[0_2px_16px_rgba(59,130,246,0.6)]" draggable={false} />
@@ -415,7 +415,7 @@ function PayMethods({ methods, busy, onAutomated, onManual, store = null }) {
   if (done) {
     return (
       <div className="rounded-lg bg-emerald-500/10 border border-emerald-500/20 p-3 text-[12px] text-emerald-400">
-        <Check className="w-4 h-4 inline mr-1.5" /> {t('pay.submitted')}
+        <Check className="w-4 h-4 inline me-1.5" /> {t('pay.submitted')}
       </div>
     );
   }
@@ -429,7 +429,7 @@ function PayMethods({ methods, busy, onAutomated, onManual, store = null }) {
             <button
               key={m.id}
               onClick={() => setSel(m.id)}
-              className="w-full flex items-center gap-2.5 px-3 py-2 rounded-lg border text-left transition-colors"
+              className="w-full flex items-center gap-2.5 px-3 py-2 rounded-lg border text-start transition-colors"
               style={active
                 ? { borderColor: 'color-mix(in srgb, var(--primary) 50%, transparent)', background: 'color-mix(in srgb, var(--primary) 8%, transparent)' }
                 : { borderColor: 'var(--border)' }}
@@ -505,7 +505,7 @@ function BannedScreen({ account, license, methods, plans = [], selPlanId, onSele
             {plans.length > 0 && <div className="mb-3"><PlanPicker plans={plans} selected={selPlanId} onSelect={onSelectPlan} storeInfo={storeInfo} /></div>}
             <PayMethods methods={methods} busy={busy} onAutomated={onAutomated} onManual={onManual} store={store} />
             <div className="mt-5">
-              <label className="block text-[11px] font-medium text-muted mb-1.5"><KeyRound className="w-3 h-3 inline mr-1" />{t('banned.haveCode')}</label>
+              <label className="block text-[11px] font-medium text-muted mb-1.5"><KeyRound className="w-3 h-3 inline me-1" />{t('banned.haveCode')}</label>
               <div className="flex items-center gap-2">
                 <input value={planCode} onChange={(e) => setPlanCode(e.target.value.toUpperCase())} placeholder="SG-XXXX-XXXX" className="flex-1 h-10 bg-background border border-border rounded-lg px-3 text-[13px] font-mono tracking-widest text-foreground outline-none focus:border-primary" onKeyDown={(e) => { if (e.key === 'Enter') onRedeem(); }} />
                 <button onClick={onRedeem} disabled={busy || !planCode.trim()} className="h-10 px-4 rounded-lg bg-secondary hover:bg-secondary/70 text-foreground font-semibold text-[12.5px] disabled:opacity-60">{t('common.redeem')}</button>
@@ -1233,7 +1233,7 @@ export default function Gate({ children }) {
                   <button onClick={resendTrialCode} disabled={trialBusy} className="mt-2 w-full text-[12px] text-muted-dark hover:text-muted">{t('verify.resend')}</button>
                 </div>
               ) : (
-                <button onClick={startTrial} disabled={trialBusy} aria-busy={trialBusy} className="w-full flex items-center gap-3 p-3.5 rounded-lg border border-primary/40 bg-primary/5 hover:bg-primary/10 transition-colors text-left disabled:opacity-70">
+                <button onClick={startTrial} disabled={trialBusy} aria-busy={trialBusy} className="w-full flex items-center gap-3 p-3.5 rounded-lg border border-primary/40 bg-primary/5 hover:bg-primary/10 transition-colors text-start disabled:opacity-70">
                   {trialBusy ? <Loader2 className="w-5 h-5 text-primary shrink-0 animate-spin" /> : <Clock className="w-5 h-5 text-primary shrink-0" />}
                   <span className="min-w-0 flex-1"><span className="block text-[13px] font-semibold">{t('plan.startTrialTitle')}</span><span className="block text-[11.5px] text-muted-dark">{t('plan.tenantTrialSubtitle')}</span></span>
                   <ArrowRight className="w-4 h-4 text-muted-dark" />
@@ -1241,7 +1241,7 @@ export default function Gate({ children }) {
               )}
               {trialErr && <p role="alert" className="text-[12px] text-red-400 mt-2.5 leading-relaxed">{trialErr}</p>}
               {/* Free forever (1.0.27): nobody has to start the trial or pay to use the app. */}
-              <button onClick={continueOnFree} disabled={busy} className="mt-2.5 w-full flex items-center gap-3 p-3.5 rounded-lg border border-border hover:bg-secondary transition-colors text-left disabled:opacity-70" data-testid="continue-free">
+              <button onClick={continueOnFree} disabled={busy} className="mt-2.5 w-full flex items-center gap-3 p-3.5 rounded-lg border border-border hover:bg-secondary transition-colors text-start disabled:opacity-70" data-testid="continue-free">
                 <Gift className="w-5 h-5 text-primary shrink-0" />
                 <span className="min-w-0 flex-1"><span className="block text-[13px] font-semibold">{t('plan.continueFreeTitle')}</span><span className="block text-[11.5px] text-muted-dark">{t('plan.continueFreeSubtitle')}</span></span>
                 <ArrowRight className="w-4 h-4 text-muted-dark" />
@@ -1254,7 +1254,7 @@ export default function Gate({ children }) {
                 </div>
               )}
               <div className="mt-4">
-                <label className="block text-[11px] font-medium text-muted mb-1.5"><KeyRound className="w-3 h-3 inline mr-1" />{t('plan.haveCode')}</label>
+                <label className="block text-[11px] font-medium text-muted mb-1.5"><KeyRound className="w-3 h-3 inline me-1" />{t('plan.haveCode')}</label>
                 <div className="flex items-center gap-2">
                   <input value={planCode} onChange={(e) => setPlanCode(e.target.value.toUpperCase())} placeholder="SG-XXXX-XXXX" className={inputCls + ' font-mono tracking-widest'} onKeyDown={(e) => { if (e.key === 'Enter') redeemPlan(); }} />
                   <button onClick={redeemPlan} disabled={busy || !planCode.trim()} className="h-10 px-4 rounded-lg bg-secondary hover:bg-secondary/70 text-foreground font-semibold text-[12.5px] disabled:opacity-60">{t('common.redeem')}</button>
@@ -1271,7 +1271,7 @@ export default function Gate({ children }) {
               <h1 className="font-display text-[20px] font-semibold tracking-tight">{t('plan.title')}</h1>
               <p className="text-[12.5px] text-muted mt-1 mb-6">{t('plan.subtitlePrefix')} <span className="text-foreground">{t('plan.trialHighlight')}</span>{t('plan.subtitleSuffix')}</p>
               <div className="space-y-2.5">
-                <button onClick={startTrial} className="w-full flex items-center gap-3 p-3.5 rounded-lg border border-primary/40 bg-primary/5 hover:bg-primary/10 transition-colors text-left">
+                <button onClick={startTrial} className="w-full flex items-center gap-3 p-3.5 rounded-lg border border-primary/40 bg-primary/5 hover:bg-primary/10 transition-colors text-start">
                   <Clock className="w-5 h-5 text-primary shrink-0" />
                   <span className="min-w-0 flex-1"><span className="block text-[13px] font-semibold">{t('plan.startTrialTitle')}</span><span className="block text-[11.5px] text-muted-dark">{t('plan.startTrialSubtitle')}</span></span>
                   <ArrowRight className="w-4 h-4 text-muted-dark" />
@@ -1284,7 +1284,7 @@ export default function Gate({ children }) {
                 )}
               </div>
               <div className="mt-4">
-                <label className="block text-[11px] font-medium text-muted mb-1.5"><KeyRound className="w-3 h-3 inline mr-1" />{t('plan.haveCode')}</label>
+                <label className="block text-[11px] font-medium text-muted mb-1.5"><KeyRound className="w-3 h-3 inline me-1" />{t('plan.haveCode')}</label>
                 <div className="flex items-center gap-2">
                   <input value={planCode} onChange={(e) => setPlanCode(e.target.value.toUpperCase())} placeholder="SG-XXXX-XXXX" className={inputCls + ' font-mono tracking-widest'} onKeyDown={(e) => { if (e.key === 'Enter') redeemPlan(); }} />
                   <button onClick={redeemPlan} disabled={busy || !planCode.trim()} className="h-10 px-4 rounded-lg bg-secondary hover:bg-secondary/70 text-foreground font-semibold text-[12.5px] disabled:opacity-60">{t('common.redeem')}</button>
@@ -1424,7 +1424,7 @@ export default function Gate({ children }) {
               <div className="space-y-1.5">
                 {members.map((m) => (
                   <div key={m.id}>
-                    <button onClick={() => pick(m)} className="w-full flex items-center gap-3 p-2.5 rounded-lg border border-border hover:border-muted-dark hover:bg-secondary transition-colors text-left">
+                    <button onClick={() => pick(m)} className="w-full flex items-center gap-3 p-2.5 rounded-lg border border-border hover:border-muted-dark hover:bg-secondary transition-colors text-start">
                       <span className="w-9 h-9 rounded-full grid place-items-center text-[12px] font-semibold" style={{ background: (m.color || '#6366f1') + '22', color: m.color || '#6366f1' }}>{m.initials}</span>
                       <span className="min-w-0 flex-1">
                         <span className="block text-[13px] font-medium truncate">{m.name}</span>

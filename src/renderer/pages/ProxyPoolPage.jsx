@@ -90,7 +90,7 @@ function MiniStat({ icon: Icon, label, value, sub, accent = 'var(--primary)', on
       onClick={onClick}
       title={title}
       aria-pressed={onClick ? Boolean(active) : undefined}
-      className={`w-full min-w-0 rounded-lg border bg-card p-3 text-left transition-colors ${onClick ? 'cursor-pointer hover:border-border-strong focus:outline-none focus-visible:ring-2 focus-visible:ring-primary' : ''}`}
+      className={`w-full min-w-0 rounded-lg border bg-card p-3 text-start transition-colors ${onClick ? 'cursor-pointer hover:border-border-strong focus:outline-none focus-visible:ring-2 focus-visible:ring-primary' : ''}`}
       style={{ borderColor: active ? accent : 'var(--border)' }}
     >
       <div className="flex items-start justify-between gap-2">
@@ -123,11 +123,11 @@ const CustomSelect = ({ value, onChange, className = '', children, disabled }) =
       value={value}
       onChange={onChange}
       disabled={disabled}
-      className="w-full appearance-none bg-background border border-border rounded pl-3 pr-9 py-2 text-foreground text-sm outline-none focus:border-primary focus:ring-1 focus:ring-primary transition disabled:opacity-50 text-ellipsis overflow-hidden whitespace-nowrap cursor-pointer hover:border-muted-dark"
+      className="w-full appearance-none bg-background border border-border rounded ps-3 pe-9 py-2 text-foreground text-sm outline-none focus:border-primary focus:ring-1 focus:ring-primary transition disabled:opacity-50 text-ellipsis overflow-hidden whitespace-nowrap cursor-pointer hover:border-muted-dark"
     >
       {children}
     </select>
-    <div className="absolute right-3 pointer-events-none text-muted">
+    <div className="absolute inset-e-3 pointer-events-none text-muted">
       <ChevronDown className="w-4 h-4" />
     </div>
   </div>
@@ -824,7 +824,7 @@ export default function ProxyPoolPage() {
         actions={
           view === 'custom' ? (
             <>
-              <div className="flex items-center gap-2 mr-1">
+              <div className="flex items-center gap-2 me-1">
                 <span className="text-[11px] font-medium text-muted-foreground">{t('rotation.label')}</span>
                 <DenyTip deny={denyPolicy}>
                 <select
@@ -895,7 +895,7 @@ export default function ProxyPoolPage() {
             <span className="text-[12px] text-red-400">{t('checker.failed', { n: checkRun.fail })}</span>
             {checkRun.running && checkRun.etaMs != null && <span className="text-[12px] text-muted-foreground">{t('checker.eta')} {fmtDuration(checkRun.etaMs)}</span>}
             {!checkRun.running && checkRun.totalMs != null && <span className="text-[12px] text-muted-foreground">{fmtDuration(checkRun.totalMs)}</span>}
-            <div className="ml-auto flex items-center gap-2">
+            <div className="ms-auto flex items-center gap-2">
               <Button size="sm" variant="ghost" onClick={() => setShowCheckLog((v) => !v)} title={showCheckLog ? t('checker.hideLog') : t('checker.showLog')}>
                 <ChevronDown className={`h-3.5 w-3.5 transition-transform ${showCheckLog ? '' : '-rotate-90'}`} /> {showCheckLog ? t('checker.hideLog') : t('checker.showLog')}
               </Button>
@@ -1070,7 +1070,7 @@ export default function ProxyPoolPage() {
                   key={c.proxyId}
                   onClick={() => openHistory({ id: c.proxyId, name: c.name, host: c.host, port: c.port })}
                   title={t('historyCards.openDetail', 'Open full history')}
-                  className={`text-left rounded-xl border p-3 bg-card hover:border-primary/60 transition-colors ${c.regressed ? 'border-amber-500/45' : 'border-border'}`}
+                  className={`text-start rounded-xl border p-3 bg-card hover:border-primary/60 transition-colors ${c.regressed ? 'border-amber-500/45' : 'border-border'}`}
                 >
                   <div className="flex items-center gap-1.5 mb-0.5">
                     <span className={`w-1.5 h-1.5 rounded-full shrink-0 ${c.lastStatus === 'ok' ? 'bg-emerald-400' : 'bg-red-400'}`} />
@@ -1140,13 +1140,13 @@ export default function ProxyPoolPage() {
                   key={g.id}
                   onClick={() => { setActiveGroup(g.id); setView('custom'); }}
                   title={t('groupsPage.openGroup', 'Show these proxies')}
-                  className={`group/chip inline-flex items-center gap-1.5 h-8 pl-2.5 pr-2 rounded-lg text-[12px] font-medium border transition-colors cursor-pointer ${String(activeGroup) === String(g.id) ? 'border-primary bg-primary/10 text-primary' : 'border-border text-muted-foreground hover:text-foreground hover:border-muted-dark'}`}
+                  className={`group/chip inline-flex items-center gap-1.5 h-8 ps-2.5 pe-2 rounded-lg text-[12px] font-medium border transition-colors cursor-pointer ${String(activeGroup) === String(g.id) ? 'border-primary bg-primary/10 text-primary' : 'border-border text-muted-foreground hover:text-foreground hover:border-muted-dark'}`}
                 >
                   <span className="w-2.5 h-2.5 rounded-full shrink-0" style={{ background: g.color || '#3b82f6' }} />
                   {g.name} <span className="opacity-60">{g.proxyCount ?? 0}</span>
                   {/* Rename and delete only on a group the member manages (main refuses the others). */}
                   {!perm.denyGroup('proxies.manage', g) && <>
-                    <button onClick={(e) => { e.stopPropagation(); setGroupModal({ id: g.id, name: g.name, color: g.color || '#3b82f6' }); }} className="opacity-0 group-hover/chip:opacity-100 ml-1 p-0.5 rounded hover:bg-card text-muted hover:text-foreground" title={t('groups.renameRecolor')} aria-label={t('groups.renameRecolor')}><Edit className="w-3 h-3" /></button>
+                    <button onClick={(e) => { e.stopPropagation(); setGroupModal({ id: g.id, name: g.name, color: g.color || '#3b82f6' }); }} className="opacity-0 group-hover/chip:opacity-100 ms-1 p-0.5 rounded hover:bg-card text-muted hover:text-foreground" title={t('groups.renameRecolor')} aria-label={t('groups.renameRecolor')}><Edit className="w-3 h-3" /></button>
                     <button onClick={(e) => { e.stopPropagation(); removeGroup(g); }} className="opacity-0 group-hover/chip:opacity-100 p-0.5 rounded hover:bg-red-500/10 text-muted hover:text-red-400" title={t('groups.deleteGroup')} aria-label={t('groups.deleteGroup')}><X className="w-3 h-3" /></button>
                   </>}
                 </div>
@@ -1170,7 +1170,7 @@ export default function ProxyPoolPage() {
                       <div className="flex-1 h-2 rounded-full bg-secondary overflow-hidden">
                         <div className="h-full rounded-full bg-primary" style={{ width: `${proxies.length ? Math.round((g.count / proxies.length) * 100) : 0}%` }} />
                       </div>
-                      <span className="w-10 text-right text-[12px] text-foreground tabular-nums">{g.count}</span>
+                      <span className="w-10 text-end text-[12px] text-foreground tabular-nums">{g.count}</span>
                     </div>
                   ))}
                 </div>
@@ -1271,12 +1271,12 @@ export default function ProxyPoolPage() {
               <div className="absolute z-20 mt-1 w-56 max-h-64 overflow-y-auto rounded-lg border border-border bg-card shadow-xl py-1">
                 {groups.length === 0 && <div className="px-3 py-2 text-[12px] text-muted">{t('selection.noGroupsYet')}</div>}
                 {groups.map((g) => (
-                  <button key={g.id} onClick={() => assignSelectedToGroup(g.id)} className="w-full flex items-center gap-2 px-3 py-1.5 text-[12.5px] text-foreground hover:bg-secondary text-left">
+                  <button key={g.id} onClick={() => assignSelectedToGroup(g.id)} className="w-full flex items-center gap-2 px-3 py-1.5 text-[12.5px] text-foreground hover:bg-secondary text-start">
                     <span className="w-2.5 h-2.5 rounded-full shrink-0" style={{ background: g.color || '#3b82f6' }} /> {g.name}
                   </button>
                 ))}
                 <div className="my-1 h-px bg-border" />
-                <button onClick={() => assignSelectedToGroup(null)} className="w-full flex items-center gap-2 px-3 py-1.5 text-[12.5px] text-muted-foreground hover:bg-secondary text-left">
+                <button onClick={() => assignSelectedToGroup(null)} className="w-full flex items-center gap-2 px-3 py-1.5 text-[12.5px] text-muted-foreground hover:bg-secondary text-start">
                   <X className="w-3.5 h-3.5" /> {t('selection.removeFromGroup')}
                 </button>
               </div>
@@ -1288,7 +1288,7 @@ export default function ProxyPoolPage() {
           <GuardedButton deny={denyManage} size="sm" variant="danger" onClick={handleBulkDelete} disabled={bulkDeleting}>
             {bulkDeleting ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Trash2 className="h-3.5 w-3.5" />} {t('selection.deleteSelected')}
           </GuardedButton>
-          <Button size="sm" variant="ghost" onClick={clearSelection} className="ml-auto px-2.5" title={t('selection.clearTooltip')}>
+          <Button size="sm" variant="ghost" onClick={clearSelection} className="ms-auto px-2.5" title={t('selection.clearTooltip')}>
             <X className="h-4 w-4" /> {t('selection.clear')}
           </Button>
         </div>
@@ -1307,7 +1307,7 @@ export default function ProxyPoolPage() {
             </div>
           ) : (
             <div className="w-full">
-              <table className="w-full min-w-[1180px] border-collapse text-left text-sm whitespace-nowrap">
+              <table className="w-full min-w-[1180px] border-collapse text-start text-sm whitespace-nowrap">
                 <thead className="bg-surface text-muted text-xs uppercase tracking-wider font-semibold border-b border-border sticky top-0 z-10 shadow-sm">
                   <tr>
                     <th className="px-5 py-4 w-10">
@@ -1330,7 +1330,7 @@ export default function ProxyPoolPage() {
                     <th className="px-5 py-4">{t('table.colSpeed')}</th>
                     <th className="px-5 py-4">{t('table.colBlocklist')}</th>
                     <th className="px-5 py-4">{t('table.colStatus')}</th>
-                    <th className="px-5 py-4 text-right">{t('table.colActions')}</th>
+                    <th className="px-5 py-4 text-end">{t('table.colActions')}</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-border">
@@ -1418,11 +1418,11 @@ export default function ProxyPoolPage() {
                         <div className={`flex justify-end gap-1.5 transition-opacity ${checkingId === proxy.id || rotatingId === proxy.id ? 'opacity-100' : 'opacity-0 group-hover/row:opacity-100 group-focus-within/row:opacity-100'}`}>
                           {proxy.canRotate && (
                             <GuardedButton deny={denyManage} size="sm" variant="secondary" onClick={() => handleRotate(proxy)} disabled={rotatingId === proxy.id || checkingId === proxy.id} title={t('rowActions.rotateIpTitle', 'Get a new exit IP on this proxy')} className="px-3">
-                              {rotatingId === proxy.id ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <RotateCw className="h-3.5 w-3.5 mr-1" />} {t('rowActions.rotateIp', 'Rotate IP')}
+                              {rotatingId === proxy.id ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <RotateCw className="h-3.5 w-3.5 me-1" />} {t('rowActions.rotateIp', 'Rotate IP')}
                             </GuardedButton>
                           )}
                           <Button size="sm" variant="secondary" onClick={() => handleCheck(proxy)} disabled={checkingId === proxy.id} title={t('rowActions.testProxy')} className="px-3">
-                            {checkingId === proxy.id ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Activity className="h-3.5 w-3.5 mr-1" />} {t('rowActions.check')}
+                            {checkingId === proxy.id ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Activity className="h-3.5 w-3.5 me-1" />} {t('rowActions.check')}
                           </Button>
                           <GuardedButton deny={denyManage} size="sm" variant="ghost" onClick={() => openEdit(proxy)} className="px-2.5" aria-label={t('rowActions.editProxy')}>
                             <Edit className="h-4 w-4" />

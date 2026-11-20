@@ -167,7 +167,7 @@ export default function BatchImportPage() {
             disabled={exporting}
             className="bg-secondary hover:bg-secondary text-foreground border border-border"
           >
-            {exporting ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <FileDown className="w-4 h-4 mr-2" />}
+            {exporting ? <Loader2 className="w-4 h-4 me-2 animate-spin" /> : <FileDown className="w-4 h-4 me-2" />}
             {t('header.exportProfiles')}
           </Button>
         }
@@ -210,7 +210,7 @@ export default function BatchImportPage() {
                   {t('step1.description')}
                 </p>
                 <Button onClick={handleDownloadTemplate} className="w-full bg-secondary hover:bg-secondary text-foreground border border-border">
-                  <Download className="w-4 h-4 mr-2" /> {t('step1.downloadButton')}
+                  <Download className="w-4 h-4 me-2" /> {t('step1.downloadButton')}
                 </Button>
               </CardContent>
             </Card>
@@ -230,7 +230,7 @@ export default function BatchImportPage() {
                   onClick={handleSelectFile}
                   className="w-full bg-blue-600 hover:bg-blue-500 text-white"
                 >
-                  <UploadCloud className="w-4 h-4 mr-2" /> {t('step2.selectButton')}
+                  <UploadCloud className="w-4 h-4 me-2" /> {t('step2.selectButton')}
                 </Button>
 
                 {fileError && (
@@ -300,7 +300,7 @@ export default function BatchImportPage() {
                     ) : (
                       <>
                         <div className="flex-1 overflow-x-auto">
-                          <table className="w-full text-left text-[12px] min-w-[600px]">
+                          <table className="w-full text-start text-[12px] min-w-[600px]">
                             <thead className="bg-secondary text-muted-foreground sticky top-0 shadow-sm border-b border-border">
                               <tr>
                                 <th className="px-4 py-2 font-medium">{t('table.row')}</th>
@@ -337,7 +337,7 @@ export default function BatchImportPage() {
                             </span>
                           </label>
                           {autoBind && (
-                            <div className="flex flex-wrap items-center gap-2 pl-6 text-[12px] text-muted-foreground">
+                            <div className="flex flex-wrap items-center gap-2 ps-6 text-[12px] text-muted-foreground">
                               <label htmlFor="auto-bind-source">{t('autoBind.sourceLabel')}</label>
                               <select id="auto-bind-source" value={autoBindSource} onChange={(e) => setAutoBindSource(e.target.value)} className="h-8 rounded border border-border bg-card px-2 text-[12px] text-foreground focus:border-primary focus:outline-none">
                                 <option value="paid">{t('autoBind.sourcePaid')}</option>
@@ -353,7 +353,7 @@ export default function BatchImportPage() {
                             disabled={importing}
                             className="w-full bg-emerald-600 hover:bg-emerald-500 text-white"
                           >
-                            <CheckCircle2 className="w-4 h-4 mr-2" /> {t('commitButton', { count: previewData.items.length })}
+                            <CheckCircle2 className="w-4 h-4 me-2" /> {t('commitButton', { count: previewData.items.length })}
                           </Button>
                         </div>
                       </>
@@ -398,7 +398,7 @@ export default function BatchImportPage() {
               </p>
             </div>
             <Button onClick={() => setShowQuickGen(true)} className="bg-blue-600 hover:bg-blue-500 text-white">
-              <Wand2 className="w-4 h-4 mr-2" /> {t('quick.openButton')}
+              <Wand2 className="w-4 h-4 me-2" /> {t('quick.openButton')}
             </Button>
           </CardContent>
         </Card>

@@ -166,8 +166,8 @@ function WelcomeBanner() {
   const quote = (Array.isArray(motivation) && (motivation[quoteIdx.current] || motivation[0])) || '';
 
   return (
-    <section className="relative overflow-hidden rounded-2xl border border-border bg-card p-6 pl-7 sm:p-7 sm:pl-8 animate-fade-up">
-      <span className="absolute inset-y-0 left-0 w-1 rounded-r" style={{ background: 'var(--primary)' }} aria-hidden="true" />
+    <section className="relative overflow-hidden rounded-2xl border border-border bg-card p-6 ps-7 sm:p-7 sm:ps-8 animate-fade-up">
+      <span className="absolute inset-y-0 inset-s-0 w-1 rounded-e" style={{ background: 'var(--primary)' }} aria-hidden="true" />
       <div className="flex flex-col justify-between gap-5 lg:flex-row lg:items-center">
         <div className="min-w-0">
           <div className="mb-2 flex items-center gap-2">
@@ -179,7 +179,7 @@ function WelcomeBanner() {
           </h1>
           <p className="mt-2 max-w-xl text-[13px] italic text-muted-foreground sm:text-sm">“{quote}”</p>
         </div>
-        <div className="shrink-0 rounded-xl border border-border bg-secondary/50 px-4 py-3 text-right">
+        <div className="shrink-0 rounded-xl border border-border bg-secondary/50 px-4 py-3 text-end">
           <div className="font-mono text-2xl font-bold tabular-nums tracking-tight text-foreground sm:text-3xl">{timeStr}</div>
           <div className="mt-1 flex items-center justify-end gap-1.5 text-[12px] text-muted-foreground">
             <CalendarDays className="h-3.5 w-3.5" aria-hidden="true" /> {dateStr}
@@ -285,7 +285,7 @@ function UpdateBanner() {
         )}
       </div>
       {showNotes && releaseNotes && (
-        <pre className="ml-12 mt-2 max-h-40 overflow-auto whitespace-pre-wrap rounded-lg border border-border bg-secondary/40 p-2.5 text-[11px] leading-relaxed text-muted-foreground">{releaseNotes}</pre>
+        <pre className="ms-12 mt-2 max-h-40 overflow-auto whitespace-pre-wrap rounded-lg border border-border bg-secondary/40 p-2.5 text-[11px] leading-relaxed text-muted-foreground">{releaseNotes}</pre>
       )}
     </div>
   );
@@ -728,7 +728,7 @@ export default function DashboardPage() {
             <thead>
               <tr className="border-b border-border">
                 {['thProfile', 'thProxyIp', 'thUptime', 'thHealth', 'thAction'].map((k) => (
-                  <th key={k} scope="col" className="px-5 py-3 text-left text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">{t(`dashboard.${k}`)}</th>
+                  <th key={k} scope="col" className="px-5 py-3 text-start text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">{t(`dashboard.${k}`)}</th>
                 ))}
               </tr>
             </thead>

@@ -262,12 +262,12 @@ export default function ProxyProvidersPage() {
             </div>
           </div>
           <div ref={listRef} className="flex-1 min-h-0 overflow-auto max-h-[60vh] xl:max-h-none">
-            <table className="w-full border-collapse text-left text-sm">
+            <table className="w-full border-collapse text-start text-sm">
               <thead className="sticky top-0 z-[1] bg-surface text-muted-foreground text-xs uppercase tracking-wider font-semibold shadow-[inset_0_-1px_0_var(--border)]">
                 <tr>
                   <th scope="col" className="px-4 py-3">{t('table.colProvider')}</th>
                   <th scope="col" className="px-4 py-3">{t('table.colState')}</th>
-                  <th scope="col" className="px-4 py-3 text-right">{t('table.colPool')}</th>
+                  <th scope="col" className="px-4 py-3 text-end">{t('table.colPool')}</th>
                   <th scope="col" className="px-4 py-3 hidden sm:table-cell 2xl:table-cell xl:hidden">{t('table.colKind')}</th>
                 </tr>
               </thead>
@@ -282,14 +282,14 @@ export default function ProxyProvidersPage() {
                       className={cn('cursor-pointer transition-colors', isSel ? 'bg-primary/10' : 'hover:bg-secondary/60')}
                     >
                       <td className="px-4 py-2.5">
-                        <button type="button" aria-current={isSel ? 'true' : undefined} onClick={(e) => { e.stopPropagation(); openProvider(r.p.key, tab); }} className="flex items-center gap-2.5 text-left rounded outline-none focus-visible:ring-2 focus-visible:ring-primary">
+                        <button type="button" aria-current={isSel ? 'true' : undefined} onClick={(e) => { e.stopPropagation(); openProvider(r.p.key, tab); }} className="flex items-center gap-2.5 text-start rounded outline-none focus-visible:ring-2 focus-visible:ring-primary">
                           <LogoTile p={r.p} />
                           <span className={cn('text-[13px] font-medium whitespace-nowrap', isSel ? 'text-primary' : 'text-foreground')}>{r.p.name}</span>
                           {r.pool.fail > 0 && <AlertTriangle className="w-3.5 h-3.5 shrink-0" style={{ color: TONE.warning }} aria-label={t('attention.failing', { failed: r.pool.fail, total: r.pool.total })} />}
                         </button>
                       </td>
                       <td className="px-4 py-2.5"><StateDot state={r.state} label={t(`states.${r.state}`)} /></td>
-                      <td className={cn('px-4 py-2.5 text-right font-mono text-[12.5px] tabular-nums', r.pool.total ? 'text-foreground' : 'text-muted-foreground')}>{r.pool.total}</td>
+                      <td className={cn('px-4 py-2.5 text-end font-mono text-[12.5px] tabular-nums', r.pool.total ? 'text-foreground' : 'text-muted-foreground')}>{r.pool.total}</td>
                       <td className="px-4 py-2.5 text-[12.5px] text-muted-foreground whitespace-nowrap hidden sm:table-cell 2xl:table-cell xl:hidden">{t(`kind.${r.kind}`)}</td>
                     </tr>
                   );
@@ -522,8 +522,8 @@ function PoolList({ t, pool, openPool }) {
                 <span className="w-1.5 h-1.5 rounded-full" style={{ background: TONE[tone] }} />
                 <span className={st === 'unchecked' ? 'text-muted-foreground' : ''}>{t(`detail.status${st === 'ok' ? 'Ok' : st === 'fail' ? 'Fail' : 'Unchecked'}`)}</span>
               </span>
-              <span className="hidden sm:block text-[12px] text-muted-foreground w-10 text-right">{px.lastCountry || ''}</span>
-              <span className="hidden sm:block text-[12px] text-muted-foreground font-mono w-16 text-right tabular-nums">{px.lastLatencyMs != null ? `${px.lastLatencyMs} ms` : ''}</span>
+              <span className="hidden sm:block text-[12px] text-muted-foreground w-10 text-end">{px.lastCountry || ''}</span>
+              <span className="hidden sm:block text-[12px] text-muted-foreground font-mono w-16 text-end tabular-nums">{px.lastLatencyMs != null ? `${px.lastLatencyMs} ms` : ''}</span>
             </li>
           );
         })}

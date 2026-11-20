@@ -263,12 +263,12 @@ export default function MembersPage() {
             const perms = m.permissions || {};
             const pending = m.inviteStatus === 'pending';
             return (
-              <button key={m.id} onClick={() => setEditing(m)} className="group text-left bg-card border border-border rounded-xl p-5 hover:border-border-strong transition-colors animate-fade-up">
+              <button key={m.id} onClick={() => setEditing(m)} className="group text-start bg-card border border-border rounded-xl p-5 hover:border-border-strong transition-colors animate-fade-up">
                 <div className="flex items-center gap-3">
                   <div className="relative shrink-0">
                     <span className="w-11 h-11 rounded-full grid place-items-center text-sm font-bold" style={{ background: color + '22', color, border: `1px solid ${color}33` }}>{m.initials}</span>
                     {!pending && m.status !== 'suspended' && (
-                      <span className="absolute -bottom-0.5 -right-0.5 flex w-3 h-3">
+                      <span className="absolute -bottom-0.5 -inset-e-0.5 flex w-3 h-3">
                         <span className="absolute inline-flex w-full h-full rounded-full bg-emerald-500 opacity-60 animate-ping" />
                         <span className="relative inline-flex w-3 h-3 rounded-full bg-emerald-500 border-2 border-card" />
                       </span>
@@ -405,7 +405,7 @@ function SuperAdminLicensePanel() {
                   {lic.isGrace && t('license.detail.grace', { count: lic.daysLeftGrace })}
                   {lic.isPaid && t('license.detail.paid', { date: lic.endsAt ? fmtDate(lic.endsAt) : '-' })}
                   {lic.isBanned && (r.banReason || t('status.banned'))}
-                  {lic.clockTamper && <span className="ml-2 text-amber-400">{t('license.detail.clockAnomaly')}</span>}
+                  {lic.clockTamper && <span className="ms-2 text-amber-400">{t('license.detail.clockAnomaly')}</span>}
                 </div>
               </div>
             </div>
@@ -638,7 +638,7 @@ function MemberModal({ member, me, members = [], onClose, onSaved }) {
                 {allowed.map((r) => {
                   const cfg = ROLE_CONFIG[r]; const Icon = cfg.icon; const active = role === r;
                   return (
-                    <button key={r} onClick={() => pickRole(r)} className="flex items-start gap-2.5 p-3 rounded-lg text-left border transition-colors" style={active ? { borderColor: cfg.color, background: `color-mix(in srgb, ${cfg.color} 12%, transparent)` } : { borderColor: 'var(--border)', background: 'var(--input-background)' }}>
+                    <button key={r} onClick={() => pickRole(r)} className="flex items-start gap-2.5 p-3 rounded-lg text-start border transition-colors" style={active ? { borderColor: cfg.color, background: `color-mix(in srgb, ${cfg.color} 12%, transparent)` } : { borderColor: 'var(--border)', background: 'var(--input-background)' }}>
                       <Icon className="w-3.5 h-3.5 mt-0.5 shrink-0" style={{ color: cfg.color }} />
                       <div>
                         <div className="text-[12.5px] font-semibold" style={{ color: active ? cfg.color : undefined }}>{t(`roles.${r}`)}</div>
@@ -750,7 +750,7 @@ function MemberModal({ member, me, members = [], onClose, onSaved }) {
         {!isNew && member.inviteStatus !== 'pending' && canManageTeam(me) && perm.can('members.manage') && (
           <button onClick={() => setShowAssign(true)} className="h-9 px-3 rounded-lg text-[12.5px] text-muted-foreground hover:bg-secondary flex items-center gap-1.5"><FolderInput className="w-4 h-4" />{t('actions.assignProfiles')}</button>
         )}
-        <div className="ml-auto flex items-center gap-2">
+        <div className="ms-auto flex items-center gap-2">
           <button onClick={onClose} className="h-9 px-3 rounded-lg text-[12.5px] text-muted-foreground hover:bg-secondary">{t('actions.cancel')}</button>
           <DenyTip deny={denyManage}>
             <button onClick={save} disabled={busy || Boolean(denyManage)} className="h-9 px-5 rounded-lg bg-gradient-to-br from-blue-500 to-blue-600 text-white font-semibold text-[12.5px] flex items-center gap-2 disabled:opacity-60 shadow-lg shadow-blue-500/25 hover:from-blue-400 hover:to-blue-500 transition-colors">
@@ -897,8 +897,8 @@ function AssignProfilesModal({ member, onClose }) {
     <Shell onClose={onClose} title={t('assign.title', { name: member.name })} icon={FolderInput}>
       <div className="p-6 space-y-3">
         <div className="relative">
-          <Search className="w-3.5 h-3.5 text-muted-foreground absolute left-2.5 top-1/2 -translate-y-1/2" />
-          <input value={search} onChange={(e) => setSearch(e.target.value)} placeholder={t('assign.searchPlaceholder')} className="w-full h-9 bg-input-background border border-border rounded-lg pl-8 pr-3 text-[12.5px] text-foreground outline-none focus:border-primary" />
+          <Search className="w-3.5 h-3.5 text-muted-foreground absolute inset-s-2.5 top-1/2 -translate-y-1/2" />
+          <input value={search} onChange={(e) => setSearch(e.target.value)} placeholder={t('assign.searchPlaceholder')} className="w-full h-9 bg-input-background border border-border rounded-lg ps-8 pe-3 text-[12.5px] text-foreground outline-none focus:border-primary" />
         </div>
         <div className="rounded-lg border border-border bg-elevated/40 max-h-[44vh] overflow-y-auto divide-y divide-border/60">
           {loading ? (
@@ -1200,7 +1200,7 @@ function TeamActivityFeed() {
     <div className="bg-card border border-border rounded-xl p-5 animate-fade-up">
       <div className="flex flex-wrap items-center gap-3 mb-4">
         <span className="w-7 h-7 rounded-lg grid place-items-center shrink-0" style={{ background: 'color-mix(in srgb, #3b82f6 16%, transparent)', border: '1px solid color-mix(in srgb, #3b82f6 28%, transparent)' }}><Activity className="w-3.5 h-3.5 text-blue-400" /></span>
-        <div className="mr-auto"><h2 className="text-sm font-semibold text-foreground">{t('activity.title')}</h2><p className="text-xs text-muted-foreground">{t('activity.subtitle')}</p></div>
+        <div className="me-auto"><h2 className="text-sm font-semibold text-foreground">{t('activity.title')}</h2><p className="text-xs text-muted-foreground">{t('activity.subtitle')}</p></div>
         {!exportAllowed && (
           <span className="inline-flex items-center gap-1.5 text-[11.5px] text-muted-foreground">
             <Crown className="w-3.5 h-3.5 text-violet-400" />{t('activity.enterpriseFeature')}
@@ -1250,7 +1250,7 @@ function TeamActivityFeed() {
               <span className="px-2 py-0.5 rounded-md text-[11px] font-medium" style={{ background: `color-mix(in srgb, ${ac} 14%, transparent)`, color: ac }}>{actionLabelT(r.action, t)}</span>
               {r.profileTitle && <span className="text-muted-foreground truncate">{r.profileTitle}</span>}
               {r.detail && <span className="text-muted-foreground truncate hidden md:inline">· {humanizeDetail(r.detail)}</span>}
-              <span className="ml-auto text-[11px] text-muted-foreground font-mono shrink-0">{feedTime(r.createdAt, t)}</span>
+              <span className="ms-auto text-[11px] text-muted-foreground font-mono shrink-0">{feedTime(r.createdAt, t)}</span>
             </div>
           );
         })}

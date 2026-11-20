@@ -163,7 +163,7 @@ export default function CommandPalette() {
                 aria-selected={i === sel}
                 onMouseEnter={() => setSel(i)}
                 onClick={() => exec(i)}
-                className={`w-full flex items-center gap-3 px-4 py-2.5 text-left text-[13px] ${i === sel ? 'bg-secondary text-foreground' : 'text-muted-foreground hover:text-foreground'}`}
+                className={`w-full flex items-center gap-3 px-4 py-2.5 text-start text-[13px] ${i === sel ? 'bg-secondary text-foreground' : 'text-muted-foreground hover:text-foreground'}`}
               >
                 <Icon className="w-4 h-4 shrink-0" />
                 <span className="flex-1 truncate">{r.label}</span>

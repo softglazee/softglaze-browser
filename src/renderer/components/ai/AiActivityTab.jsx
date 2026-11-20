@@ -136,7 +136,7 @@ export default function AiActivityTab({ lang, clients, active = true }) {
             {clientOptions.map((c) => <option key={c} value={c}>{clientLabel(t, c)}</option>)}
           </select>
         </label>
-        <Button className="ml-auto" variant="secondary" size="sm" onClick={() => load(cursors[pageIdx])} disabled={loading}>
+        <Button className="ms-auto" variant="secondary" size="sm" onClick={() => load(cursors[pageIdx])} disabled={loading}>
           <RefreshCw className={loading ? 'h-3.5 w-3.5 animate-spin' : 'h-3.5 w-3.5'} /> {t('refresh')}
         </Button>
       </div>
@@ -148,7 +148,7 @@ export default function AiActivityTab({ lang, clients, active = true }) {
       ) : (
         <div className="overflow-hidden rounded-xl border border-border bg-card">
           <div className="overflow-x-auto">
-            <table className="w-full min-w-[760px] table-fixed border-collapse text-left text-sm" aria-busy={loading}>
+            <table className="w-full min-w-[760px] table-fixed border-collapse text-start text-sm" aria-busy={loading}>
               <caption className="sr-only">{t('activity.caption')}</caption>
               <colgroup>
                 <col className="w-[12%]" />
@@ -165,7 +165,7 @@ export default function AiActivityTab({ lang, clients, active = true }) {
                   <th scope="col" className="px-4 py-3">{t('activity.colTool')}</th>
                   <th scope="col" className="px-4 py-3">{t('activity.colSummary')}</th>
                   <th scope="col" className="px-4 py-3">{t('activity.colOutcome')}</th>
-                  <th scope="col" className="px-4 py-3 text-right">{t('activity.colDuration')}</th>
+                  <th scope="col" className="px-4 py-3 text-end">{t('activity.colDuration')}</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-border">
@@ -194,7 +194,7 @@ export default function AiActivityTab({ lang, clients, active = true }) {
                         <TonePill tone={OUTCOME_TONE[it.outcome] || 'muted'}>{t(`activity.outcomes.${it.outcome}`, { defaultValue: it.outcome || '-' })}</TonePill>
                         {approvalPath(it) && <span className="mt-1 block text-[11px] text-muted-foreground">{t(`activity.approval.${approvalPath(it)}`)}</span>}
                       </td>
-                      <td className="whitespace-nowrap py-2.5 pl-2 pr-4 text-right font-mono text-[12px] tabular-nums text-muted-foreground">{formatDuration(it.durationMs)}</td>
+                      <td className="whitespace-nowrap py-2.5 ps-2 pe-4 text-end font-mono text-[12px] tabular-nums text-muted-foreground">{formatDuration(it.durationMs)}</td>
                     </tr>
                   ))}
                 {!loading && rows.length === 0 && (

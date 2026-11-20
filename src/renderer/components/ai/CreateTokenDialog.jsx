@@ -238,7 +238,7 @@ function AutomationSection({ form, edit, errors, toolGroups }) {
         aria-expanded={form.automation}
         aria-controls={panelId}
         onClick={() => edit({ automation: !form.automation })}
-        className="flex w-full items-center gap-2.5 px-3.5 py-3 text-left"
+        className="flex w-full items-center gap-2.5 px-3.5 py-3 text-start"
       >
         {form.automation ? <ChevronDown className="h-4 w-4 text-muted-foreground" /> : <ChevronRight className="h-4 w-4 text-muted-foreground" />}
         <Workflow className="h-4 w-4" style={{ color: AI_TONE.accent }} aria-hidden="true" />
@@ -270,7 +270,7 @@ function AutomationSection({ form, edit, errors, toolGroups }) {
                             <span className="min-w-0">
                               <span className="block text-[12.5px] text-foreground">
                                 {t(`tools.${tool.name}`, { defaultValue: tool.title || tool.name })}
-                                {tool.destructive && <TonePill tone="warning" className="ml-1.5 align-middle">{t('automation.destructive')}</TonePill>}
+                                {tool.destructive && <TonePill tone="warning" className="ms-1.5 align-middle">{t('automation.destructive')}</TonePill>}
                               </span>
                               <span className="block font-mono text-[11px] text-muted-foreground">{tool.name}</span>
                             </span>

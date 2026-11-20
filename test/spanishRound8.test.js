@@ -208,7 +208,7 @@ test('10: the sidebar says "Dark mode" and its switch is on while the dark theme
   assert.match(toggle, /\{t\('shell\.darkMode'\)\}/);
   assert.doesNotMatch(toggle, /t\('shell\.lightMode'\)/);
   assert.match(toggle, /background: isDark \? 'var\(--primary\)' : 'var\(--switch-background\)'/);
-  assert.match(toggle, /\$\{isDark \? 'translate-x-4' : ''\}/);
+  assert.match(toggle, /\$\{isDark \? 'translate-x-4 rtl:-translate-x-4' : ''\}/);
 });
 
 // ---- 8. Delete-proxy confirmations ----

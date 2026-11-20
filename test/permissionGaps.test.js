@@ -556,6 +556,6 @@ test('the editor footer wraps instead of clipping, with the same single row on a
   assert.ok(m, 'footer markup');
   assert.match(m[1], /\bflex flex-wrap gap-3\b/);
   assert.doesNotMatch(m[1], /justify-end/);
-  assert.equal(m[2], 'ml-auto flex gap-3', 'Cancel and Save stay together on the right');
+  assert.equal(m[2], 'ms-auto flex gap-3', 'Cancel and Save stay together at the end (right in LTR)');
   assert.doesNotMatch(PAGE, /<div className="flex-1" \/>\s*<Button variant="secondary" onClick=\{closeEditor\}>/, 'no spacer left');
 });

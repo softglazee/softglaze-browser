@@ -617,7 +617,7 @@ export default function ProxyProviders({ onSynced, onCredsChanged, selectedKey: 
   const inputCls = 'w-full h-10 bg-background border border-border rounded px-3 text-sm text-foreground placeholder:text-muted-foreground outline-none focus:border-primary focus:ring-1 focus:ring-primary transition';
   // Styled <select>: hide the native arrow and paint an inset chevron.
   const chevronStyle = { backgroundImage: "url(\"data:image/svg+xml;charset=utf8,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%239aa0aa' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'/%3E%3C/svg%3E\")", backgroundRepeat: 'no-repeat', backgroundPosition: 'right 0.7rem center', backgroundSize: '1rem' };
-  const selectCls = inputCls + ' appearance-none pr-9 cursor-pointer';
+  const selectCls = inputCls + ' appearance-none pe-9 cursor-pointer';
   const labelCls = 'mb-1.5 flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground';
   const sectionCls = 'rounded-xl border border-border bg-card/40 p-4 space-y-4';
   const sectionTitleCls = 'flex items-center gap-2 text-[13px] font-semibold text-foreground';
@@ -1230,11 +1230,11 @@ export default function ProxyProviders({ onSynced, onCredsChanged, selectedKey: 
   return (
     <Card className={embedded ? '' : 'bg-surface border-border flex flex-1 min-h-0 rounded shadow-xl overflow-hidden'}>
       <div className={embedded ? '' : 'grid grid-cols-1 lg:grid-cols-[300px_1fr] flex-1 min-h-0'}>
-        {!embedded && <div className="border-b lg:border-b-0 lg:border-r border-border bg-card/40 flex flex-col min-h-0">
+        {!embedded && <div className="border-b lg:border-b-0 lg:border-e border-border bg-card/40 flex flex-col min-h-0">
           <div className="flex items-center gap-2 px-4 py-3 border-b border-border shrink-0">
             <Boxes className="w-4 h-4 text-primary" />
             <span className="text-[13px] font-semibold text-foreground">{t('proxyProviders.heading')}</span>
-            <span className="ml-auto text-[10.5px] text-muted-foreground">{t('proxyProviders.integratedCount', { connected: PROVIDERS.filter((x) => !x.unavailable).length, total: PROVIDERS.length })}</span>
+            <span className="ms-auto text-[10.5px] text-muted-foreground">{t('proxyProviders.integratedCount', { connected: PROVIDERS.filter((x) => !x.unavailable).length, total: PROVIDERS.length })}</span>
           </div>
           <div className="overflow-y-auto p-2 grid grid-cols-2 lg:grid-cols-1 gap-1.5">
             {PROVIDERS.map((p) => {
@@ -1244,7 +1244,7 @@ export default function ProxyProviders({ onSynced, onCredsChanged, selectedKey: 
                   key={p.key}
                   type="button"
                   onClick={() => setSelectedKey(p.key)}
-                  className={`flex items-center gap-2.5 px-2.5 py-2 rounded-lg text-left transition-colors border ${active ? 'bg-primary/10 border-primary/30' : 'border-transparent hover:bg-card'}`}
+                  className={`flex items-center gap-2.5 px-2.5 py-2 rounded-lg text-start transition-colors border ${active ? 'bg-primary/10 border-primary/30' : 'border-transparent hover:bg-card'}`}
                 >
                   <span className="w-8 h-8 rounded-lg grid place-items-center shrink-0" style={{ background: `color-mix(in srgb, ${p.color} 16%, transparent)`, color: p.color, border: `1px solid color-mix(in srgb, ${p.color} 28%, transparent)` }}>
                     <ProviderLogo k={p.key} className="w-5 h-5" />
@@ -1262,7 +1262,7 @@ export default function ProxyProviders({ onSynced, onCredsChanged, selectedKey: 
         <div className={embedded ? '' : 'overflow-y-auto p-5 min-h-0'}>
           {/* Promo banner (the Proxy providers page shows its own header instead) */}
           {!embedded && <div className="rounded-xl p-5 mb-5 relative overflow-hidden" style={{ background: `linear-gradient(120deg, color-mix(in srgb, ${provider.color} 22%, var(--card)), var(--card))`, border: `1px solid color-mix(in srgb, ${provider.color} 30%, transparent)` }}>
-            <div className="absolute -top-8 -right-8 w-32 h-32 rounded-full opacity-20" style={{ background: provider.color, filter: 'blur(36px)' }} />
+            <div className="absolute -top-8 -inset-e-8 w-32 h-32 rounded-full opacity-20" style={{ background: provider.color, filter: 'blur(36px)' }} />
             <div className="relative z-10 flex items-center justify-between gap-4 flex-wrap">
               <div className="flex items-center gap-3">
                 <span className="w-12 h-12 rounded-xl grid place-items-center shrink-0" style={{ background: `color-mix(in srgb, ${provider.color} 20%, transparent)`, color: provider.color, border: `1px solid color-mix(in srgb, ${provider.color} 34%, transparent)` }}>

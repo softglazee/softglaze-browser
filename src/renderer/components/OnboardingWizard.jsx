@@ -25,7 +25,7 @@ function WizardShell({ icon: Icon, title, subtitle, children, onBack, footer, on
     <div className="fixed inset-0 z-[110] flex items-center justify-center p-4">
       <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" />
       <div ref={dialogRef} role="dialog" aria-modal="true" aria-label={title} tabIndex={-1} className="relative w-full max-w-[480px] rounded-2xl bg-card border border-border shadow-2xl p-6">
-        <button onClick={onSkip} title={t('wizard.skipTitle')} className="absolute top-4 right-4 text-muted-foreground hover:text-foreground"><X className="w-4 h-4" /></button>
+        <button onClick={onSkip} title={t('wizard.skipTitle')} className="absolute top-4 inset-e-4 text-muted-foreground hover:text-foreground"><X className="w-4 h-4" /></button>
         <div className="w-11 h-11 rounded-xl bg-primary/10 text-primary grid place-items-center mb-4"><Icon className="w-5 h-5" /></div>
         <h2 className="font-display text-[19px] font-semibold tracking-tight text-foreground">{title}</h2>
         <p className="text-[12.5px] text-muted-foreground mt-1 mb-5">{subtitle}</p>

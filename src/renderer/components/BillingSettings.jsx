@@ -216,7 +216,7 @@ function ProviderConfig({ provider, onSaved }) {
   return (
     <div className="rounded-lg border border-border bg-elevated/40 overflow-hidden">
       <div className="flex items-center gap-3 px-4 py-3">
-        <button onClick={() => setOpen((o) => !o)} className="flex items-center gap-2 flex-1 min-w-0 text-left">
+        <button onClick={() => setOpen((o) => !o)} className="flex items-center gap-2 flex-1 min-w-0 text-start">
           <span className="text-[13px] font-semibold text-foreground">{provider.label}</span>
           <span className={`text-[9.5px] font-semibold px-1.5 py-0.5 rounded-full ${provider.kind === 'manual' ? 'bg-amber-500/15 text-amber-400' : 'bg-blue-500/15 text-blue-400'}`}>
             {provider.kind === 'manual' ? t('billing.provider.kindManual') : t('billing.provider.kindAutomated')}
@@ -225,7 +225,7 @@ function ProviderConfig({ provider, onSaved }) {
         </button>
         <div className="flex items-center gap-2 shrink-0">
           {busy === 'toggle' && <Loader2 className="w-3.5 h-3.5 animate-spin text-muted-foreground" />}
-          <span className="text-[11.5px] text-muted-foreground w-14 text-right">{enabled ? t('billing.provider.enabled') : t('billing.provider.disabled')}</span>
+          <span className="text-[11.5px] text-muted-foreground w-14 text-end">{enabled ? t('billing.provider.enabled') : t('billing.provider.disabled')}</span>
           <Switch checked={enabled} disabled={busy === 'toggle'} onChange={toggleEnabled} label={t('billing.provider.enableAria', { provider: provider.label })} />
         </div>
       </div>

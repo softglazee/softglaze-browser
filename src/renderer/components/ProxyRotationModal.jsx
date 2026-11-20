@@ -94,7 +94,7 @@ export default function ProxyRotationModal({ profileId, profileName, onClose, on
                   onClick={() => setEnabled((v) => !v)}
                   className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer items-center rounded-full border-2 border-transparent transition-colors ${enabled ? 'bg-primary' : 'bg-muted-dark'}`}
                 >
-                  <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition ${enabled ? 'translate-x-5' : 'translate-x-0'}`} />
+                  <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition ${enabled ? 'translate-x-5 rtl:-translate-x-5' : 'translate-x-0'}`} />
                 </button>
                 <span className="text-sm font-medium text-foreground">{enabled ? t('proxyRotation.enabled') : t('proxyRotation.disabled')}</span>
               </div>
@@ -142,7 +142,7 @@ export default function ProxyRotationModal({ profileId, profileName, onClose, on
         <div className="flex items-center justify-end gap-3 px-5 py-4 border-t border-border bg-surface">
           <Button size="sm" variant="secondary" onClick={onClose}>{t('proxyRotation.close')}</Button>
           <Button size="sm" variant="primary" disabled={saving || loading} onClick={save}>
-            {saving ? <Loader2 className="w-4 h-4 mr-1.5 animate-spin" /> : null} {t('proxyRotation.save')}
+            {saving ? <Loader2 className="w-4 h-4 me-1.5 animate-spin" /> : null} {t('proxyRotation.save')}
           </Button>
         </div>
       </div>

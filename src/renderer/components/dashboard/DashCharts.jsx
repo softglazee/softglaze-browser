@@ -104,7 +104,7 @@ export function Legend({ items = [], total }) {
           <span className="h-2.5 w-2.5 shrink-0 rounded-full" style={{ background: d.color }} aria-hidden="true" />
           <span className="flex-1 truncate text-muted-foreground">{d.label}</span>
           <span className="font-semibold text-foreground tabular-nums">{d.value}</span>
-          {total > 0 && <span className="w-9 text-right text-muted-foreground tabular-nums">{Math.round((d.value / total) * 100)}%</span>}
+          {total > 0 && <span className="w-9 text-end text-muted-foreground tabular-nums">{Math.round((d.value / total) * 100)}%</span>}
         </li>
       ))}
     </ul>
@@ -124,7 +124,7 @@ export function HBars({ rows = [], color = 'var(--chart-1)', ariaLabel, emptyLab
           <span className="h-2 overflow-hidden rounded-full bg-elevated">
             <span className="block h-full rounded-full transition-[width] duration-700 ease-out" style={{ width: `${((r.value || 0) / max) * 100}%`, background: r.color || color }} />
           </span>
-          <span className="text-right text-xs font-semibold tabular-nums text-foreground">{r.value}</span>
+          <span className="text-end text-xs font-semibold tabular-nums text-foreground">{r.value}</span>
         </li>
       ))}
     </ul>

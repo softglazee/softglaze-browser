@@ -182,7 +182,7 @@ export default function DeveloperApiSettings() {
                 style={{ background: status?.enabled ? '#22c55e' : 'var(--switch-background, #3f3f46)' }}
                 title={status?.enabled ? t('developerApi.server.disableTitle') : t('developerApi.server.enableTitle')}
               >
-                <span className={`inline-block transform rounded-full bg-white shadow transition-transform ${status?.enabled ? 'translate-x-5' : 'translate-x-1'}`} style={{ height: 18, width: 18 }} />
+                <span className={`inline-block transform rounded-full bg-white shadow transition-transform ${status?.enabled ? 'translate-x-5 rtl:-translate-x-5' : 'translate-x-1 rtl:-translate-x-1'}`} style={{ height: 18, width: 18 }} />
               </button>
             </div>
 

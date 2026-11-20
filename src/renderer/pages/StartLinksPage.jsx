@@ -126,7 +126,7 @@ export default function StartLinksPage() {
           <div className="flex items-center gap-2">
             {saved && <span className="text-xs text-emerald-500 inline-flex items-center gap-1"><Check className="w-3.5 h-3.5" /> Saved</span>}
             <GuardedButton deny={deny} variant="primary" size="sm" onClick={save} disabled={saving || !dirty || loading || !!loadErr}>
-              {saving ? <Loader2 className="w-4 h-4 animate-spin mr-1" /> : <Check className="w-4 h-4 mr-1" />} Save
+              {saving ? <Loader2 className="w-4 h-4 animate-spin me-1" /> : <Check className="w-4 h-4 me-1" />} Save
             </GuardedButton>
           </div>
         )}
@@ -158,8 +158,8 @@ export default function StartLinksPage() {
             <div className="flex flex-wrap items-center justify-between gap-2 px-5 py-3 border-b border-border">
               <h3 className="text-sm font-semibold text-foreground">Links <span className="text-muted-foreground font-normal">· {validCount}</span></h3>
               <div className="flex items-center gap-1.5">
-                <Button variant="ghost" size="sm" onClick={autoLabelAll} disabled={items.length === 0} title="Fill any empty label from its URL"><Wand2 className="w-3.5 h-3.5 mr-1" /> Auto-label</Button>
-                <Button variant="ghost" size="sm" onClick={add}><Plus className="w-3.5 h-3.5 mr-1" /> Add</Button>
+                <Button variant="ghost" size="sm" onClick={autoLabelAll} disabled={items.length === 0} title="Fill any empty label from its URL"><Wand2 className="w-3.5 h-3.5 me-1" /> Auto-label</Button>
+                <Button variant="ghost" size="sm" onClick={add}><Plus className="w-3.5 h-3.5 me-1" /> Add</Button>
               </div>
             </div>
             <div className="p-4 space-y-2 max-h-[54vh] overflow-y-auto">
@@ -207,7 +207,7 @@ export default function StartLinksPage() {
               onChange={(e) => setBulk(e.target.value)}
             />
             <div className="flex items-center gap-3">
-              <Button variant="primary" size="sm" onClick={bulkAdd} disabled={!bulk.trim()}><Plus className="w-3.5 h-3.5 mr-1" /> Add all</Button>
+              <Button variant="primary" size="sm" onClick={bulkAdd} disabled={!bulk.trim()}><Plus className="w-3.5 h-3.5 me-1" /> Add all</Button>
               {bulk.trim() && <button type="button" className="text-xs text-muted-foreground hover:text-foreground" onClick={() => setBulk('')}>Clear</button>}
             </div>
           </CardContent>
