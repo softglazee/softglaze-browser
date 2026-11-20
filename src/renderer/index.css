@@ -70,10 +70,21 @@
   --linkedin-btn-bg: #0a66c2;
   --linkedin-btn-fg: #ffffff;
   --linkedin-btn-hover: #004182;
+  /* "Continue with Microsoft": Microsoft's sign-in button, dark variant on the dark theme (#2F2F2F, white text,
+     the four-square logo). The light theme below uses the light variant. */
+  --microsoft-btn-bg: #2f2f2f;
+  --microsoft-btn-fg: #ffffff;
+  --microsoft-btn-border: #2f2f2f;
+  --microsoft-btn-hover: #3b3b3b;
 }
 
 /* LIGHT - a clean, high-contrast complement (Figma ships dark only) */
 .light {
+  /* Microsoft's light sign-in button: white, #8C8C8C border, #5E5E5E text. */
+  --microsoft-btn-bg: #ffffff;
+  --microsoft-btn-fg: #5e5e5e;
+  --microsoft-btn-border: #8c8c8c;
+  --microsoft-btn-hover: #f3f3f3;
   --background: #f4f6fb;
   --foreground: #0f172a;
   --card: #ffffff;

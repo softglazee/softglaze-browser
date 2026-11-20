@@ -6,8 +6,8 @@ import { getStoredLang } from '@/lib/lang.js';
 import { USE_CASES, LEAD_LIMITS } from '@/lib/signupLead.mjs';
 import { signInErrorText, providerButtons, PROVIDER_NAMES, offerEmailRerequest, sixDigits, canOfferMove, moveErrorKey } from '@/lib/signInFlow.mjs';
 
-// One-click sign-in (1.0.26): "Continue with Google", "Continue with Facebook", "Continue with LinkedIn" and
-// "Continue with GitHub" (the system browser, then back to the app) and "Continue with email" (a 6-digit code). Used by the Gate for a new workspace (purpose 'signup') and for a one-click
+// One-click sign-in (1.0.26): "Continue with Google", "Continue with Microsoft", "Continue with Facebook",
+// "Continue with LinkedIn" and "Continue with GitHub" (the system browser, then back to the app) and "Continue with email" (a 6-digit code). Used by the Gate for a new workspace (purpose 'signup') and for a one-click
 // workspace after Sign out ('unlock'), and by Settings > Account ('link'). Main does the work and keeps the
 // session token; this only draws the steps.
 
@@ -19,6 +19,9 @@ const githubBtn = `${bigBtn} bg-foreground text-background hover:opacity-90 shad
 // Google's own light button (branding guidelines): white, a thin grey border, dark text and the four-colour G, in
 // both themes. The colours are the --google-btn-* tokens in index.css.
 const googleBtn = `${bigBtn} border border-[var(--google-btn-border)] bg-[var(--google-btn-bg)] text-[var(--google-btn-fg)] hover:bg-[var(--google-btn-hover)] shadow-sm`;
+// Microsoft's sign-in button: light variant (white, #8C8C8C border, #5E5E5E text) on the light theme, dark variant
+// (#2F2F2F, white text) on the dark theme. The colours are the --microsoft-btn-* tokens.
+const microsoftBtn = `${bigBtn} border border-[var(--microsoft-btn-border)] bg-[var(--microsoft-btn-bg)] text-[var(--microsoft-btn-fg)] hover:bg-[var(--microsoft-btn-hover)] shadow-sm`;
 // Meta's brand button: Facebook blue, the white "f" logo, white text. The colours are the --facebook-btn-* tokens.
 const facebookBtn = `${bigBtn} bg-[var(--facebook-btn-bg)] text-[var(--facebook-btn-fg)] hover:bg-[var(--facebook-btn-hover)] shadow-sm`;
 // LinkedIn's brand button: LinkedIn blue, the white "in" logo, white text. The colours are the --linkedin-btn-* tokens.
@@ -43,6 +46,18 @@ export function GoogleMark({ className = 'w-[18px] h-[18px]' }) {
       <path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z" />
       <path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z" />
       <path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.15 1.45-4.92 2.3-8.16 2.3-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z" />
+    </svg>
+  );
+}
+
+// The Microsoft logo: four squares, exactly Microsoft's colours (do not recolour or redraw it).
+export function MicrosoftMark({ className = 'w-[18px] h-[18px]' }) {
+  return (
+    <svg viewBox="0 0 21 21" aria-hidden="true" className={className}>
+      <rect x="1" y="1" width="9" height="9" fill="#F25022" />
+      <rect x="11" y="1" width="9" height="9" fill="#7FBA00" />
+      <rect x="1" y="11" width="9" height="9" fill="#00A4EF" />
+      <rect x="11" y="11" width="9" height="9" fill="#FFB900" />
     </svg>
   );
 }
@@ -73,6 +88,7 @@ export function LinkedinMark({ className = 'w-[18px] h-[18px]', onBlue = false }
 
 export function ProviderMark({ provider, className }) {
   if (provider === 'google') return <GoogleMark className={className} />;
+  if (provider === 'microsoft') return <MicrosoftMark className={className} />;
   if (provider === 'facebook') return <FacebookMark className={className} />;
   if (provider === 'linkedin') return <LinkedinMark className={className} />;
   return <GithubMark className={className} />;
@@ -227,6 +243,11 @@ export default function SignInPanel({ purpose, info, lockedEmail = '', onDone, o
         {buttons.includes('google') && (
           <button type="button" onClick={() => startProvider('google', 'auto')} className={googleBtn}>
             <GoogleMark /> {t('choose.google')}
+          </button>
+        )}
+        {buttons.includes('microsoft') && (
+          <button type="button" onClick={() => startProvider('microsoft', 'auto')} className={microsoftBtn}>
+            <MicrosoftMark /> {t('choose.microsoft')}
           </button>
         )}
         {buttons.includes('facebook') && (

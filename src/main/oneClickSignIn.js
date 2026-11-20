@@ -1,6 +1,6 @@
 'use strict';
-// One-click sign-in (1.0.26): "Continue with Google", "Continue with Facebook", "Continue with LinkedIn",
-// "Continue with GitHub" and "Continue with email" (a 6-digit code, no password).
+// One-click sign-in (1.0.26): "Continue with Google", "Continue with Microsoft", "Continue with Facebook",
+// "Continue with LinkedIn", "Continue with GitHub" and "Continue with email" (a 6-digit code, no password).
 // What main does with a verified sign-in, for three purposes:
 //
 //   signup  a new workspace: the Owner is created from the verified name and email (no long form) and the
@@ -179,7 +179,7 @@ function createOneClickSignIn(d) {
     return (await workspaceAccount()).customerId;
   }
 
-  // --- Provider sign-in (Google, Facebook, LinkedIn, GitHub) ---
+  // --- Provider sign-in (Google, Microsoft, Facebook, LinkedIn, GitHub) ---
   // rerequest: "Allow email access" after a Facebook sign-in that shared no email.
   async function start({ provider, purpose, mode, rerequest = false } = {}) {
     await assertPurpose(purpose);
