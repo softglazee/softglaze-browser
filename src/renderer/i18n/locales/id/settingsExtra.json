@@ -202,7 +202,7 @@
       "desc": "Di profil berbasis Chrome, setiap jendela atau panel Alat Developer (F12, Ctrl+Shift+I, Inspect) ditutup begitu terbuka. Berlaku untuk profil yang dibuka setelah Anda mengubahnya. Chrome Anda sendiri di komputer ini tidak terpengaruh."
     },
     "minimizeCdpFootprint": {
-      "title": "Kurangi jejak CDP (eksperimental, untuk CAPTCHA)",
+      "title": "Kurangi jejak CDP (eksperimental, lebih sedikit CAPTCHA)",
       "shortTitle": "Kurangi jejak CDP",
       "desc": "Menghapus Runtime.enable CDP yang terus aktif, sinyal otomatisasi utama yang dikenali Cloudflare/Turnstile. KONSEKUENSI saat AKTIF: autofill persona, tautan cek di halaman awal, dan pencerminan sesi tersinkron berhenti bekerja (semuanya butuh binding CDP). Mati secara default; aktifkan untuk membandingkan apakah CAPTCHA berkurang, lalu buka ulang profil."
     },

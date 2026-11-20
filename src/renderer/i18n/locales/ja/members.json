@@ -73,7 +73,7 @@
   "status": {
     "active": "有効",
     "suspended": "一時停止中",
-    "banned": "利用停止中"
+    "banned": "ブロック中"
   },
   "actions": {
     "inviteMember": "メンバーを招待",
@@ -126,7 +126,7 @@
     "inviteTitle": "メンバーを招待",
     "editTitle": "{{name}}を編集",
     "noCreatableRoles": "サブメンバーを作成する権限がありません。",
-    "invitePendingCode": "招待保留中 - コード"
+    "invitePendingCode": "招待保留中：コード"
   },
   "fields": {
     "name": "名前",
@@ -171,10 +171,10 @@
   "accountStatus": {
     "title": "アカウントの状態",
     "reason": "理由：{{reason}}",
-    "unban": "利用停止を解除",
-    "banHint": "上のフィールドを編集しても利用停止は維持されます。アクセスを復元するには「利用停止を解除」を使用してください。",
+    "unban": "メンバーのブロックを解除",
+    "banHint": "上のフィールドを編集してもブロックは維持されます。アクセスを復元するには「メンバーのブロックを解除」を使用してください。",
     "suspendToggle": "このメンバーを一時停止（サインインをブロック）",
-    "ban": "メンバーを利用停止"
+    "ban": "メンバーをブロック"
   },
   "delete": {
     "title": "{{name}}を削除",
@@ -265,7 +265,7 @@
       "paid": "有料",
       "trialing": "トライアル",
       "grace": "猶予",
-      "banned": "利用停止中"
+      "banned": "ブロック中"
     },
     "type": {
       "trial": "トライアル",

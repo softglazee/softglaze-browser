@@ -132,7 +132,7 @@
     "inviteTitle": "Inviter un membre",
     "editTitle": "Modifier {{name}}",
     "noCreatableRoles": "Vous n'êtes autorisé à créer aucun sous-membre.",
-    "invitePendingCode": "Invitation en attente - code"
+    "invitePendingCode": "Invitation en attente, code"
   },
   "fields": {
     "name": "Nom",
@@ -180,14 +180,14 @@
     "title": "Statut du compte",
     "reason": "Motif : {{reason}}",
     "unban": "Débloquer le membre",
-    "banHint": "Modifier les champs ci-dessus conserve le blocage : utilisez « Débloquer » pour rétablir l'accès.",
+    "banHint": "Modifier les champs ci-dessus conserve le blocage. Utilisez « Débloquer » pour rétablir l'accès.",
     "suspendToggle": "Suspendre ce membre (empêche la connexion)",
     "ban": "Bloquer le membre"
   },
   "delete": {
     "title": "Retirer {{name}}",
     "warnPrefix": "Cette action retire ",
-    "warnMiddle": " et vous transfère ses éventuels sous-membres. Choisissez ce qu'il advient de ses données -",
+    "warnMiddle": " et vous transfère ses éventuels sous-membres. Choisissez ce qu'il advient de ses données :",
     "profilesWord_one": "profil",
     "profilesWord_other": "profils",
     "profilesWord_many": "profils",

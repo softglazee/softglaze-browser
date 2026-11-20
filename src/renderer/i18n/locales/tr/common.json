@@ -26,7 +26,7 @@
     "settings": "Ayarlar"
   },
   "shell": {
-    "footerDefault": "© {year} SoftGlaze - [SoftGlaze Team](https://softglaze.com) tarafından yapıldı · Geliştiren: [Azhar Ali](https://azhar.softglaze.com)",
+    "footerDefault": "© {year} SoftGlaze. [SoftGlaze Team](https://softglaze.com) tarafından yapıldı · Geliştiren: [Azhar Ali](https://azhar.softglaze.com)",
     "antiDetect": "Çoklu Profil",
     "darkMode": "Koyu mod",
     "lightMode": "Açık mod",
@@ -83,14 +83,14 @@
       "Oluşturduğunuz her profil yeni bir kapı açar.",
       "Bugün disiplin, yarın üstünlük.",
       "Küçük ama düzenli adımlar büyük kazançlara dönüşür.",
-      "Dikkatli olun - fark ayrıntılarda saklıdır.",
+      "Dikkatli olun: fark ayrıntılarda saklıdır.",
       "Odak, telaşı yener. Önce nişan alın, sonra harekete geçin.",
       "Bugün sessizce yaptığınız iş, yarının imparatorluğunu kurar.",
       "Hassasiyet bir alışkanlıktır, tesadüf değil.",
       "Gelin, odaklanın ve sonuçların konuşmasına izin verin.",
       "Bir oturum daha, bir kazanç daha.",
       "Büyüklük, iyi geçirilmiş günlerin toplamıdır.",
-      "Gelecekteki haliniz sizi izliyor - onu gururlandırın.",
+      "Gelecekteki haliniz sizi izliyor. Onu gururlandırın.",
       "Amaçla hareket edin. Güvenle büyüyün."
     ],
     "overview": "Genel bakış",
@@ -207,7 +207,7 @@
     "launchesTitle": "Başlatmalar",
     "launchesSub": "Son 7 gün",
     "sampleBadge": "Örnek",
-    "sampleNote": "Yalnızca örnek amaçlı — günlük başlatma geçmişi henüz kaydedilmiyor.",
+    "sampleNote": "Yalnızca örnek amaçlı. Günlük başlatma geçmişi henüz kaydedilmiyor.",
     "proxyTypesTitle": "Proxy türleri",
     "proxyTypesSub": "Havuzdaki protokol dağılımı",
     "noData": "Henüz veri yok",
@@ -273,5 +273,15 @@
     "settingsHidden": "Ayarlar hesabınız için bir yönetici tarafından kapatıldı.",
     "proxiesHidden": "Proxy'ler hesabınız için bir yönetici tarafından kapatıldı.",
     "profilesHidden": "Profiller hesabınız için bir yönetici tarafından kapatıldı."
+  },
+  "promo": {
+    "bf2026": {
+      "text": "Black Friday: Pro Ömür Boyu {{pro}} veya Enterprise Ömür Boyu {{enterprise}}, tek ödeme. 1 Aralık 23:59 UTC'de sona erer."
+    },
+    "xmas2026": {
+      "text": "Yılbaşı kampanyası: Pro Ömür Boyu {{pro}} veya Enterprise Ömür Boyu {{enterprise}}, tek ödeme. 31 Aralık 23:59 UTC'de sona erer."
+    },
+    "cta": "Teklifi gör",
+    "dismiss": "Bu teklifi gizle"
   }
 }

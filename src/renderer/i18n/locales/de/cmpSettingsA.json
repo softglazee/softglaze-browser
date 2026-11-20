@@ -45,7 +45,7 @@
       "savedMsg": "Gespeichert.",
       "saveError": "Speichern fehlgeschlagen.",
       "connectionOk": "Verbindung sieht gut aus ✓",
-      "validationFailedKeys": "Prüfung fehlgeschlagen – prüfen Sie die Schlüssel.",
+      "validationFailedKeys": "Prüfung fehlgeschlagen. Prüfen Sie die Schlüssel.",
       "validationFailed": "Prüfung fehlgeschlagen."
     },
     "manual": {
@@ -78,7 +78,7 @@
       "openLinkTitle": "{{provider}}-Link öffnen",
       "saving": "Speichert…",
       "saveButton": "Links speichern",
-      "footnote": "Diese Links stehen hinter den Buttons „Kaufen bei…“ / „Dashboard öffnen“ im Proxy-Pool → Tab „Anbieter“. Es sind nur öffentliche Empfehlungs-URLs – Proxy-Tokens und Zugangsdaten sind nie betroffen."
+      "footnote": "Diese Links stehen hinter den Buttons „Kaufen bei…“ / „Dashboard öffnen“ im Proxy-Pool → Tab „Anbieter“. Es sind nur öffentliche Empfehlungs-URLs. Proxy-Tokens und Zugangsdaten sind nie betroffen."
     }
   },
   "developerApi": {
@@ -96,7 +96,7 @@
       "title": "API-Schlüssel",
       "namePlaceholder": "Schlüsselname (z. B. CI-Server)",
       "generate": "Neuen API-Schlüssel erzeugen",
-      "copyOnce": "Kopieren Sie diesen Schlüssel jetzt – er wird nur einmal angezeigt und lässt sich nicht wiederherstellen.",
+      "copyOnce": "Kopieren Sie diesen Schlüssel jetzt. Er wird nur einmal angezeigt und lässt sich nicht wiederherstellen.",
       "empty": "Noch keine API-Schlüssel.",
       "lastUsed": "zuletzt genutzt {{when}}",
       "neverUsed": "nie genutzt",

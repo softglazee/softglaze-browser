@@ -190,7 +190,7 @@
     "starting": "Memulai…",
     "logStarted": "\"{{name}}\" dimulai · {{total}} langkah di {{profile}}",
     "logStepRunning": "▶ {{label}}: {{summary}}",
-    "logStepError": "✕ {{label}} - {{error}}",
+    "logStepError": "✕ {{label}}: {{error}}",
     "logStepFailed": "gagal",
     "logStopped": "Dihentikan.",
     "logFinished": "Selesai: {{ran}}/{{total}} langkah.",
@@ -207,7 +207,7 @@
     "errors": {
       "run": "Tidak bisa menjalankan makro."
     },
-    "logStepSkipped": "{{label}} dilewati (opsional) - {{error}}"
+    "logStepSkipped": "{{label}} dilewati (opsional): {{error}}"
   },
   "parallel": {
     "states": {

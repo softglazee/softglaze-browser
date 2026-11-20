@@ -16,7 +16,7 @@
     "resumeTitle": "{{state}}({{percent}}%)- 再開",
     "statusInstalling": "導入中",
     "statusQueued": "…",
-    "retryTitle": "再試行 - {{error}}",
+    "retryTitle": "再試行：{{error}}",
     "downloadFailedShort": "DL失敗",
     "downloadInstallTitle": "このバージョンをダウンロードしてインストール"
   },

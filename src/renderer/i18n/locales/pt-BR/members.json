@@ -180,7 +180,7 @@
     "title": "Status da conta",
     "reason": "Motivo: {{reason}}",
     "unban": "Desbloquear membro",
-    "banHint": "Editar os campos acima mantém o bloqueio: use Desbloquear para devolver o acesso.",
+    "banHint": "Editar os campos acima mantém o bloqueio. Use Desbloquear para devolver o acesso.",
     "suspendToggle": "Suspender este membro (impede o login)",
     "ban": "Bloquear membro"
   },

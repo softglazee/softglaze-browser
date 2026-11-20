@@ -9,57 +9,25 @@
     "unavailable": "Bu cihaz oturum bilgisini güvenle saklayamıyor (işletim sistemi şifrelemesi yok), bu yüzden bir sonraki başlatmada yeniden giriş yapmanız istenir."
   },
   "brand": {
-    "tagline": "Çoklu Profil",
-    "bullets": {
-      "fingerprints": "Her profil için benzersiz, tutarlı parmak izleri",
-      "proxy": "Her kimlik için ayrı bir proxy",
-      "localFirst": "Önce yerel - çalışma alanınız bu cihazda saklanır"
-    },
-    "heroLine1": "Yüzlerce kimliği yönetin.",
-    "heroLine2": "Her birini ayrı tutun.",
-    "heroBody": "Ekipler için önce yerel çalışan çoklu profil tarayıcısı. Her profil kendi çerezlerini, depolamasını, proxy'sini ve parmak izi ayarlarını korur.",
-    "footer": "© {{year}} SoftGlaze · Yerel çalışma alanı",
-    "trust": {
-      "local": "Önce yerel",
-      "encrypted": "Çalışma alanı kilidi",
-      "private": "Sıfır telemetri"
-    },
-    "slides": {
-      "security": {
-        "title": "Güçlü veri güvenliği",
-        "body": "Profilleriniz, çerezleriniz ve gezinme verileriniz bu cihazda kalır; 2FA anahtarları ve sağlayıcı anahtarları sistem anahtarlığınızla korunur."
-      },
-      "fingerprint": {
-        "title": "Tutarlı parmak izleri",
-        "body": "Her profil benzersiz ve tutarlı bir parmak iziyle gelir: canvas, WebGL, yazı tipleri, ses ve donanım."
-      },
-      "proxy": {
-        "title": "Her kimlik için bir proxy",
-        "body": "Her profile ayrı bir ağ kimliği bağlayın ve güvenle döndürün."
-      },
-      "automation": {
-        "title": "Zaman kazandıran otomasyon",
-        "body": "Çerezleri ısındırın, profilleri toplu oluşturun ve her şeyi geniş ölçekte yönetin."
-      }
-    }
+    "footer": "© {{year}} SoftGlaze · Yerel çalışma alanı"
   },
   "license": {
     "machineMismatch": "Bu lisans başka bir bilgisayara kayıtlı. Bu PC'ye taşıyın veya yöneticinizden sıfırlamasını isteyin."
   },
   "pay": {
     "noMethods": "Yeni bir ödeme sağlayıcısı eklenirken uygulama içi satın alma duraklatıldı. Faturayla satın almak için support@softglaze.com adresine yazın, ardından satın alma kodunuzu girin.",
-    "submitted": "Ödeme gönderildi - bir yönetici inceleyip planınızı kısa süre içinde etkinleştirecek.",
+    "submitted": "Ödeme gönderildi. Bir yönetici inceleyip planınızı kısa süre içinde etkinleştirecek.",
     "manualBadge": "Manuel",
     "continueTo": "{{label}} ile devam et",
     "openPaymentLink": "Ödeme bağlantısını aç",
     "referencePlaceholder": "Ödeme referansı / işlem kimliği",
-    "submitForApproval": "Ödedim - onaya gönder"
+    "submitForApproval": "Ödedim, onaya gönder"
   },
   "banned": {
     "blockedHeading": "Hesabınız engellendi",
     "endedHeading": "Aboneliğiniz sona erdi",
-    "blockedBodyNamed": "{{name}}, hesabınız bir yönetici tarafından engellendi. Erişimi geri almak için onunla iletişime geçin - verileriniz güvende.",
-    "blockedBody": "Hesabınız bir yönetici tarafından engellendi. Erişimi geri almak için onunla iletişime geçin - verileriniz güvende.",
+    "blockedBodyNamed": "{{name}}, hesabınız bir yönetici tarafından engellendi. Erişimi geri almak için onunla iletişime geçin. Verileriniz güvende.",
+    "blockedBody": "Hesabınız bir yönetici tarafından engellendi. Erişimi geri almak için onunla iletişime geçin. Verileriniz güvende.",
     "endedBodyNamed": "{{name}}, bu lisans artık etkin değil (iade edildi, iptal edildi veya başka bir bilgisayara kayıtlı). Çalışma alanınızın kilidini açmak için bir plan seçin. Profilleriniz ve verileriniz güvende ve sizi bekliyor.",
     "endedBody": "Bu lisans artık etkin değil (iade edildi, iptal edildi veya başka bir bilgisayara kayıtlı). Çalışma alanınızın kilidini açmak için bir plan seçin. Profilleriniz ve verileriniz güvende ve sizi bekliyor.",
     "haveCode": "Satın alma kodunuz mu var?",
@@ -68,7 +36,7 @@
   },
   "register": {
     "title": "Hesabınızı oluşturun",
-    "subtitle": "Bu sizin ana hesabınızdır - çalışma alanının sahibi.",
+    "subtitle": "Bu, çalışma alanının sahibi olan ana hesabınızdır.",
     "firstName": "Ad",
     "lastName": "Soyad",
     "email": "E-posta",
@@ -94,7 +62,7 @@
     "title": "E-postanızı doğrulayın",
     "subtitlePrefix": "Şu adrese gönderilen 6 haneli kodu girin:",
     "subtitleSuffix": ".",
-    "devModePrefix": "Geliştirici modu - henüz gerçekten e-posta gönderilmiyor. Kodunuz:",
+    "devModePrefix": "Geliştirici modu: henüz gerçekten e-posta gönderilmiyor. Kodunuz:",
     "devModeSuffix": ".",
     "verifyCreate": "Doğrula ve hesap oluştur",
     "resendIn": "{{count}} sn sonra kodu tekrar gönder",
@@ -138,10 +106,10 @@
     "trialHighlight": "7 günlük ücretsiz deneme",
     "subtitleSuffix": ". Şimdi başlayın veya ücretli bir plan etkinleştirin.",
     "startTrialTitle": "7 günlük ücretsiz denemeyi başlat",
-    "startTrialSubtitle": "Şimdi ödeme yok - her şeyi keşfedin.",
+    "startTrialSubtitle": "Şimdi ödeme yok. Tüm özellikler açık.",
     "activatePaid": "Şimdi ücretli plan etkinleştir",
     "haveCode": "Satın alma kodunuz mu var?",
-    "skip": "Atla - denemeyi başlat",
+    "skip": "Atla ve denemeyi başlat",
     "tenantTitle": "Hesabınız hazır",
     "tenantSubtitle": "Ücretsiz denemenizi başlatın veya bir plan seçin.",
     "tenantTrialSubtitle": "Tam erişim, ödeme yok. Bilgisayar ve e-posta başına bir ücretsiz deneme.",
@@ -161,7 +129,7 @@
     "password": "Parola",
     "forgot": "Unuttunuz mu?",
     "passwordPlaceholder": "Ana parola",
-    "forgotBody": "Yerel kurulumda ana parolanız kurtarılamaz - bu cihazdan asla çıkmaz. Kaybolursa çalışma alanının Ayarlar'dan sıfırlanması gerekir.",
+    "forgotBody": "Ana parolanız bu cihazdan asla çıkmadığı için yerel kurulumda kurtarılamaz. Kaybolursa çalışma alanının Ayarlar'dan sıfırlanması gerekir.",
     "signIn": "Giriş yap",
     "noAccount": "Hesabınız yok mu?",
     "newHere": "SoftGlaze'de yeni misiniz?",
@@ -197,7 +165,7 @@
     "access": "Süper Yönetici erişimi",
     "setupSubtitlePrefix": "İlk kurulum. Süper Yönetici kimlik bilgisini şunun için oluşturun:",
     "setupSubtitleHighlight": "bu kurulum",
-    "setupSubtitleSuffix": "- bu cihazda karma olarak saklanır ve tek giriş yoludur, bu yüzden güvende tutun.",
+    "setupSubtitleSuffix": "(bu cihazda karma olarak saklanır ve tek giriş yoludur, bu yüzden güvende tutun).",
     "username": "Kullanıcı adı",
     "usernamePlaceholder": "superadmin",
     "password": "Parola",
@@ -225,7 +193,7 @@
     "workspacePassword": "Çalışma alanı parolası",
     "passwordPlaceholder": "Çalışma alanı parolası",
     "unlock": "Kilidi aç",
-    "corrupted": "Parolanın doğru olduğundan eminseniz veritabanı dosyası hasar görmüş olabilir. Uygulamayı yeniden kurup bir çalışma alanı yedeğini geri yükleyerek kurtarabilirsiniz (Ayarlar → Çalışma Alanı Yedekleme ve Geri Yükleme). Parola sıfırlama yoktur - veriler yalnızca doğru parolayla açılabilir."
+    "corrupted": "Parolanın doğru olduğundan eminseniz veritabanı dosyası hasar görmüş olabilir. Uygulamayı yeniden kurup bir çalışma alanı yedeğini geri yükleyerek kurtarabilirsiniz (Ayarlar → Çalışma Alanı Yedekleme ve Geri Yükleme). Parola sıfırlama yoktur. Veriler yalnızca doğru parolayla açılabilir."
   },
   "errors": {
     "enterFirstLast": "Adınızı ve soyadınızı girin.",
@@ -239,7 +207,7 @@
     "verificationFailed": "Doğrulama başarısız oldu.",
     "incorrectPassword": "Yanlış parola.",
     "couldNotSignIn": "Giriş yapılamadı.",
-    "superSetupRequired": "Henüz Süper Yönetici kimlik bilgisi yok - aşağıdan oluşturun.",
+    "superSetupRequired": "Henüz Süper Yönetici kimlik bilgisi yok. Aşağıdan oluşturun.",
     "invalidSuperCredentials": "Geçersiz Süper Yönetici kimlik bilgileri.",
     "couldNotCreateSuper": "Süper Yönetici kimlik bilgileri oluşturulamadı.",
     "enterInviteCode": "Davet kodunuzu girin.",
@@ -252,9 +220,9 @@
     "paymentNotStarted": "Ödeme başlatılamadı.",
     "couldNotSubmitPayment": "Ödemeniz gönderilemedi.",
     "enterWorkspacePassword": "Çalışma alanı parolanızı girin.",
-    "dbStillLocked": "Veritabanı hâlâ kilitli - lütfen tekrar deneyin.",
+    "dbStillLocked": "Veritabanı hâlâ kilitli. Lütfen tekrar deneyin.",
     "dbMissing": "Şifreli veritabanı dosyası eksik. Kurtarmak için bir çalışma alanı yedeğini geri yükleyin.",
-    "dbUnlockFailed": "Yanlış parola - veya dosya bozuk.",
+    "dbUnlockFailed": "Yanlış parola veya dosya bozuk.",
     "couldNotUnlockDb": "Veritabanının kilidi açılamadı.",
     "trialFailed": "Ücretsiz deneme başlatılamadı."
   },
@@ -277,5 +245,49 @@
     "SIGNUP_USE_CASE": "SoftGlaze'i ne için kullanacağınızı seçin.",
     "SIGNUP_USE_CASE_OTHER": "SoftGlaze'i ne için kullanacağınızı birkaç kelimeyle anlatın.",
     "CONFIRM_OFFLINE": "E-postanızı onaylamak için internete bağlanın."
+  },
+  "panel": {
+    "label": "SoftGlaze ürün turu",
+    "carousel": "döngü",
+    "slide": "slayt",
+    "slideOf": "{{n}} / {{total}}",
+    "prev": "Önceki slayt",
+    "next": "Sonraki slayt",
+    "pause": "Slaytları duraklat",
+    "play": "Slaytları oynat",
+    "goTo": "{{n}}. slaytı göster: {{title}}",
+    "trust": "Profiller, çerezler ve oturum bilgileri bu bilgisayarda kalır.",
+    "slides": {
+      "free": {
+        "title": "25 tarayıcı profiliyle ücretsiz başlayın",
+        "body": "Kart yok, süre sınırı yok. Her yeni hesap ayrıca Pro'yu 7 gün ücretsiz deneyebilir.",
+        "alt": "On profil, proxy'leri ve son kullanım zamanlarıyla Profiller sayfası"
+      },
+      "fingerprint": {
+        "title": "Her profilin kendi parmak izi",
+        "body": "Canvas, WebGL, yazı tipleri, ses ve saat dilimi profil başına ayarlanır ve her başlatmada aynı kalır. Her birine kendi HTTP, HTTPS veya SOCKS5 proxy'nizi verin.",
+        "alt": "Bir profilin Parmak izi sekmesi ve yanında ortam özeti"
+      },
+      "ai": {
+        "title": "Yapay zekâ ajanları çalışır, siz onaylarsınız",
+        "body": "Claude, ChatGPT, Cursor ve diğer MCP uygulamaları profillerinizde görevleri yürütür. Hangi işlemlerin onayınızı gerektirdiğine siz karar verirsiniz ve her adım kaydedilir.",
+        "alt": "Claude Desktop'tan bir giriş formunu doldurmak için gelen onay isteği"
+      },
+      "phone": {
+        "title": "İstekleri telefonunuzdan onaylayın",
+        "body": "SoftGlaze telefon uygulaması ve web uygulaması her isteği ayrıntılarıyla gösterir. Bir kez veya bir saatliğine izin verin ya da reddedin. Tüm planlara dahildir.",
+        "alt": "Telefonda yanıt bekleyen bir isteğin bulunduğu Onaylar ekranı"
+      },
+      "team": {
+        "title": "Net rollerle ekip olarak çalışın",
+        "body": "Sahip, Yönetici, Müdür ve Operatör rolleri her profili kimin görüp açabileceğini belirler. Pro 3 kullanıcı, Enterprise 25 kullanıcı içerir.",
+        "alt": "Beş ekip üyesi ve rolleriyle Üyeler sayfası"
+      }
+    }
+  },
+  "controls": {
+    "language": "Dil: {{lang}}",
+    "toLight": "Açık temaya geç",
+    "toDark": "Koyu temaya geç"
   }
 }

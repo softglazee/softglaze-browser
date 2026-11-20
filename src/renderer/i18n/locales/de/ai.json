@@ -29,7 +29,7 @@
     "unavailableTitle": "SoftGlaze AI ist in diesem Build nicht verfügbar",
     "unavailableBody": "Diese Version von SoftGlaze Browser enthält den KI-Server noch nicht. Er kommt mit einem Update. Mit Ihrem Arbeitsbereich ist alles in Ordnung.",
     "forbiddenTitle": "Nur der Inhaber oder ein Admin kann SoftGlaze AI verwalten",
-    "forbiddenBody": "Bitten Sie den Inhaber des Arbeitsbereichs um Zugriff. Wenn eine KI-App ein Token nutzt, das in Ihrem Namen handelt, erscheinen ihre Anfragen weiterhin bei Ihnen zum Erlauben oder Ablehnen – auf jeder Seite.",
+    "forbiddenBody": "Bitten Sie den Inhaber des Arbeitsbereichs um Zugriff. Wenn eine KI-App ein Token nutzt, das in Ihrem Namen handelt, erscheinen ihre Anfragen auf jeder Seite weiterhin bei Ihnen zum Erlauben oder Ablehnen.",
     "errorTitle": "SoftGlaze AI konnte nicht geladen werden"
   },
   "header": {
@@ -112,7 +112,7 @@
       "n8n": "Workflow"
     },
     "snippet": "Einrichtung für {{app}}",
-    "placeholderHint": "<YOUR_TOKEN> steht für Ihr Token. Ein Token sehen Sie nur einmal – beim Erstellen.",
+    "placeholderHint": "<YOUR_TOKEN> steht für Ihr Token. Ein Token sehen Sie nur einmal, beim Erstellen.",
     "noSnippet": "Für diese App gibt es keine fertige Einrichtung. Folgen Sie den Schritten oben.",
     "createToken": "Token für diese App erstellen",
     "createTokenHint": "Geben Sie jeder App ein eigenes Token. So sehen Sie, was jede App tut, und können eine abschalten, ohne die anderen zu berühren.",
@@ -145,7 +145,7 @@
     },
     "clients": {
       "claude-desktop": {
-        "where": "Settings > Developer > Edit Config (claude_desktop_config.json), dann Claude Desktop neu starten. Claude Desktop führt lokale Server über stdio aus, daher startet dies die SoftGlaze-Bridge. Einfacher: softglaze-browser.mcpb installieren ({{mcpb}}) – fragt nach Token und Port und funktioniert auch mit Cowork.",
+        "where": "Settings > Developer > Edit Config (claude_desktop_config.json), dann Claude Desktop neu starten. Claude Desktop führt lokale Server über stdio aus, daher startet dies die SoftGlaze-Bridge. Einfacher: softglaze-browser.mcpb installieren ({{mcpb}}). Es fragt nach Token und Port und funktioniert auch mit Cowork.",
         "title": "Claude Desktop",
         "step1": "Erstellen Sie mit der Schaltfläche unten ein Token für Claude Desktop.",
         "step2": "Am einfachsten: Laden Sie softglaze-browser.mcpb mit der Schaltfläche unten herunter, doppelklicken Sie darauf und fügen Sie Ihr Token ein, wenn Claude Desktop danach fragt. Oder öffnen Sie Settings > Developer > Edit Config und fügen Sie die Einrichtung in claude_desktop_config.json ein, mit Ihrem Token anstelle von <YOUR_TOKEN>.",
@@ -233,7 +233,7 @@
       },
       "b": {
         "title": "Feste Schritte mit dem HTTP-Request-Knoten",
-        "body": "Für Schritte, die sich nie ändern – etwa ein Profil um 9:00 starten –, kann ein HTTP-Request-Knoten die lokale API direkt aufrufen. Senden Sie das Token im Authorization-Header.",
+        "body": "Für Schritte, die sich nie ändern (etwa ein Profil um 9:00 starten), kann ein HTTP-Request-Knoten die lokale API direkt aufrufen. Senden Sie das Token im Authorization-Header.",
         "kind": "HTTP Request"
       },
       "c": {
@@ -248,7 +248,7 @@
       "subtitle": "Ein laufendes Chromium-Profil an einen externen DevTools-Client übergeben.",
       "ownerOnly": "Nur Inhaber",
       "warning": "Websites können einen externen Debugger erkennen. Playwright MCP und Chrome DevTools MCP verbinden sich als zweiter DevTools-Client und senden eigene Befehle, die Anti-Bot-Skripte bemerken können. Das Profil kann markiert oder gesperrt werden. Die eigenen Seiten-Tools von SoftGlaze tun das nicht. Jeder auf diesem Computer, der die Adresse unten kennt, kann das Profil steuern, solange es läuft.",
-      "intro": "Nutzen Sie dies für Aufgaben, die die Seiten-Tools von SoftGlaze nicht abdecken, etwa Performance-Traces oder Netzwerk- und Konsolenprotokolle auf Ihrer eigenen Website, und verwenden Sie ein Testprofil. Hier handeln Sie selbst in der App – unabhängig vom Expertenmodus, der festlegt, was KI-Apps anfordern dürfen.",
+      "intro": "Nutzen Sie dies für Aufgaben, die die Seiten-Tools von SoftGlaze nicht abdecken, etwa Performance-Traces oder Netzwerk- und Konsolenprotokolle auf Ihrer eigenen Website, und verwenden Sie ein Testprofil. Hier handeln Sie selbst in der App, unabhängig vom Expertenmodus, der festlegt, was KI-Apps anfordern dürfen.",
       "profile": "Laufendes Profil",
       "loading": "Laufende Profile werden geladen…",
       "loadError": "Laufende Profile konnten nicht geladen werden: {{message}}",
@@ -455,7 +455,7 @@
     "allowHour": "1 Stunde erlauben",
     "allowHourHint": "Für diese Art von Aktion von {{token}} in der nächsten Stunde nicht mehr fragen.",
     "allowOnce": "Einmal erlauben",
-    "footnote": "SoftGlaze fragt in der App nach – unabhängig von den Einstellungen der KI-App. Jede Antwort wird unter „Aktivität“ protokolliert.",
+    "footnote": "SoftGlaze fragt in der App nach, unabhängig von den Einstellungen der KI-App. Jede Antwort wird unter „Aktivität“ protokolliert.",
     "later": "Später entscheiden (bei Zeitablauf wird abgelehnt)",
     "respondError": "Ihre Antwort wurde nicht gespeichert: {{message}}",
     "waitingChip_one": "{{count}} KI-Anfrage wartet",
@@ -535,7 +535,7 @@
     "guides": {
       "howItWorks": {
         "title": "So funktioniert SoftGlaze",
-        "body": "Profile, Fingerprints, Proxys, Gruppen, Sitzungen, Makros und Tariflimits – und wie man die Tools gut nutzt."
+        "body": "Profile, Fingerprints, Proxys, Gruppen, Sitzungen, Makros und Tariflimits, und wie man die Tools gut nutzt."
       },
       "acceptableUse": {
         "title": "Zulässige Nutzung",
@@ -577,7 +577,7 @@
     "remove": "{{value}} entfernen",
     "approvals": {
       "title": "Wann SoftGlaze Sie fragt",
-      "description": "SoftGlaze fragt in der App nach, bevor eine KI-App etwas tut – unabhängig von den Einstellungen der KI-App.",
+      "description": "SoftGlaze fragt in der App nach, bevor eine KI-App etwas tut, unabhängig von den Einstellungen der KI-App.",
       "read": {
         "title": "Lese-Tools",
         "body": "Profile, Proxys, Gruppen und Aktivität ansehen."

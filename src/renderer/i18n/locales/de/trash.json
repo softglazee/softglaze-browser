@@ -46,7 +46,7 @@
     "emptyTrashWithData_other": "ALLE {{count}} Profile im Papierkorb endgültig löschen? Das kann nicht rückgängig gemacht werden, und die lokalen Browserdaten werden gelöscht."
   },
   "pager": {
-    "showing": "{{from}}–{{to}} von {{total}}",
+    "showing": "{{from}} bis {{to}} von {{total}}",
     "prev": "Zurück",
     "next": "Weiter"
   },

@@ -26,7 +26,7 @@
     "settings": "Einstellungen"
   },
   "shell": {
-    "footerDefault": "© {year} SoftGlaze – Entwickelt vom [SoftGlaze Team](https://softglaze.com) · Programmiert von [Azhar Ali](https://azhar.softglaze.com)",
+    "footerDefault": "© {year} SoftGlaze. Entwickelt vom [SoftGlaze Team](https://softglaze.com) · Programmiert von [Azhar Ali](https://azhar.softglaze.com)",
     "antiDetect": "Multi-Profil",
     "darkMode": "Dunkelmodus",
     "lightMode": "Hellmodus",
@@ -83,14 +83,14 @@
       "Jedes Profil, das Sie anlegen, öffnet eine neue Tür.",
       "Heute Disziplin, morgen Vorsprung.",
       "Kleine, stetige Schritte summieren sich zu großen Erfolgen.",
-      "Bleiben Sie aufmerksam – der Vorsprung steckt im Detail.",
+      "Bleiben Sie aufmerksam: Der Vorsprung steckt im Detail.",
       "Fokus schlägt Hektik. Erst zielen, dann handeln.",
       "Die stille Arbeit von heute baut das Fundament von morgen.",
       "Präzision ist Gewohnheit, kein Zufall.",
       "Dranbleiben, fokussieren und die Ergebnisse sprechen lassen.",
       "Noch eine Sitzung, noch ein Erfolg.",
       "Größe ist nur eine Reihe gut genutzter Tage.",
-      "Ihr zukünftiges Ich schaut zu – machen Sie es stolz.",
+      "Ihr zukünftiges Ich schaut zu. Machen Sie es stolz.",
       "Mit Absicht handeln. Mit Zuversicht wachsen."
     ],
     "overview": "Übersicht",
@@ -207,7 +207,7 @@
     "launchesTitle": "Starts",
     "launchesSub": "Letzte 7 Tage",
     "sampleBadge": "Beispiel",
-    "sampleNote": "Nur zur Veranschaulichung – der tägliche Startverlauf wird noch nicht erfasst.",
+    "sampleNote": "Nur zur Veranschaulichung. Der tägliche Startverlauf wird noch nicht erfasst.",
     "proxyTypesTitle": "Proxy-Typen",
     "proxyTypesSub": "Protokollmix im Pool",
     "noData": "Noch keine Daten",
@@ -233,7 +233,7 @@
       "title": "Sprache",
       "description": "Wählen Sie die Anzeigesprache der SoftGlaze-Oberfläche.",
       "label": "Anzeigesprache",
-      "hint": "Weitere Sprachen folgen. Änderungen gelten sofort in der ganzen App."
+      "hint": "Änderungen gelten sofort in der ganzen App."
     }
   },
   "startLinks": {
@@ -273,5 +273,15 @@
     "settingsHidden": "Einstellungen sind für Ihr Konto von einem Administrator deaktiviert.",
     "proxiesHidden": "Proxys sind für Ihr Konto von einem Administrator deaktiviert.",
     "profilesHidden": "Profile sind für Ihr Konto von einem Administrator deaktiviert."
+  },
+  "promo": {
+    "bf2026": {
+      "text": "Black Friday: Pro auf Lebenszeit {{pro}} oder Enterprise auf Lebenszeit {{enterprise}}, einmalige Zahlung. Endet am 1. Dez., 23:59 UTC."
+    },
+    "xmas2026": {
+      "text": "Weihnachtsaktion: Pro auf Lebenszeit {{pro}} oder Enterprise auf Lebenszeit {{enterprise}}, einmalige Zahlung. Endet am 31. Dez., 23:59 UTC."
+    },
+    "cta": "Zum Angebot",
+    "dismiss": "Angebot ausblenden"
   }
 }

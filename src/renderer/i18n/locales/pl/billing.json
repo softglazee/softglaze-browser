@@ -7,7 +7,7 @@
   },
   "header": {
     "title": "Płatności i plany",
-    "description": "Zarządzaj subskrypcją, porównuj plany i przechodź na wyższe - wszystko w jednym miejscu."
+    "description": "Zarządzaj subskrypcją, porównuj plany i przechodź na wyższe, wszystko w jednym miejscu."
   },
   "status": {
     "loading": "Wczytywanie…",
@@ -23,7 +23,7 @@
   "backend": {
     "licensedVerified": "Licencja zweryfikowana",
     "renews": "odnawia się {{date}}",
-    "noLicense": "Licencjonowanie aktywne - brak jeszcze płatnej licencji dla tej instalacji.",
+    "noLicense": "Licencjonowanie aktywne, ale brak jeszcze płatnej licencji dla tej instalacji.",
     "trialVerified": "Bezpłatny okres próbny, zweryfikowany",
     "trialEnds": "kończy się {{date}}"
   },
@@ -35,10 +35,10 @@
     "freeForever": "Plan Free · bezpłatny na zawsze"
   },
   "grace": {
-    "message_one": "Twój {{kind}} się zakończył - został {{count}} dzień karencji. Odnów poniżej, aby nie stracić dostępu.",
-    "message_few": "Twój {{kind}} się zakończył - zostały {{count}} dni karencji. Odnów poniżej, aby nie stracić dostępu.",
-    "message_many": "Twój {{kind}} się zakończył - zostało {{count}} dni karencji. Odnów poniżej, aby nie stracić dostępu.",
-    "message_other": "Twój {{kind}} się zakończył - zostało {{count}} dnia karencji. Odnów poniżej, aby nie stracić dostępu.",
+    "message_one": "Twój {{kind}} się zakończył. Został {{count}} dzień karencji. Odnów poniżej, aby nie stracić dostępu.",
+    "message_few": "Twój {{kind}} się zakończył. Zostały {{count}} dni karencji. Odnów poniżej, aby nie stracić dostępu.",
+    "message_many": "Twój {{kind}} się zakończył. Zostało {{count}} dni karencji. Odnów poniżej, aby nie stracić dostępu.",
+    "message_other": "Twój {{kind}} się zakończył. Zostało {{count}} dnia karencji. Odnów poniżej, aby nie stracić dostępu.",
     "kindTrial": "bezpłatny okres próbny",
     "kindSubscription": "okres subskrypcji"
   },
@@ -46,10 +46,10 @@
     "message": "Subskrypcja wygasła, a uruchamianie profili jest zablokowane. Wykup subskrypcję lub wpisz kod zakupu, aby przywrócić dostęp."
   },
   "trialRemaining": {
-    "message_one": "Bezpłatny okres próbny - został {{count}} dzień.",
-    "message_few": "Bezpłatny okres próbny - zostały {{count}} dni.",
-    "message_many": "Bezpłatny okres próbny - zostało {{count}} dni.",
-    "message_other": "Bezpłatny okres próbny - zostało {{count}} dnia."
+    "message_one": "Bezpłatny okres próbny: został {{count}} dzień.",
+    "message_few": "Bezpłatny okres próbny: zostały {{count}} dni.",
+    "message_many": "Bezpłatny okres próbny: zostało {{count}} dni.",
+    "message_other": "Bezpłatny okres próbny: zostało {{count}} dnia."
   },
   "seats": {
     "label": "Miejsca w zespole",
@@ -57,7 +57,7 @@
     "upgradeToAddMore": "· przejdź wyżej, aby dodać więcej"
   },
   "exempt": {
-    "note": "Jesteś właścicielem kodu - system subskrypcji Cię nie dotyczy. Wszystkie funkcje są dostępne."
+    "note": "Jesteś właścicielem kodu, więc system subskrypcji Cię nie dotyczy. Wszystkie funkcje są dostępne."
   },
   "checkout": {
     "waiting": "Oczekiwanie na płatność…",
@@ -99,7 +99,7 @@
   },
   "trial": {
     "started": "Bezpłatny okres próbny z pełnym dostępem jest aktywny. Miłego korzystania!",
-    "startedWithDays": "Bezpłatny okres próbny jest aktywny - {{days}} dni pełnego dostępu. Miłego korzystania!",
+    "startedWithDays": "Bezpłatny okres próbny jest aktywny: {{days}} dni pełnego dostępu. Miłego korzystania!",
     "errors": {
       "failed": "Nie udało się rozpocząć okresu próbnego."
     }
@@ -107,14 +107,14 @@
   "redeem": {
     "label": "Masz kod zakupu?",
     "apply": "Zastosuj",
-    "success": "Kod zakupu zastosowany - dziękujemy!",
+    "success": "Kod zakupu zastosowany. Dziękujemy!",
     "errors": {
       "empty": "Wpisz kod zakupu.",
       "failed": "Nie udało się zastosować tego kodu."
     }
   },
   "pay": {
-    "received": "Płatność otrzymana - Twój plan jest aktywny!",
+    "received": "Płatność otrzymana. Twój plan jest aktywny!",
     "errors": {
       "noMethods": "Zakupy w aplikacji są wstrzymane, dopóki dodajemy nowego dostawcę płatności. Napisz na support@softglaze.com, aby kupić na fakturę, a potem wpisz poniżej kod zakupu.",
       "checkoutFailed": "Nie udało się rozpocząć płatności.",
@@ -129,7 +129,7 @@
     "openPayLink": "Otwórz link do płatności",
     "referencePlaceholder": "Tytuł płatności / ID transakcji",
     "notePlaceholder": "Notatka (opcjonalnie)",
-    "submitForApproval": "Zapłaciłem - wyślij do zatwierdzenia",
+    "submitForApproval": "Zapłaciłem, wyślij do zatwierdzenia",
     "manualActivationNote": "Plan aktywuje się, gdy administrator potwierdzi płatność."
   },
   "admin": {
@@ -137,7 +137,7 @@
   },
   "invoices": {
     "title": "Faktury",
-    "subtitleAdmin": "Wszystkie płatności wszystkich właścicieli - automatyczne i ręczne.",
+    "subtitleAdmin": "Wszystkie płatności wszystkich właścicieli, automatyczne i ręczne.",
     "subtitleUser": "Twoje potwierdzenia płatności.",
     "add": "Dodaj",
     "empty": "Brak faktur.",
@@ -264,10 +264,10 @@
     "grantNoteFree": "Zapisywane jako przyznanie za $0.",
     "fallbackAccount": "konto",
     "fallbackPlan": "plan",
-    "success_one": "Przypisano {{plan}} do {{name}} - {{count}} miesiąc.",
-    "success_few": "Przypisano {{plan}} do {{name}} - {{count}} miesiące.",
-    "success_many": "Przypisano {{plan}} do {{name}} - {{count}} miesięcy.",
-    "success_other": "Przypisano {{plan}} do {{name}} - {{count}} miesiąca.",
+    "success_one": "Przypisano {{plan}} do {{name}} na {{count}} miesiąc.",
+    "success_few": "Przypisano {{plan}} do {{name}} na {{count}} miesiące.",
+    "success_many": "Przypisano {{plan}} do {{name}} na {{count}} miesięcy.",
+    "success_other": "Przypisano {{plan}} do {{name}} na {{count}} miesiąca.",
     "errors": {
       "chooseAccount": "Wybierz konto.",
       "choosePlan": "Wybierz plan.",
@@ -275,7 +275,7 @@
     }
   },
   "planText": {
-    "trialTagline": "Przetestuj każdą funkcję za darmo - pełny dostęp, bez karty.",
+    "trialTagline": "Przetestuj każdą funkcję za darmo: pełny dostęp, bez karty.",
     "trialFullAccess": "Pełny dostęp do każdej funkcji",
     "trialTools": "Wszystkie narzędzia odcisku przeglądarki, proxy i testów wycieków",
     "trialMacros": "Makra, rozgrzewanie cookie i profile mobilne",
@@ -294,7 +294,7 @@
     "proPalette": "Paleta poleceń + wdrożenie",
     "proSeats": "Do 3 członków zespołu",
     "proParallel": "Uruchamianie równoległe, do 3 profili naraz, z konsolą na żywo",
-    "entTagline": "Dla zespołów - do 25 członków, 10 profili naraz i eksport dziennika audytu.",
+    "entTagline": "Dla zespołów: do 25 członków, 10 profili naraz i eksport dziennika audytu.",
     "entEverythingInPro": "Wszystko z Pro, a także:",
     "entSeats": "Do 25 członków zespołu",
     "entParallel": "Uruchamianie równoległe, do 10 profili naraz, z konsolą na żywo",

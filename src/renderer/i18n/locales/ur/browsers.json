@@ -18,7 +18,7 @@
     "heading": "فنگر پرنٹ انجن",
     "installed": "انسٹال شدہ",
     "notInstalled": "انسٹال نہیں",
-    "description": "fingerprint-chromium: یہ canvas / WebGL / UA / پلیٹ فارم / ٹائم زون براہ راست سیٹ کرتا ہے، webdriver چھپاتا ہے اور WebRTC لیک بلاک کرتا ہے۔ اسے سیٹنگز ← براؤزر میں آن کریں۔",
+    "description": "fingerprint-chromium براہ راست canvas، WebGL، UA، پلیٹ فارم اور ٹائم زون سیٹ کرتا ہے، webdriver چھپاتا ہے اور WebRTC لیک بلاک کرتا ہے۔ اسے سیٹنگز ← براؤزر میں آن کریں۔",
     "progressInstalling": "انسٹال ہو رہا ہے",
     "progressVerifying": "تصدیق ہو رہی ہے",
     "installing": "انسٹال ہو رہا ہے",

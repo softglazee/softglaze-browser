@@ -2,7 +2,7 @@
   "header": {
     "eyebrow": "इंजन",
     "title": "ब्राउज़र",
-    "subtitle": "ज़रूरत पड़ने पर असली Chrome और Firefox बिल्ड डाउनलोड करें - ये अपने आप इंस्टॉल होकर लॉन्च के लिए तैयार रहते हैं।",
+    "subtitle": "ज़रूरत पड़ने पर असली Chrome और Firefox बिल्ड डाउनलोड करें। ये अपने आप इंस्टॉल होकर लॉन्च के लिए तैयार रहते हैं।",
     "refresh": "रीफ़्रेश करें"
   },
   "stats": {
@@ -18,7 +18,7 @@
     "heading": "फ़िंगरप्रिंट इंजन",
     "installed": "इंस्टॉल है",
     "notInstalled": "इंस्टॉल नहीं है",
-    "description": "fingerprint-chromium - canvas / WebGL / UA / प्लेटफ़ॉर्म / टाइम ज़ोन के लिए ब्राउज़र के अंदर ही अपने मान सेट करता है, webdriver छिपाता है, WebRTC लीक रोकता है। सेटिंग्स → ब्राउज़र में इसे चालू करें।",
+    "description": "fingerprint-chromium ब्राउज़र के अंदर ही canvas, WebGL, UA, प्लेटफ़ॉर्म और टाइम ज़ोन सेट करता है, webdriver छिपाता है और WebRTC लीक रोकता है। सेटिंग्स → ब्राउज़र में इसे चालू करें।",
     "progressInstalling": "इंस्टॉल हो रहा है",
     "progressVerifying": "जांच हो रही है",
     "installing": "इंस्टॉल हो रहा है",
@@ -31,13 +31,13 @@
     "ready": "तैयार",
     "notDetected": "नहीं मिला",
     "detectedDesc": "तैयार। {{path}} पर मिला। Firefox प्रोफ़ाइल असली Firefox खोलती हैं, प्रॉक्सी, UA, भाषा, टाइम ज़ोन के साथ और WebRTC बंद करके।",
-    "notDetectedDesc": "सिस्टम में Firefox नहीं मिला। नीचे से कोई वर्शन डाउनलोड करें - यह ऐप में इंस्टॉल होगा और Firefox प्रोफ़ाइल असली Firefox खोलेंगी, प्रॉक्सी, UA, भाषा, टाइम ज़ोन के साथ और WebRTC बंद करके।",
+    "notDetectedDesc": "सिस्टम में Firefox नहीं मिला। नीचे से कोई वर्शन डाउनलोड करें। यह ऐप में इंस्टॉल होगा और Firefox प्रोफ़ाइल असली Firefox खोलेंगी, प्रॉक्सी, UA, भाषा, टाइम ज़ोन के साथ और WebRTC बंद करके।",
     "fetching": "Firefox रिलीज़ कैटलॉग लाया जा रहा है…",
     "empty": "कोई Firefox वर्शन उपलब्ध नहीं (क्या आप ऑफ़लाइन हैं?)।"
   },
   "chromium": {
     "heading": "Chromium (Chrome for Testing)",
-    "subtitle": "असली बिल्ड - UA, Client-Hints, TLS और workers सब सच में वर्शन से मेल खाते हैं।",
+    "subtitle": "असली बिल्ड: UA, Client-Hints, TLS और workers सब सच में वर्शन से मेल खाते हैं।",
     "fetching": "Chrome-for-Testing कैटलॉग लाया जा रहा है…",
     "empty": "कोई वर्शन उपलब्ध नहीं (क्या आप ऑफ़लाइन हैं?)।"
   },

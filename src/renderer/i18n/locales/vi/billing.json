@@ -7,7 +7,7 @@
   },
   "header": {
     "title": "Thanh toán và gói",
-    "description": "Quản lý gói đăng ký, so sánh các gói và nâng cấp - tất cả ở một nơi."
+    "description": "Quản lý gói đăng ký, so sánh các gói và nâng cấp, tất cả ở một nơi."
   },
   "status": {
     "loading": "Đang tải…",
@@ -23,7 +23,7 @@
   "backend": {
     "licensedVerified": "Đã cấp phép và xác minh",
     "renews": "gia hạn {{date}}",
-    "noLicense": "Cấp phép đang hoạt động - bản cài này chưa có giấy phép trả phí.",
+    "noLicense": "Cấp phép đang hoạt động. Bản cài này chưa có giấy phép trả phí.",
     "trialVerified": "Dùng thử miễn phí, đã xác minh",
     "trialEnds": "kết thúc {{date}}"
   },
@@ -35,8 +35,8 @@
     "freeForever": "Gói Miễn phí · miễn phí mãi mãi"
   },
   "grace": {
-    "message_one": "{{kind}} của bạn đã kết thúc - còn {{count}} ngày ân hạn. Hãy gia hạn bên dưới để không mất quyền truy cập.",
-    "message_other": "{{kind}} của bạn đã kết thúc - còn {{count}} ngày ân hạn. Hãy gia hạn bên dưới để không mất quyền truy cập.",
+    "message_one": "{{kind}} của bạn đã kết thúc, còn {{count}} ngày ân hạn. Hãy gia hạn bên dưới để không mất quyền truy cập.",
+    "message_other": "{{kind}} của bạn đã kết thúc, còn {{count}} ngày ân hạn. Hãy gia hạn bên dưới để không mất quyền truy cập.",
     "kindTrial": "Bản dùng thử miễn phí",
     "kindSubscription": "Gói đăng ký"
   },
@@ -44,8 +44,8 @@
     "message": "Gói đăng ký của bạn đã kết thúc và việc mở hồ sơ đang bị khóa. Hãy đăng ký hoặc nhập mã mua hàng để khôi phục quyền truy cập."
   },
   "trialRemaining": {
-    "message_one": "Dùng thử miễn phí - còn {{count}} ngày.",
-    "message_other": "Dùng thử miễn phí - còn {{count}} ngày."
+    "message_one": "Dùng thử miễn phí: còn {{count}} ngày.",
+    "message_other": "Dùng thử miễn phí: còn {{count}} ngày."
   },
   "seats": {
     "label": "Chỗ cho nhóm",
@@ -53,7 +53,7 @@
     "upgradeToAddMore": "· nâng cấp để thêm"
   },
   "exempt": {
-    "note": "Bạn là chủ mã nguồn - không chịu hệ thống gói đăng ký. Mọi tính năng đều có sẵn."
+    "note": "Bạn là chủ mã nguồn nên không chịu hệ thống gói đăng ký. Mọi tính năng đều có sẵn."
   },
   "checkout": {
     "waiting": "Đang chờ thanh toán…",
@@ -91,7 +91,7 @@
   },
   "trial": {
     "started": "Bản dùng thử miễn phí đã kích hoạt với toàn quyền truy cập. Chúc bạn trải nghiệm vui!",
-    "startedWithDays": "Bản dùng thử miễn phí đã kích hoạt - {{days}} ngày toàn quyền truy cập. Chúc bạn trải nghiệm vui!",
+    "startedWithDays": "Bản dùng thử miễn phí đã kích hoạt: {{days}} ngày toàn quyền truy cập. Chúc bạn trải nghiệm vui!",
     "errors": {
       "failed": "Không bắt đầu được dùng thử."
     }
@@ -99,14 +99,14 @@
   "redeem": {
     "label": "Có mã mua hàng?",
     "apply": "Áp dụng",
-    "success": "Đã áp dụng mã mua hàng - cảm ơn bạn!",
+    "success": "Đã áp dụng mã mua hàng. Cảm ơn bạn!",
     "errors": {
       "empty": "Nhập mã mua hàng của bạn.",
       "failed": "Không áp dụng được mã này."
     }
   },
   "pay": {
-    "received": "Đã nhận thanh toán - gói của bạn đã được kích hoạt!",
+    "received": "Đã nhận thanh toán. Gói của bạn đã được kích hoạt!",
     "errors": {
       "noMethods": "Mua trong ứng dụng đang tạm dừng trong khi chúng tôi thêm nhà cung cấp thanh toán mới. Hãy gửi email đến support@softglaze.com để mua theo hóa đơn, rồi nhập mã mua hàng bên dưới.",
       "checkoutFailed": "Không bắt đầu được thanh toán.",
@@ -121,7 +121,7 @@
     "openPayLink": "Mở liên kết thanh toán",
     "referencePlaceholder": "Mã tham chiếu thanh toán / mã giao dịch",
     "notePlaceholder": "Ghi chú (không bắt buộc)",
-    "submitForApproval": "Tôi đã thanh toán - gửi để phê duyệt",
+    "submitForApproval": "Tôi đã thanh toán, gửi để phê duyệt",
     "manualActivationNote": "Gói của bạn được kích hoạt khi quản trị viên xác nhận thanh toán."
   },
   "admin": {
@@ -129,7 +129,7 @@
   },
   "invoices": {
     "title": "Hóa đơn",
-    "subtitleAdmin": "Mọi khoản thanh toán của các chủ sở hữu - tự động ghi nhận + thủ công.",
+    "subtitleAdmin": "Mọi khoản thanh toán của các chủ sở hữu, gồm tự động ghi nhận + thủ công.",
     "subtitleUser": "Biên lai thanh toán của bạn.",
     "add": "Thêm",
     "empty": "Chưa có hóa đơn nào.",
@@ -256,8 +256,8 @@
     "grantNoteFree": "Ghi nhận là cấp miễn phí $0.",
     "fallbackAccount": "tài khoản",
     "fallbackPlan": "gói",
-    "success_one": "Đã gán {{plan}} cho {{name}} - {{count}} tháng.",
-    "success_other": "Đã gán {{plan}} cho {{name}} - {{count}} tháng.",
+    "success_one": "Đã gán {{plan}} cho {{name}} trong {{count}} tháng.",
+    "success_other": "Đã gán {{plan}} cho {{name}} trong {{count}} tháng.",
     "errors": {
       "chooseAccount": "Hãy chọn một tài khoản.",
       "choosePlan": "Hãy chọn một gói.",
@@ -265,7 +265,7 @@
     }
   },
   "planText": {
-    "trialTagline": "Dùng thử miễn phí mọi tính năng - toàn quyền truy cập, không cần thẻ.",
+    "trialTagline": "Dùng thử miễn phí mọi tính năng: toàn quyền truy cập, không cần thẻ.",
     "trialFullAccess": "Truy cập mọi tính năng",
     "trialTools": "Mọi công cụ dấu vân tay, proxy và kiểm tra rò rỉ",
     "trialMacros": "Macro, làm nóng cookie và hồ sơ di động",
@@ -284,7 +284,7 @@
     "proPalette": "Bảng lệnh + hướng dẫn bắt đầu",
     "proSeats": "Tối đa 3 thành viên nhóm",
     "proParallel": "Chạy song song tối đa 3 hồ sơ cùng lúc, có bảng theo dõi trực tiếp",
-    "entTagline": "Cho các nhóm - tối đa 25 thành viên, 10 hồ sơ cùng lúc và xuất nhật ký kiểm tra.",
+    "entTagline": "Cho các nhóm: tối đa 25 thành viên, 10 hồ sơ cùng lúc và xuất nhật ký kiểm tra.",
     "entEverythingInPro": "Mọi thứ trong Pro, cộng thêm:",
     "entSeats": "Tối đa 25 thành viên nhóm",
     "entParallel": "Chạy song song tối đa 10 hồ sơ cùng lúc, có bảng theo dõi trực tiếp",

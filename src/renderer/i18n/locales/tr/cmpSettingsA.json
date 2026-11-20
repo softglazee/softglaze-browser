@@ -45,7 +45,7 @@
       "savedMsg": "Kaydedildi.",
       "saveError": "Kaydedilemedi.",
       "connectionOk": "Bağlantı iyi görünüyor ✓",
-      "validationFailedKeys": "Doğrulama başarısız - anahtarları kontrol edin.",
+      "validationFailedKeys": "Doğrulama başarısız. Anahtarları kontrol edin.",
       "validationFailed": "Doğrulama başarısız oldu."
     },
     "manual": {
@@ -78,7 +78,7 @@
       "openLinkTitle": "{{provider}} bağlantısını aç",
       "saving": "Kaydediliyor…",
       "saveButton": "Bağlantıları kaydet",
-      "footnote": "Bu bağlantılar Proxy havuzu → Sağlayıcılar sekmesindeki “Satın al…” / “Panoyu ziyaret et” düğmelerini çalıştırır. Yalnızca herkese açık yönlendirme URL'leridir - proxy token'ları ve kimlik bilgileri asla etkilenmez."
+      "footnote": "Bu bağlantılar Proxy havuzu → Sağlayıcılar sekmesindeki “Satın al…” / “Panoyu ziyaret et” düğmelerini çalıştırır. Yalnızca herkese açık yönlendirme URL'leridir. Proxy token'ları ve kimlik bilgileri asla etkilenmez."
     }
   },
   "developerApi": {
@@ -96,7 +96,7 @@
       "title": "API Anahtarları",
       "namePlaceholder": "Anahtar adı (örn. CI sunucusu)",
       "generate": "Yeni API anahtarı oluştur",
-      "copyOnce": "Bu anahtarı şimdi kopyalayın - yalnızca bir kez gösterilir ve kurtarılamaz.",
+      "copyOnce": "Bu anahtarı şimdi kopyalayın. Yalnızca bir kez gösterilir ve kurtarılamaz.",
       "empty": "Henüz API anahtarı yok.",
       "lastUsed": "son kullanım {{when}}",
       "neverUsed": "hiç kullanılmadı",

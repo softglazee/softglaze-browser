@@ -104,17 +104,17 @@
       "methodEmail": "Email",
       "methodSms": "SMS",
       "levelLabel": "Mức xác thực",
-      "levelLow": "Thấp - thiết bị mới hoặc đã hơn 90 ngày từ lần 2FA gần nhất",
-      "levelMedium": "Trung bình (khuyên dùng) - thiết bị mới hoặc hơn 30 ngày",
-      "levelHigh": "Cao - cần 2FA mỗi lần đăng nhập"
+      "levelLow": "Thấp: thiết bị mới hoặc đã hơn 90 ngày từ lần 2FA gần nhất",
+      "levelMedium": "Trung bình (khuyên dùng): thiết bị mới hoặc hơn 30 ngày",
+      "levelHigh": "Cao: cần 2FA mỗi lần đăng nhập"
     }
   },
   "multiDevice": {
     "title": "Chế độ nhiều thiết bị",
     "description": "Cho phép hay không việc nhiều thành viên truy cập cùng một hồ sơ cùng lúc.",
-    "modeOff": "Tắt - mỗi hồ sơ một thành viên",
-    "modeFull": "Toàn bộ - mọi hồ sơ cho phép truy cập đồng thời",
-    "modeSpecified": "Chỉ định - chỉ các hồ sơ đã chọn",
+    "modeOff": "Tắt: mỗi hồ sơ một thành viên",
+    "modeFull": "Toàn bộ: mọi hồ sơ cho phép truy cập đồng thời",
+    "modeSpecified": "Chỉ định: chỉ các hồ sơ đã chọn",
     "hintBefore": "Khi bật, nhiều thành viên có thể truy cập cùng một hồ sơ cùng lúc. Ở chế độ ",
     "hintSpecified": "Chỉ định",
     "hintAfter": ", hãy chọn các hồ sơ được phép ở trang Hồ sơ."
@@ -202,9 +202,9 @@
       "desc": "Trong hồ sơ dựa trên Chrome, mọi cửa sổ hoặc bảng Công cụ dành cho nhà phát triển (F12, Ctrl+Shift+I, Kiểm tra) sẽ đóng ngay khi mở. Áp dụng cho hồ sơ khởi chạy sau khi bạn thay đổi. Chrome của chính bạn trên máy tính này không bị ảnh hưởng."
     },
     "minimizeCdpFootprint": {
-      "title": "Giảm dấu vết CDP (thử nghiệm - giảm CAPTCHA)",
+      "title": "Giảm dấu vết CDP (thử nghiệm, ít CAPTCHA hơn)",
       "shortTitle": "Giảm dấu vết CDP",
-      "desc": "Bỏ CDP Runtime.enable thường trực - tín hiệu tự động hóa hàng đầu mà Cloudflare/Turnstile phát hiện. ĐÁNH ĐỔI khi BẬT: tự điền persona, liên kết kiểm tra ở trang khởi động và phản chiếu phiên đồng bộ sẽ ngừng hoạt động (chúng cần CDP binding). Mặc định tắt; hãy bật để thử A/B xem có giảm CAPTCHA không, rồi mở lại hồ sơ."
+      "desc": "Bỏ CDP Runtime.enable thường trực, tín hiệu tự động hóa hàng đầu mà Cloudflare/Turnstile phát hiện. ĐÁNH ĐỔI khi BẬT: tự điền persona, liên kết kiểm tra ở trang khởi động và phản chiếu phiên đồng bộ sẽ ngừng hoạt động (chúng cần CDP binding). Mặc định tắt; hãy bật để thử A/B xem có giảm CAPTCHA không, rồi mở lại hồ sơ."
     },
     "blockThirdPartyCookies": {
       "title": "Chặn cookie bên thứ ba",
@@ -273,12 +273,12 @@
     },
     "antidetectEngine": {
       "title": "Bộ máy dấu vân tay gốc (fingerprint-chromium)",
-      "desc": "Khởi chạy hồ sơ Chrome trên fingerprint-chromium - một bản Chromium được sửa mã nguồn, áp dụng cài đặt dấu vân tay của từng hồ sơ (canvas, WebGL, âm thanh, UA, nền tảng, múi giờ) ở cấp tệp chạy, ẩn navigator.webdriver + UA HeadlessChrome, và chặn rò rỉ IP thật qua WebRTC ngay trong trình duyệt, không có độ trễ chèn JS để trang web nhận ra. Cần tệp chạy fingerprint-chromium; nếu không có sẽ dùng Chrome thông thường. Bộ máy này bỏ CDP binding mà cầu nối trang-ứng dụng từng dùng, nên SoftGlaze chuyển các lệnh đó qua một kênh không cần binding - tự điền Kho dữ liệu, ghi macro, liên kết trang khởi động và phản chiếu phiên đều hoạt động trên đó. Mặc định tắt - hãy bật và mở lại hồ sơ."
+      "desc": "Khởi chạy hồ sơ Chrome trên fingerprint-chromium, một bản Chromium được sửa mã nguồn, áp dụng cài đặt dấu vân tay của từng hồ sơ (canvas, WebGL, âm thanh, UA, nền tảng, múi giờ) ở cấp tệp chạy, ẩn navigator.webdriver + UA HeadlessChrome, và chặn rò rỉ IP thật qua WebRTC ngay trong trình duyệt, không có độ trễ chèn JS để trang web nhận ra. Cần tệp chạy fingerprint-chromium; nếu không có sẽ dùng Chrome thông thường. Bộ máy này bỏ CDP binding mà cầu nối trang-ứng dụng từng dùng, nên SoftGlaze chuyển các lệnh đó qua một kênh không cần binding: tự điền Kho dữ liệu, ghi macro, liên kết trang khởi động và phản chiếu phiên đều hoạt động trên đó. Mặc định tắt; hãy bật và mở lại hồ sơ."
     }
   },
   "performance": {
     "title": "Hiệu năng",
-    "description": "Điều khiển việc mở nhiều hồ sơ cùng lúc - áp dụng cho mở hàng loạt và giới hạn phiên đang chạy.",
+    "description": "Điều khiển việc mở nhiều hồ sơ cùng lúc. Áp dụng cho mở hàng loạt và giới hạn phiên đang chạy.",
     "parallelLimit": {
       "title": "Giới hạn mở song song",
       "desc": "Số hồ sơ được mở cùng lúc khi mở hàng loạt. Cao hơn thì nhanh hơn nhưng tốn RAM hơn. Khuyên dùng 3-8."
@@ -302,7 +302,7 @@
     },
     "memoryGuard": {
       "title": "Bảo vệ bộ nhớ",
-      "desc": "Khi bộ nhớ hệ thống sắp hết, tự động đóng các hồ sơ đang chạy lâu nhất cho đến khi bộ nhớ hồi phục. Mặc định tắt - sẽ không bao giờ đóng hồ sơ nếu chưa bật.",
+      "desc": "Khi bộ nhớ hệ thống sắp hết, tự động đóng các hồ sơ đang chạy lâu nhất cho đến khi bộ nhớ hồi phục. Mặc định tắt, nên sẽ không bao giờ đóng hồ sơ nếu chưa bật.",
       "triggerBelow": "Kích hoạt khi RAM trống dưới",
       "stopWhenReaches": "dừng khi RAM trống đạt"
     }
@@ -336,10 +336,10 @@
     "checkDefault": "Kiểm tra xem có phiên bản SoftGlaze Browser mới hơn không.",
     "notEnabled": "Bản dựng này chưa bật cập nhật tự động.",
     "checking": "Đang kiểm tra cập nhật…",
-    "available": "Có bản cập nhật {{version}} - đang tải ở chế độ nền…",
+    "available": "Có bản cập nhật {{version}}, đang tải ở chế độ nền…",
     "downloading": "Đang tải {{version}}… {{percent}}%",
     "ready": "Bản cập nhật {{version}} đã sẵn sàng để cài.",
-    "errorWithReason": "Không kiểm tra được cập nhật - {{reason}}",
+    "errorWithReason": "Không kiểm tra được cập nhật: {{reason}}",
     "errorNoReason": "Không kiểm tra được cập nhật.",
     "upToDate": "Bạn đang dùng phiên bản mới nhất.",
     "installRestart": "Cài và khởi động lại",
@@ -367,7 +367,7 @@
   },
   "captcha": {
     "title": "Tự động giải Captcha",
-    "description": "Tự động giải reCAPTCHA v2 và hCaptcha khi duyệt web bằng dịch vụ giải bên thứ ba có trả phí. Việc này tách biệt với dấu vân tay - dấu vân tay sạch giúp captcha ít xuất hiện hơn, nhưng để giải chúng cần một dịch vụ trả phí, tính tiền theo từng lần giải bởi nhà cung cấp (không phải SoftGlaze).",
+    "description": "Tự động giải reCAPTCHA v2 và hCaptcha khi duyệt web bằng dịch vụ giải bên thứ ba có trả phí. Việc này tách biệt với dấu vân tay: dấu vân tay sạch giúp captcha ít xuất hiện hơn, nhưng để giải chúng cần một dịch vụ trả phí, tính tiền theo từng lần giải bởi nhà cung cấp (không phải SoftGlaze).",
     "enable": {
       "title": "Bật tự động giải captcha",
       "desc": "Khi bật, hồ sơ đang chạy sẽ phát hiện captcha được hỗ trợ và tự động gửi đến dịch vụ giải của bạn."
@@ -385,19 +385,19 @@
     "title": "Email (mã xác minh)",
     "configured": "Đã cấu hình",
     "offlineMode": "Chế độ ngoại tuyến",
-    "description": "SMTP để gửi mã OTP khi đăng ký. Để trống để chạy ngoại tuyến - khi đó mã sẽ hiện trong ứng dụng thay vì gửi qua email.",
+    "description": "SMTP để gửi mã OTP khi đăng ký. Để trống để chạy ngoại tuyến; khi đó mã sẽ hiện trong ứng dụng thay vì gửi qua email.",
     "smtpHost": "Máy chủ SMTP",
     "port": "Cổng",
     "encryption": "Mã hóa",
     "username": "Tên người dùng",
     "password": "Mật khẩu",
-    "passwordSavedHint": "(đã lưu - để trống để giữ)",
+    "passwordSavedHint": "(đã lưu; để trống để giữ)",
     "fromName": "Tên người gửi",
     "saved": "Đã lưu cài đặt email.",
     "saveFailed": "Không lưu được cài đặt email.",
-    "noSmtpYet": "Chưa cấu hình SMTP - hãy lưu cài đặt trước.",
+    "noSmtpYet": "Chưa cấu hình SMTP. Hãy lưu cài đặt trước.",
     "testSent": "Đã gửi email thử đến {{to}}.",
-    "testFailed": "Thử thất bại - hãy kiểm tra cài đặt.",
+    "testFailed": "Thử thất bại. Hãy kiểm tra cài đặt.",
     "saveButton": "Lưu cài đặt email",
     "test": "Thử"
   },

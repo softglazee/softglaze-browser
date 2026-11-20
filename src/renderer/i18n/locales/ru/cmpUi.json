@@ -13,10 +13,10 @@
     "resumeFailed": "Не удалось возобновить.",
     "paused": "Пауза",
     "interrupted": "Прервано",
-    "resumeTitle": "{{state}} на {{percent}}% - возобновить",
+    "resumeTitle": "{{state}} на {{percent}}%. Возобновить",
     "statusInstalling": "уст.",
     "statusQueued": "…",
-    "retryTitle": "Повторить - {{error}}",
+    "retryTitle": "Повторить ({{error}})",
     "downloadFailedShort": "ошибка загрузки",
     "downloadInstallTitle": "Скачать и установить эту версию"
   },

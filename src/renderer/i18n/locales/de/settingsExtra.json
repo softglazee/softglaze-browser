@@ -104,17 +104,17 @@
       "methodEmail": "E-Mail",
       "methodSms": "SMS",
       "levelLabel": "Authentifizierungsstufe",
-      "levelLow": "Niedrig – neues Gerät oder 90+ Tage seit der letzten 2FA",
-      "levelMedium": "Mittel (empfohlen) – neues Gerät oder 30+ Tage",
-      "levelHigh": "Hoch – 2FA bei jeder Anmeldung"
+      "levelLow": "Niedrig: neues Gerät oder 90+ Tage seit der letzten 2FA",
+      "levelMedium": "Mittel (empfohlen): neues Gerät oder 30+ Tage",
+      "levelHigh": "Hoch: 2FA bei jeder Anmeldung"
     }
   },
   "multiDevice": {
     "title": "Mehrgeräte-Modus",
     "description": "Legen Sie fest, ob mehrere Mitglieder gleichzeitig auf dasselbe Profil zugreifen können.",
-    "modeOff": "Aus – ein Mitglied pro Profil",
-    "modeFull": "Voll – alle Profile erlauben gleichzeitigen Zugriff",
-    "modeSpecified": "Festgelegt – nur ausgewählte Profile",
+    "modeOff": "Aus: ein Mitglied pro Profil",
+    "modeFull": "Voll: alle Profile erlauben gleichzeitigen Zugriff",
+    "modeSpecified": "Festgelegt: nur ausgewählte Profile",
     "hintBefore": "Wenn aktiviert, können mehrere Mitglieder gleichzeitig auf dasselbe Profil zugreifen. Im Modus ",
     "hintSpecified": "„Festgelegt“",
     "hintAfter": " wählen Sie die berechtigten Profile auf der Seite „Profile“."
@@ -202,9 +202,9 @@
       "desc": "In Chrome-basierten Profilen wird jedes Entwicklertools-Fenster oder -Panel (F12, Ctrl+Shift+I, Untersuchen) sofort nach dem Öffnen geschlossen. Gilt für Profile, die nach der Änderung gestartet werden. Ihr eigenes Chrome auf diesem Computer ist nicht betroffen."
     },
     "minimizeCdpFootprint": {
-      "title": "CDP-Spuren minimieren (experimentell – gegen CAPTCHAs)",
+      "title": "CDP-Spuren minimieren (experimentell, weniger CAPTCHAs)",
       "shortTitle": "CDP-Spuren minimieren",
-      "desc": "Verzichtet auf das dauerhafte CDP Runtime.enable – das stärkste Automatisierungssignal, das Cloudflare/Turnstile erkennt. NACHTEIL, solange AN: Persona-Autofill, die Prüf-Links der Startseite und das Spiegeln synchronisierter Sitzungen funktionieren nicht (sie brauchen die CDP-Bindung). Standardmäßig aus; einschalten, um per A/B-Test zu prüfen, ob es CAPTCHAs verringert, dann Profile neu starten."
+      "desc": "Verzichtet auf das dauerhafte CDP Runtime.enable, das stärkste Automatisierungssignal, das Cloudflare/Turnstile erkennt. NACHTEIL, solange AN: Persona-Autofill, die Prüf-Links der Startseite und das Spiegeln synchronisierter Sitzungen funktionieren nicht (sie brauchen die CDP-Bindung). Standardmäßig aus; einschalten, um per A/B-Test zu prüfen, ob es CAPTCHAs verringert, dann Profile neu starten."
     },
     "blockThirdPartyCookies": {
       "title": "Drittanbieter-Cookies blockieren",
@@ -273,15 +273,15 @@
     },
     "antidetectEngine": {
       "title": "Native Fingerprint-Engine (fingerprint-chromium)",
-      "desc": "Startet Chrome-Profile auf fingerprint-chromium – einem im Quellcode angepassten Chromium, das die Fingerprint-Einstellungen jedes Profils (Canvas, WebGL, Audio, UA, Plattform, Zeitzone) auf Binärebene anwendet, navigator.webdriver und den HeadlessChrome-UA verbirgt und das WebRTC-Leck der echten IP nativ blockiert, ohne JS-Injektion, die Websites bemerken könnten. Erfordert die fingerprint-chromium-Binärdatei; ohne sie wird Standard-Chrome genutzt. Diese Engine verzichtet auf die CDP-Bindung, auf der die Brücke zwischen Seite und App beruhte, daher leitet SoftGlaze diese Aufrufe über einen Kanal ohne Bindung – Datentresor-Autofill, Makro-Rekorder, Startseiten-Links und Sitzungsspiegelung funktionieren alle darauf. Standardmäßig aus – einschalten und Profile neu starten."
+      "desc": "Startet Chrome-Profile auf fingerprint-chromium, einem im Quellcode angepassten Chromium, das die Fingerprint-Einstellungen jedes Profils (Canvas, WebGL, Audio, UA, Plattform, Zeitzone) auf Binärebene anwendet, navigator.webdriver und den HeadlessChrome-UA verbirgt und das WebRTC-Leck der echten IP nativ blockiert, ohne JS-Injektion, die Websites bemerken könnten. Erfordert die fingerprint-chromium-Binärdatei; ohne sie wird Standard-Chrome genutzt. Diese Engine verzichtet auf die CDP-Bindung, auf der die Brücke zwischen Seite und App beruhte, daher leitet SoftGlaze diese Aufrufe über einen Kanal ohne Bindung. Datentresor-Autofill, Makro-Rekorder, Startseiten-Links und Sitzungsspiegelung funktionieren alle darauf. Standardmäßig aus. Einschalten und Profile neu starten."
     }
   },
   "performance": {
     "title": "Leistung",
-    "description": "Einstellungen für das Starten vieler Profile auf einmal – gelten für Massenstarts und die Obergrenze laufender Sitzungen.",
+    "description": "Einstellungen für das Starten vieler Profile auf einmal. Sie gelten für Massenstarts und die Obergrenze laufender Sitzungen.",
     "parallelLimit": {
       "title": "Limit für parallele Starts",
-      "desc": "Wie viele Profile bei einem Massenstart gleichzeitig starten. Höher ist schneller, braucht aber mehr RAM. Empfohlen: 3–8."
+      "desc": "Wie viele Profile bei einem Massenstart gleichzeitig starten. Höher ist schneller, braucht aber mehr RAM. Empfohlen: 3 bis 8."
     },
     "maxRunning": {
       "title": "Max. laufende Profile",
@@ -302,7 +302,7 @@
     },
     "memoryGuard": {
       "title": "Speicherschutz",
-      "desc": "Wenn der Systemspeicher knapp wird, die ältesten laufenden Profile automatisch schließen, bis sich der Speicher erholt. Standardmäßig aus – ohne Aktivierung wird nie ein Profil geschlossen.",
+      "desc": "Wenn der Systemspeicher knapp wird, die ältesten laufenden Profile automatisch schließen, bis sich der Speicher erholt. Standardmäßig aus. Ohne Aktivierung wird nie ein Profil geschlossen.",
       "triggerBelow": "Auslösen, wenn freier RAM unter",
       "stopWhenReaches": "stoppen, sobald freier RAM erreicht"
     }
@@ -336,10 +336,10 @@
     "checkDefault": "Prüfen, ob eine neuere Version von SoftGlaze Browser verfügbar ist.",
     "notEnabled": "Automatische Updates sind in diesem Build nicht aktiviert.",
     "checking": "Suche nach Updates…",
-    "available": "Update {{version}} verfügbar – wird im Hintergrund geladen…",
+    "available": "Update {{version}} verfügbar, wird im Hintergrund geladen…",
     "downloading": "Lade {{version}}… {{percent}} %",
     "ready": "Update {{version}} ist bereit zur Installation.",
-    "errorWithReason": "Suche nach Updates fehlgeschlagen – {{reason}}",
+    "errorWithReason": "Suche nach Updates fehlgeschlagen: {{reason}}",
     "errorNoReason": "Suche nach Updates fehlgeschlagen.",
     "upToDate": "Sie nutzen die neueste Version.",
     "installRestart": "Installieren & neu starten",
@@ -366,10 +366,10 @@
     }
   },
   "captcha": {
-    "title": "Automatisches Lösen von CAPTCHAs",
-    "description": "Löst reCAPTCHA v2 und hCaptcha beim Surfen automatisch über einen kostenpflichtigen Drittanbieter-Dienst. Das ist unabhängig vom Fingerprint – ein sauberer Fingerprint senkt, wie oft CAPTCHAs erscheinen, aber zum Lösen braucht es einen kostenpflichtigen Dienst, der pro Lösung vom Anbieter abgerechnet wird (nicht von SoftGlaze).",
+    "title": "CAPTCHA-Lösung",
+    "description": "Löst reCAPTCHA v2 und hCaptcha beim Surfen automatisch über einen kostenpflichtigen Drittanbieter-Dienst. Das ist unabhängig vom Fingerprint. Ein sauberer Fingerprint senkt, wie oft CAPTCHAs erscheinen, aber zum Lösen braucht es einen kostenpflichtigen Dienst, der pro Lösung vom Anbieter abgerechnet wird (nicht von SoftGlaze).",
     "enable": {
-      "title": "Automatisches Lösen von CAPTCHAs aktivieren",
+      "title": "CAPTCHA-Lösung aktivieren",
       "desc": "Wenn an, erkennen gestartete Profile unterstützte CAPTCHAs und senden sie automatisch an Ihren Lösungsdienst."
     },
     "providerLabel": "Lösungsdienst",
@@ -385,19 +385,19 @@
     "title": "E-Mail (Bestätigungscodes)",
     "configured": "Eingerichtet",
     "offlineMode": "Offline-Modus",
-    "description": "SMTP zum Senden von Einmalcodes bei der Registrierung. Leer lassen, um offline zu arbeiten – der Code wird dann in der App angezeigt statt per E-Mail gesendet.",
+    "description": "SMTP zum Senden von Einmalcodes bei der Registrierung. Leer lassen, um offline zu arbeiten. Der Code wird dann in der App angezeigt statt per E-Mail gesendet.",
     "smtpHost": "SMTP-Host",
     "port": "Port",
     "encryption": "Verschlüsselung",
     "username": "Benutzername",
     "password": "Passwort",
-    "passwordSavedHint": "(gespeichert – leer lassen, um zu behalten)",
+    "passwordSavedHint": "(gespeichert; leer lassen, um es zu behalten)",
     "fromName": "Absendername",
     "saved": "E-Mail-Einstellungen gespeichert.",
     "saveFailed": "E-Mail-Einstellungen konnten nicht gespeichert werden.",
-    "noSmtpYet": "Noch kein SMTP eingerichtet – speichern Sie zuerst Ihre Einstellungen.",
+    "noSmtpYet": "Noch kein SMTP eingerichtet. Speichern Sie zuerst Ihre Einstellungen.",
     "testSent": "Test-E-Mail an {{to}} gesendet.",
-    "testFailed": "Test fehlgeschlagen – prüfen Sie Ihre Einstellungen.",
+    "testFailed": "Test fehlgeschlagen. Prüfen Sie Ihre Einstellungen.",
     "saveButton": "E-Mail-Einstellungen speichern",
     "test": "Testen"
   },

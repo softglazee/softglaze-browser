@@ -9,57 +9,25 @@
     "unavailable": "Perangkat ini tidak bisa menyimpan login dengan aman (enkripsi OS tidak tersedia), jadi Anda akan diminta masuk lagi saat dibuka berikutnya."
   },
   "brand": {
-    "tagline": "Multi-Profil",
-    "bullets": {
-      "fingerprints": "Fingerprint unik dan konsisten untuk setiap profil",
-      "proxy": "Proxy khusus untuk setiap identitas",
-      "localFirst": "Lokal lebih dulu: ruang kerja Anda disimpan di perangkat ini"
-    },
-    "heroLine1": "Jalankan ratusan identitas.",
-    "heroLine2": "Jaga masing-masing tetap terpisah.",
-    "heroBody": "Browser multi-profil lokal untuk tim. Setiap profil menyimpan cookie, penyimpanan, proxy, dan pengaturan fingerprint-nya sendiri.",
-    "footer": "© {{year}} SoftGlaze · Ruang kerja lokal",
-    "trust": {
-      "local": "Lokal lebih dulu",
-      "encrypted": "Kunci ruang kerja",
-      "private": "Tanpa telemetri"
-    },
-    "slides": {
-      "security": {
-        "title": "Keamanan data yang kuat",
-        "body": "Profil, cookie, dan data jelajah Anda tetap di perangkat ini, dan seed 2FA serta kunci penyedia disegel dengan keychain sistem Anda."
-      },
-      "fingerprint": {
-        "title": "Fingerprint yang konsisten",
-        "body": "Setiap profil punya fingerprint unik yang konsisten: canvas, WebGL, font, audio, dan perangkat keras."
-      },
-      "proxy": {
-        "title": "Proxy untuk setiap identitas",
-        "body": "Pasang identitas jaringan khusus ke setiap profil dan putar dengan percaya diri."
-      },
-      "automation": {
-        "title": "Otomatisasi hemat waktu",
-        "body": "Panaskan cookie, buat profil secara massal, dan atur semuanya dalam skala besar."
-      }
-    }
+    "footer": "© {{year}} SoftGlaze · Ruang kerja lokal"
   },
   "license": {
     "machineMismatch": "Lisensi ini terdaftar di komputer lain. Pindahkan ke PC ini atau minta administrator Anda meresetnya."
   },
   "pay": {
     "noMethods": "Pembelian di dalam aplikasi dijeda sementara kami menambahkan penyedia pembayaran baru. Kirim email ke support@softglaze.com untuk membeli dengan invoice, lalu masukkan kode pembelian Anda.",
-    "submitted": "Pembayaran terkirim: administrator akan meninjaunya dan segera mengaktifkan paket Anda.",
+    "submitted": "Pembayaran terkirim. Administrator akan meninjaunya dan segera mengaktifkan paket Anda.",
     "manualBadge": "Manual",
     "continueTo": "Lanjut ke {{label}}",
     "openPaymentLink": "Buka tautan pembayaran",
     "referencePlaceholder": "Referensi pembayaran / ID transaksi",
-    "submitForApproval": "Saya sudah bayar: kirim untuk disetujui"
+    "submitForApproval": "Saya sudah bayar, kirim untuk disetujui"
   },
   "banned": {
     "blockedHeading": "Akun Anda diblokir",
     "endedHeading": "Langganan Anda sudah berakhir",
-    "blockedBodyNamed": "{{name}}, akun Anda diblokir oleh administrator. Hubungi mereka untuk memulihkan akses; data Anda aman.",
-    "blockedBody": "Akun Anda diblokir oleh administrator. Hubungi mereka untuk memulihkan akses; data Anda aman.",
+    "blockedBodyNamed": "{{name}}, akun Anda diblokir oleh administrator. Hubungi mereka untuk memulihkan akses. Data Anda aman.",
+    "blockedBody": "Akun Anda diblokir oleh administrator. Hubungi mereka untuk memulihkan akses. Data Anda aman.",
     "endedBodyNamed": "{{name}}, lisensi ini sudah tidak aktif (dikembalikan dananya, dicabut, atau terdaftar di komputer lain). Pilih paket untuk membuka ruang kerja Anda. Profil dan data Anda aman dan menunggu.",
     "endedBody": "Lisensi ini sudah tidak aktif (dikembalikan dananya, dicabut, atau terdaftar di komputer lain). Pilih paket untuk membuka ruang kerja Anda. Profil dan data Anda aman dan menunggu.",
     "haveCode": "Punya kode pembelian?",
@@ -68,7 +36,7 @@
   },
   "register": {
     "title": "Buat akun Anda",
-    "subtitle": "Ini akun utama Anda: pemilik ruang kerja.",
+    "subtitle": "Ini akun utama Anda, pemilik ruang kerja.",
     "firstName": "Nama depan",
     "lastName": "Nama belakang",
     "email": "Email",
@@ -138,10 +106,10 @@
     "trialHighlight": "uji coba gratis 7 hari",
     "subtitleSuffix": ". Mulai sekarang, atau aktifkan paket berbayar.",
     "startTrialTitle": "Mulai uji coba gratis 7 hari",
-    "startTrialSubtitle": "Tanpa bayar sekarang: jelajahi semuanya.",
+    "startTrialSubtitle": "Tanpa bayar sekarang. Semua fitur terbuka.",
     "activatePaid": "Aktifkan paket berbayar sekarang",
     "haveCode": "Punya kode pembelian?",
-    "skip": "Lewati: mulai uji coba",
+    "skip": "Lewati dan mulai uji coba",
     "tenantTitle": "Akun Anda siap",
     "tenantSubtitle": "Mulai uji coba gratis, atau pilih paket.",
     "tenantTrialSubtitle": "Akses penuh, tanpa bayar. Satu uji coba gratis per komputer dan email.",
@@ -161,7 +129,7 @@
     "password": "Kata sandi",
     "forgot": "Lupa?",
     "passwordPlaceholder": "Kata sandi utama",
-    "forgotBody": "Kata sandi utama tidak bisa dipulihkan di instalasi lokal: tidak pernah keluar dari perangkat ini. Jika hilang, ruang kerja harus direset dari Pengaturan.",
+    "forgotBody": "Kata sandi utama tidak bisa dipulihkan di instalasi lokal karena tidak pernah keluar dari perangkat ini. Jika hilang, ruang kerja harus direset dari Pengaturan.",
     "signIn": "Masuk",
     "noAccount": "Belum punya akun?",
     "newHere": "Baru di SoftGlaze?",
@@ -239,7 +207,7 @@
     "verificationFailed": "Verifikasi gagal.",
     "incorrectPassword": "Kata sandi salah.",
     "couldNotSignIn": "Tidak bisa masuk.",
-    "superSetupRequired": "Kredensial Super Admin belum diatur: buat di bawah.",
+    "superSetupRequired": "Kredensial Super Admin belum diatur. Buat di bawah.",
     "invalidSuperCredentials": "Kredensial Super Admin tidak valid.",
     "couldNotCreateSuper": "Tidak bisa membuat kredensial Super Admin.",
     "enterInviteCode": "Masukkan kode undangan Anda.",
@@ -252,7 +220,7 @@
     "paymentNotStarted": "Pembayaran tidak bisa dimulai.",
     "couldNotSubmitPayment": "Tidak bisa mengirim pembayaran Anda.",
     "enterWorkspacePassword": "Masukkan kata sandi ruang kerja Anda.",
-    "dbStillLocked": "Database masih terkunci: silakan coba lagi.",
+    "dbStillLocked": "Database masih terkunci. Silakan coba lagi.",
     "dbMissing": "File database terenkripsi tidak ditemukan. Pulihkan dari cadangan ruang kerja.",
     "dbUnlockFailed": "Kata sandi salah, atau file rusak.",
     "couldNotUnlockDb": "Tidak bisa membuka kunci database.",
@@ -277,5 +245,49 @@
     "SIGNUP_USE_CASE": "Pilih untuk apa Anda akan memakai SoftGlaze.",
     "SIGNUP_USE_CASE_OTHER": "Ceritakan dalam beberapa kata untuk apa Anda akan memakai SoftGlaze.",
     "CONFIRM_OFFLINE": "Sambungkan ke internet untuk mengonfirmasi email Anda."
+  },
+  "panel": {
+    "label": "Tur produk SoftGlaze",
+    "carousel": "korsel",
+    "slide": "salindia",
+    "slideOf": "{{n}} dari {{total}}",
+    "prev": "Salindia sebelumnya",
+    "next": "Salindia berikutnya",
+    "pause": "Jeda salindia",
+    "play": "Putar salindia",
+    "goTo": "Tampilkan salindia {{n}}: {{title}}",
+    "trust": "Profil, cookie, dan login tetap tersimpan di komputer ini.",
+    "slides": {
+      "free": {
+        "title": "Mulai dengan 25 profil browser, gratis",
+        "body": "Tanpa kartu dan tanpa batas waktu. Setiap akun baru juga bisa mencoba Pro gratis selama 7 hari.",
+        "alt": "Halaman Profil dengan sepuluh profil, proxy masing-masing, dan waktu terakhir dipakai"
+      },
+      "fingerprint": {
+        "title": "Setiap profil punya fingerprint sendiri",
+        "body": "Canvas, WebGL, font, audio, dan zona waktu diatur per profil dan tetap sama di setiap peluncuran. Beri setiap profil proxy HTTP, HTTPS, atau SOCKS5 milik Anda sendiri.",
+        "alt": "Tab Fingerprint sebuah profil di samping ringkasan lingkungannya"
+      },
+      "ai": {
+        "title": "Agen AI bekerja, Anda yang menyetujui",
+        "body": "Claude, ChatGPT, Cursor, dan aplikasi MCP lain menjalankan tugas di profil Anda. Anda menentukan aksi mana yang perlu persetujuan, dan setiap langkah dicatat.",
+        "alt": "Permintaan persetujuan dari Claude Desktop untuk mengisi formulir masuk"
+      },
+      "phone": {
+        "title": "Setujui permintaan dari ponsel",
+        "body": "Aplikasi ponsel dan aplikasi web SoftGlaze menampilkan setiap permintaan beserta detailnya. Izinkan sekali, izinkan selama satu jam, atau tolak. Tersedia di semua paket.",
+        "alt": "Layar Persetujuan di ponsel dengan satu permintaan yang menunggu jawaban"
+      },
+      "team": {
+        "title": "Bekerja sebagai tim dengan peran yang jelas",
+        "body": "Peran Pemilik, Admin, Manajer, dan Operator mengatur siapa yang bisa melihat dan membuka setiap profil. Pro mencakup 3 kursi dan Enterprise 25.",
+        "alt": "Halaman Anggota dengan lima anggota tim dan perannya"
+      }
+    }
+  },
+  "controls": {
+    "language": "Bahasa: {{lang}}",
+    "toLight": "Beralih ke tema terang",
+    "toDark": "Beralih ke tema gelap"
   }
 }

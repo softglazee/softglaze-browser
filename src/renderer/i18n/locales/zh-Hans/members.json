@@ -75,7 +75,7 @@
   "status": {
     "active": "活跃",
     "suspended": "已暂停",
-    "banned": "已禁止访问"
+    "banned": "已阻止"
   },
   "actions": {
     "inviteMember": "邀请成员",
@@ -175,10 +175,10 @@
   "accountStatus": {
     "title": "账号状态",
     "reason": "原因：{{reason}}",
-    "unban": "恢复成员访问",
-    "banHint": "编辑上方字段不会解除访问禁止。请使用“恢复成员访问”来恢复访问权限。",
+    "unban": "解除阻止成员",
+    "banHint": "编辑上方字段不会解除阻止。请使用“解除阻止成员”恢复访问。",
     "suspendToggle": "暂停此成员（阻止登录）",
-    "ban": "禁止成员访问"
+    "ban": "阻止成员"
   },
   "delete": {
     "title": "移除 {{name}}",
@@ -271,7 +271,7 @@
       "paid": "已付费",
       "trialing": "试用",
       "grace": "宽限期",
-      "banned": "已禁用"
+      "banned": "已阻止"
     },
     "type": {
       "trial": "试用",

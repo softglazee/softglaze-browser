@@ -18,7 +18,7 @@
     "heading": "指纹引擎",
     "installed": "已安装",
     "notInstalled": "未安装",
-    "description": "fingerprint-chromium：在引擎层面原生设置 canvas / WebGL / UA / 平台 / 时区，隐藏 webdriver，并阻止 WebRTC 泄露。请在“设置 → 浏览器”中开启。",
+    "description": "fingerprint-chromium 在引擎层面原生设置 canvas、WebGL、UA、平台和时区，隐藏 webdriver，并阻止 WebRTC 泄露。请在“设置 → 浏览器”中开启。",
     "progressInstalling": "正在安装",
     "progressVerifying": "正在验证",
     "installing": "正在安装",

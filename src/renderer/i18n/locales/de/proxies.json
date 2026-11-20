@@ -31,10 +31,10 @@
     "button": "Kostenlose Proxys",
     "buttonTooltip": "Kostenlose öffentliche Proxys auf einer eigenen Seite finden, testen und behalten, getrennt von Ihren bezahlten Proxys",
     "title": "Kostenlose öffentliche Proxys",
-    "description": "SoftGlaze lädt die öffentlichen Listen herunter, die Free-Proxy-Projekte veröffentlichen, testet jeden Proxy und behält nur die funktionierenden – auf dieser Seite und getrennt von Ihren bezahlten Proxys.",
+    "description": "SoftGlaze lädt die öffentlichen Listen herunter, die Free-Proxy-Projekte veröffentlichen, testet jeden Proxy und behält nur die funktionierenden, auf dieser Seite und getrennt von Ihren bezahlten Proxys.",
     "warn": {
       "strangers": "Kostenlose Proxys werden von Unbekannten betrieben. Nutzen Sie sie nicht, um sich bei Konten anzumelden, Passwörter einzugeben oder zu bezahlen: Der Betreiber eines Proxys kann unverschlüsselten Datenverkehr sehen.",
-      "quality": "Sie sind langsam, fallen oft innerhalb von Stunden aus, und viele stehen auf Sperrlisten – rechnen Sie also mit mehr CAPTCHAs als mit einem bezahlten Proxy. Für echte Kontoarbeit nutzen Sie einen Proxy-Anbieter.",
+      "quality": "Sie sind langsam, fallen oft innerhalb von Stunden aus, und viele stehen auf Sperrlisten. Rechnen Sie also mit mehr CAPTCHAs als mit einem bezahlten Proxy. Für echte Kontoarbeit nutzen Sie einen Proxy-Anbieter.",
       "legal": "Nutzen Sie sie nur, wo das erlaubt ist. „Schnell erstellen“ wählt nie kostenlose Proxys, außer Sie wählen „Kostenlose Proxys“ als Proxy-Quelle."
     },
     "checks": "Jeder Proxy wird live getestet, und HTTP-Proxys, die Ihre echte IP an Websites weitergeben, werden verworfen.",
@@ -197,8 +197,8 @@
   "deleteFiltered": {
     "tooltip": "Jeden Proxy löschen, der zum aktuellen Filter passt",
     "button": "Löschen: {{scope}} ({{count}})",
-    "confirm_one": "{{count}} Proxy löschen ({{scope}})? Das kann nicht rückgängig gemacht werden – Profile, die ihn nutzen, verlieren ihn und starten erst wieder, wenn Sie ihnen einen anderen Proxy zuweisen.",
-    "confirm_other": "{{count}} Proxys löschen ({{scope}})? Das kann nicht rückgängig gemacht werden – Profile, die sie nutzen, verlieren ihren Proxy und starten erst wieder, wenn Sie ihnen einen anderen zuweisen.",
+    "confirm_one": "{{count}} Proxy löschen ({{scope}})? Das kann nicht rückgängig gemacht werden. Profile, die ihn nutzen, verlieren ihn und starten erst wieder, wenn Sie ihnen einen anderen Proxy zuweisen.",
+    "confirm_other": "{{count}} Proxys löschen ({{scope}})? Das kann nicht rückgängig gemacht werden. Profile, die sie nutzen, verlieren ihren Proxy und starten erst wieder, wenn Sie ihnen einen anderen zuweisen.",
     "scope": {
       "all": "alle",
       "filtered": "gefilterte",
@@ -217,7 +217,7 @@
     "renameRecolor": "Umbenennen / Farbe ändern",
     "deleteGroup": "Gruppe löschen",
     "newGroup": "Neue Gruppe",
-    "deleteConfirm": "Gruppe „{{name}}“ löschen? Die Proxys bleiben im Pool – sie sind dann nur ohne Gruppe."
+    "deleteConfirm": "Gruppe „{{name}}“ löschen? Die Proxys bleiben im Pool, sie sind dann nur ohne Gruppe."
   },
   "autoGroup": {
     "granularityTooltip": "Feinheit der Auto-Gruppierung",
@@ -251,7 +251,7 @@
     "count": "{{count}} ausgewählt",
     "checkSelected": "Ausgewählte prüfen",
     "moveToGroup": "In Gruppe verschieben",
-    "noGroupsYet": "Noch keine Gruppen – erstellen Sie zuerst eine.",
+    "noGroupsYet": "Noch keine Gruppen. Erstellen Sie zuerst eine.",
     "removeFromGroup": "Aus Gruppe entfernen",
     "deleteSelected": "Ausgewählte löschen",
     "clear": "Leeren",

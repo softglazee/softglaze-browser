@@ -9,57 +9,25 @@
     "unavailable": "Este dispositivo não consegue guardar um login com segurança (a criptografia do sistema não está disponível), então você vai precisar entrar de novo na próxima abertura."
   },
   "brand": {
-    "tagline": "Multiperfil",
-    "bullets": {
-      "fingerprints": "Impressões digitais únicas e coerentes por perfil",
-      "proxy": "Um proxy dedicado para cada identidade",
-      "localFirst": "Local primeiro: seu espaço de trabalho fica guardado neste dispositivo"
-    },
-    "heroLine1": "Gerencie centenas de identidades.",
-    "heroLine2": "Mantenha cada uma separada.",
-    "heroBody": "Um navegador multiperfil local para equipes. Cada perfil mantém seus próprios cookies, armazenamento, proxy e configurações de impressão digital.",
-    "footer": "© {{year}} SoftGlaze · Espaço de trabalho local",
-    "trust": {
-      "local": "Local primeiro",
-      "encrypted": "Bloqueio do espaço",
-      "private": "Zero telemetria"
-    },
-    "slides": {
-      "security": {
-        "title": "Segurança de dados robusta",
-        "body": "Seus perfis, cookies e dados de navegação ficam neste dispositivo, e as sementes 2FA e as chaves de provedores são seladas com o chaveiro do sistema."
-      },
-      "fingerprint": {
-        "title": "Impressões digitais coerentes",
-        "body": "Cada perfil vem com uma impressão digital única e coerente: canvas, WebGL, fontes, áudio e hardware."
-      },
-      "proxy": {
-        "title": "Um proxy para cada identidade",
-        "body": "Vincule uma identidade de rede dedicada a cada perfil e faça a rotação com confiança."
-      },
-      "automation": {
-        "title": "Automação que poupa tempo",
-        "body": "Aqueça cookies, gere perfis em lote e coordene tudo em escala."
-      }
-    }
+    "footer": "© {{year}} SoftGlaze · Espaço de trabalho local"
   },
   "license": {
     "machineMismatch": "Esta licença está registrada em outro computador. Transfira-a para este PC ou peça ao seu administrador para redefini-la."
   },
   "pay": {
     "noMethods": "A compra dentro do app está pausada enquanto adicionamos um novo provedor de pagamento. Escreva para support@softglaze.com para comprar por fatura e depois digite seu código de compra.",
-    "submitted": "Pagamento enviado: um administrador vai revisá-lo e ativar seu plano em breve.",
+    "submitted": "Pagamento enviado. Um administrador vai revisá-lo e ativar seu plano em breve.",
     "manualBadge": "Manual",
     "continueTo": "Continuar para {{label}}",
     "openPaymentLink": "Abrir link de pagamento",
     "referencePlaceholder": "Referência do pagamento / ID da transação",
-    "submitForApproval": "Já paguei: enviar para aprovação"
+    "submitForApproval": "Já paguei, enviar para aprovação"
   },
   "banned": {
     "blockedHeading": "Sua conta está bloqueada",
     "endedHeading": "Sua assinatura terminou",
-    "blockedBodyNamed": "{{name}}, sua conta foi bloqueada por um administrador. Fale com ele para recuperar o acesso; seus dados estão seguros.",
-    "blockedBody": "Sua conta foi bloqueada por um administrador. Fale com ele para recuperar o acesso; seus dados estão seguros.",
+    "blockedBodyNamed": "{{name}}, sua conta foi bloqueada por um administrador. Fale com ele para recuperar o acesso. Seus dados estão seguros.",
+    "blockedBody": "Sua conta foi bloqueada por um administrador. Fale com ele para recuperar o acesso. Seus dados estão seguros.",
     "endedBodyNamed": "{{name}}, esta licença não está mais ativa (reembolsada, revogada ou registrada em outro computador). Escolha um plano para desbloquear seu espaço de trabalho. Seus perfis e dados estão seguros esperando por você.",
     "endedBody": "Esta licença não está mais ativa (reembolsada, revogada ou registrada em outro computador). Escolha um plano para desbloquear seu espaço de trabalho. Seus perfis e dados estão seguros esperando por você.",
     "haveCode": "Tem um código de compra?",
@@ -68,7 +36,7 @@
   },
   "register": {
     "title": "Crie sua conta",
-    "subtitle": "Esta é sua conta principal: a dona do espaço de trabalho.",
+    "subtitle": "Esta é sua conta principal, a dona do espaço de trabalho.",
     "firstName": "Nome",
     "lastName": "Sobrenome",
     "email": "E-mail",
@@ -138,10 +106,10 @@
     "trialHighlight": "teste grátis de 7 dias",
     "subtitleSuffix": ". Comece agora ou ative um plano pago.",
     "startTrialTitle": "Começar teste grátis de 7 dias",
-    "startTrialSubtitle": "Nada a pagar agora: explore tudo.",
+    "startTrialSubtitle": "Nada a pagar agora. Todos os recursos liberados.",
     "activatePaid": "Ativar um plano pago agora",
     "haveCode": "Tem um código de compra?",
-    "skip": "Pular: começar o teste",
+    "skip": "Pular e começar o teste",
     "tenantTitle": "Sua conta está pronta",
     "tenantSubtitle": "Comece seu teste grátis ou escolha um plano.",
     "tenantTrialSubtitle": "Acesso completo, sem pagamento. Um teste grátis por computador e e-mail.",
@@ -161,7 +129,7 @@
     "password": "Senha",
     "forgot": "Esqueceu?",
     "passwordPlaceholder": "Senha mestra",
-    "forgotBody": "Sua senha mestra não pode ser recuperada em uma instalação local: ela nunca sai deste dispositivo. Se você perdê-la, o espaço de trabalho precisa ser redefinido em Configurações.",
+    "forgotBody": "Sua senha mestra não pode ser recuperada em uma instalação local, porque ela nunca sai deste dispositivo. Se você perdê-la, o espaço de trabalho precisa ser redefinido em Configurações.",
     "signIn": "Entrar",
     "noAccount": "Não tem uma conta?",
     "newHere": "Novo no SoftGlaze?",
@@ -239,7 +207,7 @@
     "verificationFailed": "Falha na verificação.",
     "incorrectPassword": "Senha incorreta.",
     "couldNotSignIn": "Não foi possível entrar.",
-    "superSetupRequired": "Ainda não há credencial de Super Admin: crie uma abaixo.",
+    "superSetupRequired": "Ainda não há credencial de Super Admin. Crie uma abaixo.",
     "invalidSuperCredentials": "Credenciais de Super Admin inválidas.",
     "couldNotCreateSuper": "Não foi possível criar as credenciais de Super Admin.",
     "enterInviteCode": "Digite seu código de convite.",
@@ -252,7 +220,7 @@
     "paymentNotStarted": "Não foi possível iniciar o pagamento.",
     "couldNotSubmitPayment": "Não foi possível enviar seu pagamento.",
     "enterWorkspacePassword": "Digite a senha do espaço de trabalho.",
-    "dbStillLocked": "O banco de dados continua bloqueado: tente de novo.",
+    "dbStillLocked": "O banco de dados continua bloqueado. Tente de novo.",
     "dbMissing": "O arquivo do banco de dados criptografado não foi encontrado. Restaure um backup do espaço de trabalho para recuperar.",
     "dbUnlockFailed": "Senha incorreta, ou o arquivo está corrompido.",
     "couldNotUnlockDb": "Não foi possível desbloquear o banco de dados.",
@@ -277,5 +245,49 @@
     "SIGNUP_USE_CASE": "Escolha para que você vai usar o SoftGlaze.",
     "SIGNUP_USE_CASE_OTHER": "Conte em poucas palavras para que você vai usar o SoftGlaze.",
     "CONFIRM_OFFLINE": "Conecte-se à internet para confirmar seu e-mail."
+  },
+  "panel": {
+    "label": "Tour do produto SoftGlaze",
+    "carousel": "carrossel",
+    "slide": "slide",
+    "slideOf": "{{n}} de {{total}}",
+    "prev": "Slide anterior",
+    "next": "Próximo slide",
+    "pause": "Pausar os slides",
+    "play": "Reproduzir os slides",
+    "goTo": "Mostrar o slide {{n}}: {{title}}",
+    "trust": "Perfis, cookies e logins ficam neste computador.",
+    "slides": {
+      "free": {
+        "title": "Comece com 25 perfis de navegador, grátis",
+        "body": "Sem cartão e sem limite de tempo. Toda conta nova também pode testar o Pro grátis por 7 dias.",
+        "alt": "A página Perfis com dez perfis, seus proxies e quando cada um foi usado pela última vez"
+      },
+      "fingerprint": {
+        "title": "Cada perfil mantém a própria impressão digital",
+        "body": "Canvas, WebGL, fontes, áudio e fuso horário são definidos por perfil e continuam iguais a cada abertura. Dê a cada um o seu próprio proxy HTTP, HTTPS ou SOCKS5.",
+        "alt": "A aba Impressão digital de um perfil ao lado da visão geral do ambiente"
+      },
+      "ai": {
+        "title": "Agentes de IA fazem o trabalho, você aprova",
+        "body": "Claude, ChatGPT, Cursor e outros apps MCP executam tarefas nos seus perfis. Você decide quais ações precisam da sua aprovação, e cada passo fica registrado.",
+        "alt": "Uma solicitação de aprovação do Claude Desktop para preencher um formulário de login"
+      },
+      "phone": {
+        "title": "Aprove solicitações pelo celular",
+        "body": "O app de celular e o app web do SoftGlaze mostram cada solicitação com os detalhes. Permita uma vez, por uma hora, ou negue. Incluído em todos os planos.",
+        "alt": "A tela Aprovações em um celular com uma solicitação aguardando resposta"
+      },
+      "team": {
+        "title": "Trabalhe em equipe com funções claras",
+        "body": "As funções Proprietário, Admin, Gerente e Operador controlam quem pode ver e abrir cada perfil. O Pro inclui 3 vagas e o Enterprise, 25.",
+        "alt": "A página Membros com cinco membros da equipe e suas funções"
+      }
+    }
+  },
+  "controls": {
+    "language": "Idioma: {{lang}}",
+    "toLight": "Mudar para o tema claro",
+    "toDark": "Mudar para o tema escuro"
   }
 }

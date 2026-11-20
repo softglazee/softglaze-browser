@@ -18,7 +18,7 @@
     "heading": "محرك البصمة",
     "installed": "مثبّت",
     "notInstalled": "غير مثبّت",
-    "description": "fingerprint-chromium: يضبط canvas / WebGL / UA / المنصة / المنطقة الزمنية بشكل أصلي، ويخفي webdriver، ويمنع تسرّب WebRTC. فعّله من الإعدادات ← المتصفح.",
+    "description": "يضبط fingerprint-chromium قيم canvas وWebGL وUA والمنصة والمنطقة الزمنية بشكل أصلي، ويخفي webdriver ويمنع تسرّب WebRTC. فعّله من الإعدادات ← المتصفح.",
     "progressInstalling": "جارٍ التثبيت",
     "progressVerifying": "جارٍ التحقق",
     "installing": "جارٍ التثبيت",

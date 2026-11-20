@@ -1,7 +1,7 @@
 {
   "choose": {
-    "title": "Bienvenue dans SoftGlaze",
-    "subtitle": "Connectez-vous pour créer votre espace de travail. Aucun mot de passe nécessaire.",
+    "title": "Créez votre compte gratuit",
+    "subtitle": "Utilisez un compte que vous avez déjà. Aucun nouveau mot de passe.",
     "google": "Continuer avec Google",
     "microsoft": "Continuer avec Microsoft",
     "facebook": "Continuer avec Facebook",
@@ -9,12 +9,16 @@
     "allowEmail": "Autoriser l'accès à l'e-mail et réessayer Facebook",
     "github": "Continuer avec GitHub",
     "email": "Continuer avec un e-mail",
-    "or": "ou",
-    "moreOptions": "Plus d'options",
-    "moreOptionsHint": "Créer plutôt l'espace de travail avec un nom et un mot de passe",
+    "moreOptions": "Configurer avec un mot de passe",
+    "moreOptionsHint": "Vous préférez un nom et un mot de passe ?",
     "privacy": "Nous recevons uniquement votre nom et votre adresse e-mail vérifiée.",
     "haveAccount": "Vous avez déjà un espace de travail sur cet ordinateur ?",
-    "logIn": "Se connecter"
+    "logIn": "Se connecter avec son mot de passe",
+    "signInTitle": "Se connecter à SoftGlaze",
+    "signInSubtitle": "Utilisez le compte avec lequel vous vous êtes inscrit. Si votre forfait est sur un autre ordinateur, vous pouvez le transférer ici.",
+    "entryLabel": "Nouveau ou déjà inscrit",
+    "entryNew": "Nouveau compte",
+    "entryReturning": "J'ai déjà un compte"
   },
   "unlock": {
     "title": "Bon retour",

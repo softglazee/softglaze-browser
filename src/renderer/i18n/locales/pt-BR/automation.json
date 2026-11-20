@@ -192,7 +192,7 @@
     "starting": "Iniciando…",
     "logStarted": "\"{{name}}\" iniciada · {{total}} passo(s) em {{profile}}",
     "logStepRunning": "▶ {{label}}: {{summary}}",
-    "logStepError": "✕ {{label}} - {{error}}",
+    "logStepError": "✕ {{label}}: {{error}}",
     "logStepFailed": "falhou",
     "logStopped": "Parada.",
     "logFinished": "Concluída: {{ran}}/{{total}} passo(s).",
@@ -209,7 +209,7 @@
     "errors": {
       "run": "Não foi possível executar a macro."
     },
-    "logStepSkipped": "{{label}} pulado (opcional) - {{error}}"
+    "logStepSkipped": "{{label}} pulado (opcional): {{error}}"
   },
   "parallel": {
     "states": {

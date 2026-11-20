@@ -104,7 +104,7 @@
     "chooseSpreadsheet": "Tabelle wählen",
     "colIdentityField": "Identitätsfeld",
     "colYourColumn": "Ihre Spalte",
-    "skipOption": "– überspringen –",
+    "skipOption": "(überspringen)",
     "mappedCount_one": "{{count}} Feld zugeordnet. Zeilen ohne Name/E-Mail/Benutzername werden übersprungen.",
     "mappedCount_other": "{{count}} Felder zugeordnet. Zeilen ohne Name/E-Mail/Benutzername werden übersprungen.",
     "done": "Fertig",
@@ -124,7 +124,7 @@
     "errors": {
       "noRows": "Diese Datei hat keine lesbare Kopfzeile oder Datenzeilen.",
       "readFile": "Die Datei konnte nicht gelesen werden.",
-      "nothingMapped": "Keine Zeilen zum Importieren – ordnen Sie mindestens eines von Vorname / Nachname / E-Mail / Benutzername zu.",
+      "nothingMapped": "Keine Zeilen zum Importieren. Ordnen Sie mindestens eines von Vorname / Nachname / E-Mail / Benutzername zu.",
       "failed": "Import fehlgeschlagen."
     }
   },

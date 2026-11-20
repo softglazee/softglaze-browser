@@ -129,7 +129,7 @@
     "inviteTitle": "Mời thành viên",
     "editTitle": "Sửa {{name}}",
     "noCreatableRoles": "Bạn không được phép tạo thành viên cấp dưới nào.",
-    "invitePendingCode": "Đang chờ chấp nhận lời mời - mã"
+    "invitePendingCode": "Đang chờ chấp nhận lời mời, mã"
   },
   "fields": {
     "name": "Tên",
@@ -176,7 +176,7 @@
     "title": "Trạng thái tài khoản",
     "reason": "Lý do: {{reason}}",
     "unban": "Bỏ chặn thành viên",
-    "banHint": "Sửa các trường ở trên vẫn giữ trạng thái chặn - dùng Bỏ chặn để khôi phục quyền truy cập.",
+    "banHint": "Sửa các trường ở trên vẫn giữ trạng thái chặn. Dùng Bỏ chặn để khôi phục quyền truy cập.",
     "suspendToggle": "Tạm ngưng thành viên này (không cho đăng nhập)",
     "ban": "Chặn thành viên"
   },
@@ -204,14 +204,14 @@
     },
     "pickTarget": "Chọn thành viên nhận dữ liệu.",
     "reassignTo": "Giao cho",
-    "noOtherMembers": "Không có thành viên nào khác - hãy chọn tùy chọn khác."
+    "noOtherMembers": "Không có thành viên nào khác. Hãy chọn tùy chọn khác."
   },
   "assign": {
     "title": "Giao hồ sơ · {{name}}",
     "searchPlaceholder": "Tìm hồ sơ",
     "noProfiles": "Không tìm thấy hồ sơ.",
     "memberFallback": "thành viên #{{id}}",
-    "updated": "Đã cập nhật - giao {{assigned}}, bỏ giao {{unassigned}}.",
+    "updated": "Đã cập nhật: giao {{assigned}}, bỏ giao {{unassigned}}.",
     "save": "Lưu phân công"
   },
   "activity": {
@@ -261,7 +261,7 @@
     "days": "{{count}} ngày trước"
   },
   "license": {
-    "intro": "Trạng thái gói đăng ký của từng không gian làm việc của chủ sở hữu. Ưu tiên cục bộ và chỉ ở mức cố gắng tốt nhất - người dùng cố ý vẫn có thể sửa CSDL cục bộ hoặc đồng hồ; muốn kiểm soát chắc chắn cần máy chủ cấp phép.",
+    "intro": "Trạng thái gói đăng ký của từng không gian làm việc của chủ sở hữu. Ưu tiên cục bộ và chỉ ở mức cố gắng tốt nhất: người dùng cố ý vẫn có thể sửa CSDL cục bộ hoặc đồng hồ; muốn kiểm soát chắc chắn cần máy chủ cấp phép.",
     "noOwners": "Chưa có không gian làm việc của chủ sở hữu nào.",
     "editTitle": "Giấy phép · {{name}}",
     "setState": "Đặt trạng thái",

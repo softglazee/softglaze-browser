@@ -1,7 +1,7 @@
 {
   "choose": {
-    "title": "Selamat datang di SoftGlaze",
-    "subtitle": "Masuk untuk membuat ruang kerja Anda. Tanpa kata sandi.",
+    "title": "Buat akun gratis Anda",
+    "subtitle": "Gunakan akun yang sudah Anda punya. Tanpa kata sandi baru.",
     "google": "Lanjut dengan Google",
     "microsoft": "Lanjut dengan Microsoft",
     "facebook": "Lanjut dengan Facebook",
@@ -9,12 +9,16 @@
     "allowEmail": "Izinkan akses email dan coba Facebook lagi",
     "github": "Lanjut dengan GitHub",
     "email": "Lanjut dengan email",
-    "or": "atau",
-    "moreOptions": "Opsi lain",
-    "moreOptionsHint": "Buat ruang kerja dengan nama dan kata sandi",
+    "moreOptions": "Siapkan dengan kata sandi",
+    "moreOptionsHint": "Lebih suka nama dan kata sandi?",
     "privacy": "Kami hanya menerima nama dan alamat email terverifikasi Anda.",
     "haveAccount": "Sudah punya ruang kerja di komputer ini?",
-    "logIn": "Masuk"
+    "logIn": "Masuk dengan kata sandi",
+    "signInTitle": "Masuk ke SoftGlaze",
+    "signInSubtitle": "Gunakan akun yang Anda pakai saat mendaftar. Jika paket Anda ada di komputer lain, Anda bisa memindahkannya ke sini.",
+    "entryLabel": "Baru atau sudah punya akun",
+    "entryNew": "Akun baru",
+    "entryReturning": "Saya sudah punya akun"
   },
   "unlock": {
     "title": "Selamat datang kembali",

@@ -26,7 +26,7 @@
     "settings": "Pengaturan"
   },
   "shell": {
-    "footerDefault": "© {year} SoftGlaze - Dibuat oleh [Tim SoftGlaze](https://softglaze.com) · Dikembangkan oleh [Azhar Ali](https://azhar.softglaze.com)",
+    "footerDefault": "© {year} SoftGlaze · Dibuat oleh [Tim SoftGlaze](https://softglaze.com) · Dikembangkan oleh [Azhar Ali](https://azhar.softglaze.com)",
     "antiDetect": "Multi-Profil",
     "darkMode": "Mode gelap",
     "lightMode": "Mode terang",
@@ -221,7 +221,7 @@
       "title": "Bahasa",
       "description": "Pilih bahasa tampilan untuk antarmuka SoftGlaze.",
       "label": "Bahasa tampilan",
-      "hint": "Bahasa lain segera hadir. Perubahan langsung berlaku di seluruh aplikasi."
+      "hint": "Perubahan langsung berlaku di seluruh aplikasi."
     }
   },
   "startLinks": {
@@ -260,5 +260,15 @@
     "settingsHidden": "Pengaturan dimatikan untuk akun Anda oleh administrator.",
     "proxiesHidden": "Proxy dimatikan untuk akun Anda oleh administrator.",
     "profilesHidden": "Profil dimatikan untuk akun Anda oleh administrator."
+  },
+  "promo": {
+    "bf2026": {
+      "text": "Black Friday: Pro Seumur Hidup {{pro}} atau Enterprise Seumur Hidup {{enterprise}}, sekali bayar. Berakhir 1 Des, pukul 23.59 UTC."
+    },
+    "xmas2026": {
+      "text": "Gelombang Natal: Pro Seumur Hidup {{pro}} atau Enterprise Seumur Hidup {{enterprise}}, sekali bayar. Berakhir 31 Des, pukul 23.59 UTC."
+    },
+    "cta": "Lihat penawaran",
+    "dismiss": "Sembunyikan penawaran ini"
   }
 }

@@ -18,7 +18,7 @@
     "heading": "フィンガープリントエンジン",
     "installed": "インストール済み",
     "notInstalled": "未インストール",
-    "description": "fingerprint-chromium - canvas / WebGL / UA / プラットフォーム / タイムゾーンをネイティブに設定し、webdriverを非表示にして、WebRTCの漏えいを防ぎます。「設定 → ブラウザ」でオンにしてください。",
+    "description": "fingerprint-chromium は canvas、WebGL、UA、プラットフォーム、タイムゾーンをネイティブに設定し、webdriver を非表示にして、WebRTC の漏えいを防ぎます。「設定 → ブラウザ」でオンにしてください。",
     "progressInstalling": "インストール中",
     "progressVerifying": "検証中",
     "installing": "インストール中",

@@ -1,7 +1,7 @@
 {
   "choose": {
-    "title": "Willkommen bei SoftGlaze",
-    "subtitle": "Melden Sie sich an, um Ihren Arbeitsbereich zu erstellen. Kein Passwort nötig.",
+    "title": "Kostenloses Konto erstellen",
+    "subtitle": "Nutzen Sie ein Konto, das Sie schon haben. Kein neues Passwort.",
     "google": "Weiter mit Google",
     "microsoft": "Weiter mit Microsoft",
     "facebook": "Weiter mit Facebook",
@@ -9,12 +9,16 @@
     "allowEmail": "E-Mail-Zugriff erlauben und Facebook erneut versuchen",
     "github": "Weiter mit GitHub",
     "email": "Weiter mit E-Mail",
-    "or": "oder",
-    "moreOptions": "Weitere Optionen",
-    "moreOptionsHint": "Arbeitsbereich stattdessen mit Name und Passwort erstellen",
+    "moreOptions": "Mit Passwort einrichten",
+    "moreOptionsHint": "Lieber mit Name und Passwort?",
     "privacy": "Wir erhalten nur Ihren Namen und Ihre bestätigte E-Mail-Adresse.",
     "haveAccount": "Haben Sie schon einen Arbeitsbereich auf diesem Computer?",
-    "logIn": "Anmelden"
+    "logIn": "Mit Passwort anmelden",
+    "signInTitle": "Bei SoftGlaze anmelden",
+    "signInSubtitle": "Nutzen Sie das Konto, mit dem Sie sich registriert haben. Liegt Ihr Tarif auf einem anderen Computer, können Sie ihn hierher übertragen.",
+    "entryLabel": "Neu oder wiederkehrend",
+    "entryNew": "Neues Konto",
+    "entryReturning": "Ich habe ein Konto"
   },
   "unlock": {
     "title": "Willkommen zurück",

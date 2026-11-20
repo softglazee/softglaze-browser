@@ -103,7 +103,7 @@
     "chooseSpreadsheet": "เลือกสเปรดชีต",
     "colIdentityField": "ฟิลด์ข้อมูลระบุตัวตน",
     "colYourColumn": "คอลัมน์ของคุณ",
-    "skipOption": "- ข้าม -",
+    "skipOption": "(ข้าม)",
     "mappedCount_other": "จับคู่แล้ว {{count}} ฟิลด์ แถวที่ไม่มีชื่อ/อีเมล/ชื่อผู้ใช้จะถูกข้าม",
     "done": "เสร็จสิ้น",
     "cancel": "ยกเลิก",

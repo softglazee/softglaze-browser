@@ -202,7 +202,7 @@
       "desc": "Em perfis baseados no Chrome, qualquer janela ou painel das ferramentas de desenvolvedor (F12, Ctrl+Shift+I, Inspecionar) é fechado assim que abre. Vale para perfis abertos depois da alteração. O seu próprio Chrome neste computador não é afetado."
     },
     "minimizeCdpFootprint": {
-      "title": "Reduzir rastro do CDP (experimental, contra CAPTCHA)",
+      "title": "Reduzir rastro do CDP (experimental, menos CAPTCHAs)",
       "shortTitle": "Reduzir rastro do CDP",
       "desc": "Remove o Runtime.enable persistente do CDP, o principal sinal de automação que o Cloudflare/Turnstile identificam. PREÇO enquanto LIGADO: o preenchimento de personas, os links de verificação da página inicial e o espelhamento de sessões sincronizadas param de funcionar (eles precisam do binding do CDP). Desligado por padrão; ative para comparar se reduz os CAPTCHAs e depois reabra os perfis."
     },

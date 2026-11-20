@@ -110,7 +110,7 @@
     "footerCardTitle": "ส่วนท้ายของแอป",
     "footerCardDesc": "แสดงที่ด้านล่างของทุกหน้า ใช้ {year} แทนปีปัจจุบัน ลิงก์จะเปิดในเบราว์เซอร์ของคุณ",
     "preview": "ตัวอย่าง",
-    "previewEmpty": "- ว่าง -",
+    "previewEmpty": "(ว่าง)",
     "saveFooter": "บันทึกส่วนท้าย",
     "hideFooter": "ซ่อนส่วนท้าย",
     "showFooter": "แสดงส่วนท้าย",

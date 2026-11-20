@@ -18,7 +18,7 @@
   },
   "importer": {
     "title": "Ekibe aktar",
-    "description": "Bir Chrome Web Store URL'si veya 32 karakterlik kimliğini yapıştırın - SoftGlaze gerçek paketi indirip açar.",
+    "description": "Bir Chrome Web Store URL'si veya 32 karakterlik kimliğini yapıştırın. SoftGlaze gerçek paketi indirip açar.",
     "inputPlaceholder": "https://chromewebstore.google.com/detail/…  veya  cjpalhdlnbpafiamejdnhcphjbkeiagm",
     "submit": "Ekibe aktar"
   },

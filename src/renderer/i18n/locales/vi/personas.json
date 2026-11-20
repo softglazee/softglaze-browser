@@ -124,7 +124,7 @@
     "errors": {
       "noRows": "Tệp này không có dòng tiêu đề hoặc dòng dữ liệu đọc được.",
       "readFile": "Không đọc được tệp này.",
-      "nothingMapped": "Không có dòng nào để nhập - hãy ghép ít nhất một trong các trường Tên / Họ / Email / Tên người dùng.",
+      "nothingMapped": "Không có dòng nào để nhập. Hãy ghép ít nhất một trong các trường Tên / Họ / Email / Tên người dùng.",
       "failed": "Nhập thất bại."
     }
   },

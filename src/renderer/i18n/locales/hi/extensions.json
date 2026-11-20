@@ -18,7 +18,7 @@
   },
   "importer": {
     "title": "टीम में इंपोर्ट करें",
-    "description": "Chrome Web Store का URL या उसकी 32 अक्षरों वाली ID पेस्ट करें - Softglaze असली पैकेज डाउनलोड करके खोलता है।",
+    "description": "Chrome Web Store का URL या उसकी 32 अक्षरों वाली ID पेस्ट करें। Softglaze असली पैकेज डाउनलोड करके खोलता है।",
     "inputPlaceholder": "https://chromewebstore.google.com/detail/…  या  cjpalhdlnbpafiamejdnhcphjbkeiagm",
     "submit": "टीम में इंपोर्ट करें"
   },

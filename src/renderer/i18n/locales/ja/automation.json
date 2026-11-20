@@ -190,10 +190,10 @@
     "starting": "開始しています…",
     "logStarted": "「{{name}}」を開始 · {{profile}} で {{total}} ステップ",
     "logStepRunning": "▶ {{label}}: {{summary}}",
-    "logStepError": "✕ {{label}} - {{error}}",
+    "logStepError": "✕ {{label}}：{{error}}",
     "logStepFailed": "失敗",
     "logStopped": "停止しました。",
-    "logFinished": "完了 - {{ran}}/{{total}} ステップ。",
+    "logFinished": "完了：{{ran}}/{{total}} ステップ。",
     "stopped": "停止しました。",
     "finished": "完了しました。",
     "summaryCompleted": "{{ran}}/{{total}} ステップが完了しました。",
@@ -207,7 +207,7 @@
     "errors": {
       "run": "マクロを実行できませんでした。"
     },
-    "logStepSkipped": "{{label}} をスキップしました (任意) - {{error}}"
+    "logStepSkipped": "{{label}} をスキップしました (任意)：{{error}}"
   },
   "parallel": {
     "states": {
@@ -229,7 +229,7 @@
     "dataHint": "任意: スプレッドシートを紐付け (行 → プロファイル、順番どおり)",
     "clearDataBinding": "データの紐付けを解除",
     "bindData": "データを紐付け",
-    "columnsPrefix": "列: {{columns}} - マクロのステップで",
+    "columnsPrefix": "列: {{columns}}。マクロのステップで",
     "columnsSuffix": "を使用します。",
     "profilesLabel": "プロファイル ({{count}} 件選択中)",
     "selectAll": "すべて選択",
@@ -249,8 +249,8 @@
     "runConsole": "実行コンソール",
     "live": "ライブ",
     "consoleIdle": "[ idle ] まだ実行していません。進行状況はここに表示されます (Cookie や認証情報が含まれることはありません)。",
-    "logRunFinished": "実行完了 - {{passed}}/{{total}} 件成功",
-    "logRunFinishedError": "実行完了 - {{passed}}/{{total}} 件成功 ({{error}})",
+    "logRunFinished": "実行完了：{{passed}}/{{total}} 件成功",
+    "logRunFinishedError": "実行完了：{{passed}}/{{total}} 件成功 ({{error}})",
     "errors": {
       "readSpreadsheet": "スプレッドシートを読み込めませんでした。",
       "chooseMacro": "実行するマクロを選択してください。",
@@ -400,7 +400,7 @@
       "save": "オートパイロットの設定を保存できませんでした。",
       "noGroups": "グループがまだありません。先にプロファイルページで作成してください。",
       "owner-missing": "オートパイロットをオンにしたメンバーは存在しません。ワークスペースのオーナーが一度オフにしてからオンにすると、引き継ぐことができます。",
-      "owner-inactive": "オートパイロットをオンにしたメンバーは、一時停止中または利用停止中です。",
+      "owner-inactive": "オートパイロットをオンにしたメンバーは、一時停止中またはブロックされています。",
       "owner-no-permission": "オートパイロットをオンにしたメンバーには、自動化を実行する権限がなくなっている可能性があります。",
       "warm-failed": "{{profile}}: {{error}}",
       "warmFailedHidden": "表示権限のないプロファイルのウォームアップに失敗しました。",

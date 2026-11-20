@@ -2,7 +2,7 @@
   "header": {
     "eyebrow": "Silniki",
     "title": "Przeglądarki",
-    "subtitle": "Pobieraj prawdziwe wersje Chrome i Firefox na żądanie - instalują się automatycznie i są gotowe do uruchomienia.",
+    "subtitle": "Pobieraj prawdziwe wersje Chrome i Firefox na żądanie. Instalują się automatycznie i są gotowe do uruchomienia.",
     "refresh": "Odśwież"
   },
   "stats": {
@@ -18,7 +18,7 @@
     "heading": "Silnik odcisku przeglądarki",
     "installed": "Zainstalowany",
     "notInstalled": "Niezainstalowany",
-    "description": "fingerprint-chromium - natywnie ustawia canvas / WebGL / UA / platformę / strefę czasową, ukrywa webdriver, blokuje wyciek WebRTC. Włącz go w Ustawienia → Przeglądarka.",
+    "description": "fingerprint-chromium natywnie ustawia canvas, WebGL, UA, platformę i strefę czasową, ukrywa webdriver i blokuje wyciek WebRTC. Włącz go w Ustawienia → Przeglądarka.",
     "progressInstalling": "instalowanie",
     "progressVerifying": "weryfikowanie",
     "installing": "Instalowanie",
@@ -31,13 +31,13 @@
     "ready": "Gotowy",
     "notDetected": "Nie wykryto",
     "detectedDesc": "Gotowy. Wykryto w {{path}}. Profile Firefox uruchamiają prawdziwego Firefoksa z proxy, UA, językiem, strefą czasową i wyłączonym WebRTC.",
-    "notDetectedDesc": "Nie wykryto Firefoksa w systemie. Pobierz wersję poniżej - zainstaluje się w aplikacji, a profile Firefox uruchomią prawdziwego Firefoksa z proxy, UA, językiem, strefą czasową i wyłączonym WebRTC.",
+    "notDetectedDesc": "Nie wykryto Firefoksa w systemie. Pobierz wersję poniżej. Zainstaluje się w aplikacji, a profile Firefox uruchomią prawdziwego Firefoksa z proxy, UA, językiem, strefą czasową i wyłączonym WebRTC.",
     "fetching": "Pobieranie katalogu wydań Firefoksa…",
     "empty": "Brak dostępnych wersji Firefoksa (czy jesteś offline?)."
   },
   "chromium": {
     "heading": "Chromium (Chrome for Testing)",
-    "subtitle": "Prawdziwe wersje - UA, Client-Hints, TLS i workery naprawdę zgadzają się z wersją.",
+    "subtitle": "Prawdziwe wersje: UA, Client-Hints, TLS i workery naprawdę zgadzają się z wersją.",
     "fetching": "Pobieranie katalogu Chrome for Testing…",
     "empty": "Brak dostępnych wersji (czy jesteś offline?)."
   },

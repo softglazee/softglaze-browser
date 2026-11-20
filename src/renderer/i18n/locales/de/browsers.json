@@ -2,7 +2,7 @@
   "header": {
     "eyebrow": "Engines",
     "title": "Browser",
-    "subtitle": "Laden Sie echte Chrome- und Firefox-Builds bei Bedarf herunter – automatisch installiert und startbereit.",
+    "subtitle": "Laden Sie echte Chrome- und Firefox-Builds bei Bedarf herunter. Sie werden automatisch installiert und sind startbereit.",
     "refresh": "Aktualisieren"
   },
   "stats": {
@@ -18,7 +18,7 @@
     "heading": "Fingerprint-Engine",
     "installed": "Installiert",
     "notInstalled": "Nicht installiert",
-    "description": "fingerprint-chromium – setzt Canvas / WebGL / UA / Plattform / Zeitzone nativ, verbirgt webdriver und blockiert das WebRTC-Leck. Aktivieren unter Einstellungen → Browser.",
+    "description": "fingerprint-chromium setzt Canvas, WebGL, UA, Plattform und Zeitzone nativ, verbirgt webdriver und blockiert das WebRTC-Leck. Aktivieren unter Einstellungen → Browser.",
     "progressInstalling": "wird installiert",
     "progressVerifying": "wird geprüft",
     "installing": "Wird installiert",
@@ -31,13 +31,13 @@
     "ready": "Bereit",
     "notDetected": "Nicht gefunden",
     "detectedDesc": "Bereit. Gefunden unter {{path}}. Firefox-Profile starten echtes Firefox mit Proxy, UA, Sprache, Zeitzone und deaktiviertem WebRTC.",
-    "notDetectedDesc": "Kein System-Firefox gefunden. Laden Sie unten eine Version herunter – sie wird in die App installiert, und Firefox-Profile starten echtes Firefox mit Proxy, UA, Sprache, Zeitzone und deaktiviertem WebRTC.",
+    "notDetectedDesc": "Kein System-Firefox gefunden. Laden Sie unten eine Version herunter. Sie wird in die App installiert, und Firefox-Profile starten echtes Firefox mit Proxy, UA, Sprache, Zeitzone und deaktiviertem WebRTC.",
     "fetching": "Firefox-Versionskatalog wird geladen…",
     "empty": "Keine Firefox-Versionen verfügbar (sind Sie offline?)."
   },
   "chromium": {
     "heading": "Chromium (Chrome for Testing)",
-    "subtitle": "Echte Builds – UA, Client Hints, TLS und Worker passen wirklich zur Version.",
+    "subtitle": "Echte Builds: UA, Client Hints, TLS und Worker passen wirklich zur Version.",
     "fetching": "Chrome-for-Testing-Katalog wird geladen…",
     "empty": "Keine Versionen verfügbar (sind Sie offline?)."
   },

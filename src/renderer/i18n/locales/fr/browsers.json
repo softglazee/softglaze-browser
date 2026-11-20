@@ -18,7 +18,7 @@
     "heading": "Moteur d'empreinte",
     "installed": "Installé",
     "notInstalled": "Non installé",
-    "description": "fingerprint-chromium : définit nativement canvas / WebGL / UA / plateforme / fuseau horaire, masque webdriver et bloque la fuite WebRTC. Activez-le dans Paramètres → Navigateur.",
+    "description": "fingerprint-chromium définit nativement canvas, WebGL, UA, plateforme et fuseau horaire, masque webdriver et bloque la fuite WebRTC. Activez-le dans Paramètres → Navigateur.",
     "progressInstalling": "installation",
     "progressVerifying": "vérification",
     "installing": "Installation",

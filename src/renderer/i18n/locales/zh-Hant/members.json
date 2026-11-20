@@ -75,7 +75,7 @@
   "status": {
     "active": "活躍",
     "suspended": "已暫停",
-    "banned": "已禁止存取"
+    "banned": "已阻擋"
   },
   "actions": {
     "inviteMember": "邀請成員",
@@ -175,10 +175,10 @@
   "accountStatus": {
     "title": "帳號狀態",
     "reason": "原因：{{reason}}",
-    "unban": "恢復成員存取",
-    "banHint": "編輯上方欄位不會解除存取禁止。請使用「恢復成員存取」來恢復存取權限。",
+    "unban": "解除阻擋成員",
+    "banHint": "編輯上方欄位不會解除阻擋。請使用「解除阻擋成員」恢復存取。",
     "suspendToggle": "暫停此成員（阻擋登入）",
-    "ban": "禁止成員存取"
+    "ban": "阻擋成員"
   },
   "delete": {
     "title": "移除 {{name}}",
@@ -271,7 +271,7 @@
       "paid": "已付費",
       "trialing": "試用",
       "grace": "寬限期",
-      "banned": "已禁用"
+      "banned": "已阻擋"
     },
     "type": {
       "trial": "試用",

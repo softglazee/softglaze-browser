@@ -105,7 +105,7 @@
     "chooseSpreadsheet": "Choisir un tableur",
     "colIdentityField": "Champ d'identité",
     "colYourColumn": "Votre colonne",
-    "skipOption": "— ignorer —",
+    "skipOption": "(ignorer)",
     "mappedCount_one": "{{count}} champ associé. Les lignes sans nom/e-mail/nom d'utilisateur sont ignorées.",
     "mappedCount_other": "{{count}} champs associés. Les lignes sans nom/e-mail/nom d'utilisateur sont ignorées.",
     "mappedCount_many": "{{count}} champs associés. Les lignes sans nom/e-mail/nom d'utilisateur sont ignorées.",

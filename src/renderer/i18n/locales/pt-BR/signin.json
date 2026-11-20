@@ -1,7 +1,7 @@
 {
   "choose": {
-    "title": "Boas-vindas ao SoftGlaze",
-    "subtitle": "Entre para criar seu espaço de trabalho. Sem senha.",
+    "title": "Crie sua conta grátis",
+    "subtitle": "Use uma conta que você já tem. Sem senha nova.",
     "google": "Continuar com Google",
     "microsoft": "Continuar com Microsoft",
     "facebook": "Continuar com Facebook",
@@ -9,12 +9,16 @@
     "allowEmail": "Permita o acesso ao e-mail e tente o Facebook de novo",
     "github": "Continuar com GitHub",
     "email": "Continuar com e-mail",
-    "or": "ou",
-    "moreOptions": "Mais opções",
-    "moreOptionsHint": "Criar o espaço de trabalho com nome e senha",
+    "moreOptions": "Configurar com senha",
+    "moreOptionsHint": "Prefere nome e senha?",
     "privacy": "Recebemos só seu nome e seu endereço de e-mail verificado.",
     "haveAccount": "Já tem um espaço de trabalho neste computador?",
-    "logIn": "Entrar"
+    "logIn": "Entrar com a senha",
+    "signInTitle": "Entre no SoftGlaze",
+    "signInSubtitle": "Use a conta com que você se cadastrou. Se o seu plano estiver em outro computador, você pode trazê-lo para cá.",
+    "entryLabel": "Conta nova ou existente",
+    "entryNew": "Conta nova",
+    "entryReturning": "Já tenho conta"
   },
   "unlock": {
     "title": "Que bom ver você de novo",

@@ -89,7 +89,7 @@
     "valClose": "ปิด",
     "coresValue_other": "{{count}} คอร์",
     "gbValue": "{{gb}} GB",
-    "deviceMemoryValue": "{{gb}} GB - ค่าที่เว็บไซต์เห็น (Chrome จำกัด navigator.deviceMemory ไว้ที่ 8)",
+    "deviceMemoryValue": "{{gb}} GB คือค่าที่เว็บไซต์เห็น (Chrome จำกัด navigator.deviceMemory ไว้ที่ 8)",
     "footerValues": "ค่าต่าง ๆ สะท้อนการตั้งค่าของโปรไฟล์",
     "footerEngineNote": "User-Agent “‹engine›” หมายความว่าเวอร์ชันจะตาม Chromium ที่มาพร้อมแอปเพื่อให้ฟิงเกอร์พรินต์สอดคล้องกัน",
     "uaFirefoxOwn": "User-Agent ของ Firefox เอง",

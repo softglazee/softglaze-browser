@@ -26,7 +26,7 @@
     "settings": "การตั้งค่า"
   },
   "shell": {
-    "footerDefault": "© {year} SoftGlaze - สร้างโดย [SoftGlaze Team](https://softglaze.com) · พัฒนาโดย [Azhar Ali](https://azhar.softglaze.com)",
+    "footerDefault": "© {year} SoftGlaze · สร้างโดย [SoftGlaze Team](https://softglaze.com) · พัฒนาโดย [Azhar Ali](https://azhar.softglaze.com)",
     "antiDetect": "หลายโปรไฟล์",
     "darkMode": "โหมดมืด",
     "lightMode": "โหมดสว่าง",
@@ -221,7 +221,7 @@
       "title": "ภาษา",
       "description": "เลือกภาษาที่แสดงในอินเทอร์เฟซของ SoftGlaze",
       "label": "ภาษาที่แสดง",
-      "hint": "จะมีภาษาเพิ่มเติมเร็ว ๆ นี้ การเปลี่ยนแปลงจะมีผลทันทีทั่วทั้งแอป"
+      "hint": "การเปลี่ยนแปลงจะมีผลทันทีทั่วทั้งแอป"
     }
   },
   "startLinks": {
@@ -260,5 +260,15 @@
     "settingsHidden": "ผู้ดูแลระบบปิดการตั้งค่าสำหรับบัญชีของคุณ",
     "proxiesHidden": "ผู้ดูแลระบบปิดพร็อกซีสำหรับบัญชีของคุณ",
     "profilesHidden": "ผู้ดูแลระบบปิดโปรไฟล์สำหรับบัญชีของคุณ"
+  },
+  "promo": {
+    "bf2026": {
+      "text": "แบล็กฟรายเดย์: Pro ตลอดชีพ {{pro}} หรือ Enterprise ตลอดชีพ {{enterprise}} ชำระครั้งเดียว สิ้นสุด 1 ธ.ค. เวลา 23:59 UTC"
+    },
+    "xmas2026": {
+      "text": "โปรคริสต์มาส: Pro ตลอดชีพ {{pro}} หรือ Enterprise ตลอดชีพ {{enterprise}} ชำระครั้งเดียว สิ้นสุด 31 ธ.ค. เวลา 23:59 UTC"
+    },
+    "cta": "ดูข้อเสนอ",
+    "dismiss": "ซ่อนข้อเสนอนี้"
   }
 }

@@ -9,39 +9,7 @@
     "unavailable": "此设备无法安全地存储登录信息（操作系统加密不可用），因此下次启动时需要重新登录。"
   },
   "brand": {
-    "tagline": "多配置文件",
-    "bullets": {
-      "fingerprints": "每个配置文件都有独特且一致的指纹",
-      "proxy": "每个身份都有专属代理",
-      "localFirst": "本地优先：你的工作区存储在此设备上"
-    },
-    "heroLine1": "运行数百个身份。",
-    "heroLine2": "让每个身份彼此独立。",
-    "heroBody": "面向团队的本地优先多配置文件浏览器。每个配置文件都有自己的 Cookie、存储、代理和指纹设置。",
-    "footer": "© {{year}} SoftGlaze · 本地工作区",
-    "trust": {
-      "local": "本地优先",
-      "encrypted": "工作区锁定",
-      "private": "零遥测"
-    },
-    "slides": {
-      "security": {
-        "title": "可靠的数据安全",
-        "body": "你的配置文件、Cookie 和浏览数据都保留在此设备上，双重验证种子和服务商密钥使用系统钥匙串密封保存。"
-      },
-      "fingerprint": {
-        "title": "一致的指纹",
-        "body": "每个配置文件都带有独特且一致的指纹：canvas、WebGL、字体、音频和硬件。"
-      },
-      "proxy": {
-        "title": "每个身份一个代理",
-        "body": "为每个配置文件绑定专属的网络身份，放心轮换。"
-      },
-      "automation": {
-        "title": "节省时间的自动化",
-        "body": "预热 Cookie、批量生成配置文件，并规模化编排一切。"
-      }
-    }
+    "footer": "© {{year}} SoftGlaze · 本地工作区"
   },
   "license": {
     "machineMismatch": "此许可证已注册到另一台电脑。请将其转移到这台电脑，或请管理员重置。"
@@ -138,7 +106,7 @@
     "trialHighlight": "7 天免费试用",
     "subtitleSuffix": "。立即开始，或激活付费套餐。",
     "startTrialTitle": "开始 7 天免费试用",
-    "startTrialSubtitle": "现在无需付款，畅享全部功能。",
+    "startTrialSubtitle": "现在无需付款，所有功能均已开放。",
     "activatePaid": "立即激活付费套餐",
     "haveCode": "有购买码？",
     "skip": "跳过，开始试用",
@@ -277,5 +245,49 @@
     "SIGNUP_USE_CASE": "请选择你将用 SoftGlaze 做什么。",
     "SIGNUP_USE_CASE_OTHER": "请简单告诉我们你将用 SoftGlaze 做什么。",
     "CONFIRM_OFFLINE": "请连接互联网以确认您的邮箱。"
+  },
+  "panel": {
+    "label": "SoftGlaze 产品导览",
+    "carousel": "轮播",
+    "slide": "幻灯片",
+    "slideOf": "第 {{n}} 张，共 {{total}} 张",
+    "prev": "上一张",
+    "next": "下一张",
+    "pause": "暂停轮播",
+    "play": "播放轮播",
+    "goTo": "显示第 {{n}} 张：{{title}}",
+    "trust": "配置文件、Cookie 和登录信息都保存在这台电脑上。",
+    "slides": {
+      "free": {
+        "title": "免费使用 25 个浏览器配置文件",
+        "body": "无需绑卡，没有时间限制。每个新账号还可以免费试用 Pro 7 天。",
+        "alt": "配置文件页面，显示十个配置文件、各自的代理和最近使用时间"
+      },
+      "fingerprint": {
+        "title": "每个配置文件拥有独立指纹",
+        "body": "Canvas、WebGL、字体、音频和时区按配置文件单独设置，每次启动都保持不变。还可以为每个配置文件分配独立的 HTTP、HTTPS 或 SOCKS5 代理。",
+        "alt": "配置文件的“指纹”标签页及其环境概览"
+      },
+      "ai": {
+        "title": "AI 智能体执行任务，由你批准",
+        "body": "Claude、ChatGPT、Cursor 和其他 MCP 应用可以在配置文件中执行任务。哪些操作需要你批准由你决定，每一步都会被记录。",
+        "alt": "来自 Claude Desktop 的批准请求：填写登录表单"
+      },
+      "phone": {
+        "title": "在手机上批准请求",
+        "body": "SoftGlaze 手机应用和网页应用会显示每个请求及其详情。可以允许一次、允许一小时或拒绝。所有套餐均包含此功能。",
+        "alt": "手机上的“批准”界面，有一个请求正在等待处理"
+      },
+      "team": {
+        "title": "团队协作，角色清晰",
+        "body": "所有者、管理员、经理和操作员角色决定谁可以查看和打开每个配置文件。Pro 包含 3 个席位，Enterprise 包含 25 个。",
+        "alt": "成员页面，显示五名团队成员及其角色"
+      }
+    }
+  },
+  "controls": {
+    "language": "语言：{{lang}}",
+    "toLight": "切换到浅色主题",
+    "toDark": "切换到深色主题"
   }
 }

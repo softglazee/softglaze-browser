@@ -104,17 +104,17 @@
       "methodEmail": "E-posta",
       "methodSms": "SMS",
       "levelLabel": "Kimlik doğrulama düzeyi",
-      "levelLow": "Düşük - yeni cihaz veya son 2FA'dan bu yana 90+ gün",
-      "levelMedium": "Orta (önerilir) - yeni cihaz veya 30+ gün",
-      "levelHigh": "Yüksek - her girişte 2FA gerekir"
+      "levelLow": "Düşük: yeni cihaz veya son 2FA'dan bu yana 90+ gün",
+      "levelMedium": "Orta (önerilir): yeni cihaz veya 30+ gün",
+      "levelHigh": "Yüksek: her girişte 2FA gerekir"
     }
   },
   "multiDevice": {
     "title": "Çoklu Cihaz Modu",
     "description": "Birden fazla üyenin aynı profile aynı anda erişip erişemeyeceğini belirleyin.",
-    "modeOff": "Kapalı - profil başına tek üye",
-    "modeFull": "Tam - tüm profiller eşzamanlı erişimi destekler",
-    "modeSpecified": "Belirli - yalnızca seçili profiller",
+    "modeOff": "Kapalı: profil başına tek üye",
+    "modeFull": "Tam: tüm profiller eşzamanlı erişimi destekler",
+    "modeSpecified": "Belirli: yalnızca seçili profiller",
     "hintBefore": "Etkinleştirildiğinde birden fazla üye aynı profile aynı anda erişebilir. ",
     "hintSpecified": "Belirli",
     "hintAfter": " modunda uygun profilleri Profiller sayfasından seçin."
@@ -202,9 +202,9 @@
       "desc": "Chrome tabanlı profillerde herhangi bir Geliştirici Araçları penceresi veya paneli (F12, Ctrl+Shift+I, İncele) açılır açılmaz kapatılır. Değiştirdikten sonra başlatılan profillere uygulanır. Bu bilgisayardaki kendi Chrome'unuz etkilenmez."
     },
     "minimizeCdpFootprint": {
-      "title": "CDP izini en aza indir (deneysel - daha az CAPTCHA)",
+      "title": "CDP izini en aza indir (deneysel, daha az CAPTCHA)",
       "shortTitle": "CDP izini en aza indir",
-      "desc": "Kalıcı CDP Runtime.enable'ı kaldırır - Cloudflare/Turnstile'ın tespit ettiği en önemli otomasyon sinyali. AÇIKKEN ÖDÜN: persona otomatik doldurma, başlangıç sayfası kontrol bağlantıları ve eşitlenmiş oturum yansıtma çalışmaz (CDP bağlamasına ihtiyaç duyarlar). Varsayılan olarak kapalı; CAPTCHA'ları azaltıp azaltmadığını denemek için açın, sonra profilleri yeniden başlatın."
+      "desc": "Kalıcı CDP Runtime.enable'ı, yani Cloudflare/Turnstile'ın tespit ettiği en önemli otomasyon sinyalini kaldırır. AÇIKKEN ÖDÜN: persona otomatik doldurma, başlangıç sayfası kontrol bağlantıları ve eşitlenmiş oturum yansıtma çalışmaz (CDP bağlamasına ihtiyaç duyarlar). Varsayılan olarak kapalı; CAPTCHA'ları azaltıp azaltmadığını denemek için açın, sonra profilleri yeniden başlatın."
     },
     "blockThirdPartyCookies": {
       "title": "Üçüncü taraf çerezleri engelle",
@@ -273,12 +273,12 @@
     },
     "antidetectEngine": {
       "title": "Yerel parmak izi motoru (fingerprint-chromium)",
-      "desc": "Chrome profillerini fingerprint-chromium üzerinde başlatın - her profilin parmak izi ayarlarını (canvas, WebGL, ses, UA, platform, saat dilimi) ikili düzeyde uygulayan, kaynak kodu yamalanmış bir Chromium; navigator.webdriver ve HeadlessChrome UA'sını gizler ve WebRTC gerçek IP sızıntısını doğrudan engeller, sitelerin yakalayabileceği bir JS ekleme yarışı olmadan. fingerprint-chromium ikili dosyasını gerektirir; yoksa standart Chrome kullanılır. Bu motor, sayfa-uygulama köprüsünün dayandığı CDP bağlamasını kaldırır, bu yüzden SoftGlaze bu çağrıları bağlamasız bir kanaldan yönlendirir - Veri Kasası otomatik doldurma, makro kaydedici, başlangıç sayfası bağlantıları ve oturum yansıtma bu motorda çalışır. Varsayılan olarak kapalı - açın ve profilleri yeniden başlatın."
+      "desc": "Chrome profillerini fingerprint-chromium üzerinde başlatın. Bu, her profilin parmak izi ayarlarını (canvas, WebGL, ses, UA, platform, saat dilimi) ikili düzeyde uygulayan, kaynak kodu yamalanmış bir Chromium; navigator.webdriver ve HeadlessChrome UA'sını gizler ve WebRTC gerçek IP sızıntısını doğrudan engeller, sitelerin yakalayabileceği bir JS ekleme yarışı olmadan. fingerprint-chromium ikili dosyasını gerektirir; yoksa standart Chrome kullanılır. Bu motor, sayfa-uygulama köprüsünün dayandığı CDP bağlamasını kaldırır, bu yüzden SoftGlaze bu çağrıları bağlamasız bir kanaldan yönlendirir. Veri Kasası otomatik doldurma, makro kaydedici, başlangıç sayfası bağlantıları ve oturum yansıtma bu motorda çalışır. Varsayılan olarak kapalı. Açın ve profilleri yeniden başlatın."
     }
   },
   "performance": {
     "title": "Performans",
-    "description": "Birçok profili aynı anda başlatma ayarları - toplu başlatmalara ve çalışan oturum tavanına uygulanır.",
+    "description": "Birçok profili aynı anda başlatma ayarları. Toplu başlatmalara ve çalışan oturum tavanına uygulanır.",
     "parallelLimit": {
       "title": "Paralel başlatma sınırı",
       "desc": "Toplu başlatmada aynı anda kaç profilin açılacağı. Daha yüksek değer daha hızlıdır ama daha çok RAM kullanır. Önerilen 3-8."
@@ -302,7 +302,7 @@
     },
     "memoryGuard": {
       "title": "Bellek koruması",
-      "desc": "Sistem belleği azaldığında, bellek toparlanana kadar en eski çalışan profilleri otomatik kapatır. Varsayılan olarak kapalı - etkinleştirilmedikçe hiçbir profili kapatmaz.",
+      "desc": "Sistem belleği azaldığında, bellek toparlanana kadar en eski çalışan profilleri otomatik kapatır. Varsayılan olarak kapalı. Etkinleştirilmedikçe hiçbir profili kapatmaz.",
       "triggerBelow": "Boş RAM şunun altına düşünce tetikle:",
       "stopWhenReaches": "boş RAM şuna ulaşınca dur:"
     }
@@ -336,10 +336,10 @@
     "checkDefault": "SoftGlaze Browser'ın daha yeni bir sürümünün olup olmadığını denetleyin.",
     "notEnabled": "Bu sürümde otomatik güncellemeler etkin değil.",
     "checking": "Güncellemeler denetleniyor…",
-    "available": "{{version}} güncellemesi mevcut - arka planda indiriliyor…",
+    "available": "{{version}} güncellemesi mevcut, arka planda indiriliyor…",
     "downloading": "{{version}} indiriliyor… %{{percent}}",
     "ready": "{{version}} güncellemesi kurulmaya hazır.",
-    "errorWithReason": "Güncellemeler denetlenemedi - {{reason}}",
+    "errorWithReason": "Güncellemeler denetlenemedi: {{reason}}",
     "errorNoReason": "Güncellemeler denetlenemedi.",
     "upToDate": "En son sürümü kullanıyorsunuz.",
     "installRestart": "Kur ve yeniden başlat",
@@ -367,7 +367,7 @@
   },
   "captcha": {
     "title": "Otomatik CAPTCHA Çözme",
-    "description": "Gezinme sırasında reCAPTCHA v2 ve hCaptcha'yı ücretli bir üçüncü taraf çözücüyle otomatik çözün. Bu, parmak izinden ayrıdır - temiz bir parmak izi CAPTCHA'ların ne sıklıkla çıktığını azaltır, ancak çözmek için çözüm başına sağlayıcı tarafından (SoftGlaze tarafından değil) ücretlendirilen ücretli bir hizmet gerekir.",
+    "description": "Gezinme sırasında reCAPTCHA v2 ve hCaptcha'yı ücretli bir üçüncü taraf çözücüyle otomatik çözün. Bu, parmak izinden ayrıdır. Temiz bir parmak izi CAPTCHA'ların ne sıklıkla çıktığını azaltır, ancak çözmek için çözüm başına sağlayıcı tarafından (SoftGlaze tarafından değil) ücretlendirilen ücretli bir hizmet gerekir.",
     "enable": {
       "title": "Otomatik CAPTCHA çözmeyi etkinleştir",
       "desc": "Açıkken başlatılan profiller desteklenen CAPTCHA'ları algılar ve otomatik olarak çözücünüze gönderir."
@@ -385,19 +385,19 @@
     "title": "E-posta (doğrulama kodları)",
     "configured": "Yapılandırıldı",
     "offlineMode": "Çevrimdışı mod",
-    "description": "Kayıt sırasında OTP kodları göndermek için SMTP. Çevrimdışı çalışmak için boş bırakın - kod o zaman e-postayla gönderilmek yerine uygulamada gösterilir.",
+    "description": "Kayıt sırasında OTP kodları göndermek için SMTP. Çevrimdışı çalışmak için boş bırakın. Kod o zaman e-postayla gönderilmek yerine uygulamada gösterilir.",
     "smtpHost": "SMTP sunucusu",
     "port": "Port",
     "encryption": "Şifreleme",
     "username": "Kullanıcı adı",
     "password": "Parola",
-    "passwordSavedHint": "(kayıtlı - korumak için boş bırakın)",
+    "passwordSavedHint": "(kayıtlı; korumak için boş bırakın)",
     "fromName": "Gönderen adı",
     "saved": "E-posta ayarları kaydedildi.",
     "saveFailed": "E-posta ayarları kaydedilemedi.",
-    "noSmtpYet": "Henüz SMTP yapılandırılmadı - önce ayarlarınızı kaydedin.",
+    "noSmtpYet": "Henüz SMTP yapılandırılmadı. Önce ayarlarınızı kaydedin.",
     "testSent": "Test e-postası {{to}} adresine gönderildi.",
-    "testFailed": "Test başarısız - ayarlarınızı kontrol edin.",
+    "testFailed": "Test başarısız. Ayarlarınızı kontrol edin.",
     "saveButton": "E-posta ayarlarını kaydet",
     "test": "Test"
   },

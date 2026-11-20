@@ -192,7 +192,7 @@
     "starting": "Démarrage…",
     "logStarted": "\"{{name}}\" démarrée · {{total}} étape(s) sur {{profile}}",
     "logStepRunning": "▶ {{label}} : {{summary}}",
-    "logStepError": "✕ {{label}} - {{error}}",
+    "logStepError": "✕ {{label}} : {{error}}",
     "logStepFailed": "échec",
     "logStopped": "Arrêtée.",
     "logFinished": "Terminée : {{ran}}/{{total}} étape(s).",

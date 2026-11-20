@@ -106,7 +106,7 @@
     "chooseSpreadsheet": "Wybierz arkusz",
     "colIdentityField": "Pole tożsamości",
     "colYourColumn": "Twoja kolumna",
-    "skipOption": "- pomiń -",
+    "skipOption": "(pomiń)",
     "mappedCount_one": "Przypisano {{count}} pole. Wiersze bez imienia/e-maila/nazwy użytkownika są pomijane.",
     "mappedCount_few": "Przypisano {{count}} pola. Wiersze bez imienia/e-maila/nazwy użytkownika są pomijane.",
     "mappedCount_many": "Przypisano {{count}} pól. Wiersze bez imienia/e-maila/nazwy użytkownika są pomijane.",
@@ -134,7 +134,7 @@
     "errors": {
       "noRows": "Ten plik nie ma czytelnego wiersza nagłówka ani wierszy danych.",
       "readFile": "Nie udało się odczytać tego pliku.",
-      "nothingMapped": "Brak wierszy do importu - przypisz co najmniej jedno z pól Imię / Nazwisko / E-mail / Nazwa użytkownika.",
+      "nothingMapped": "Brak wierszy do importu. Przypisz co najmniej jedno z pól Imię / Nazwisko / E-mail / Nazwa użytkownika.",
       "failed": "Import nie powiódł się."
     }
   },

@@ -61,13 +61,13 @@
       "subtitleShort_other": "Thiết lập nhanh {{count}} bước. Bạn có thể bỏ qua bất kỳ bước nào.",
       "unavailable": "Các bước bị làm mờ sẽ được bỏ qua: tài khoản của bạn không làm được các bước đó.",
       "getStarted": "Bắt đầu",
-      "stepEmail": "Email (SMTP) - không bắt buộc, dùng cho mã OTP",
-      "stepProxy": "Proxy đầu tiên - không bắt buộc",
+      "stepEmail": "Email (SMTP), không bắt buộc, dùng cho mã OTP",
+      "stepProxy": "Proxy đầu tiên (không bắt buộc)",
       "stepProfile": "Hồ sơ trình duyệt đầu tiên"
     },
     "smtp": {
       "title": "Email (SMTP)",
-      "subtitle": "Không bắt buộc - cho phép ứng dụng gửi mã xác minh. Bạn có thể thiết lập sau trong Cài đặt.",
+      "subtitle": "Không bắt buộc. Cho phép ứng dụng gửi mã xác minh. Bạn có thể thiết lập sau trong Cài đặt.",
       "host": "Máy chủ SMTP",
       "hostPlaceholder": "smtp.example.com",
       "port": "Cổng",
@@ -79,7 +79,7 @@
     },
     "proxy": {
       "title": "Thêm proxy đầu tiên",
-      "subtitle": "Không bắt buộc - cho mỗi danh tính một mạng riêng. Bạn có thể thêm proxy trong Kho proxy.",
+      "subtitle": "Không bắt buộc. Cho mỗi danh tính một mạng riêng. Bạn có thể thêm proxy trong Kho proxy.",
       "type": "Loại",
       "host": "Máy chủ",
       "hostPlaceholder": "1.2.3.4",
@@ -100,7 +100,7 @@
       "deviceType": "Loại thiết bị",
       "desktop": "Máy tính",
       "mobile": "Di động (Android)",
-      "mobileNote": "Android được mô phỏng trên bộ máy máy tính - UA, cảm ứng, màn hình và GPU nhất quán, nhưng không phải thiết bị thật.",
+      "mobileNote": "Android được mô phỏng trên bộ máy máy tính: UA, cảm ứng, màn hình và GPU nhất quán, nhưng không phải thiết bị thật.",
       "proxyAttached": "Proxy mới của bạn sẽ được gắn vào hồ sơ này."
     }
   }

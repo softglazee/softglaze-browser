@@ -197,8 +197,8 @@
   "deleteFiltered": {
     "tooltip": "Geçerli filtreyle eşleşen her proxy'yi sil",
     "button": "Tümünü sil: {{scope}} ({{count}})",
-    "confirm_one": "{{scope}} {{count}} proxy'nin tümü silinsin mi? Bu işlem geri alınamaz - onu kullanan profiller proxy'sini kaybeder ve siz başka bir proxy atayana kadar başlatılamaz.",
-    "confirm_other": "{{scope}} {{count}} proxy'nin tümü silinsin mi? Bu işlem geri alınamaz - onları kullanan profiller proxy'sini kaybeder ve siz başka bir proxy atayana kadar başlatılamaz.",
+    "confirm_one": "{{scope}} {{count}} proxy'nin tümü silinsin mi? Bu işlem geri alınamaz. Onu kullanan profiller proxy'sini kaybeder ve siz başka bir proxy atayana kadar başlatılamaz.",
+    "confirm_other": "{{scope}} {{count}} proxy'nin tümü silinsin mi? Bu işlem geri alınamaz. Onları kullanan profiller proxy'sini kaybeder ve siz başka bir proxy atayana kadar başlatılamaz.",
     "scope": {
       "all": "tüm",
       "filtered": "filtrelenmiş",
@@ -217,7 +217,7 @@
     "renameRecolor": "Yeniden adlandır / renk değiştir",
     "deleteGroup": "Grubu sil",
     "newGroup": "Yeni grup",
-    "deleteConfirm": "\"{{name}}\" grubu silinsin mi? Proxy'ler havuzda kalır - yalnızca grupsuz olurlar."
+    "deleteConfirm": "\"{{name}}\" grubu silinsin mi? Proxy'ler havuzda kalır, yalnızca grupsuz olurlar."
   },
   "autoGroup": {
     "granularityTooltip": "Otomatik gruplama ayrıntı düzeyi",
@@ -251,7 +251,7 @@
     "count": "{{count}} seçili",
     "checkSelected": "Seçilenleri kontrol et",
     "moveToGroup": "Gruba taşı",
-    "noGroupsYet": "Henüz grup yok - önce bir tane oluşturun.",
+    "noGroupsYet": "Henüz grup yok. Önce bir tane oluşturun.",
     "removeFromGroup": "Gruptan çıkar",
     "deleteSelected": "Seçilenleri sil",
     "clear": "Temizle",

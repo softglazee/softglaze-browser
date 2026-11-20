@@ -1,7 +1,7 @@
 {
   "choose": {
-    "title": "Chào mừng đến với SoftGlaze",
-    "subtitle": "Đăng nhập để tạo không gian làm việc. Không cần mật khẩu.",
+    "title": "Tạo tài khoản miễn phí",
+    "subtitle": "Dùng tài khoản bạn đã có. Không cần mật khẩu mới.",
     "google": "Tiếp tục với Google",
     "microsoft": "Tiếp tục với Microsoft",
     "facebook": "Tiếp tục với Facebook",
@@ -9,12 +9,16 @@
     "allowEmail": "Cho phép truy cập email và thử lại Facebook",
     "github": "Tiếp tục với GitHub",
     "email": "Tiếp tục với email",
-    "or": "hoặc",
-    "moreOptions": "Tùy chọn khác",
-    "moreOptionsHint": "Tạo không gian làm việc bằng tên và mật khẩu",
+    "moreOptions": "Thiết lập bằng mật khẩu",
+    "moreOptionsHint": "Muốn dùng tên và mật khẩu?",
     "privacy": "Chúng tôi chỉ nhận tên và địa chỉ email đã xác minh của bạn.",
     "haveAccount": "Đã có không gian làm việc trên máy tính này?",
-    "logIn": "Đăng nhập"
+    "logIn": "Đăng nhập bằng mật khẩu",
+    "signInTitle": "Đăng nhập vào SoftGlaze",
+    "signInSubtitle": "Dùng tài khoản bạn đã đăng ký. Nếu gói của bạn đang ở máy tính khác, bạn có thể chuyển gói sang máy này.",
+    "entryLabel": "Mới hoặc đã có tài khoản",
+    "entryNew": "Tài khoản mới",
+    "entryReturning": "Tôi đã có tài khoản"
   },
   "unlock": {
     "title": "Chào mừng trở lại",

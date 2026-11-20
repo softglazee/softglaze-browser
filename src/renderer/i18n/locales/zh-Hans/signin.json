@@ -1,7 +1,7 @@
 {
   "choose": {
-    "title": "欢迎使用 SoftGlaze",
-    "subtitle": "登录以创建你的工作区，无需密码。",
+    "title": "创建免费账号",
+    "subtitle": "使用已有账号，无需新密码。",
     "google": "使用 Google 继续",
     "microsoft": "使用 Microsoft 继续",
     "facebook": "使用 Facebook 继续",
@@ -9,12 +9,16 @@
     "allowEmail": "允许访问邮箱并重试 Facebook",
     "github": "使用 GitHub 继续",
     "email": "使用邮箱继续",
-    "or": "或",
-    "moreOptions": "更多选项",
-    "moreOptionsHint": "改用名称和密码创建工作区",
+    "moreOptions": "使用密码设置",
+    "moreOptionsHint": "想用名称和密码？",
     "privacy": "我们只会获取你的姓名和已验证的邮箱地址。",
     "haveAccount": "这台电脑上已有工作区？",
-    "logIn": "登录"
+    "logIn": "使用密码登录",
+    "signInTitle": "登录 SoftGlaze",
+    "signInSubtitle": "请使用注册时的账号。如果你的套餐在另一台电脑上，可以将其转移到这台电脑。",
+    "entryLabel": "新用户或老用户",
+    "entryNew": "新账号",
+    "entryReturning": "我已有账号"
   },
   "unlock": {
     "title": "欢迎回来",

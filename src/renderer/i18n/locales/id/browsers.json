@@ -18,7 +18,7 @@
     "heading": "Mesin fingerprint",
     "installed": "Terpasang",
     "notInstalled": "Belum terpasang",
-    "description": "fingerprint-chromium: mengubah canvas / WebGL / UA / platform / zona waktu secara native, menyembunyikan webdriver, dan memblokir kebocoran WebRTC. Aktifkan di Pengaturan → Browser.",
+    "description": "fingerprint-chromium mengatur canvas, WebGL, UA, platform, dan zona waktu secara native, menyembunyikan webdriver, dan memblokir kebocoran WebRTC. Aktifkan di Pengaturan → Browser.",
     "progressInstalling": "memasang",
     "progressVerifying": "memverifikasi",
     "installing": "Memasang",

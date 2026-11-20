@@ -7,7 +7,7 @@
   },
   "header": {
     "title": "Faturalandırma ve Planlar",
-    "description": "Aboneliğinizi yönetin, planları karşılaştırın ve yükseltin - hepsi tek yerde."
+    "description": "Aboneliğinizi yönetin, planları karşılaştırın ve yükseltin; hepsi tek yerde."
   },
   "status": {
     "loading": "Yükleniyor…",
@@ -23,7 +23,7 @@
   "backend": {
     "licensedVerified": "Lisanslı ve doğrulandı",
     "renews": "{{date}} tarihinde yenilenir",
-    "noLicense": "Lisanslama etkin - bu kurulum için henüz ücretli lisans yok.",
+    "noLicense": "Lisanslama etkin, ancak bu kurulum için henüz ücretli lisans yok.",
     "trialVerified": "Ücretsiz deneme, doğrulandı",
     "trialEnds": "{{date}} tarihinde biter"
   },
@@ -35,8 +35,8 @@
     "freeForever": "Free plan · sonsuza kadar ücretsiz"
   },
   "grace": {
-    "message_one": "{{kind}} sona erdi - {{count}} gün ek süre kaldı. Erişimi kaybetmemek için aşağıdan yenileyin.",
-    "message_other": "{{kind}} sona erdi - {{count}} gün ek süre kaldı. Erişimi kaybetmemek için aşağıdan yenileyin.",
+    "message_one": "{{kind}} sona erdi. {{count}} gün ek süre kaldı. Erişimi kaybetmemek için aşağıdan yenileyin.",
+    "message_other": "{{kind}} sona erdi. {{count}} gün ek süre kaldı. Erişimi kaybetmemek için aşağıdan yenileyin.",
     "kindTrial": "Ücretsiz denemeniz",
     "kindSubscription": "Aboneliğiniz"
   },
@@ -44,8 +44,8 @@
     "message": "Aboneliğiniz sona erdi ve profil başlatma kilitlendi. Erişimi geri almak için abone olun veya satın alma kodu girin."
   },
   "trialRemaining": {
-    "message_one": "Ücretsiz deneme - {{count}} gün kaldı.",
-    "message_other": "Ücretsiz deneme - {{count}} gün kaldı."
+    "message_one": "Ücretsiz deneme: {{count}} gün kaldı.",
+    "message_other": "Ücretsiz deneme: {{count}} gün kaldı."
   },
   "seats": {
     "label": "Ekip koltukları",
@@ -53,7 +53,7 @@
     "upgradeToAddMore": "· daha fazlası için yükseltin"
   },
   "exempt": {
-    "note": "Kaynak sahibisiniz - abonelik sisteminden muafsınız. Tüm özellikler dahildir."
+    "note": "Kaynak sahibi olduğunuz için abonelik sisteminden muafsınız. Tüm özellikler dahildir."
   },
   "checkout": {
     "waiting": "Ödemeniz bekleniyor…",
@@ -91,7 +91,7 @@
   },
   "trial": {
     "started": "Tam erişimli ücretsiz denemeniz etkin. İyi kullanımlar!",
-    "startedWithDays": "Ücretsiz denemeniz etkin - {{days}} gün tam erişim. İyi kullanımlar!",
+    "startedWithDays": "Ücretsiz denemeniz etkin: {{days}} gün tam erişim. İyi kullanımlar!",
     "errors": {
       "failed": "Deneme başlatılamadı."
     }
@@ -99,14 +99,14 @@
   "redeem": {
     "label": "Satın alma kodunuz mu var?",
     "apply": "Uygula",
-    "success": "Satın alma kodu uygulandı - teşekkürler!",
+    "success": "Satın alma kodu uygulandı. Teşekkürler!",
     "errors": {
       "empty": "Satın alma kodunuzu girin.",
       "failed": "Bu kod uygulanamadı."
     }
   },
   "pay": {
-    "received": "Ödeme alındı - planınız artık etkin!",
+    "received": "Ödeme alındı. Planınız artık etkin!",
     "errors": {
       "noMethods": "Yeni bir ödeme sağlayıcısı eklenirken uygulama içi satın alma duraklatıldı. Faturayla satın almak için support@softglaze.com adresine yazın, ardından satın alma kodunuzu aşağıya girin.",
       "checkoutFailed": "Ödeme başlatılamadı.",
@@ -121,7 +121,7 @@
     "openPayLink": "Ödeme bağlantısını aç",
     "referencePlaceholder": "Ödeme referansı / işlem kimliği",
     "notePlaceholder": "Not (isteğe bağlı)",
-    "submitForApproval": "Ödedim - onaya gönder",
+    "submitForApproval": "Ödedim, onaya gönder",
     "manualActivationNote": "Planınız, bir yönetici ödemeyi onayladığında etkinleşir."
   },
   "admin": {
@@ -129,7 +129,7 @@
   },
   "invoices": {
     "title": "Faturalar",
-    "subtitleAdmin": "Tüm sahiplerin ödemeleri - otomatik alınan + manuel.",
+    "subtitleAdmin": "Tüm sahiplerin ödemeleri: otomatik alınan + manuel.",
     "subtitleUser": "Ödeme makbuzlarınız.",
     "add": "Ekle",
     "empty": "Henüz fatura yok.",
@@ -256,8 +256,8 @@
     "grantNoteFree": "$0'lık bir hibe olarak kaydedilir.",
     "fallbackAccount": "hesap",
     "fallbackPlan": "plan",
-    "success_one": "{{name}} hesabına {{plan}} atandı - {{count}} ay.",
-    "success_other": "{{name}} hesabına {{plan}} atandı - {{count}} ay.",
+    "success_one": "{{name}} hesabına {{count}} aylık {{plan}} atandı.",
+    "success_other": "{{name}} hesabına {{count}} aylık {{plan}} atandı.",
     "errors": {
       "chooseAccount": "Bir hesap seçin.",
       "choosePlan": "Bir plan seçin.",
@@ -265,7 +265,7 @@
     }
   },
   "planText": {
-    "trialTagline": "Her özelliği ücretsiz test edin - tam erişim, kart gerekmez.",
+    "trialTagline": "Her özelliği ücretsiz test edin: tam erişim, kart gerekmez.",
     "trialFullAccess": "Her özelliğe tam erişim",
     "trialTools": "Tüm parmak izi, proxy ve sızıntı araçları",
     "trialMacros": "Makrolar, çerez ısındırıcı ve mobil profiller",
@@ -284,7 +284,7 @@
     "proPalette": "Komut paleti + başlangıç rehberi",
     "proSeats": "3 ekip üyesine kadar",
     "proParallel": "Paralel çalıştırıcı, aynı anda 3 profile kadar, canlı çalıştırma konsoluyla",
-    "entTagline": "Ekipler için - 25 üyeye kadar, aynı anda 10 profil ve denetim günlüğü dışa aktarma.",
+    "entTagline": "Ekipler için: 25 üyeye kadar, aynı anda 10 profil ve denetim günlüğü dışa aktarma.",
     "entEverythingInPro": "Pro'daki her şey, artı:",
     "entSeats": "25 ekip üyesine kadar",
     "entParallel": "Paralel çalıştırıcı, aynı anda 10 profile kadar, canlı çalıştırma konsoluyla",

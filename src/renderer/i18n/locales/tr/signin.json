@@ -1,7 +1,7 @@
 {
   "choose": {
-    "title": "SoftGlaze'e hoş geldiniz",
-    "subtitle": "Çalışma alanınızı oluşturmak için giriş yapın. Parola gerekmez.",
+    "title": "Ücretsiz hesabınızı oluşturun",
+    "subtitle": "Zaten sahip olduğunuz bir hesabı kullanın. Yeni parola gerekmez.",
     "google": "Google ile devam et",
     "microsoft": "Microsoft ile devam et",
     "facebook": "Facebook ile devam et",
@@ -9,12 +9,16 @@
     "allowEmail": "E-posta erişimine izin verin ve Facebook'u tekrar deneyin",
     "github": "GitHub ile devam et",
     "email": "E-posta ile devam et",
-    "or": "veya",
-    "moreOptions": "Diğer seçenekler",
-    "moreOptionsHint": "Bunun yerine çalışma alanını ad ve parolayla oluşturun",
+    "moreOptions": "Parolayla kur",
+    "moreOptionsHint": "Ad ve parola mı tercih edersiniz?",
     "privacy": "Yalnızca adınızı ve doğrulanmış e-posta adresinizi alırız.",
     "haveAccount": "Bu bilgisayarda zaten bir çalışma alanınız var mı?",
-    "logIn": "Giriş yap"
+    "logIn": "Parolasıyla giriş yap",
+    "signInTitle": "SoftGlaze'e giriş yapın",
+    "signInSubtitle": "Kaydolduğunuz hesabı kullanın. Planınız başka bir bilgisayardaysa buraya taşıyabilirsiniz.",
+    "entryLabel": "Yeni veya kayıtlı",
+    "entryNew": "Yeni hesap",
+    "entryReturning": "Hesabım var"
   },
   "unlock": {
     "title": "Tekrar hoş geldiniz",

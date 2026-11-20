@@ -26,7 +26,7 @@
     "settings": "سیٹنگز"
   },
   "shell": {
-    "footerDefault": "© {year} SoftGlaze - تیار کردہ [SoftGlaze ٹیم](https://softglaze.com) · ڈویلپر [اظہر علی](https://azhar.softglaze.com)",
+    "footerDefault": "© {year} SoftGlaze · تیار کردہ [SoftGlaze ٹیم](https://softglaze.com) · ڈویلپر [اظہر علی](https://azhar.softglaze.com)",
     "antiDetect": "ملٹی پروفائل",
     "darkMode": "ڈارک موڈ",
     "lightMode": "لائٹ موڈ",
@@ -233,7 +233,7 @@
       "title": "زبان",
       "description": "SoftGlaze انٹرفیس کی زبان منتخب کریں۔",
       "label": "ڈسپلے زبان",
-      "hint": "مزید زبانیں جلد آ رہی ہیں۔ تبدیلیاں فوراً پوری ایپ پر لاگو ہوتی ہیں۔"
+      "hint": "تبدیلیاں فوراً پوری ایپ پر لاگو ہوتی ہیں۔"
     }
   },
   "startLinks": {
@@ -273,5 +273,15 @@
     "settingsHidden": "ایڈمنسٹریٹر نے سیٹنگز آپ کے اکاؤنٹ کے لیے بند کی ہوئی ہیں۔",
     "proxiesHidden": "ایڈمنسٹریٹر نے پراکسیز آپ کے اکاؤنٹ کے لیے بند کی ہوئی ہیں۔",
     "profilesHidden": "ایڈمنسٹریٹر نے پروفائلز آپ کے اکاؤنٹ کے لیے بند کی ہوئی ہیں۔"
+  },
+  "promo": {
+    "bf2026": {
+      "text": "بلیک فرائیڈے: Pro تاحیات {{pro}} یا Enterprise تاحیات {{enterprise}}، صرف ایک ادائیگی۔ آفر 1 دسمبر، 23:59 UTC پر ختم ہو گی۔"
+    },
+    "xmas2026": {
+      "text": "کرسمس آفر: Pro تاحیات {{pro}} یا Enterprise تاحیات {{enterprise}}، صرف ایک ادائیگی۔ آفر 31 دسمبر، 23:59 UTC پر ختم ہو گی۔"
+    },
+    "cta": "آفر دیکھیں",
+    "dismiss": "یہ آفر چھپائیں"
   }
 }

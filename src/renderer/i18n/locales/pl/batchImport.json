@@ -50,7 +50,7 @@
   },
   "autoBind": {
     "label": "Automatycznie przypisz proxy wg kraju",
-    "descPrefix": "- dla wierszy bez własnego proxy przypisz zapisane proxy, którego sprawdzony kraj zgadza się z kolumną",
+    "descPrefix": "dla wierszy bez własnego proxy: przypisz zapisane proxy, którego sprawdzony kraj zgadza się z kolumną",
     "descSuffix": "wiersza (rotacyjnie wśród dopasowań).",
     "sourceLabel": "Przypisz z",
     "sourcePaid": "Twoje proxy",
@@ -72,7 +72,7 @@
   },
   "quick": {
     "engineTitle": "Mechanizm generowania sekwencyjnego",
-    "description": "Twórz od razu wiele profili bez arkusza - unikalne odciski przeglądarki, kolejne nazwy, docelowa grupa (można ją utworzyć na miejscu) i przypisanie proxy z wybranej grupy lub dostawcy. Używa dokładnie tego samego mechanizmu co strona Profile.",
+    "description": "Twórz od razu wiele profili bez arkusza: unikalne odciski przeglądarki, kolejne nazwy, docelowa grupa (można ją utworzyć na miejscu) i przypisanie proxy z wybranej grupy lub dostawcy. Używa dokładnie tego samego mechanizmu co strona Profile.",
     "openButton": "Otwórz szybkie generowanie"
   },
   "errors": {

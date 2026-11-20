@@ -26,7 +26,7 @@
     "settings": "設定"
   },
   "shell": {
-    "footerDefault": "© {year} SoftGlaze - 由 [SoftGlaze 團隊](https://softglaze.com)打造 · 開發者 [Azhar Ali](https://azhar.softglaze.com)",
+    "footerDefault": "© {year} SoftGlaze · 由 [SoftGlaze 團隊](https://softglaze.com)打造 · 開發者 [Azhar Ali](https://azhar.softglaze.com)",
     "antiDetect": "多設定檔",
     "darkMode": "深色模式",
     "lightMode": "淺色模式",
@@ -233,7 +233,7 @@
       "title": "語言",
       "description": "選擇 SoftGlaze 介面的顯示語言。",
       "label": "顯示語言",
-      "hint": "更多語言即將推出。更改會立即套用到整個應用程式。"
+      "hint": "更改會立即套用到整個應用程式。"
     }
   },
   "startLinks": {
@@ -273,5 +273,15 @@
     "settingsHidden": "管理員已為你的帳號關閉「設定」。",
     "proxiesHidden": "管理員已為你的帳號關閉「代理」。",
     "profilesHidden": "管理員已為你的帳號關閉「設定檔」。"
+  },
+  "promo": {
+    "bf2026": {
+      "text": "黑色星期五：Pro 終身版 {{pro}} 或 Enterprise 終身版 {{enterprise}}，一次付清。12 月 1 日 23:59 UTC 截止。"
+    },
+    "xmas2026": {
+      "text": "聖誕特惠：Pro 終身版 {{pro}} 或 Enterprise 終身版 {{enterprise}}，一次付清。12 月 31 日 23:59 UTC 截止。"
+    },
+    "cta": "查看優惠",
+    "dismiss": "隱藏此優惠"
   }
 }

@@ -45,7 +45,7 @@
       "savedMsg": "Đã lưu.",
       "saveError": "Không lưu được.",
       "connectionOk": "Kết nối ổn ✓",
-      "validationFailedKeys": "Xác thực thất bại - hãy kiểm tra khóa.",
+      "validationFailedKeys": "Xác thực thất bại. Hãy kiểm tra khóa.",
       "validationFailed": "Xác thực thất bại."
     },
     "manual": {
@@ -78,7 +78,7 @@
       "openLinkTitle": "Mở liên kết {{provider}}",
       "saving": "Đang lưu…",
       "saveButton": "Lưu liên kết",
-      "footnote": "Các liên kết này dùng cho nút “Mua tại…” / “Mở bảng điều khiển” ở Kho proxy → thẻ Nhà cung cấp. Đây chỉ là URL giới thiệu công khai - token và thông tin đăng nhập proxy không bao giờ bị ảnh hưởng."
+      "footnote": "Các liên kết này dùng cho nút “Mua tại…” / “Mở bảng điều khiển” ở Kho proxy → thẻ Nhà cung cấp. Đây chỉ là URL giới thiệu công khai; token và thông tin đăng nhập proxy không bao giờ bị ảnh hưởng."
     }
   },
   "developerApi": {
@@ -96,7 +96,7 @@
       "title": "Khóa API",
       "namePlaceholder": "Tên khóa (ví dụ CI server)",
       "generate": "Tạo khóa API mới",
-      "copyOnce": "Hãy sao chép khóa này ngay - nó chỉ hiện một lần và không khôi phục được.",
+      "copyOnce": "Hãy sao chép khóa này ngay. Nó chỉ hiện một lần và không khôi phục được.",
       "empty": "Chưa có khóa API nào.",
       "lastUsed": "dùng lần cuối {{when}}",
       "neverUsed": "chưa từng dùng",

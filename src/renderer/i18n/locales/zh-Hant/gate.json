@@ -9,39 +9,7 @@
     "unavailable": "此裝置無法安全地儲存登入資訊（作業系統加密不可用），因此下次啟動時需要重新登入。"
   },
   "brand": {
-    "tagline": "多設定檔",
-    "bullets": {
-      "fingerprints": "每個設定檔都有獨特且一致的指紋",
-      "proxy": "每個身分都有專屬代理",
-      "localFirst": "本機優先：你的工作區儲存在此裝置上"
-    },
-    "heroLine1": "執行數百個身分。",
-    "heroLine2": "讓每個身分彼此獨立。",
-    "heroBody": "面向團隊的本機優先多設定檔瀏覽器。每個設定檔都有自己的 Cookie、儲存、代理和指紋設定。",
-    "footer": "© {{year}} SoftGlaze · 本機工作區",
-    "trust": {
-      "local": "本機優先",
-      "encrypted": "工作區鎖定",
-      "private": "零遙測"
-    },
-    "slides": {
-      "security": {
-        "title": "可靠的資料安全",
-        "body": "你的設定檔、Cookie 和瀏覽資料都保留在此裝置上，雙重驗證種子和供應商金鑰使用系統鑰匙串密封儲存。"
-      },
-      "fingerprint": {
-        "title": "一致的指紋",
-        "body": "每個設定檔都帶有獨特且一致的指紋：canvas、WebGL、字型、音訊和硬體。"
-      },
-      "proxy": {
-        "title": "每個身分一個代理",
-        "body": "為每個設定檔繫結專屬的網路身分，放心輪換。"
-      },
-      "automation": {
-        "title": "節省時間的自動化",
-        "body": "預熱 Cookie、批次產生設定檔，並規模化編排一切。"
-      }
-    }
+    "footer": "© {{year}} SoftGlaze · 本機工作區"
   },
   "license": {
     "machineMismatch": "此授權已註冊到另一台電腦。請將其轉移到這台電腦，或請管理員重設。"
@@ -138,7 +106,7 @@
     "trialHighlight": "7 天免費試用",
     "subtitleSuffix": "。立即開始，或啟用付費方案。",
     "startTrialTitle": "開始 7 天免費試用",
-    "startTrialSubtitle": "現在無需付款，暢享全部功能。",
+    "startTrialSubtitle": "現在無需付款，所有功能均已開放。",
     "activatePaid": "立即啟用付費方案",
     "haveCode": "有購買碼？",
     "skip": "跳過，開始試用",
@@ -277,5 +245,49 @@
     "SIGNUP_USE_CASE": "請選擇你將用 SoftGlaze 做什麼。",
     "SIGNUP_USE_CASE_OTHER": "請簡單告訴我們你將用 SoftGlaze 做什麼。",
     "CONFIRM_OFFLINE": "請連線網際網路以確認您的電子郵件。"
+  },
+  "panel": {
+    "label": "SoftGlaze 產品導覽",
+    "carousel": "輪播",
+    "slide": "投影片",
+    "slideOf": "第 {{n}} 張，共 {{total}} 張",
+    "prev": "上一張",
+    "next": "下一張",
+    "pause": "暫停輪播",
+    "play": "播放輪播",
+    "goTo": "顯示第 {{n}} 張：{{title}}",
+    "trust": "設定檔、Cookie 和登入資訊都保存在這台電腦上。",
+    "slides": {
+      "free": {
+        "title": "免費使用 25 個瀏覽器設定檔",
+        "body": "無需綁卡，沒有時間限制。每個新帳號還可以免費試用 Pro 7 天。",
+        "alt": "設定檔頁面，顯示十個設定檔、各自的代理和最近使用時間"
+      },
+      "fingerprint": {
+        "title": "每個設定檔擁有獨立指紋",
+        "body": "Canvas、WebGL、字型、音訊和時區按設定檔單獨設定，每次啟動都保持不變。還可以為每個設定檔指派獨立的 HTTP、HTTPS 或 SOCKS5 代理。",
+        "alt": "設定檔的「指紋」分頁及其環境概覽"
+      },
+      "ai": {
+        "title": "AI 智慧代理執行任務，由你核准",
+        "body": "Claude、ChatGPT、Cursor 和其他 MCP 應用程式可以在設定檔中執行任務。哪些操作需要你核准由你決定，每一步都會被記錄。",
+        "alt": "來自 Claude Desktop 的核准請求：填寫登入表單"
+      },
+      "phone": {
+        "title": "在手機上核准請求",
+        "body": "SoftGlaze 手機應用程式和網頁應用程式會顯示每個請求及其詳情。可以允許一次、允許一小時或拒絕。所有方案均包含此功能。",
+        "alt": "手機上的「核准」畫面，有一個請求正在等待處理"
+      },
+      "team": {
+        "title": "團隊協作，角色清晰",
+        "body": "擁有者、管理員、經理和操作員角色決定誰可以檢視和開啟每個設定檔。Pro 包含 3 個席位，Enterprise 包含 25 個。",
+        "alt": "成員頁面，顯示五名團隊成員及其角色"
+      }
+    }
+  },
+  "controls": {
+    "language": "語言：{{lang}}",
+    "toLight": "切換到淺色主題",
+    "toDark": "切換到深色主題"
   }
 }

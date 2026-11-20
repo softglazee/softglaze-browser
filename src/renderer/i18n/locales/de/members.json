@@ -129,7 +129,7 @@
     "inviteTitle": "Mitglied einladen",
     "editTitle": "{{name}} bearbeiten",
     "noCreatableRoles": "Sie dürfen keine Untermitglieder anlegen.",
-    "invitePendingCode": "Einladung offen – Code"
+    "invitePendingCode": "Einladung offen, Code"
   },
   "fields": {
     "name": "Name",
@@ -176,14 +176,14 @@
     "title": "Kontostatus",
     "reason": "Grund: {{reason}}",
     "unban": "Mitglied entsperren",
-    "banHint": "Änderungen an den Feldern oben behalten die Sperre – nutzen Sie „Entsperren“, um den Zugriff wiederherzustellen.",
+    "banHint": "Änderungen an den Feldern oben behalten die Sperre. Nutzen Sie „Entsperren“, um den Zugriff wiederherzustellen.",
     "suspendToggle": "Dieses Mitglied suspendieren (blockiert die Anmeldung)",
     "ban": "Mitglied sperren"
   },
   "delete": {
     "title": "{{name}} entfernen",
     "warnPrefix": "Dies entfernt ",
-    "warnMiddle": " und verschiebt alle Untermitglieder zu Ihnen. Wählen Sie, was mit den Daten passiert –",
+    "warnMiddle": " und verschiebt alle Untermitglieder zu Ihnen. Wählen Sie, was mit den Daten passiert:",
     "profilesWord_one": "Profil",
     "profilesWord_other": "Profile",
     "proxiesWord_one": "Proxy",
@@ -204,14 +204,14 @@
     },
     "pickTarget": "Wählen Sie ein Mitglied, das die Daten erhält.",
     "reassignTo": "Neu zuweisen an",
-    "noOtherMembers": "Keine anderen Mitglieder verfügbar – wählen Sie eine andere Option."
+    "noOtherMembers": "Keine anderen Mitglieder verfügbar. Wählen Sie eine andere Option."
   },
   "assign": {
     "title": "Profile zuweisen · {{name}}",
     "searchPlaceholder": "Profile suchen",
     "noProfiles": "Keine Profile gefunden.",
     "memberFallback": "Mitglied #{{id}}",
-    "updated": "Aktualisiert – {{assigned}} zugewiesen, {{unassigned}} entfernt.",
+    "updated": "Aktualisiert: {{assigned}} zugewiesen, {{unassigned}} entfernt.",
     "save": "Zuweisung speichern"
   },
   "activity": {
@@ -261,7 +261,7 @@
     "days": "vor {{count}} T."
   },
   "license": {
-    "intro": "Abostatus pro Inhaber-Arbeitsbereich. Lokal und nach bestem Bemühen – ein entschlossener Nutzer kann die lokale DB oder die Uhr dennoch ändern; eine dauerhafte Durchsetzung braucht das Lizenz-Backend.",
+    "intro": "Abostatus pro Inhaber-Arbeitsbereich. Lokal und nach bestem Bemühen. Ein entschlossener Nutzer kann die lokale DB oder die Uhr dennoch ändern; eine dauerhafte Durchsetzung braucht das Lizenz-Backend.",
     "noOwners": "Noch keine Inhaber-Arbeitsbereiche.",
     "editTitle": "Lizenz · {{name}}",
     "setState": "Status setzen",

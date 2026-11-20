@@ -197,8 +197,8 @@
   "deleteFiltered": {
     "tooltip": "Xóa mọi proxy khớp bộ lọc hiện tại",
     "button": "Xóa tất cả {{scope}} ({{count}})",
-    "confirm_one": "Xóa tất cả {{count}} proxy {{scope}}? Không thể hoàn tác - hồ sơ đang dùng sẽ mất proxy và không khởi chạy được cho đến khi bạn gán proxy khác.",
-    "confirm_other": "Xóa tất cả {{count}} proxy {{scope}}? Không thể hoàn tác - hồ sơ đang dùng sẽ mất proxy và không khởi chạy được cho đến khi bạn gán proxy khác.",
+    "confirm_one": "Xóa tất cả {{count}} proxy {{scope}}? Không thể hoàn tác: hồ sơ đang dùng sẽ mất proxy và không khởi chạy được cho đến khi bạn gán proxy khác.",
+    "confirm_other": "Xóa tất cả {{count}} proxy {{scope}}? Không thể hoàn tác: hồ sơ đang dùng sẽ mất proxy và không khởi chạy được cho đến khi bạn gán proxy khác.",
     "scope": {
       "all": "tất cả",
       "filtered": "đã lọc",
@@ -217,7 +217,7 @@
     "renameRecolor": "Đổi tên / đổi màu",
     "deleteGroup": "Xóa nhóm",
     "newGroup": "Nhóm mới",
-    "deleteConfirm": "Xóa nhóm \"{{name}}\"? Proxy vẫn ở trong kho - chỉ không còn thuộc nhóm nào."
+    "deleteConfirm": "Xóa nhóm \"{{name}}\"? Proxy vẫn ở trong kho, chỉ không còn thuộc nhóm nào."
   },
   "autoGroup": {
     "granularityTooltip": "Mức chi tiết khi tự nhóm",
@@ -251,7 +251,7 @@
     "count": "Đã chọn {{count}}",
     "checkSelected": "Kiểm tra mục đã chọn",
     "moveToGroup": "Chuyển vào nhóm",
-    "noGroupsYet": "Chưa có nhóm nào - hãy tạo trước.",
+    "noGroupsYet": "Chưa có nhóm nào. Hãy tạo trước.",
     "removeFromGroup": "Gỡ khỏi nhóm",
     "deleteSelected": "Xóa mục đã chọn",
     "clear": "Bỏ chọn",

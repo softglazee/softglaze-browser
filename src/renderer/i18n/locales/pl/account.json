@@ -5,7 +5,7 @@
     "description": "Zarządzaj zdjęciem profilowym, imieniem, adresem e-mail i hasłem."
   },
   "notice": {
-    "superAdmin": "To jest sesja Super-Admina / właściciela kodu źródłowego - nie ma tu rekordu członka do edycji."
+    "superAdmin": "To jest sesja Super-Admina / właściciela kodu źródłowego. Nie ma tu rekordu członka do edycji."
   },
   "fields": {
     "fullName": "Imię i nazwisko",
@@ -20,7 +20,7 @@
   "avatar": {
     "alt": "awatar",
     "changeTitle": "Zmień zdjęcie",
-    "newSelected": "Wybrano nowe zdjęcie - zapisz, aby zastosować.",
+    "newSelected": "Wybrano nowe zdjęcie. Zapisz, aby zastosować.",
     "notImage": "Wybierz plik graficzny.",
     "tooLarge": "To zdjęcie ma ponad 2 MB. Wybierz mniejsze.",
     "readFailed": "Nie udało się odczytać tego zdjęcia."
@@ -52,7 +52,7 @@
     "title": "Potwierdź, że to Ty",
     "codeSentTo": "Kod wysłano na {{email}}",
     "codeLabel": "6-cyfrowy kod",
-    "devMode": "Tryb deweloperski - brak skonfigurowanego e-maila. Twój kod to",
+    "devMode": "Tryb deweloperski: brak skonfigurowanego e-maila. Twój kod to",
     "apply": "Zweryfikuj i zastosuj",
     "resend": "Wyślij ponownie",
     "enterCode": "Wpisz 6-cyfrowy kod.",

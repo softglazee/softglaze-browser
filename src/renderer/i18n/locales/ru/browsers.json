@@ -18,7 +18,7 @@
     "heading": "Движок отпечатков",
     "installed": "Установлен",
     "notInstalled": "Не установлен",
-    "description": "fingerprint-chromium задаёт свои значения canvas / WebGL / UA / платформы / часового пояса на уровне движка, скрывает webdriver и закрывает утечку WebRTC. Включите его в Настройки → Браузер.",
+    "description": "fingerprint-chromium задаёт canvas, WebGL, UA, платформу и часовой пояс на уровне движка, скрывает webdriver и блокирует утечку WebRTC. Включите его в Настройки → Браузер.",
     "progressInstalling": "установка",
     "progressVerifying": "проверка",
     "installing": "Установка",

@@ -190,10 +190,10 @@
     "starting": "กำลังเริ่ม…",
     "logStarted": "เริ่ม \"{{name}}\" · {{total}} ขั้นตอนบน {{profile}}",
     "logStepRunning": "▶ {{label}}: {{summary}}",
-    "logStepError": "✕ {{label}} - {{error}}",
+    "logStepError": "✕ {{label}}: {{error}}",
     "logStepFailed": "ล้มเหลว",
     "logStopped": "หยุดแล้ว",
-    "logFinished": "เสร็จสิ้น - {{ran}}/{{total}} ขั้นตอน",
+    "logFinished": "เสร็จสิ้น: {{ran}}/{{total}} ขั้นตอน",
     "stopped": "หยุดแล้ว",
     "finished": "เสร็จสิ้น",
     "summaryCompleted": "เสร็จสมบูรณ์ {{ran}}/{{total}} ขั้นตอน",
@@ -207,7 +207,7 @@
     "errors": {
       "run": "รันมาโครไม่ได้"
     },
-    "logStepSkipped": "ข้าม {{label}} (ไม่บังคับ) - {{error}}"
+    "logStepSkipped": "ข้าม {{label}} (ไม่บังคับ): {{error}}"
   },
   "parallel": {
     "states": {
@@ -229,7 +229,7 @@
     "dataHint": "ไม่บังคับ: ผูกสเปรดชีต (แถว → โปรไฟล์ ตามลำดับ)",
     "clearDataBinding": "ล้างการผูกข้อมูล",
     "bindData": "ผูกข้อมูล",
-    "columnsPrefix": "คอลัมน์: {{columns}} - ใช้",
+    "columnsPrefix": "คอลัมน์: {{columns}} ใช้",
     "columnsSuffix": "ในขั้นตอนของมาโคร",
     "profilesLabel": "โปรไฟล์ (เลือกแล้ว {{count}})",
     "selectAll": "เลือกทั้งหมด",
@@ -249,8 +249,8 @@
     "runConsole": "คอนโซลการรัน",
     "live": "สด",
     "consoleIdle": "[ idle ] ยังไม่มีการรัน ความคืบหน้าจะแสดงที่นี่ (ไม่มีคุกกี้หรือข้อมูลรับรองรวมอยู่ด้วย)",
-    "logRunFinished": "รันเสร็จสิ้น - ผ่าน {{passed}}/{{total}}",
-    "logRunFinishedError": "รันเสร็จสิ้น - ผ่าน {{passed}}/{{total}} ({{error}})",
+    "logRunFinished": "รันเสร็จสิ้น: ผ่าน {{passed}}/{{total}}",
+    "logRunFinishedError": "รันเสร็จสิ้น: ผ่าน {{passed}}/{{total}} ({{error}})",
     "errors": {
       "readSpreadsheet": "อ่านสเปรดชีตไม่ได้",
       "chooseMacro": "เลือกมาโครที่จะรัน",
@@ -400,7 +400,7 @@
       "save": "บันทึกการตั้งค่าออโต้ไพลอตไม่ได้",
       "noGroups": "ยังไม่มีกลุ่ม สร้างกลุ่มในหน้าโปรไฟล์ก่อน",
       "owner-missing": "สมาชิกที่เปิดออโต้ไพลอตไม่มีอยู่แล้ว เจ้าของพื้นที่ทำงานสามารถปิดแล้วเปิดใหม่เพื่อรับช่วงต่อได้",
-      "owner-inactive": "สมาชิกที่เปิดออโต้ไพลอตถูกพักการใช้งานหรือถูกระงับ",
+      "owner-inactive": "สมาชิกที่เปิดออโต้ไพลอตถูกพักการใช้งานหรือถูกบล็อก",
       "owner-no-permission": "สมาชิกที่เปิดออโต้ไพลอตอาจไม่มีสิทธิ์รันระบบอัตโนมัติแล้ว",
       "warm-failed": "{{profile}}: {{error}}",
       "warmFailedHidden": "โปรไฟล์ที่คุณมองไม่เห็นวอร์มไม่สำเร็จ",

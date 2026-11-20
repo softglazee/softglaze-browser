@@ -68,7 +68,7 @@
   },
   "quick": {
     "engineTitle": "Bộ máy tạo tuần tự",
-    "description": "Tạo ngay nhiều hồ sơ không cần bảng tính - dấu vân tay riêng, tên đánh số liên tiếp, nhóm đích (tạo ngay tại chỗ) và gán proxy từ một nhóm hoặc nhà cung cấp cụ thể. Dùng đúng bộ máy của trang Hồ sơ.",
+    "description": "Tạo ngay nhiều hồ sơ không cần bảng tính: dấu vân tay riêng, tên đánh số liên tiếp, nhóm đích (tạo ngay tại chỗ) và gán proxy từ một nhóm hoặc nhà cung cấp cụ thể. Dùng đúng bộ máy của trang Hồ sơ.",
     "openButton": "Mở Tạo nhanh"
   },
   "errors": {

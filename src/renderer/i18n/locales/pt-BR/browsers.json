@@ -18,7 +18,7 @@
     "heading": "Motor de impressão digital",
     "installed": "Instalado",
     "notInstalled": "Não instalado",
-    "description": "fingerprint-chromium: altera canvas / WebGL / UA / plataforma / fuso horário de forma nativa, oculta o webdriver e bloqueia o vazamento do WebRTC. Ative em Configurações → Navegador.",
+    "description": "fingerprint-chromium define canvas, WebGL, UA, plataforma e fuso horário de forma nativa, oculta o webdriver e bloqueia o vazamento do WebRTC. Ative em Configurações → Navegador.",
     "progressInstalling": "instalando",
     "progressVerifying": "verificando",
     "installing": "Instalando",

@@ -38,11 +38,11 @@
     "subtitle": "Seçili profillerdeki proxy'leri yeniden atayın, değiştirin veya temizleyin.",
     "modeLabel": "İşlem",
     "modes": {
-      "unique": "Benzersiz - her profile ayrı bir proxy",
-      "pool": "Sırayla - bir kümeyi profillere dağıt",
+      "unique": "Benzersiz: her profile ayrı bir proxy",
+      "pool": "Sırayla: bir kümeyi profillere dağıt",
       "single": "Tüm seçililer için tek proxy",
-      "shuffle": "Karıştır - mevcut proxy'lerini aralarında değiştir",
-      "clear": "Temizle - proxy'yi kaldır (doğrudan)"
+      "shuffle": "Karıştır: mevcut proxy'lerini aralarında değiştir",
+      "clear": "Temizle: proxy'yi kaldır (doğrudan)"
     },
     "sourceLabel": "Proxy kaynağı",
     "sources": {
@@ -52,14 +52,14 @@
       "paste": "Liste yapıştır"
     },
     "pickGroup": "Bir grup seçin…",
-    "pastePlaceholder": "host:port:user:pass - her satıra bir tane",
+    "pastePlaceholder": "host:port:user:pass (her satıra bir tane)",
     "verify": "Önce proxy'lerin çalıştığını doğrula (daha yavaş)",
     "proxyLabel": "Proxy",
     "pickProxy": "Bir proxy seçin…",
     "shuffleNote": "Her seçili profil başka bir seçili profilin proxy'sine geçer. Proxy'li en az iki profil gerekir.",
     "clearNote": "Her seçili profilden proxy'yi kaldırır (doğrudan bağlanırlar).",
     "apply": "Uygula",
-    "limited": "{{assigned}} atandı - {{skipped}} profil için kaynakta proxy kalmadı.",
+    "limited": "{{assigned}} atandı. {{skipped}} profil için kaynakta proxy kalmadı.",
     "socks4Chromium": "{{count}} profil Chromium'da açılıyor ve SOCKS4 proxy üzerinden başlatılamaz (DNS sızardı). Bunları Firefox'a geçirin veya SOCKS5 ya da HTTP proxy verin."
   },
   "tabs": {
@@ -95,7 +95,7 @@
     "noBuilds": "Google Chrome kurulu değil ve indirilmiş Chrome sürümü yok. Bu profili açmadan önce aşağıdan bir sürüm indirin.",
     "downloadMore": "Daha fazla sürüm indir",
     "identity": "Kimlik",
-    "identityHelpPre": "Yukarıdaki aynı gerçek Chrome sürümünü çalıştırır, ancak seçilen Chromium tarayıcısı olarak görünür - UA belirteci, Sec-CH-UA markaları ve navigator kimliği eşleşir, TLS/JA4 ise gerçek kalır (altında ",
+    "identityHelpPre": "Yukarıdaki aynı gerçek Chrome sürümünü çalıştırır, ancak seçilen Chromium tarayıcısı olarak görünür: UA belirteci, Sec-CH-UA markaları ve navigator kimliği eşleşir, TLS/JA4 ise gerçek kalır (altında ",
     "identityHelpEmph": "gerçekten",
     "identityHelpPost": " Chromium var).",
     "os": "İşletim sistemi",
@@ -121,7 +121,7 @@
     "crossOsWarning": "Bu profil {{os}} olduğunu söylüyor ama {{host}} üzerinde çalışıyor. Sistemin yazı tipleri, canvas çizimi ve gerçek TLS/JS motoru davranışı hâlâ {{host}} gösterir, bu yüzden tarayıcılar uyumsuzluğu fark edebilir. Özellikle farklı işletim sistemli bir profile ihtiyacınız yoksa {{host}} kullanın.",
     "engine": "Motor",
     "antidetectLabel": "Parmak izi motoru (fingerprint-chromium)",
-    "antidetectHelp": "Bu profili yerel fingerprint-chromium motorunda başlatın - profil bazlı canvas / WebGL / UA / platform / saat dilimi ayarlarını ikili düzeyde uygular, navigator.webdriver'ı gizler ve WebRTC sızıntısını engeller. Motorun kurulu olmasını gerektirir (Tarayıcılar sayfası). Kapalı = standart Chrome. Bunu kapalı bırakan profillere genel Ayarlar anahtarı yine uygulanır.",
+    "antidetectHelp": "Bu profili yerel fingerprint-chromium motorunda başlatın. Profil bazlı canvas / WebGL / UA / platform / saat dilimi ayarlarını ikili düzeyde uygular, navigator.webdriver'ı gizler ve WebRTC sızıntısını engeller. Motorun kurulu olmasını gerektirir (Tarayıcılar sayfası). Kapalı = standart Chrome. Bunu kapalı bırakan profillere genel Ayarlar anahtarı yine uygulanır.",
     "launchesAutoReal": "Otomatik: bu profil, bu bilgisayarda kurulu Google Chrome {{major}} ile açılır.",
     "launchesAutoDownloaded": "Otomatik: Google Chrome kurulu değil, bu yüzden bu profil indirilen en yeni sürüm olan Chrome {{major}} ile açılır.",
     "launchesPinnedReal": "Chrome {{major}} seçili: bu profil kurulu Google Chrome {{major}} ile açılır.",
@@ -162,7 +162,7 @@
     "passPlaceholder": "Proxy parolası (isteğe bağlı)",
     "selectProxy": "Proxy seç",
     "chooseSaved": "-- Kayıtlı bir proxy seçin --",
-    "noSaved": "Henüz kayıtlı proxy yok - Proxy havuzu sayfasından ekleyin.",
+    "noSaved": "Henüz kayıtlı proxy yok. Proxy havuzu sayfasından ekleyin.",
     "optgroupPaid": "Proxy'leriniz",
     "optgroupFree": "Ücretsiz proxy'ler",
     "freeWarning": "Yabancı biri tarafından işletilen ücretsiz proxy: bu profili asla hesaplara giriş yapmak, parola girmek veya ödeme yapmak için kullanmayın.",
@@ -198,7 +198,7 @@
     "passwordPlaceholder": "Parola",
     "twoFactor": "2FA gizli anahtarı",
     "twoFactorPlaceholder": "Base32 doğrulayıcı anahtarı, örn. JBSWY3DPEHPK3PXP",
-    "twoFactorHint": "Bu hesabın 2FA gizli anahtarını yapıştırın. SoftGlaze canlı 6 haneli kodlar üretir - bunları Profiller listesinden tek tıkla kopyalayın (🔑 2FA rozeti)."
+    "twoFactorHint": "Bu hesabın 2FA gizli anahtarını yapıştırın. SoftGlaze canlı 6 haneli kodlar üretir. Bunları Profiller listesinden tek tıkla kopyalayın (🔑 2FA rozeti)."
   },
   "fp": {
     "coreIdentity": "Temel Kimlik",
@@ -235,7 +235,7 @@
     "speechVoicesNoise": "SpeechVoices gürültüsü",
     "mediaDevice": "Medya cihazı",
     "webglMetadata": "WebGL meta verileri",
-    "webglMetadataDesc": "Real (önerilir), gerçek GPU'nuzu sayfada, worker'larda VE service worker'da tutarlı şekilde bildirir - uyumsuzluk olmaz. Özel, farklı bir GPU dizesi ayarlar ancak service worker yine gerçek olanı gösterir ve algılama araçları bunu işaretler.",
+    "webglMetadataDesc": "Real (önerilir), gerçek GPU'nuzu sayfada, worker'larda VE service worker'da tutarlı şekilde bildirir, uyumsuzluk olmaz. Özel, farklı bir GPU dizesi ayarlar ancak service worker yine gerçek olanı gösterir ve algılama araçları bunu işaretler.",
     "configureGpu": "Özel GPU'yu yapılandır",
     "autoRandomize": "Otomatik rastgele",
     "vendor": "Üretici",
@@ -308,7 +308,7 @@
     "coreSettings": "Temel Ayarlar",
     "coreSettingsSub": "Uzantılar ve tarayıcı davranışı",
     "extension": "Uzantı",
-    "extensionDesc": "[Uzantılar - Ekip Uzantıları] bölümündeki etkin uzantılar profile kurulur.",
+    "extensionDesc": "[Uzantılar > Ekip Uzantıları] bölümündeki etkin uzantılar profile kurulur.",
     "teamExtensions": "Ekip Uzantıları",
     "noExtensions": "Uzantı yok",
     "dataSync": "Veri Eşitleme",
@@ -434,7 +434,7 @@
     "queueWidth": "aynı anda",
     "queueWidthTitle": "Aynı anda kaç profil açık kalır. Birini kapattığınız anda sıradaki açılır.",
     "synchronize": "Eşitle",
-    "synchronizeTitle": "Ana + Yansı pencereler olarak başlat",
+    "synchronizeTitle": "Ana + ikincil yansıtılmış pencereler olarak başlat",
     "close": "Kapat",
     "tag": "Etiket",
     "tagTitle": "Etiket ekle veya kaldır",
@@ -468,7 +468,7 @@
     "savedFilters": "Kayıtlı filtreler…",
     "save": "Kaydet",
     "savePresetTitle": "Geçerli filtreleri hazır ayar olarak kaydet",
-    "savePresetPrompt": "Geçerli filtreleri hazır ayar olarak kaydet - ad:",
+    "savePresetPrompt": "Geçerli filtreleri hazır ayar olarak kaydet. Ad:",
     "profileCount_one": "{{count}} profil",
     "profileCount_other": "{{count}} profil",
     "used": "Kullanılmış",
@@ -515,7 +515,7 @@
   },
   "actions": {
     "stop": "Durdur",
-    "inUseTitle": "{{member}} kullanıyor - önce kapatmasını isteyin",
+    "inUseTitle": "{{member}} kullanıyor. Önce kapatmasını isteyin",
     "launch": "Başlat",
     "environmentOverview": "Ortam özeti",
     "editConfig": "Yapılandırmayı düzenle",

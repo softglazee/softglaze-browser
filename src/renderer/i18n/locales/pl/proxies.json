@@ -31,7 +31,7 @@
     "button": "Darmowe proxy",
     "buttonTooltip": "Znajduj, testuj i przechowuj darmowe publiczne proxy na osobnej stronie, oddzielnie od płatnych",
     "title": "Darmowe publiczne proxy",
-    "description": "SoftGlaze pobiera publiczne listy publikowane przez projekty darmowych proxy, testuje każde proxy i zachowuje tylko działające - na tej stronie, oddzielnie od płatnych proxy.",
+    "description": "SoftGlaze pobiera publiczne listy publikowane przez projekty darmowych proxy, testuje każde proxy i zachowuje tylko działające, na tej stronie, oddzielnie od płatnych proxy.",
     "warn": {
       "strangers": "Darmowe proxy prowadzą nieznane osoby. Nie używaj ich do logowania na konta, wpisywania haseł ani płatności: właściciel proxy widzi ruch, który nie jest szyfrowany.",
       "quality": "Są wolne, często przestają działać w ciągu kilku godzin, a wiele z nich jest na czarnych listach, więc spodziewaj się więcej CAPTCHA niż przy płatnym proxy. Do prawdziwej pracy z kontami używaj dostawcy proxy.",
@@ -205,10 +205,10 @@
   "deleteFiltered": {
     "tooltip": "Usuń każde proxy pasujące do bieżącego filtra",
     "button": "Usuń wszystkie: {{scope}} ({{count}})",
-    "confirm_one": "Usunąć wszystkie proxy ({{count}}, {{scope}})? Tej operacji nie można cofnąć - profile, które go używają, stracą je i nie uruchomią się, dopóki nie przypiszesz innego proxy.",
-    "confirm_few": "Usunąć wszystkie proxy ({{count}}, {{scope}})? Tej operacji nie można cofnąć - profile, które ich używają, stracą proxy i nie uruchomią się, dopóki nie przypiszesz innego.",
-    "confirm_many": "Usunąć wszystkie proxy ({{count}}, {{scope}})? Tej operacji nie można cofnąć - profile, które ich używają, stracą proxy i nie uruchomią się, dopóki nie przypiszesz innego.",
-    "confirm_other": "Usunąć wszystkie proxy ({{count}}, {{scope}})? Tej operacji nie można cofnąć - profile, które ich używają, stracą proxy i nie uruchomią się, dopóki nie przypiszesz innego.",
+    "confirm_one": "Usunąć wszystkie proxy ({{count}}, {{scope}})? Tej operacji nie można cofnąć. Profile, które go używają, stracą je i nie uruchomią się, dopóki nie przypiszesz innego proxy.",
+    "confirm_few": "Usunąć wszystkie proxy ({{count}}, {{scope}})? Tej operacji nie można cofnąć. Profile, które ich używają, stracą proxy i nie uruchomią się, dopóki nie przypiszesz innego.",
+    "confirm_many": "Usunąć wszystkie proxy ({{count}}, {{scope}})? Tej operacji nie można cofnąć. Profile, które ich używają, stracą proxy i nie uruchomią się, dopóki nie przypiszesz innego.",
+    "confirm_other": "Usunąć wszystkie proxy ({{count}}, {{scope}})? Tej operacji nie można cofnąć. Profile, które ich używają, stracą proxy i nie uruchomią się, dopóki nie przypiszesz innego.",
     "scope": {
       "all": "wszystkie",
       "filtered": "przefiltrowane",
@@ -227,7 +227,7 @@
     "renameRecolor": "Zmień nazwę / kolor",
     "deleteGroup": "Usuń grupę",
     "newGroup": "Nowa grupa",
-    "deleteConfirm": "Usunąć grupę \"{{name}}\"? Proxy pozostaną w puli - po prostu będą bez grupy."
+    "deleteConfirm": "Usunąć grupę \"{{name}}\"? Proxy pozostaną w puli, po prostu będą bez grupy."
   },
   "autoGroup": {
     "granularityTooltip": "Szczegółowość autogrupowania",
@@ -263,7 +263,7 @@
     "count": "Zaznaczono: {{count}}",
     "checkSelected": "Sprawdź zaznaczone",
     "moveToGroup": "Przenieś do grupy",
-    "noGroupsYet": "Brak grup - najpierw utwórz grupę.",
+    "noGroupsYet": "Brak grup. Najpierw utwórz grupę.",
     "removeFromGroup": "Usuń z grupy",
     "deleteSelected": "Usuń zaznaczone",
     "clear": "Wyczyść",

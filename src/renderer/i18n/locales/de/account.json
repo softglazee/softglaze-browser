@@ -5,7 +5,7 @@
     "description": "Verwalten Sie Profilbild, Name, E-Mail und Passwort."
   },
   "notice": {
-    "superAdmin": "Dies ist eine Super-Admin- / Quellcode-Inhaber-Sitzung – hier gibt es keinen bearbeitbaren Mitgliedseintrag."
+    "superAdmin": "Dies ist eine Sitzung als Super-Admin bzw. Quellcode-Inhaber. Hier gibt es keinen bearbeitbaren Mitgliedseintrag."
   },
   "fields": {
     "fullName": "Vollständiger Name",
@@ -20,7 +20,7 @@
   "avatar": {
     "alt": "Avatar",
     "changeTitle": "Bild ändern",
-    "newSelected": "Neues Bild ausgewählt – speichern, um es zu übernehmen.",
+    "newSelected": "Neues Bild ausgewählt. Speichern, um es zu übernehmen.",
     "notImage": "Bitte wählen Sie eine Bilddatei.",
     "tooLarge": "Das Bild ist größer als 2 MB. Wählen Sie ein kleineres.",
     "readFailed": "Das Bild konnte nicht gelesen werden."
@@ -52,7 +52,7 @@
     "title": "Bestätigen Sie, dass Sie es sind",
     "codeSentTo": "Code gesendet an {{email}}",
     "codeLabel": "6-stelliger Code",
-    "devMode": "Entwicklermodus – keine E-Mail eingerichtet. Ihr Code lautet",
+    "devMode": "Entwicklermodus: keine E-Mail eingerichtet. Ihr Code lautet",
     "apply": "Bestätigen & übernehmen",
     "resend": "Erneut senden",
     "enterCode": "Geben Sie den 6-stelligen Code ein.",

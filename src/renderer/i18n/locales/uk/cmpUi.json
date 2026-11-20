@@ -13,10 +13,10 @@
     "resumeFailed": "Не вдалося відновити.",
     "paused": "Пауза",
     "interrupted": "Перервано",
-    "resumeTitle": "{{state}} на {{percent}}% - відновити",
+    "resumeTitle": "{{state}} на {{percent}}%. Відновити",
     "statusInstalling": "встан.",
     "statusQueued": "…",
-    "retryTitle": "Повторити - {{error}}",
+    "retryTitle": "Повторити ({{error}})",
     "downloadFailedShort": "помилка завантаження",
     "downloadInstallTitle": "Завантажити й установити цю версію"
   },

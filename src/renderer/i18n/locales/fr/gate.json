@@ -9,57 +9,25 @@
     "unavailable": "Cet appareil ne peut pas stocker une connexion de façon sécurisée (le chiffrement du système n'est pas disponible). Vous devrez donc vous reconnecter au prochain lancement."
   },
   "brand": {
-    "tagline": "Multi-profils",
-    "bullets": {
-      "fingerprints": "Des empreintes uniques et cohérentes pour chaque profil",
-      "proxy": "Un proxy dédié pour chaque identité",
-      "localFirst": "Local d'abord : votre espace de travail est stocké sur cet appareil"
-    },
-    "heroLine1": "Gérez des centaines d'identités.",
-    "heroLine2": "Gardez-les toutes séparées.",
-    "heroBody": "Un navigateur multi-profils local d'abord, pensé pour les équipes. Chaque profil garde ses propres cookies, stockage, proxy et paramètres d'empreinte.",
-    "footer": "© {{year}} SoftGlaze · Espace de travail local",
-    "trust": {
-      "local": "Local d'abord",
-      "encrypted": "Verrouillage de l'espace",
-      "private": "Aucune télémétrie"
-    },
-    "slides": {
-      "security": {
-        "title": "Sécurité des données solide",
-        "body": "Vos profils, cookies et données de navigation restent sur cet appareil, et les clés 2FA et clés de fournisseur sont protégées par le trousseau de votre système."
-      },
-      "fingerprint": {
-        "title": "Empreintes cohérentes",
-        "body": "Chaque profil dispose d'une empreinte unique et cohérente : canvas, WebGL, polices, audio et matériel."
-      },
-      "proxy": {
-        "title": "Un proxy pour chaque identité",
-        "body": "Associez une identité réseau dédiée à chaque profil et faites la rotation en toute confiance."
-      },
-      "automation": {
-        "title": "Une automatisation qui fait gagner du temps",
-        "body": "Préchauffez les cookies, générez des profils en lot et orchestrez tout à grande échelle."
-      }
-    }
+    "footer": "© {{year}} SoftGlaze · Espace de travail local"
   },
   "license": {
     "machineMismatch": "Cette licence est enregistrée sur un autre ordinateur. Transférez-la sur ce PC ou demandez à votre administrateur de la réinitialiser."
   },
   "pay": {
     "noMethods": "L'achat dans l'application est suspendu pendant que nous ajoutons un nouveau prestataire de paiement. Écrivez à support@softglaze.com pour acheter sur facture, puis saisissez votre code d'achat.",
-    "submitted": "Paiement envoyé : un administrateur va le vérifier et activer votre forfait sous peu.",
+    "submitted": "Paiement envoyé. Un administrateur va le vérifier et activer votre forfait sous peu.",
     "manualBadge": "Manuel",
     "continueTo": "Continuer vers {{label}}",
     "openPaymentLink": "Ouvrir le lien de paiement",
     "referencePlaceholder": "Référence du paiement / ID de transaction",
-    "submitForApproval": "J'ai payé : envoyer pour approbation"
+    "submitForApproval": "J'ai payé, envoyer pour approbation"
   },
   "banned": {
     "blockedHeading": "Votre compte est bloqué",
     "endedHeading": "Votre abonnement a pris fin",
-    "blockedBodyNamed": "{{name}}, votre compte a été bloqué par un administrateur. Contactez-le pour retrouver l'accès : vos données sont en sécurité.",
-    "blockedBody": "Votre compte a été bloqué par un administrateur. Contactez-le pour retrouver l'accès : vos données sont en sécurité.",
+    "blockedBodyNamed": "{{name}}, votre compte a été bloqué par un administrateur. Contactez-le pour rétablir l'accès. Vos données sont en sécurité.",
+    "blockedBody": "Votre compte a été bloqué par un administrateur. Contactez-le pour rétablir l'accès. Vos données sont en sécurité.",
     "endedBodyNamed": "{{name}}, cette licence n'est plus active (remboursée, révoquée ou enregistrée sur un autre ordinateur). Choisissez un forfait pour déverrouiller votre espace de travail. Vos profils et vos données sont en sécurité et vous attendent.",
     "endedBody": "Cette licence n'est plus active (remboursée, révoquée ou enregistrée sur un autre ordinateur). Choisissez un forfait pour déverrouiller votre espace de travail. Vos profils et vos données sont en sécurité et vous attendent.",
     "haveCode": "Vous avez un code d'achat ?",
@@ -68,7 +36,7 @@
   },
   "register": {
     "title": "Créer votre compte",
-    "subtitle": "C'est votre compte principal : le propriétaire de l'espace de travail.",
+    "subtitle": "Il s'agit de votre compte principal, propriétaire de l'espace de travail.",
     "firstName": "Prénom",
     "lastName": "Nom",
     "email": "E-mail",
@@ -94,7 +62,7 @@
     "title": "Vérifiez votre e-mail",
     "subtitlePrefix": "Saisissez le code à 6 chiffres envoyé à",
     "subtitleSuffix": ".",
-    "devModePrefix": "Mode dev : aucun e-mail n'est encore réellement envoyé. Votre code est",
+    "devModePrefix": "Mode développeur : aucun e-mail n'est encore réellement envoyé. Votre code est",
     "devModeSuffix": ".",
     "verifyCreate": "Vérifier et créer le compte",
     "resendIn": "Renvoyer le code dans {{count}} s",
@@ -138,10 +106,10 @@
     "trialHighlight": "essai gratuit de 7 jours",
     "subtitleSuffix": ". Commencez maintenant ou activez un forfait payant.",
     "startTrialTitle": "Démarrer l'essai gratuit de 7 jours",
-    "startTrialSubtitle": "Aucun paiement maintenant : explorez tout.",
+    "startTrialSubtitle": "Aucun paiement maintenant. Toutes les fonctionnalités sont ouvertes.",
     "activatePaid": "Activer un forfait payant maintenant",
     "haveCode": "Vous avez un code d'achat ?",
-    "skip": "Passer : démarrer l'essai",
+    "skip": "Passer et démarrer l'essai",
     "tenantTitle": "Votre compte est prêt",
     "tenantSubtitle": "Démarrez votre essai gratuit ou choisissez un forfait.",
     "tenantTrialSubtitle": "Accès complet, sans paiement. Un essai gratuit par ordinateur et par e-mail.",
@@ -161,7 +129,7 @@
     "password": "Mot de passe",
     "forgot": "Oublié ?",
     "passwordPlaceholder": "Mot de passe principal",
-    "forgotBody": "Votre mot de passe principal n'est pas récupérable sur une installation locale : il ne quitte jamais cet appareil. S'il est perdu, l'espace de travail doit être réinitialisé depuis les Paramètres.",
+    "forgotBody": "Votre mot de passe principal n'est pas récupérable sur une installation locale, car il ne quitte jamais cet appareil. S'il est perdu, l'espace de travail doit être réinitialisé depuis les Paramètres.",
     "signIn": "Se connecter",
     "noAccount": "Vous n'avez pas de compte ?",
     "newHere": "Nouveau sur SoftGlaze ?",
@@ -239,7 +207,7 @@
     "verificationFailed": "Échec de la vérification.",
     "incorrectPassword": "Mot de passe incorrect.",
     "couldNotSignIn": "Connexion impossible.",
-    "superSetupRequired": "Aucun identifiant Super Admin n'est encore défini : créez-en un ci-dessous.",
+    "superSetupRequired": "Aucun identifiant Super Admin n'est encore défini. Créez-en un ci-dessous.",
     "invalidSuperCredentials": "Identifiants Super Admin non valides.",
     "couldNotCreateSuper": "Impossible de créer les identifiants Super Admin.",
     "enterInviteCode": "Saisissez votre code d'invitation.",
@@ -252,9 +220,9 @@
     "paymentNotStarted": "Le paiement n'a pas pu être lancé.",
     "couldNotSubmitPayment": "Impossible d'envoyer votre paiement.",
     "enterWorkspacePassword": "Saisissez le mot de passe de votre espace de travail.",
-    "dbStillLocked": "La base de données est toujours verrouillée, veuillez réessayer.",
+    "dbStillLocked": "La base de données est toujours verrouillée. Veuillez réessayer.",
     "dbMissing": "Le fichier de base de données chiffré est introuvable. Restaurez une sauvegarde de l'espace de travail pour le récupérer.",
-    "dbUnlockFailed": "Mot de passe incorrect, ou le fichier est corrompu.",
+    "dbUnlockFailed": "Mot de passe incorrect, ou fichier corrompu.",
     "couldNotUnlockDb": "Impossible de déverrouiller la base de données.",
     "trialFailed": "Impossible de démarrer l'essai gratuit."
   },
@@ -277,5 +245,49 @@
     "SIGNUP_USE_CASE": "Choisissez l'usage que vous ferez de SoftGlaze.",
     "SIGNUP_USE_CASE_OTHER": "Dites-nous en quelques mots pour quoi vous utiliserez SoftGlaze.",
     "CONFIRM_OFFLINE": "Connectez-vous à Internet pour confirmer votre e-mail."
+  },
+  "panel": {
+    "label": "Visite guidée de SoftGlaze",
+    "carousel": "carrousel",
+    "slide": "diapositive",
+    "slideOf": "{{n}} sur {{total}}",
+    "prev": "Diapositive précédente",
+    "next": "Diapositive suivante",
+    "pause": "Mettre les diapositives en pause",
+    "play": "Lire les diapositives",
+    "goTo": "Afficher la diapositive {{n}} : {{title}}",
+    "trust": "Profils, cookies et identifiants restent sur cet ordinateur.",
+    "slides": {
+      "free": {
+        "title": "25 profils de navigateur gratuits",
+        "body": "Sans carte et sans limite de durée. Chaque nouveau compte peut aussi essayer Pro gratuitement pendant 7 jours.",
+        "alt": "La page Profils avec dix profils, leurs proxys et leur dernière utilisation"
+      },
+      "fingerprint": {
+        "title": "Chaque profil garde son empreinte",
+        "body": "Canvas, WebGL, polices, audio et fuseau horaire sont définis par profil et restent identiques à chaque lancement. Attribuez à chacun votre propre proxy HTTP, HTTPS ou SOCKS5.",
+        "alt": "L'onglet Empreinte d'un profil à côté de sa vue d'ensemble de l'environnement"
+      },
+      "ai": {
+        "title": "Les agents IA travaillent, vous approuvez",
+        "body": "Claude, ChatGPT, Cursor et d'autres applications MCP exécutent des tâches dans vos profils. Vous décidez quelles actions nécessitent votre approbation, et chaque étape est journalisée.",
+        "alt": "Une demande d'approbation de Claude Desktop pour remplir un formulaire de connexion"
+      },
+      "phone": {
+        "title": "Approuvez depuis votre téléphone",
+        "body": "L'application mobile et l'application web SoftGlaze affichent chaque demande avec ses détails. Autorisez-la une fois, pour une heure, ou refusez-la. Inclus dans tous les forfaits.",
+        "alt": "L'écran Approbations sur un téléphone avec une demande en attente de réponse"
+      },
+      "team": {
+        "title": "Travaillez en équipe avec des rôles clairs",
+        "body": "Les rôles Propriétaire, Admin, Manager et Opérateur déterminent qui peut voir et ouvrir chaque profil. Pro inclut 3 places et Enterprise 25.",
+        "alt": "La page Membres avec cinq membres de l'équipe et leurs rôles"
+      }
+    }
+  },
+  "controls": {
+    "language": "Langue : {{lang}}",
+    "toLight": "Passer au thème clair",
+    "toDark": "Passer au thème sombre"
   }
 }

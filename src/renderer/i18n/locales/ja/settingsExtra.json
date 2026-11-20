@@ -104,17 +104,17 @@
       "methodEmail": "メール",
       "methodSms": "SMS",
       "levelLabel": "認証レベル",
-      "levelLow": "低 - 新しいデバイス、または前回の2FAから90日以上",
-      "levelMedium": "中（推奨） - 新しいデバイス、または30日以上",
-      "levelHigh": "高 - ログインのたびに2FAが必要"
+      "levelLow": "低：新しいデバイス、または前回の2FAから90日以上",
+      "levelMedium": "中（推奨）：新しいデバイス、または30日以上",
+      "levelHigh": "高：ログインのたびに2FAが必要"
     }
   },
   "multiDevice": {
     "title": "マルチデバイスモード",
     "description": "複数のメンバーが同じプロファイルに同時にアクセスできるかどうかを設定します。",
-    "modeOff": "オフ - 1つのプロファイルにつき1人のメンバー",
-    "modeFull": "フル - すべてのプロファイルで同時アクセス可能",
-    "modeSpecified": "指定 - 選択したプロファイルのみ",
+    "modeOff": "オフ：1つのプロファイルにつき1人のメンバー",
+    "modeFull": "フル：すべてのプロファイルで同時アクセス可能",
+    "modeSpecified": "指定：選択したプロファイルのみ",
     "hintBefore": "有効にすると、複数のメンバーが同じプロファイルに同時にアクセスできます。",
     "hintSpecified": "指定",
     "hintAfter": "モードでは、「プロファイル」ページで対象のプロファイルを選択してください。"
@@ -202,7 +202,7 @@
       "desc": "Chromeベースのプロファイルでは、開発者ツールのウィンドウやパネル（F12、Ctrl+Shift+I、検証）を開くとすぐに閉じます。変更後に起動したプロファイルに適用されます。このコンピューター上のご自身のChromeには影響しません。"
     },
     "minimizeCdpFootprint": {
-      "title": "CDPの痕跡を最小化（試験運用 - CAPTCHA対策）",
+      "title": "CDPの痕跡を最小化（試験運用、CAPTCHAを削減）",
       "shortTitle": "CDPの痕跡を最小化",
       "desc": "常時有効なCDPのRuntime.enableを停止します。これはCloudflare/Turnstileが検出する代表的な自動化シグナルです。オンの間のトレードオフ: ペルソナの自動入力、スタートページのチェックリンク、同期セッションのミラーリングが動作しなくなります（CDPバインディングが必要なため）。既定はオフです。オンにしてCAPTCHAが減るかA/Bテストし、プロファイルを再起動してください。"
     },
@@ -339,7 +339,7 @@
     "available": "アップデート {{version}} があります。バックグラウンドでダウンロード中…",
     "downloading": "{{version}} をダウンロード中… {{percent}}%",
     "ready": "アップデート {{version}} をインストールできます。",
-    "errorWithReason": "アップデートを確認できませんでした - {{reason}}",
+    "errorWithReason": "アップデートを確認できませんでした：{{reason}}",
     "errorNoReason": "アップデートを確認できませんでした。",
     "upToDate": "最新バージョンです。",
     "installRestart": "インストールして再起動",
@@ -391,7 +391,7 @@
     "encryption": "暗号化",
     "username": "ユーザー名",
     "password": "パスワード",
-    "passwordSavedHint": "（保存済み - 変更しない場合は空欄）",
+    "passwordSavedHint": "（保存済み。変更しない場合は空欄）",
     "fromName": "差出人名",
     "saved": "メール設定を保存しました。",
     "saveFailed": "メール設定を保存できませんでした。",

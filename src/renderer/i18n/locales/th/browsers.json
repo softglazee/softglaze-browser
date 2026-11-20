@@ -18,7 +18,7 @@
     "heading": "เอนจินฟิงเกอร์พรินต์",
     "installed": "ติดตั้งแล้ว",
     "notInstalled": "ยังไม่ได้ติดตั้ง",
-    "description": "fingerprint-chromium ตั้งค่า canvas / WebGL / UA / แพลตฟอร์ม / เขตเวลาในระดับเนทีฟ ซ่อน webdriver และป้องกัน WebRTC รั่วไหล เปิดใช้ได้ที่ การตั้งค่า → เบราว์เซอร์",
+    "description": "fingerprint-chromium ตั้งค่า canvas, WebGL, UA, แพลตฟอร์ม และเขตเวลาในระดับเนทีฟ ซ่อน webdriver และบล็อกไม่ให้ WebRTC รั่วไหล เปิดใช้ได้ที่ การตั้งค่า → เบราว์เซอร์",
     "progressInstalling": "กำลังติดตั้ง",
     "progressVerifying": "กำลังตรวจสอบ",
     "installing": "กำลังติดตั้ง",

@@ -5,7 +5,7 @@
     "description": "Quản lý ảnh đại diện, tên, email và mật khẩu."
   },
   "notice": {
-    "superAdmin": "Đây là phiên Super-Admin / chủ mã nguồn - không có bản ghi thành viên nào để sửa ở đây."
+    "superAdmin": "Đây là phiên Super-Admin / chủ mã nguồn, không có bản ghi thành viên nào để sửa ở đây."
   },
   "fields": {
     "fullName": "Họ và tên",
@@ -20,7 +20,7 @@
   "avatar": {
     "alt": "ảnh đại diện",
     "changeTitle": "Đổi ảnh",
-    "newSelected": "Đã chọn ảnh mới - hãy lưu để áp dụng.",
+    "newSelected": "Đã chọn ảnh mới. Hãy lưu để áp dụng.",
     "notImage": "Vui lòng chọn một tệp ảnh.",
     "tooLarge": "Ảnh này lớn hơn 2 MB. Hãy chọn ảnh nhỏ hơn.",
     "readFailed": "Không đọc được ảnh này."
@@ -52,7 +52,7 @@
     "title": "Xác nhận đó là bạn",
     "codeSentTo": "Đã gửi mã đến {{email}}",
     "codeLabel": "Mã 6 chữ số",
-    "devMode": "Chế độ dev - chưa cấu hình email. Mã của bạn là",
+    "devMode": "Chế độ dev: chưa cấu hình email. Mã của bạn là",
     "apply": "Xác minh và áp dụng",
     "resend": "Gửi lại",
     "enterCode": "Nhập mã 6 chữ số.",

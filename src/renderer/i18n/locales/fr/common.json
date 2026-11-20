@@ -26,7 +26,7 @@
     "settings": "Paramètres"
   },
   "shell": {
-    "footerDefault": "© {year} SoftGlaze - Conçu par la [SoftGlaze Team](https://softglaze.com) · Développé par [Azhar Ali](https://azhar.softglaze.com)",
+    "footerDefault": "© {year} SoftGlaze. Conçu par la [SoftGlaze Team](https://softglaze.com) · Développé par [Azhar Ali](https://azhar.softglaze.com)",
     "antiDetect": "Multi-profil",
     "darkMode": "Mode sombre",
     "lightMode": "Mode clair",
@@ -245,7 +245,7 @@
       "title": "Langue",
       "description": "Choisissez la langue d'affichage de l'interface SoftGlaze.",
       "label": "Langue d'affichage",
-      "hint": "D'autres langues arrivent bientôt. Les changements s'appliquent immédiatement dans toute l'application."
+      "hint": "Les changements s'appliquent immédiatement dans toute l'application."
     }
   },
   "startLinks": {
@@ -286,5 +286,15 @@
     "settingsHidden": "Les paramètres sont désactivés pour votre compte par un administrateur.",
     "proxiesHidden": "Les proxys sont désactivés pour votre compte par un administrateur.",
     "profilesHidden": "Les profils sont désactivés pour votre compte par un administrateur."
+  },
+  "promo": {
+    "bf2026": {
+      "text": "Black Friday : Pro à vie {{pro}} ou Enterprise à vie {{enterprise}}, en un seul paiement. Fin le 1er déc. à 23 h 59 UTC."
+    },
+    "xmas2026": {
+      "text": "Offre de Noël : Pro à vie {{pro}} ou Enterprise à vie {{enterprise}}, en un seul paiement. Fin le 31 déc. à 23 h 59 UTC."
+    },
+    "cta": "Voir l'offre",
+    "dismiss": "Masquer cette offre"
   }
 }

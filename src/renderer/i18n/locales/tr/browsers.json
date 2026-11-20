@@ -2,7 +2,7 @@
   "header": {
     "eyebrow": "Motorlar",
     "title": "Tarayıcılar",
-    "subtitle": "Gerçek Chrome ve Firefox sürümlerini istediğiniz zaman indirin - otomatik kurulur ve başlatmaya hazır olur.",
+    "subtitle": "Gerçek Chrome ve Firefox sürümlerini istediğiniz zaman indirin. Otomatik kurulur ve başlatmaya hazır olur.",
     "refresh": "Yenile"
   },
   "stats": {
@@ -18,7 +18,7 @@
     "heading": "Parmak izi motoru",
     "installed": "Kurulu",
     "notInstalled": "Kurulu değil",
-    "description": "fingerprint-chromium - canvas / WebGL / UA / platform / saat dilimini doğrudan motor içinde ayarlar, webdriver'ı gizler, WebRTC sızıntısını engeller. Ayarlar → Tarayıcı bölümünden açın.",
+    "description": "fingerprint-chromium canvas, WebGL, UA, platform ve saat dilimini doğrudan motor içinde ayarlar, webdriver'ı gizler ve WebRTC sızıntısını engeller. Ayarlar → Tarayıcı bölümünden açın.",
     "progressInstalling": "kuruluyor",
     "progressVerifying": "doğrulanıyor",
     "installing": "Kuruluyor",
@@ -31,13 +31,13 @@
     "ready": "Hazır",
     "notDetected": "Bulunamadı",
     "detectedDesc": "Hazır. {{path}} konumunda bulundu. Firefox profilleri gerçek Firefox'u proxy, UA, dil, saat dilimi ayarlarıyla ve WebRTC kapalı olarak başlatır.",
-    "notDetectedDesc": "Sistemde Firefox bulunamadı. Aşağıdan bir sürüm indirin - uygulamanın içine kurulur ve Firefox profilleri gerçek Firefox'u proxy, UA, dil, saat dilimi ayarlarıyla ve WebRTC kapalı olarak başlatır.",
+    "notDetectedDesc": "Sistemde Firefox bulunamadı. Aşağıdan bir sürüm indirin. Uygulamanın içine kurulur ve Firefox profilleri gerçek Firefox'u proxy, UA, dil, saat dilimi ayarlarıyla ve WebRTC kapalı olarak başlatır.",
     "fetching": "Firefox sürüm kataloğu alınıyor…",
     "empty": "Kullanılabilir Firefox sürümü yok (çevrimdışı mısınız?)."
   },
   "chromium": {
     "heading": "Chromium (Chrome for Testing)",
-    "subtitle": "Gerçek sürümler - UA, Client-Hints, TLS ve worker'lar sürümle gerçekten eşleşir.",
+    "subtitle": "Gerçek sürümler: UA, Client-Hints, TLS ve worker'lar sürümle gerçekten eşleşir.",
     "fetching": "Chrome for Testing kataloğu alınıyor…",
     "empty": "Kullanılabilir sürüm yok (çevrimdışı mısınız?)."
   },

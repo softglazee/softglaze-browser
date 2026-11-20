@@ -20,7 +20,7 @@
   },
   "importer": {
     "title": "Importuj do zespołu",
-    "description": "Wklej adres URL z Chrome Web Store lub 32-znakowy identyfikator - SoftGlaze pobierze i rozpakuje prawdziwy pakiet.",
+    "description": "Wklej adres URL z Chrome Web Store lub 32-znakowy identyfikator. SoftGlaze pobierze i rozpakuje prawdziwy pakiet.",
     "inputPlaceholder": "https://chromewebstore.google.com/detail/…  lub  cjpalhdlnbpafiamejdnhcphjbkeiagm",
     "submit": "Importuj do zespołu"
   },

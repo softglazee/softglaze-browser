@@ -43,7 +43,7 @@
     "message": "การสมัครสมาชิกของคุณสิ้นสุดแล้ว และการเปิดโปรไฟล์ถูกล็อก สมัครสมาชิกหรือป้อนรหัสการซื้อเพื่อกู้คืนสิทธิ์การเข้าถึง"
   },
   "trialRemaining": {
-    "message_other": "ทดลองใช้ฟรี - เหลืออีก {{count}} วัน"
+    "message_other": "ทดลองใช้ฟรี: เหลืออีก {{count}} วัน"
   },
   "seats": {
     "label": "ที่นั่งของทีม",
@@ -117,7 +117,7 @@
     "openPayLink": "เปิดลิงก์ชำระเงิน",
     "referencePlaceholder": "เลขอ้างอิงการชำระเงิน / รหัสธุรกรรม",
     "notePlaceholder": "หมายเหตุ (ไม่บังคับ)",
-    "submitForApproval": "ชำระเงินแล้ว - ส่งเพื่อขออนุมัติ",
+    "submitForApproval": "ชำระเงินแล้ว ส่งเพื่อขออนุมัติ",
     "manualActivationNote": "แพ็กเกจของคุณจะเปิดใช้งานเมื่อผู้ดูแลระบบยืนยันการชำระเงิน"
   },
   "admin": {
@@ -252,7 +252,7 @@
     "grantNoteFree": "บันทึกเป็นการมอบสิทธิ์มูลค่า $0",
     "fallbackAccount": "บัญชี",
     "fallbackPlan": "แพ็กเกจ",
-    "success_other": "กำหนด {{plan}} ให้ {{name}} แล้ว - {{count}} เดือน",
+    "success_other": "กำหนด {{plan}} ให้ {{name}} แล้ว เป็นเวลา {{count}} เดือน",
     "errors": {
       "chooseAccount": "เลือกบัญชี",
       "choosePlan": "เลือกแพ็กเกจ",

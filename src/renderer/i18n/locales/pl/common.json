@@ -26,7 +26,7 @@
     "settings": "Ustawienia"
   },
   "shell": {
-    "footerDefault": "© {year} SoftGlaze - Stworzone przez [SoftGlaze Team](https://softglaze.com) · Autor: [Azhar Ali](https://azhar.softglaze.com)",
+    "footerDefault": "© {year} SoftGlaze. Stworzone przez [SoftGlaze Team](https://softglaze.com) · Autor: [Azhar Ali](https://azhar.softglaze.com)",
     "antiDetect": "Wieloprofilowa",
     "darkMode": "Tryb ciemny",
     "lightMode": "Tryb jasny",
@@ -91,14 +91,14 @@
       "Każdy stworzony profil to nowe otwarte drzwi.",
       "Dyscyplina dziś, przewaga jutro.",
       "Małe, regularne działania składają się na wielkie wygrane.",
-      "Bądź czujny - przewaga tkwi w szczegółach.",
+      "Bądź czujny: przewaga tkwi w szczegółach.",
       "Skupienie wygrywa z pośpiechem. Wyceluj, potem działaj.",
       "Cicha praca dziś buduje imperium jutro.",
       "Precyzja to nawyk, nie przypadek.",
       "Przyjdź, skup się i pozwól, by mówiły wyniki.",
       "Jeszcze jedna sesja, jeszcze jedna wygrana.",
       "Wielkość to po prostu seria dobrze przeżytych dni.",
-      "Twoje przyszłe ja patrzy - spraw, by było dumne.",
+      "Twoje przyszłe ja patrzy. Spraw, by było dumne.",
       "Działaj z zamysłem. Skaluj z pewnością."
     ],
     "overview": "Przegląd",
@@ -231,7 +231,7 @@
     "launchesTitle": "Uruchomienia",
     "launchesSub": "Ostatnie 7 dni",
     "sampleBadge": "Przykład",
-    "sampleNote": "Tylko poglądowo — historia uruchomień z podziałem na dni nie jest jeszcze zapisywana.",
+    "sampleNote": "Tylko poglądowo. Historia uruchomień z podziałem na dni nie jest jeszcze zapisywana.",
     "proxyTypesTitle": "Typy proxy",
     "proxyTypesSub": "Podział puli wg protokołu",
     "noData": "Brak danych",
@@ -299,5 +299,15 @@
     "settingsHidden": "Administrator wyłączył Ustawienia dla Twojego konta.",
     "proxiesHidden": "Administrator wyłączył Proxy dla Twojego konta.",
     "profilesHidden": "Administrator wyłączył Profile dla Twojego konta."
+  },
+  "promo": {
+    "bf2026": {
+      "text": "Black Friday: Pro Dożywotni {{pro}} lub Enterprise Dożywotni {{enterprise}}, jedna płatność. Oferta do 1 grudnia, 23:59 UTC."
+    },
+    "xmas2026": {
+      "text": "Oferta świąteczna: Pro Dożywotni {{pro}} lub Enterprise Dożywotni {{enterprise}}, jedna płatność. Oferta do 31 grudnia, 23:59 UTC."
+    },
+    "cta": "Zobacz ofertę",
+    "dismiss": "Ukryj tę ofertę"
   }
 }

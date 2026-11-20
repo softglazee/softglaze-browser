@@ -49,7 +49,7 @@
       "savedMsg": "Zapisano.",
       "saveError": "Nie udało się zapisać.",
       "connectionOk": "Połączenie działa ✓",
-      "validationFailedKeys": "Weryfikacja nie powiodła się - sprawdź klucze.",
+      "validationFailedKeys": "Weryfikacja nie powiodła się. Sprawdź klucze.",
       "validationFailed": "Weryfikacja nie powiodła się."
     },
     "manual": {
@@ -82,7 +82,7 @@
       "openLinkTitle": "Otwórz link {{provider}}",
       "saving": "Zapisywanie…",
       "saveButton": "Zapisz linki",
-      "footnote": "Te linki obsługują przyciski „Kup w…” / „Otwórz panel” na karcie Pula proxy → Dostawcy. To tylko publiczne adresy polecające - tokeny proxy i dane logowania nie są nigdy zmieniane."
+      "footnote": "Te linki obsługują przyciski „Kup w…” / „Otwórz panel” na karcie Pula proxy → Dostawcy. To tylko publiczne adresy polecające. Tokeny proxy i dane logowania nie są nigdy zmieniane."
     }
   },
   "developerApi": {
@@ -100,7 +100,7 @@
       "title": "Klucze API",
       "namePlaceholder": "Nazwa klucza (np. Serwer CI)",
       "generate": "Wygeneruj nowy klucz API",
-      "copyOnce": "Skopiuj ten klucz teraz - jest pokazywany tylko raz i nie można go odzyskać.",
+      "copyOnce": "Skopiuj ten klucz teraz. Jest pokazywany tylko raz i nie można go odzyskać.",
       "empty": "Brak kluczy API.",
       "lastUsed": "ostatnio użyty {{when}}",
       "neverUsed": "nigdy nieużyty",

@@ -18,7 +18,7 @@
   },
   "importer": {
     "title": "Ins Team importieren",
-    "description": "Fügen Sie eine Chrome-Web-Store-URL oder ihre 32-stellige ID ein – SoftGlaze lädt das echte Paket herunter und entpackt es.",
+    "description": "Fügen Sie eine Chrome-Web-Store-URL oder ihre 32-stellige ID ein. SoftGlaze lädt das echte Paket herunter und entpackt es.",
     "inputPlaceholder": "https://chromewebstore.google.com/detail/…  oder  cjpalhdlnbpafiamejdnhcphjbkeiagm",
     "submit": "Ins Team importieren"
   },

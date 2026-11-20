@@ -104,7 +104,7 @@
     "chooseSpreadsheet": "Tablo dosyası seçin",
     "colIdentityField": "Kimlik alanı",
     "colYourColumn": "Sütununuz",
-    "skipOption": "- atla -",
+    "skipOption": "(atla)",
     "mappedCount_one": "{{count}} alan eşlendi. Adı/e-postası/kullanıcı adı olmayan satırlar atlanır.",
     "mappedCount_other": "{{count}} alan eşlendi. Adı/e-postası/kullanıcı adı olmayan satırlar atlanır.",
     "done": "Bitti",
@@ -124,7 +124,7 @@
     "errors": {
       "noRows": "Bu dosyada okunabilir bir başlık satırı veya veri satırı yok.",
       "readFile": "Bu dosya okunamadı.",
-      "nothingMapped": "İçe aktarılacak satır yok - Ad / Soyad / E-posta / Kullanıcı adı alanlarından en az birini eşleyin.",
+      "nothingMapped": "İçe aktarılacak satır yok. Ad / Soyad / E-posta / Kullanıcı adı alanlarından en az birini eşleyin.",
       "failed": "İçe aktarma başarısız oldu."
     }
   },

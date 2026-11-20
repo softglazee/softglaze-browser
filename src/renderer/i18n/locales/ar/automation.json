@@ -195,7 +195,7 @@
     "starting": "جارٍ البدء…",
     "logStarted": "بدأ «{{name}}» · {{total}} خطوة/خطوات على {{profile}}",
     "logStepRunning": "▶ {{label}}: {{summary}}",
-    "logStepError": "✕ {{label}} - {{error}}",
+    "logStepError": "✕ {{label}}: {{error}}",
     "logStepFailed": "فشل",
     "logStopped": "توقف.",
     "logFinished": "انتهى، {{ran}}/{{total}} خطوة/خطوات.",
@@ -212,7 +212,7 @@
     "errors": {
       "run": "تعذّر تشغيل الماكرو."
     },
-    "logStepSkipped": "تخطي {{label}} (اختياري) - {{error}}"
+    "logStepSkipped": "تخطي {{label}} (اختياري): {{error}}"
   },
   "parallel": {
     "states": {
@@ -239,7 +239,7 @@
     "dataHint": "اختياري: اربط جدول بيانات (صف ← ملف، بالترتيب)",
     "clearDataBinding": "إلغاء ربط البيانات",
     "bindData": "ربط البيانات",
-    "columnsPrefix": "الأعمدة: {{columns}} - استخدم",
+    "columnsPrefix": "الأعمدة: {{columns}}. استخدم",
     "columnsSuffix": "في خطوات الماكرو.",
     "profilesLabel": "الملفات ({{count}} محدد)",
     "selectAll": "تحديد الكل",

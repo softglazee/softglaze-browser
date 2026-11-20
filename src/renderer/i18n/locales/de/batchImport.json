@@ -48,7 +48,7 @@
   },
   "autoBind": {
     "label": "Proxys automatisch nach Land zuweisen",
-    "descPrefix": "– Zeilen ohne eigenen Proxy erhalten einen gespeicherten Proxy, dessen geprüftes Land zur Spalte",
+    "descPrefix": "für Zeilen ohne eigenen Proxy: Sie erhalten einen gespeicherten Proxy, dessen geprüftes Land zur Spalte",
     "descSuffix": "der Zeile passt (reihum unter den Treffern).",
     "sourceLabel": "Zuweisen aus",
     "sourcePaid": "Ihre Proxys",
@@ -68,7 +68,7 @@
   },
   "quick": {
     "engineTitle": "Fortlaufende Generierung",
-    "description": "Erstellen Sie sofort viele Profile ohne Tabelle – eindeutige Fingerprints, fortlaufende Namen, eine Zielgruppe (direkt anlegbar) und Proxy-Zuweisung aus einer bestimmten Gruppe oder von einem Anbieter. Nutzt genau dieselbe Engine wie die Profilseite.",
+    "description": "Erstellen Sie sofort viele Profile ohne Tabelle: eindeutige Fingerprints, fortlaufende Namen, eine Zielgruppe (direkt anlegbar) und Proxy-Zuweisung aus einer bestimmten Gruppe oder von einem Anbieter. Nutzt genau dieselbe Engine wie die Profilseite.",
     "openButton": "Schnell erstellen öffnen"
   },
   "errors": {

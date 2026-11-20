@@ -118,7 +118,7 @@
     "footerCardTitle": "Pied de page de l'application",
     "footerCardDesc": "Affiché en bas de chaque page. Utilisez {year} pour l'année en cours ; les liens s'ouvrent dans votre navigateur.",
     "preview": "Aperçu",
-    "previewEmpty": "- vide -",
+    "previewEmpty": "(vide)",
     "saveFooter": "Enregistrer le pied de page",
     "hideFooter": "Masquer le pied de page",
     "showFooter": "Afficher le pied de page",

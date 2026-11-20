@@ -183,7 +183,7 @@
       "targetingTitle": "Kierowanie",
       "save": "Zapisz dane",
       "saving": "Zapisywanie…",
-      "saved": "Dane zapisane - gotowe do pobrania",
+      "saved": "Dane zapisane, gotowe do pobrania",
       "cleared": "Usunięto zapisane dane"
     },
     "rotating": {
@@ -195,7 +195,7 @@
       "checkProxy": "Sprawdź proxy",
       "ok": "OK",
       "failed": "Błąd",
-      "tip": "Wskazówka: rotująca brama używa tego samego host:port dla każdej sesji - nazwa użytkownika/hasło (lub token sesji sticky) wybiera wyjściowy IP.",
+      "tip": "Wskazówka: rotująca brama używa tego samego host:port dla każdej sesji. Nazwa użytkownika/hasło (lub token sesji sticky) wybiera wyjściowy IP.",
       "saveCreds": "Zapisz dane",
       "credsSaved": "Zapisano"
     },

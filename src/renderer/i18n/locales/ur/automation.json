@@ -191,10 +191,10 @@
     "starting": "شروع ہو رہا ہے…",
     "logStarted": "\"{{name}}\" شروع ہوا · {{profile}} پر {{total}} قدم",
     "logStepRunning": "▶ {{label}}: {{summary}}",
-    "logStepError": "✕ {{label}} - {{error}}",
+    "logStepError": "✕ {{label}}: {{error}}",
     "logStepFailed": "ناکام",
     "logStopped": "روک دیا گیا۔",
-    "logFinished": "مکمل - {{ran}}/{{total}} قدم۔",
+    "logFinished": "مکمل: {{ran}}/{{total}} قدم۔",
     "stopped": "روک دیا گیا۔",
     "finished": "مکمل۔",
     "summaryCompleted": "{{ran}}/{{total}} قدم مکمل ہوئے۔",
@@ -208,7 +208,7 @@
     "errors": {
       "run": "میکرو چل نہیں سکا۔"
     },
-    "logStepSkipped": "{{label}} چھوڑ دیا (اختیاری) - {{error}}"
+    "logStepSkipped": "{{label}} چھوڑ دیا (اختیاری): {{error}}"
   },
   "parallel": {
     "states": {
@@ -231,14 +231,14 @@
     "dataHint": "اختیاری: اسپریڈ شیٹ جوڑیں (قطار ← پروفائل، ترتیب سے)",
     "clearDataBinding": "ڈیٹا کا جوڑ ہٹائیں",
     "bindData": "ڈیٹا جوڑیں",
-    "columnsPrefix": "کالمز: {{columns}} - میکرو کے قدموں میں",
+    "columnsPrefix": "کالمز: {{columns}}۔ میکرو کے قدموں میں",
     "columnsSuffix": "استعمال کریں۔",
     "profilesLabel": "پروفائلز ({{count}} منتخب)",
     "selectAll": "سب منتخب کریں",
     "clear": "صاف کریں",
     "searchPlaceholder": "تلاش",
     "noProfiles": "کوئی پروفائل نہیں ملی۔",
-    "rowMismatch": "{{rows}} ڈیٹا قطاریں اور {{profiles}} پروفائلز - اضافی پروفائلز ویری ایبلز کے بغیر چلیں گی۔",
+    "rowMismatch": "{{rows}} ڈیٹا قطاریں اور {{profiles}} پروفائلز، اضافی پروفائلز ویری ایبلز کے بغیر چلیں گی۔",
     "running": "چل رہا ہے…",
     "runOn_one": "{{count}} پروفائل پر چلائیں",
     "runOn_other": "{{count}} پروفائلز پر چلائیں",
@@ -251,9 +251,9 @@
     "profileFallback": "پروفائل {{id}}",
     "runConsole": "رن کنسول",
     "live": "لائیو",
-    "consoleIdle": "[ idle ] ابھی کوئی رن نہیں - پیش رفت یہاں دکھے گی (کوکیز یا لاگ ان معلومات کبھی شامل نہیں ہوتیں)۔",
-    "logRunFinished": "رن مکمل - {{passed}}/{{total}} کامیاب",
-    "logRunFinishedError": "رن مکمل - {{passed}}/{{total}} کامیاب ({{error}})",
+    "consoleIdle": "[ idle ] ابھی کوئی رن نہیں۔ پیش رفت یہاں دکھے گی (کوکیز یا لاگ ان معلومات کبھی شامل نہیں ہوتیں)۔",
+    "logRunFinished": "رن مکمل: {{passed}}/{{total}} کامیاب",
+    "logRunFinishedError": "رن مکمل: {{passed}}/{{total}} کامیاب ({{error}})",
     "errors": {
       "readSpreadsheet": "اسپریڈ شیٹ پڑھی نہیں جا سکی۔",
       "chooseMacro": "چلانے کے لیے میکرو چنیں۔",

@@ -18,7 +18,7 @@
   },
   "importer": {
     "title": "Nhập vào nhóm",
-    "description": "Dán URL Chrome Web Store hoặc ID 32 ký tự - Softglaze sẽ tải và giải nén gói thật.",
+    "description": "Dán URL Chrome Web Store hoặc ID 32 ký tự. Softglaze sẽ tải và giải nén gói thật.",
     "inputPlaceholder": "https://chromewebstore.google.com/detail/…  hoặc  cjpalhdlnbpafiamejdnhcphjbkeiagm",
     "submit": "Nhập vào nhóm"
   },

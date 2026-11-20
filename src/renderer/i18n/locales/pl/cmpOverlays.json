@@ -63,13 +63,13 @@
       "subtitleShort_other": "Szybka konfiguracja w {{count}} krokach. Każdy krok możesz pominąć.",
       "unavailable": "Wyszarzone kroki są pomijane: Twoje konto nie może ich wykonać.",
       "getStarted": "Zaczynamy",
-      "stepEmail": "E-mail (SMTP) - opcjonalnie, dla kodów OTP",
-      "stepProxy": "Pierwsze proxy - opcjonalnie",
+      "stepEmail": "E-mail (SMTP), opcjonalnie, dla kodów OTP",
+      "stepProxy": "Pierwsze proxy (opcjonalnie)",
       "stepProfile": "Pierwszy profil przeglądarki"
     },
     "smtp": {
       "title": "E-mail (SMTP)",
-      "subtitle": "Opcjonalnie - pozwala aplikacji wysyłać kody weryfikacyjne. Możesz to ustawić później w Ustawieniach.",
+      "subtitle": "Opcjonalnie. Pozwala aplikacji wysyłać kody weryfikacyjne. Możesz to ustawić później w Ustawieniach.",
       "host": "Host SMTP",
       "hostPlaceholder": "smtp.example.com",
       "port": "Port",
@@ -81,7 +81,7 @@
     },
     "proxy": {
       "title": "Dodaj pierwsze proxy",
-      "subtitle": "Opcjonalnie - daj każdej tożsamości własną sieć. Więcej dodasz w Puli proxy.",
+      "subtitle": "Opcjonalnie. Daj każdej tożsamości własną sieć. Więcej dodasz w Puli proxy.",
       "type": "Typ",
       "host": "Host",
       "hostPlaceholder": "1.2.3.4",
@@ -102,7 +102,7 @@
       "deviceType": "Typ urządzenia",
       "desktop": "Komputer",
       "mobile": "Telefon (Android)",
-      "mobileNote": "Android jest emulowany na silniku desktopowym - spójne UA, dotyk, ekran i GPU, ale to nie jest prawdziwe urządzenie.",
+      "mobileNote": "Android jest emulowany na silniku desktopowym: spójne UA, dotyk, ekran i GPU, ale to nie jest prawdziwe urządzenie.",
       "proxyAttached": "Nowe proxy zostanie przypisane do tego profilu."
     }
   }

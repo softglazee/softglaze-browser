@@ -89,7 +89,7 @@
     "valClose": "閉じる",
     "coresValue_other": "{{count}}コア",
     "gbValue": "{{gb}} GB",
-    "deviceMemoryValue": "{{gb}} GB - サイトから見える値（Chromeはnavigator.deviceMemoryの上限を8にしています）",
+    "deviceMemoryValue": "{{gb}} GB（サイトから見える値。Chromeはnavigator.deviceMemoryの上限を8にしています）",
     "footerValues": "値はプロファイルの設定を反映しています。",
     "footerEngineNote": "User-Agentが「‹engine›」の場合、フィンガープリントの一貫性のため、バージョンは同梱のChromiumに従います。",
     "uaFirefoxOwn": "Firefox本来のUser-Agent",

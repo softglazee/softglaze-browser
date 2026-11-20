@@ -26,7 +26,7 @@
     "settings": "設定"
   },
   "shell": {
-    "footerDefault": "© {year} SoftGlaze - 制作: [SoftGlaze Team](https://softglaze.com) · 開発: [Azhar Ali](https://azhar.softglaze.com)",
+    "footerDefault": "© {year} SoftGlaze · 制作: [SoftGlaze Team](https://softglaze.com) · 開発: [Azhar Ali](https://azhar.softglaze.com)",
     "antiDetect": "マルチプロファイル",
     "darkMode": "ダークモード",
     "lightMode": "ライトモード",
@@ -221,7 +221,7 @@
       "title": "言語",
       "description": "SoftGlazeの画面に表示する言語を選択します。",
       "label": "表示言語",
-      "hint": "対応言語は今後さらに増えます。変更はアプリ全体にすぐ反映されます。"
+      "hint": "変更はアプリ全体にすぐ反映されます。"
     }
   },
   "startLinks": {
@@ -260,5 +260,15 @@
     "settingsHidden": "設定は管理者によってあなたのアカウントで無効にされています。",
     "proxiesHidden": "プロキシは管理者によってあなたのアカウントで無効にされています。",
     "profilesHidden": "プロファイルは管理者によってあなたのアカウントで無効にされています。"
+  },
+  "promo": {
+    "bf2026": {
+      "text": "ブラックフライデー：Pro 永久ライセンス {{pro}}、または Enterprise 永久ライセンス {{enterprise}}。お支払いは1回のみです。12月1日 23:59 UTC まで。"
+    },
+    "xmas2026": {
+      "text": "クリスマス限定枠：Pro 永久ライセンス {{pro}}、または Enterprise 永久ライセンス {{enterprise}}。お支払いは1回のみです。12月31日 23:59 UTC まで。"
+    },
+    "cta": "オファーを見る",
+    "dismiss": "このオファーを非表示"
   }
 }

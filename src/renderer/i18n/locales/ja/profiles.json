@@ -35,11 +35,11 @@
     "subtitle": "選択したプロファイルのプロキシを再割り当て、入れ替え、またはクリアします。",
     "modeLabel": "操作",
     "modes": {
-      "unique": "個別 - プロファイルごとに異なるプロキシを1つ",
-      "pool": "ラウンドロビン - セットをプロファイル間で分配",
+      "unique": "個別：プロファイルごとに異なるプロキシを1つ",
+      "pool": "ラウンドロビン：セットをプロファイル間で分配",
       "single": "選択したすべてに同じプロキシを1つ",
-      "shuffle": "シャッフル - 既存のプロキシを入れ替え",
-      "clear": "クリア - プロキシを削除 (直接接続)"
+      "shuffle": "シャッフル：既存のプロキシを入れ替え",
+      "clear": "クリア：プロキシを削除 (直接接続)"
     },
     "sourceLabel": "プロキシの取得元",
     "sources": {
@@ -49,7 +49,7 @@
       "paste": "リストを貼り付け"
     },
     "pickGroup": "グループを選択…",
-    "pastePlaceholder": "host:port:user:pass - 1行に1つ",
+    "pastePlaceholder": "host:port:user:pass（1行に1つ）",
     "verify": "先にプロキシが動作中か確認 (時間がかかります)",
     "proxyLabel": "プロキシ",
     "pickProxy": "プロキシを選択…",
@@ -302,7 +302,7 @@
     "coreSettings": "基本設定",
     "coreSettingsSub": "拡張機能とブラウザの動作",
     "extension": "拡張機能",
-    "extensionDesc": "[拡張機能 - チームの拡張機能] で有効になっている拡張機能が、プロファイルにインストールされます。",
+    "extensionDesc": "[拡張機能 → チームの拡張機能] で有効になっている拡張機能が、プロファイルにインストールされます。",
     "teamExtensions": "チームの拡張機能",
     "noExtensions": "拡張機能なし",
     "dataSync": "データ同期",
@@ -426,7 +426,7 @@
     "queueWidth": "件ずつ",
     "queueWidthTitle": "同時に開いておくプロファイル数。1つ閉じるとすぐに次が開きます。",
     "synchronize": "同期",
-    "synchronizeTitle": "マスター + スレーブのミラーウィンドウとして起動",
+    "synchronizeTitle": "メイン + サブのミラーウィンドウとして起動",
     "close": "閉じる",
     "tag": "タグ",
     "tagTitle": "タグを追加または削除",

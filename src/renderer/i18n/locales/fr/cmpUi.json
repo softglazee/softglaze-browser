@@ -13,10 +13,10 @@
     "resumeFailed": "Échec de la reprise.",
     "paused": "En pause",
     "interrupted": "Interrompu",
-    "resumeTitle": "{{state}} à {{percent}} % - reprendre",
+    "resumeTitle": "{{state}} à {{percent}} %, reprendre",
     "statusInstalling": "inst.",
     "statusQueued": "…",
-    "retryTitle": "Réessayer - {{error}}",
+    "retryTitle": "Réessayer ({{error}})",
     "downloadFailedShort": "échec du téléchargement",
     "downloadInstallTitle": "Télécharger et installer cette version"
   },

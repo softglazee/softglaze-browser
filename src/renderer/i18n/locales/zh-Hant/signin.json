@@ -1,7 +1,7 @@
 {
   "choose": {
-    "title": "歡迎使用 SoftGlaze",
-    "subtitle": "登入以建立你的工作區，無需密碼。",
+    "title": "建立免費帳號",
+    "subtitle": "使用已有帳號，無需新密碼。",
     "google": "使用 Google 繼續",
     "microsoft": "使用 Microsoft 繼續",
     "facebook": "使用 Facebook 繼續",
@@ -9,12 +9,16 @@
     "allowEmail": "允許存取電子郵件並重試 Facebook",
     "github": "使用 GitHub 繼續",
     "email": "使用電子郵件繼續",
-    "or": "或",
-    "moreOptions": "更多選項",
-    "moreOptionsHint": "改用名稱和密碼建立工作區",
+    "moreOptions": "使用密碼設定",
+    "moreOptionsHint": "想用名稱和密碼？",
     "privacy": "我們只會取得你的姓名和已驗證的電子郵件地址。",
     "haveAccount": "這台電腦上已有工作區？",
-    "logIn": "登入"
+    "logIn": "使用密碼登入",
+    "signInTitle": "登入 SoftGlaze",
+    "signInSubtitle": "請使用註冊時的帳號。如果你的方案在另一台電腦上，可以將其轉移到這台電腦。",
+    "entryLabel": "新使用者或舊使用者",
+    "entryNew": "新帳號",
+    "entryReturning": "我已有帳號"
   },
   "unlock": {
     "title": "歡迎回來",

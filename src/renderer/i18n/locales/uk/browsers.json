@@ -18,7 +18,7 @@
     "heading": "Рушій відбитків",
     "installed": "Встановлено",
     "notInstalled": "Не встановлено",
-    "description": "fingerprint-chromium задає власні значення canvas / WebGL / UA / платформи / часового поясу на рівні рушія, приховує webdriver і закриває витік WebRTC. Увімкніть його в Налаштування → Браузер.",
+    "description": "fingerprint-chromium задає canvas, WebGL, UA, платформу й часовий пояс на рівні рушія, приховує webdriver і блокує витік WebRTC. Увімкніть його в Налаштування → Браузер.",
     "progressInstalling": "встановлення",
     "progressVerifying": "перевірка",
     "installing": "Встановлення",

@@ -135,7 +135,7 @@
     "inviteTitle": "Zaproś członka",
     "editTitle": "Edytuj: {{name}}",
     "noCreatableRoles": "Nie możesz tworzyć podczłonków.",
-    "invitePendingCode": "Zaproszenie oczekuje - kod"
+    "invitePendingCode": "Zaproszenie oczekuje, kod"
   },
   "fields": {
     "name": "Imię",
@@ -184,14 +184,14 @@
     "title": "Stan konta",
     "reason": "Powód: {{reason}}",
     "unban": "Odblokuj członka",
-    "banHint": "Edycja pól powyżej zachowuje blokadę - użyj Odblokuj, aby przywrócić dostęp.",
+    "banHint": "Edycja pól powyżej zachowuje blokadę. Użyj Odblokuj, aby przywrócić dostęp.",
     "suspendToggle": "Zawieś tego członka (blokuje logowanie)",
     "ban": "Zablokuj członka"
   },
   "delete": {
     "title": "Usuń: {{name}}",
     "warnPrefix": "To usuwa: ",
-    "warnMiddle": " i przenosi podległych członków do Ciebie. Wybierz, co stanie się z danymi -",
+    "warnMiddle": " i przenosi podległych członków do Ciebie. Wybierz, co stanie się z danymi:",
     "profilesWord_one": "profil",
     "profilesWord_few": "profile",
     "profilesWord_many": "profili",
@@ -216,14 +216,14 @@
     },
     "pickTarget": "Wybierz członka, który otrzyma dane.",
     "reassignTo": "Przypisz do",
-    "noOtherMembers": "Brak innych członków - wybierz inną opcję."
+    "noOtherMembers": "Brak innych członków. Wybierz inną opcję."
   },
   "assign": {
     "title": "Przypisz profile · {{name}}",
     "searchPlaceholder": "Szukaj profili",
     "noProfiles": "Nie znaleziono profili.",
     "memberFallback": "członek #{{id}}",
-    "updated": "Zaktualizowano - przypisano {{assigned}}, odpięto {{unassigned}}.",
+    "updated": "Zaktualizowano: przypisano {{assigned}}, odpięto {{unassigned}}.",
     "save": "Zapisz przypisanie"
   },
   "activity": {
@@ -273,7 +273,7 @@
     "days": "{{count}} dn. temu"
   },
   "license": {
-    "intro": "Stan subskrypcji dla każdego obszaru roboczego właściciela. Lokalnie i w miarę możliwości - zdeterminowany użytkownik może nadal edytować lokalną bazę lub zegar; trwałe egzekwowanie wymaga serwera licencji.",
+    "intro": "Stan subskrypcji dla każdego obszaru roboczego właściciela. Lokalnie i w miarę możliwości. Zdeterminowany użytkownik może nadal edytować lokalną bazę lub zegar; trwałe egzekwowanie wymaga serwera licencji.",
     "noOwners": "Brak obszarów roboczych właścicieli.",
     "editTitle": "Licencja · {{name}}",
     "setState": "Ustaw stan",

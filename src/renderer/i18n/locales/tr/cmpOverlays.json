@@ -61,13 +61,13 @@
       "subtitleShort_other": "{{count}} adımlık hızlı kurulum. İstediğiniz adımı atlayabilirsiniz.",
       "unavailable": "Gri adımlar atlanır: hesabınız bunları yapamaz.",
       "getStarted": "Başlayın",
-      "stepEmail": "E-posta (SMTP) - isteğe bağlı, OTP kodları için",
-      "stepProxy": "İlk proxy'niz - isteğe bağlı",
+      "stepEmail": "E-posta (SMTP), isteğe bağlı, OTP kodları için",
+      "stepProxy": "İlk proxy'niz (isteğe bağlı)",
       "stepProfile": "İlk tarayıcı profiliniz"
     },
     "smtp": {
       "title": "E-posta (SMTP)",
-      "subtitle": "İsteğe bağlı - uygulamanın doğrulama kodları göndermesini sağlar. Bunu daha sonra Ayarlar'dan yapabilirsiniz.",
+      "subtitle": "İsteğe bağlı. Uygulamanın doğrulama kodları göndermesini sağlar. Bunu daha sonra Ayarlar'dan yapabilirsiniz.",
       "host": "SMTP sunucusu",
       "hostPlaceholder": "smtp.example.com",
       "port": "Port",
@@ -79,7 +79,7 @@
     },
     "proxy": {
       "title": "İlk proxy'nizi ekleyin",
-      "subtitle": "İsteğe bağlı - her kimliğe kendi ağını verin. Daha fazlasını Proxy havuzu'ndan ekleyebilirsiniz.",
+      "subtitle": "İsteğe bağlı. Her kimliğe kendi ağını verin. Daha fazlasını Proxy havuzu'ndan ekleyebilirsiniz.",
       "type": "Tür",
       "host": "Sunucu",
       "hostPlaceholder": "1.2.3.4",
@@ -100,7 +100,7 @@
       "deviceType": "Cihaz türü",
       "desktop": "Masaüstü",
       "mobile": "Mobil (Android)",
-      "mobileNote": "Android, masaüstü motorunda taklit edilir - tutarlı UA, dokunma, ekran ve GPU, ancak gerçek bir cihaz değil.",
+      "mobileNote": "Android, masaüstü motorunda taklit edilir: tutarlı UA, dokunma, ekran ve GPU, ancak gerçek bir cihaz değil.",
       "proxyAttached": "Yeni proxy'niz bu profile bağlanacak."
     }
   }

@@ -26,7 +26,7 @@
     "settings": "الإعدادات"
   },
   "shell": {
-    "footerDefault": "© {year} SoftGlaze - من تطوير [فريق SoftGlaze](https://softglaze.com) · برمجة [Azhar Ali](https://azhar.softglaze.com)",
+    "footerDefault": "© {year} SoftGlaze · من تطوير [فريق SoftGlaze](https://softglaze.com) · برمجة [Azhar Ali](https://azhar.softglaze.com)",
     "antiDetect": "ملفات متعددة",
     "darkMode": "الوضع الداكن",
     "lightMode": "الوضع الفاتح",
@@ -281,7 +281,7 @@
       "title": "اللغة",
       "description": "اختر لغة العرض لواجهة SoftGlaze.",
       "label": "لغة العرض",
-      "hint": "المزيد من اللغات قادم قريبًا. تُطبَّق التغييرات فورًا في كامل التطبيق."
+      "hint": "تُطبَّق التغييرات فورًا في كامل التطبيق."
     }
   },
   "startLinks": {
@@ -325,5 +325,15 @@
     "settingsHidden": "أوقف أحد المسؤولين الإعدادات لحسابك.",
     "proxiesHidden": "أوقف أحد المسؤولين البروكسيات لحسابك.",
     "profilesHidden": "أوقف أحد المسؤولين الملفات لحسابك."
+  },
+  "promo": {
+    "bf2026": {
+      "text": "الجمعة السوداء: Pro مدى الحياة بسعر {{pro}} أو Enterprise مدى الحياة بسعر {{enterprise}}، بدفعة واحدة. ينتهي العرض في 1 ديسمبر، 23:59 UTC."
+    },
+    "xmas2026": {
+      "text": "عرض عيد الميلاد: Pro مدى الحياة بسعر {{pro}} أو Enterprise مدى الحياة بسعر {{enterprise}}، بدفعة واحدة. ينتهي العرض في 31 ديسمبر، 23:59 UTC."
+    },
+    "cta": "اطّلع على العرض",
+    "dismiss": "إخفاء هذا العرض"
   }
 }

@@ -38,11 +38,11 @@
     "subtitle": "Gán lại, hoán đổi hoặc gỡ proxy trên các hồ sơ đã chọn.",
     "modeLabel": "Thao tác",
     "modes": {
-      "unique": "Riêng biệt - mỗi hồ sơ một proxy khác nhau",
-      "pool": "Lần lượt - chia một bộ proxy cho các hồ sơ",
+      "unique": "Riêng biệt: mỗi hồ sơ một proxy khác nhau",
+      "pool": "Lần lượt: chia một bộ proxy cho các hồ sơ",
       "single": "Một proxy cho tất cả hồ sơ đã chọn",
-      "shuffle": "Xáo trộn - hoán đổi proxy các hồ sơ đang có",
-      "clear": "Gỡ - bỏ proxy (kết nối trực tiếp)"
+      "shuffle": "Xáo trộn: hoán đổi proxy các hồ sơ đang có",
+      "clear": "Gỡ: bỏ proxy (kết nối trực tiếp)"
     },
     "sourceLabel": "Lấy proxy từ",
     "sources": {
@@ -52,14 +52,14 @@
       "paste": "Dán danh sách"
     },
     "pickGroup": "Chọn nhóm…",
-    "pastePlaceholder": "host:port:user:pass - mỗi dòng một proxy",
+    "pastePlaceholder": "host:port:user:pass, mỗi dòng một proxy",
     "verify": "Kiểm tra proxy còn hoạt động trước (chậm hơn)",
     "proxyLabel": "Proxy",
     "pickProxy": "Chọn proxy…",
     "shuffleNote": "Mỗi hồ sơ đã chọn đổi sang proxy của một hồ sơ đã chọn khác. Cần ít nhất hai hồ sơ có proxy.",
     "clearNote": "Gỡ proxy khỏi mọi hồ sơ đã chọn (chúng sẽ kết nối trực tiếp).",
     "apply": "Áp dụng",
-    "limited": "Đã gán {{assigned}} - {{skipped}} hồ sơ không còn proxy nào trong nguồn.",
+    "limited": "Đã gán {{assigned}}. {{skipped}} hồ sơ không còn proxy nào trong nguồn.",
     "socks4Chromium": "{{count}} hồ sơ mở bằng Chromium, mà Chromium sẽ không khởi chạy qua proxy SOCKS4 (DNS sẽ bị rò rỉ). Hãy chuyển chúng sang Firefox hoặc gán proxy SOCKS5 hay HTTP."
   },
   "tabs": {
@@ -95,7 +95,7 @@
     "noBuilds": "Google Chrome chưa được cài và chưa tải bản Chrome nào. Hãy tải một phiên bản bên dưới trước khi mở hồ sơ này.",
     "downloadMore": "Tải thêm phiên bản",
     "identity": "Nhận dạng",
-    "identityHelpPre": "Chạy cùng bản Chrome thật ở trên, nhưng hiển thị là trình duyệt Chromium đã chọn - token UA, thương hiệu Sec-CH-UA và nhận dạng navigator đều khớp, còn TLS/JA4 vẫn là thật (bên dưới nó ",
+    "identityHelpPre": "Chạy cùng bản Chrome thật ở trên, nhưng hiển thị là trình duyệt Chromium đã chọn: token UA, thương hiệu Sec-CH-UA và nhận dạng navigator đều khớp, còn TLS/JA4 vẫn là thật (bên dưới nó ",
     "identityHelpEmph": "chính là",
     "identityHelpPost": " Chromium).",
     "os": "Hệ điều hành",
@@ -121,7 +121,7 @@
     "crossOsWarning": "Hồ sơ này khai báo {{os}} nhưng chạy trên {{host}}. Phông chữ của máy, cách vẽ canvas và hành vi TLS/bộ máy JS thật vẫn cho thấy {{host}}, nên các công cụ quét có thể nhận ra sự không khớp. Hãy dùng {{host}} trừ khi bạn thật sự cần hồ sơ khác hệ điều hành.",
     "engine": "Bộ máy",
     "antidetectLabel": "Bộ máy dấu vân tay (fingerprint-chromium)",
-    "antidetectHelp": "Khởi chạy hồ sơ này trên bộ máy fingerprint-chromium gốc - áp dụng cài đặt canvas / WebGL / UA / nền tảng / múi giờ riêng của hồ sơ ở cấp tệp chạy, ẩn navigator.webdriver và chặn rò rỉ WebRTC. Cần cài bộ máy (trang Trình duyệt). Tắt = Chrome tiêu chuẩn. Công tắc trong Cài đặt chung vẫn áp dụng cho các hồ sơ để tắt.",
+    "antidetectHelp": "Khởi chạy hồ sơ này trên bộ máy fingerprint-chromium gốc: áp dụng cài đặt canvas, WebGL, UA, nền tảng và múi giờ riêng của hồ sơ ở cấp tệp chạy, ẩn navigator.webdriver và chặn rò rỉ WebRTC. Cần cài bộ máy (trang Trình duyệt). Tắt = Chrome tiêu chuẩn. Công tắc trong Cài đặt chung vẫn áp dụng cho các hồ sơ để tắt.",
     "launchesAutoReal": "Tự động: hồ sơ này mở bằng Google Chrome {{major}} đã cài trên máy tính này.",
     "launchesAutoDownloaded": "Tự động: Google Chrome chưa được cài, nên hồ sơ này mở bằng bản tải về mới nhất, Chrome {{major}}.",
     "launchesPinnedReal": "Đã chọn Chrome {{major}}: hồ sơ này mở bằng Google Chrome {{major}} đã cài.",
@@ -162,7 +162,7 @@
     "passPlaceholder": "Mật khẩu proxy (không bắt buộc)",
     "selectProxy": "Chọn proxy",
     "chooseSaved": "-- Chọn một proxy đã lưu --",
-    "noSaved": "Chưa có proxy đã lưu - hãy thêm ở trang Kho proxy.",
+    "noSaved": "Chưa có proxy đã lưu. Hãy thêm ở trang Kho proxy.",
     "optgroupPaid": "Proxy của bạn",
     "optgroupFree": "Proxy miễn phí",
     "freeWarning": "Proxy miễn phí do người lạ vận hành: đừng bao giờ dùng hồ sơ này để đăng nhập tài khoản, nhập mật khẩu hay thanh toán.",
@@ -178,7 +178,7 @@
     "quicDisableTitle": "Tắt HTTP/3 (QUIC)",
     "quicEnableTitle": "Bật HTTP/3 (QUIC)",
     "quicLabel": "Bật HTTP/3 (hỗ trợ QUIC)",
-    "quicWarning": "⚠️ Cảnh báo: Chỉ bật với proxy cao cấp, chất lượng cao hỗ trợ đầy đủ việc tách biệt UDP. Bật QUIC mở khóa tốc độ HTTP/3 nhưng có thể gây rò rỉ mạng nếu cấu hình kém. Mặc định là Tắt (Riêng tư tối đa).",
+    "quicWarning": "⚠️ Cảnh báo: Chỉ bật với proxy cao cấp, chất lượng cao hỗ trợ đầy đủ việc tách biệt UDP. Bật QUIC mở khóa tốc độ HTTP/3 nhưng có thể gây rò rỉ mạng nếu cấu hình kém. Mặc định là Tắt (bảo vệ tối đa).",
     "showPassword": "Hiện mật khẩu",
     "hidePassword": "Ẩn mật khẩu",
     "typeLocal": "Cục bộ (PC này)",
@@ -198,7 +198,7 @@
     "passwordPlaceholder": "Mật khẩu",
     "twoFactor": "Khóa bí mật 2FA",
     "twoFactorPlaceholder": "Khóa xác thực Base32, ví dụ JBSWY3DPEHPK3PXP",
-    "twoFactorHint": "Dán khóa bí mật 2FA của tài khoản này. Softglaze tạo mã 6 chữ số trực tiếp - sao chép bằng một cú bấm từ danh sách Hồ sơ (huy hiệu 🔑 2FA)."
+    "twoFactorHint": "Dán khóa bí mật 2FA của tài khoản này. Softglaze tạo mã 6 chữ số trực tiếp, sao chép bằng một cú bấm từ danh sách Hồ sơ (huy hiệu 🔑 2FA)."
   },
   "fp": {
     "coreIdentity": "Nhận dạng cốt lõi",
@@ -235,7 +235,7 @@
     "speechVoicesNoise": "Nhiễu SpeechVoices",
     "mediaDevice": "Thiết bị đa phương tiện",
     "webglMetadata": "Thông tin WebGL",
-    "webglMetadataDesc": "Thật (khuyên dùng) báo GPU thật của bạn nhất quán trên trang, worker VÀ service worker - không có điểm lệch. Tùy chỉnh đặt chuỗi GPU khác nhưng service worker vẫn hiện GPU thật, điều mà các công cụ kiểm tra sẽ gắn cờ.",
+    "webglMetadataDesc": "Thật (khuyên dùng) báo GPU thật của bạn nhất quán trên trang, worker VÀ service worker, không có điểm lệch. Tùy chỉnh đặt chuỗi GPU khác nhưng service worker vẫn hiện GPU thật, điều mà các công cụ kiểm tra sẽ gắn cờ.",
     "configureGpu": "Cấu hình GPU tùy chỉnh",
     "autoRandomize": "Tự động ngẫu nhiên",
     "vendor": "Nhà cung cấp",
@@ -308,7 +308,7 @@
     "coreSettings": "Cài đặt cốt lõi",
     "coreSettingsSub": "Tiện ích và hành vi trình duyệt",
     "extension": "Tiện ích",
-    "extensionDesc": "Các tiện ích đã bật trong [Tiện ích - Tiện ích của nhóm] sẽ được cài vào hồ sơ.",
+    "extensionDesc": "Các tiện ích đã bật trong [Tiện ích → Tiện ích của nhóm] sẽ được cài vào hồ sơ.",
     "teamExtensions": "Tiện ích của nhóm",
     "noExtensions": "Không có tiện ích",
     "dataSync": "Đồng bộ dữ liệu",
@@ -468,7 +468,7 @@
     "savedFilters": "Bộ lọc đã lưu…",
     "save": "Lưu",
     "savePresetTitle": "Lưu bộ lọc hiện tại làm mẫu",
-    "savePresetPrompt": "Lưu bộ lọc hiện tại làm mẫu - tên:",
+    "savePresetPrompt": "Lưu bộ lọc hiện tại làm mẫu. Tên:",
     "profileCount_one": "{{count}} hồ sơ",
     "profileCount_other": "{{count}} hồ sơ",
     "used": "Đã dùng",
@@ -515,7 +515,7 @@
   },
   "actions": {
     "stop": "Dừng",
-    "inUseTitle": "{{member}} đang dùng - hãy nhờ họ đóng trước",
+    "inUseTitle": "{{member}} đang dùng. Hãy nhờ họ đóng trước",
     "launch": "Mở",
     "environmentOverview": "Tổng quan môi trường",
     "editConfig": "Sửa cấu hình",

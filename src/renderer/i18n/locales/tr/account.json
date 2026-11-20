@@ -5,7 +5,7 @@
     "description": "Profil fotoğrafınızı, adınızı, e-postanızı ve parolanızı yönetin."
   },
   "notice": {
-    "superAdmin": "Bu bir Süper Yönetici / kaynak sahibi oturumu - burada düzenlenecek bir üye kaydı yok."
+    "superAdmin": "Bu bir Süper Yönetici / kaynak sahibi oturumu. Burada düzenlenecek bir üye kaydı yok."
   },
   "fields": {
     "fullName": "Ad soyad",
@@ -20,7 +20,7 @@
   "avatar": {
     "alt": "avatar",
     "changeTitle": "Fotoğrafı değiştir",
-    "newSelected": "Yeni fotoğraf seçildi - uygulamak için kaydedin.",
+    "newSelected": "Yeni fotoğraf seçildi. Uygulamak için kaydedin.",
     "notImage": "Lütfen bir görsel dosyası seçin.",
     "tooLarge": "Bu görsel 2 MB'tan büyük. Daha küçük bir tane seçin.",
     "readFailed": "Bu görsel okunamadı."
@@ -52,7 +52,7 @@
     "title": "Siz olduğunuzu doğrulayın",
     "codeSentTo": "Kod {{email}} adresine gönderildi",
     "codeLabel": "6 haneli kod",
-    "devMode": "Geliştirici modu - e-posta yapılandırılmadı. Kodunuz:",
+    "devMode": "Geliştirici modu: e-posta yapılandırılmadı. Kodunuz:",
     "apply": "Doğrula ve uygula",
     "resend": "Tekrar gönder",
     "enterCode": "6 haneli kodu girin.",

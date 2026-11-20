@@ -172,7 +172,7 @@
     "title": "Status akun",
     "reason": "Alasan: {{reason}}",
     "unban": "Buka blokir anggota",
-    "banHint": "Mengedit kolom di atas tetap mempertahankan blokir: gunakan Buka blokir untuk memulihkan akses.",
+    "banHint": "Mengedit kolom di atas tetap mempertahankan blokir. Gunakan Buka blokir untuk memulihkan akses.",
     "suspendToggle": "Tangguhkan anggota ini (memblokir login)",
     "ban": "Blokir anggota"
   },

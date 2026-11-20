@@ -26,7 +26,7 @@
     "settings": "Configurações"
   },
   "shell": {
-    "footerDefault": "© {year} SoftGlaze - Feito pela [Equipe SoftGlaze](https://softglaze.com) · Desenvolvido por [Azhar Ali](https://azhar.softglaze.com)",
+    "footerDefault": "© {year} SoftGlaze · Feito pela [Equipe SoftGlaze](https://softglaze.com) · Desenvolvido por [Azhar Ali](https://azhar.softglaze.com)",
     "antiDetect": "Multiperfil",
     "darkMode": "Modo escuro",
     "lightMode": "Modo claro",
@@ -245,7 +245,7 @@
       "title": "Idioma",
       "description": "Escolha o idioma da interface do SoftGlaze.",
       "label": "Idioma da interface",
-      "hint": "Mais idiomas estão a caminho. As alterações valem na hora em todo o app."
+      "hint": "As alterações valem na hora em todo o app."
     }
   },
   "startLinks": {
@@ -286,5 +286,15 @@
     "settingsHidden": "Configurações foi desativado para sua conta por um administrador.",
     "proxiesHidden": "Proxies foi desativado para sua conta por um administrador.",
     "profilesHidden": "Perfis foi desativado para sua conta por um administrador."
+  },
+  "promo": {
+    "bf2026": {
+      "text": "Black Friday: Pro Vitalício {{pro}} ou Enterprise Vitalício {{enterprise}}, pagamento único. Termina em 1º de dez., às 23:59 UTC."
+    },
+    "xmas2026": {
+      "text": "Oferta de Natal: Pro Vitalício {{pro}} ou Enterprise Vitalício {{enterprise}}, pagamento único. Termina em 31 de dez., às 23:59 UTC."
+    },
+    "cta": "Ver a oferta",
+    "dismiss": "Ocultar esta oferta"
   }
 }

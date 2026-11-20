@@ -61,13 +61,13 @@
       "subtitleShort_other": "Eine kurze Einrichtung in {{count}} Schritten. Sie können jeden Schritt überspringen.",
       "unavailable": "Ausgegraute Schritte werden übersprungen: Ihr Konto kann sie nicht ausführen.",
       "getStarted": "Los geht’s",
-      "stepEmail": "E-Mail (SMTP) – optional, für Einmalcodes",
-      "stepProxy": "Ihr erster Proxy – optional",
+      "stepEmail": "E-Mail (SMTP), optional, für Einmalcodes",
+      "stepProxy": "Ihr erster Proxy (optional)",
       "stepProfile": "Ihr erstes Browserprofil"
     },
     "smtp": {
       "title": "E-Mail (SMTP)",
-      "subtitle": "Optional – damit kann die App Bestätigungscodes senden. Sie können das später in den Einstellungen festlegen.",
+      "subtitle": "Optional. Damit kann die App Bestätigungscodes senden. Sie können das später in den Einstellungen festlegen.",
       "host": "SMTP-Host",
       "hostPlaceholder": "smtp.example.com",
       "port": "Port",
@@ -79,7 +79,7 @@
     },
     "proxy": {
       "title": "Ihren ersten Proxy hinzufügen",
-      "subtitle": "Optional – geben Sie jeder Identität ein eigenes Netzwerk. Weitere fügen Sie im Proxy-Pool hinzu.",
+      "subtitle": "Optional. Geben Sie jeder Identität ein eigenes Netzwerk. Weitere fügen Sie im Proxy-Pool hinzu.",
       "type": "Typ",
       "host": "Host",
       "hostPlaceholder": "1.2.3.4",
@@ -100,7 +100,7 @@
       "deviceType": "Gerätetyp",
       "desktop": "Desktop",
       "mobile": "Mobil (Android)",
-      "mobileNote": "Android wird auf der Desktop-Engine emuliert – stimmiger UA, Touch, Bildschirm & GPU, aber kein echtes Gerät.",
+      "mobileNote": "Android wird auf der Desktop-Engine emuliert: stimmiger UA, Touch, Bildschirm & GPU, aber kein echtes Gerät.",
       "proxyAttached": "Ihr neuer Proxy wird diesem Profil zugewiesen."
     }
   }

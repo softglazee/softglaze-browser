@@ -129,7 +129,7 @@
     "inviteTitle": "Üye davet et",
     "editTitle": "Düzenle: {{name}}",
     "noCreatableRoles": "Alt üye oluşturma izniniz yok.",
-    "invitePendingCode": "Davet bekliyor - kod"
+    "invitePendingCode": "Davet bekliyor, kod"
   },
   "fields": {
     "name": "Ad",
@@ -176,14 +176,14 @@
     "title": "Hesap durumu",
     "reason": "Neden: {{reason}}",
     "unban": "Üyenin engelini kaldır",
-    "banHint": "Yukarıdaki alanları düzenlemek engeli korur - erişimi geri vermek için Engeli kaldır'ı kullanın.",
+    "banHint": "Yukarıdaki alanları düzenlemek engeli korur. Erişimi geri vermek için Engeli kaldır'ı kullanın.",
     "suspendToggle": "Bu üyeyi askıya al (girişi engeller)",
     "ban": "Üyeyi engelle"
   },
   "delete": {
     "title": "Kaldır: {{name}}",
     "warnPrefix": "Bu işlem şunu kaldırır: ",
-    "warnMiddle": " ve alt üyeleri size taşır. Verilerine ne olacağını seçin -",
+    "warnMiddle": " ve alt üyeleri size taşır. Verilerine ne olacağını seçin:",
     "profilesWord_one": "profil",
     "profilesWord_other": "profil",
     "proxiesWord_one": "proxy",
@@ -204,14 +204,14 @@
     },
     "pickTarget": "Verileri alacak bir üye seçin.",
     "reassignTo": "Atanacak kişi",
-    "noOtherMembers": "Başka üye yok - başka bir seçenek belirleyin."
+    "noOtherMembers": "Başka üye yok. Başka bir seçenek belirleyin."
   },
   "assign": {
     "title": "Profil ata · {{name}}",
     "searchPlaceholder": "Profillerde ara",
     "noProfiles": "Profil bulunamadı.",
     "memberFallback": "üye #{{id}}",
-    "updated": "Güncellendi - {{assigned}} atandı, {{unassigned}} kaldırıldı.",
+    "updated": "Güncellendi: {{assigned}} atandı, {{unassigned}} kaldırıldı.",
     "save": "Atamayı kaydet"
   },
   "activity": {
@@ -261,7 +261,7 @@
     "days": "{{count}} gün önce"
   },
   "license": {
-    "intro": "Her sahip çalışma alanının abonelik durumu. Önce yerel ve elden geldiğince - kararlı bir kullanıcı yerel veritabanını veya saati yine de düzenleyebilir; kalıcı denetim için lisans sunucusu gerekir.",
+    "intro": "Her sahip çalışma alanının abonelik durumu. Önce yerel ve elden geldiğince. Kararlı bir kullanıcı yerel veritabanını veya saati yine de düzenleyebilir; kalıcı denetim için lisans sunucusu gerekir.",
     "noOwners": "Henüz sahip çalışma alanı yok.",
     "editTitle": "Lisans · {{name}}",
     "setState": "Durum ayarla",

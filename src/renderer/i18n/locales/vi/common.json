@@ -26,7 +26,7 @@
     "settings": "Cài đặt"
   },
   "shell": {
-    "footerDefault": "© {year} SoftGlaze - Xây dựng bởi [SoftGlaze Team](https://softglaze.com) · Phát triển bởi [Azhar Ali](https://azhar.softglaze.com)",
+    "footerDefault": "© {year} SoftGlaze · Xây dựng bởi [SoftGlaze Team](https://softglaze.com) · Phát triển bởi [Azhar Ali](https://azhar.softglaze.com)",
     "antiDetect": "Đa hồ sơ",
     "darkMode": "Chế độ tối",
     "lightMode": "Chế độ sáng",
@@ -83,14 +83,14 @@
       "Mỗi hồ sơ bạn tạo là một cánh cửa mới mở ra.",
       "Kỷ luật hôm nay, dẫn đầu ngày mai.",
       "Việc nhỏ đều đặn sẽ cộng dồn thành thành quả lớn.",
-      "Luôn tỉnh táo - lợi thế nằm ở chi tiết.",
+      "Luôn tỉnh táo: lợi thế nằm ở chi tiết.",
       "Tập trung hơn vội vàng. Nhắm kỹ rồi hãy làm.",
       "Việc thầm lặng hôm nay xây nên cơ nghiệp mai sau.",
       "Chính xác là thói quen, không phải tình cờ.",
       "Có mặt, tập trung, và để kết quả lên tiếng.",
       "Thêm một phiên, thêm một thành công.",
       "Thành công lớn chỉ là chuỗi ngày làm việc tốt.",
-      "Bạn của tương lai đang dõi theo - hãy làm họ tự hào.",
+      "Bạn của tương lai đang dõi theo. Hãy làm họ tự hào.",
       "Làm có chủ đích. Mở rộng đầy tự tin."
     ],
     "overview": "Tổng quan",
@@ -207,7 +207,7 @@
     "launchesTitle": "Lượt mở",
     "launchesSub": "7 ngày qua",
     "sampleBadge": "Mẫu",
-    "sampleNote": "Chỉ để minh họa — lịch sử mở theo ngày chưa được ghi lại.",
+    "sampleNote": "Chỉ để minh họa: lịch sử mở theo ngày chưa được ghi lại.",
     "proxyTypesTitle": "Loại proxy",
     "proxyTypesSub": "Tỷ lệ giao thức trong kho",
     "noData": "Chưa có dữ liệu",
@@ -233,7 +233,7 @@
       "title": "Ngôn ngữ",
       "description": "Chọn ngôn ngữ hiển thị cho giao diện SoftGlaze.",
       "label": "Ngôn ngữ hiển thị",
-      "hint": "Sắp có thêm ngôn ngữ. Thay đổi có hiệu lực ngay trong toàn ứng dụng."
+      "hint": "Thay đổi có hiệu lực ngay trong toàn ứng dụng."
     }
   },
   "startLinks": {
@@ -273,5 +273,15 @@
     "settingsHidden": "Quản trị viên đã tắt Cài đặt cho tài khoản của bạn.",
     "proxiesHidden": "Quản trị viên đã tắt Proxy cho tài khoản của bạn.",
     "profilesHidden": "Quản trị viên đã tắt Hồ sơ cho tài khoản của bạn."
+  },
+  "promo": {
+    "bf2026": {
+      "text": "Black Friday: Pro Trọn đời {{pro}} hoặc Enterprise Trọn đời {{enterprise}}, thanh toán một lần. Kết thúc lúc 23:59 UTC ngày 1/12."
+    },
+    "xmas2026": {
+      "text": "Đợt Giáng sinh: Pro Trọn đời {{pro}} hoặc Enterprise Trọn đời {{enterprise}}, thanh toán một lần. Kết thúc lúc 23:59 UTC ngày 31/12."
+    },
+    "cta": "Xem ưu đãi",
+    "dismiss": "Ẩn ưu đãi này"
   }
 }

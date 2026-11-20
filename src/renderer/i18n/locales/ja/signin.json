@@ -1,7 +1,7 @@
 {
   "choose": {
-    "title": "SoftGlazeへようこそ",
-    "subtitle": "サインインしてワークスペースを作成します。パスワードは不要です。",
+    "title": "無料アカウントを作成",
+    "subtitle": "お持ちのアカウントを使用します。新しいパスワードは不要です。",
     "google": "Googleで続行",
     "microsoft": "Microsoftで続行",
     "facebook": "Facebookで続行",
@@ -9,12 +9,16 @@
     "allowEmail": "メールへのアクセスを許可してFacebookを再試行",
     "github": "GitHubで続行",
     "email": "メールアドレスで続行",
-    "or": "または",
-    "moreOptions": "その他のオプション",
-    "moreOptionsHint": "代わりに名前とパスワードでワークスペースを作成",
+    "moreOptions": "パスワードで設定",
+    "moreOptionsHint": "名前とパスワードを使いますか？",
     "privacy": "受け取るのはお名前と確認済みのメールアドレスのみです。",
     "haveAccount": "このコンピューターにすでにワークスペースがありますか？",
-    "logIn": "ログイン"
+    "logIn": "パスワードでサインイン",
+    "signInTitle": "SoftGlaze にサインイン",
+    "signInSubtitle": "登録したアカウントを使用してください。プランが別のコンピューターにある場合は、このコンピューターに移行できます。",
+    "entryLabel": "新規または既存",
+    "entryNew": "新規アカウント",
+    "entryReturning": "アカウントをお持ちの方"
   },
   "unlock": {
     "title": "おかえりなさい",

@@ -104,17 +104,17 @@
       "methodEmail": "E-mail",
       "methodSms": "SMS",
       "levelLabel": "Poziom uwierzytelniania",
-      "levelLow": "Niski - nowe urządzenie lub 90+ dni od ostatniego 2FA",
-      "levelMedium": "Średni (zalecany) - nowe urządzenie lub 30+ dni",
-      "levelHigh": "Wysoki - 2FA przy każdym logowaniu"
+      "levelLow": "Niski: nowe urządzenie lub 90+ dni od ostatniego 2FA",
+      "levelMedium": "Średni (zalecany): nowe urządzenie lub 30+ dni",
+      "levelHigh": "Wysoki: 2FA przy każdym logowaniu"
     }
   },
   "multiDevice": {
     "title": "Tryb wielu urządzeń",
     "description": "Określ, czy kilku członków może jednocześnie korzystać z tego samego profilu.",
-    "modeOff": "Wył. - jeden członek na profil",
-    "modeFull": "Pełny - wszystkie profile obsługują jednoczesny dostęp",
-    "modeSpecified": "Wybrane - tylko zaznaczone profile",
+    "modeOff": "Wył.: jeden członek na profil",
+    "modeFull": "Pełny: wszystkie profile obsługują jednoczesny dostęp",
+    "modeSpecified": "Wybrane: tylko zaznaczone profile",
     "hintBefore": "Po włączeniu kilku członków może korzystać z tego samego profilu jednocześnie. W trybie ",
     "hintSpecified": "Wybrane",
     "hintAfter": " wybierz uprawnione profile na stronie Profile."
@@ -202,9 +202,9 @@
       "desc": "W profilach opartych na Chrome każde okno lub panel narzędzi deweloperskich (F12, Ctrl+Shift+I, Zbadaj) jest zamykane od razu po otwarciu. Dotyczy profili uruchomionych po zmianie. Twoje własne Chrome na tym komputerze nie jest objęte."
     },
     "minimizeCdpFootprint": {
-      "title": "Ogranicz ślad CDP (eksperymentalne - mniej CAPTCHA)",
+      "title": "Ogranicz ślad CDP (eksperymentalne, mniej CAPTCHA)",
       "shortTitle": "Ogranicz ślad CDP",
-      "desc": "Usuwa stałe CDP Runtime.enable - główny sygnał automatyzacji, który wykrywa Cloudflare/Turnstile. KOMPROMIS przy włączeniu: autouzupełnianie person, linki testowe strony startowej i lustrzane sesje przestają działać (wymagają powiązania CDP). Domyślnie wyłączone; włącz, aby sprawdzić, czy zmniejsza liczbę CAPTCHA, a potem uruchom profile ponownie."
+      "desc": "Usuwa stałe CDP Runtime.enable, główny sygnał automatyzacji, który wykrywa Cloudflare/Turnstile. KOMPROMIS przy włączeniu: autouzupełnianie person, linki testowe strony startowej i lustrzane sesje przestają działać (wymagają powiązania CDP). Domyślnie wyłączone; włącz, aby sprawdzić, czy zmniejsza liczbę CAPTCHA, a potem uruchom profile ponownie."
     },
     "blockThirdPartyCookies": {
       "title": "Blokuj pliki cookie innych firm",
@@ -273,12 +273,12 @@
     },
     "antidetectEngine": {
       "title": "Natywny silnik odcisku przeglądarki (fingerprint-chromium)",
-      "desc": "Uruchamiaj profile Chrome na fingerprint-chromium - Chromium z poprawkami w kodzie źródłowym, który stosuje ustawienia odcisku każdego profilu (canvas, WebGL, audio, UA, platforma, strefa czasowa) na poziomie binarnym, ukrywa navigator.webdriver i UA HeadlessChrome oraz natywnie blokuje wyciek prawdziwego IP przez WebRTC, bez wyścigu wstrzykiwania JS, który strony mogłyby wychwycić. Wymaga pliku binarnego fingerprint-chromium; gdy go brak, używane jest zwykłe Chrome. Ten silnik usuwa powiązanie CDP, na którym opierał się most strona-aplikacja, więc SoftGlaze kieruje te wywołania kanałem bez powiązania - autouzupełnianie z Sejfu danych, rejestrator makr, linki strony startowej i lustrzane sesje działają na nim. Domyślnie wyłączone - włącz i uruchom profile ponownie."
+      "desc": "Uruchamiaj profile Chrome na fingerprint-chromium, czyli Chromium z poprawkami w kodzie źródłowym, który stosuje ustawienia odcisku każdego profilu (canvas, WebGL, audio, UA, platforma, strefa czasowa) na poziomie binarnym, ukrywa navigator.webdriver i UA HeadlessChrome oraz natywnie blokuje wyciek prawdziwego IP przez WebRTC, bez wyścigu wstrzykiwania JS, który strony mogłyby wychwycić. Wymaga pliku binarnego fingerprint-chromium; gdy go brak, używane jest zwykłe Chrome. Ten silnik usuwa powiązanie CDP, na którym opierał się most strona-aplikacja, więc SoftGlaze kieruje te wywołania kanałem bez powiązania. Autouzupełnianie z Sejfu danych, rejestrator makr, linki strony startowej i lustrzane sesje działają na nim. Domyślnie wyłączone. Włącz i uruchom profile ponownie."
     }
   },
   "performance": {
     "title": "Wydajność",
-    "description": "Ustawienia uruchamiania wielu profili naraz - dotyczą uruchomień masowych i limitu działających sesji.",
+    "description": "Ustawienia uruchamiania wielu profili naraz. Dotyczą uruchomień masowych i limitu działających sesji.",
     "parallelLimit": {
       "title": "Limit równoległych uruchomień",
       "desc": "Ile profili startuje jednocześnie przy uruchomieniu masowym. Więcej = szybciej, ale więcej RAM. Zalecane 3-8."
@@ -302,7 +302,7 @@
     },
     "memoryGuard": {
       "title": "Ochrona pamięci",
-      "desc": "Gdy brakuje pamięci systemowej, automatycznie zamykaj najstarsze uruchomione profile, aż pamięć się odzyska. Domyślnie wyłączone - bez włączenia nigdy nie zamknie profilu.",
+      "desc": "Gdy brakuje pamięci systemowej, automatycznie zamykaj najstarsze uruchomione profile, aż pamięć się odzyska. Domyślnie wyłączone. Bez włączenia nigdy nie zamknie profilu.",
       "triggerBelow": "Uruchom, gdy wolny RAM spadnie poniżej",
       "stopWhenReaches": "zatrzymaj, gdy wolny RAM osiągnie"
     }
@@ -336,10 +336,10 @@
     "checkDefault": "Sprawdź, czy dostępna jest nowsza wersja SoftGlaze Browser.",
     "notEnabled": "Automatyczne aktualizacje nie są włączone w tej wersji.",
     "checking": "Sprawdzanie aktualizacji…",
-    "available": "Dostępna aktualizacja {{version}} - pobieranie w tle…",
+    "available": "Dostępna aktualizacja {{version}}, pobieranie w tle…",
     "downloading": "Pobieranie {{version}}… {{percent}}%",
     "ready": "Aktualizacja {{version}} jest gotowa do instalacji.",
-    "errorWithReason": "Nie udało się sprawdzić aktualizacji - {{reason}}",
+    "errorWithReason": "Nie udało się sprawdzić aktualizacji: {{reason}}",
     "errorNoReason": "Nie udało się sprawdzić aktualizacji.",
     "upToDate": "Masz najnowszą wersję.",
     "installRestart": "Zainstaluj i uruchom ponownie",
@@ -367,7 +367,7 @@
   },
   "captcha": {
     "title": "Automatyczne rozwiązywanie CAPTCHA",
-    "description": "Automatycznie rozwiązuj reCAPTCHA v2 i hCaptcha podczas przeglądania za pomocą płatnej usługi zewnętrznej. To osobna sprawa od odcisku przeglądarki - czysty odcisk zmniejsza częstotliwość CAPTCHA, ale ich rozwiązywanie wymaga płatnej usługi, rozliczanej za każde rozwiązanie przez dostawcę (nie przez SoftGlaze).",
+    "description": "Automatycznie rozwiązuj reCAPTCHA v2 i hCaptcha podczas przeglądania za pomocą płatnej usługi zewnętrznej. To osobna sprawa od odcisku przeglądarki. Czysty odcisk zmniejsza częstotliwość CAPTCHA, ale ich rozwiązywanie wymaga płatnej usługi, rozliczanej za każde rozwiązanie przez dostawcę (nie przez SoftGlaze).",
     "enable": {
       "title": "Włącz automatyczne rozwiązywanie CAPTCHA",
       "desc": "Po włączeniu uruchomione profile wykrywają obsługiwane CAPTCHA i automatycznie przesyłają je do Twojej usługi."
@@ -385,19 +385,19 @@
     "title": "E-mail (kody weryfikacyjne)",
     "configured": "Skonfigurowano",
     "offlineMode": "Tryb offline",
-    "description": "SMTP do wysyłania kodów OTP przy rejestracji. Zostaw puste, aby działać offline - kod jest wtedy pokazywany w aplikacji zamiast wysyłany e-mailem.",
+    "description": "SMTP do wysyłania kodów OTP przy rejestracji. Zostaw puste, aby działać offline. Kod jest wtedy pokazywany w aplikacji zamiast wysyłany e-mailem.",
     "smtpHost": "Host SMTP",
     "port": "Port",
     "encryption": "Szyfrowanie",
     "username": "Nazwa użytkownika",
     "password": "Hasło",
-    "passwordSavedHint": "(zapisane - zostaw puste, aby zachować)",
+    "passwordSavedHint": "(zapisane; zostaw puste, aby zachować)",
     "fromName": "Nazwa nadawcy",
     "saved": "Zapisano ustawienia e-mail.",
     "saveFailed": "Nie udało się zapisać ustawień e-mail.",
-    "noSmtpYet": "Nie skonfigurowano jeszcze SMTP - najpierw zapisz ustawienia.",
+    "noSmtpYet": "Nie skonfigurowano jeszcze SMTP. Najpierw zapisz ustawienia.",
     "testSent": "Wysłano testowy e-mail na {{to}}.",
-    "testFailed": "Test nie powiódł się - sprawdź ustawienia.",
+    "testFailed": "Test nie powiódł się. Sprawdź ustawienia.",
     "saveButton": "Zapisz ustawienia e-mail",
     "test": "Test"
   },

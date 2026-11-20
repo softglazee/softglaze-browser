@@ -175,7 +175,7 @@
       "targetingTitle": "Hedefleme",
       "save": "Kimlik bilgilerini kaydet",
       "saving": "Kaydediliyor…",
-      "saved": "Kimlik bilgileri kaydedildi - çekmeye hazır",
+      "saved": "Kimlik bilgileri kaydedildi, çekmeye hazır",
       "cleared": "Kayıtlı kimlik bilgileri kaldırıldı"
     },
     "rotating": {
@@ -187,7 +187,7 @@
       "checkProxy": "Proxy'yi kontrol et",
       "ok": "Tamam",
       "failed": "Başarısız",
-      "tip": "İpucu: döner bir ağ geçidi her oturum için aynı host:port'u kullanır - çıkış IP'sini kullanıcı adınız/parolanız (veya sticky oturum belirteci) seçer.",
+      "tip": "İpucu: döner bir ağ geçidi her oturum için aynı host:port'u kullanır. Çıkış IP'sini kullanıcı adınız/parolanız (veya sticky oturum belirteci) seçer.",
       "saveCreds": "Kimlik bilgilerini kaydet",
       "credsSaved": "Kaydedildi"
     },

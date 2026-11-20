@@ -1,7 +1,7 @@
 {
   "choose": {
-    "title": "Witamy w SoftGlaze",
-    "subtitle": "Zaloguj się, aby utworzyć obszar roboczy. Hasło nie jest potrzebne.",
+    "title": "Utwórz darmowe konto",
+    "subtitle": "Użyj konta, które już masz. Bez nowego hasła.",
     "google": "Kontynuuj przez Google",
     "microsoft": "Kontynuuj przez Microsoft",
     "facebook": "Kontynuuj przez Facebook",
@@ -9,12 +9,16 @@
     "allowEmail": "Zezwól na dostęp do e-maila i spróbuj ponownie przez Facebook",
     "github": "Kontynuuj przez GitHub",
     "email": "Kontynuuj przez e-mail",
-    "or": "lub",
-    "moreOptions": "Więcej opcji",
-    "moreOptionsHint": "Zamiast tego utwórz obszar roboczy z nazwą i hasłem",
+    "moreOptions": "Skonfiguruj z hasłem",
+    "moreOptionsHint": "Wolisz nazwę i hasło?",
     "privacy": "Otrzymujemy tylko Twoje imię i zweryfikowany adres e-mail.",
     "haveAccount": "Masz już obszar roboczy na tym komputerze?",
-    "logIn": "Zaloguj się"
+    "logIn": "Zaloguj się hasłem",
+    "signInTitle": "Zaloguj się do SoftGlaze",
+    "signInSubtitle": "Użyj konta, którym się rejestrowałeś. Jeśli Twój plan jest na innym komputerze, możesz go tu przenieść.",
+    "entryLabel": "Nowe lub istniejące konto",
+    "entryNew": "Nowe konto",
+    "entryReturning": "Mam konto"
   },
   "unlock": {
     "title": "Witaj ponownie",

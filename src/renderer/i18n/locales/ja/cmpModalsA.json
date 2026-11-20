@@ -5,7 +5,7 @@
     "confirmAfter": "をゴミ箱に移動しますか？データも消去しない限り、後で復元できます。",
     "readingData": "保存データを読み込み中…",
     "storedData": "保存されているブラウザデータ:",
-    "storedFiles_other": "（{{files}}個のファイル - Cookie、キャッシュ、ログイン情報）",
+    "storedFiles_other": "（{{files}}個のファイル：Cookie、キャッシュ、ログイン情報）",
     "noData": "ディスク上にローカルのブラウザデータはまだありません。",
     "alsoDelete": "Cookieとキャッシュも今すぐ削除",
     "alsoDeleteHint": "ディスク上のデータフォルダーを完全に消去します。プロファイルは復元できますが、ログアウトした空の状態で始まります。",
