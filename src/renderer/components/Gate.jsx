@@ -345,7 +345,7 @@ function ThemeLangControls() {
           <Globe className="w-4 h-4" /> <span lang={cur.code}>{cur.native}</span> <ChevronDown className="w-3.5 h-3.5" />
         </button>
         {open && (
-          <div className="absolute end-0 mt-1 w-56 rounded-lg border border-border bg-popover shadow-xl z-50">
+          <div className="absolute end-0 mt-1 w-64 rounded-lg border border-border bg-popover shadow-xl z-50">
             <div className="p-1.5 border-b border-border">
               <input
                 autoFocus
@@ -369,7 +369,7 @@ function ThemeLangControls() {
                   role="option"
                   aria-selected={l.code === lang}
                   onMouseDown={(e) => { e.preventDefault(); pick(l.code); }}
-                  className={`w-full flex items-center gap-2 px-3 py-1.5 text-[12.5px] text-start hover:bg-secondary ${l.code === lang ? 'text-primary' : 'text-foreground'}`}
+                  className={`w-full flex items-center gap-2 px-3 py-1.5 text-[12.5px] text-start whitespace-nowrap hover:bg-secondary ${l.code === lang ? 'text-primary' : 'text-foreground'}`}
                 >
                   <span lang={l.code}>{l.native}</span>
                   {l.native !== l.label && <span className="text-[11px] text-muted-foreground">{l.label}</span>}
