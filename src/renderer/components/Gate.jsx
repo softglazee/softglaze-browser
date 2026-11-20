@@ -18,10 +18,10 @@ import SignInPanel, { UseCaseStep, MoveLicenceCard } from '@/components/SignInPa
 import AuthProductPanel from '@/components/AuthProductPanel.jsx';
 import { phaseAfterSignIn } from '@/lib/signInFlow.mjs';
 
-const inputCls = 'w-full h-11 bg-input-background border border-border-strong rounded-lg px-3.5 text-[16px] text-foreground outline-none focus:border-primary focus:ring-2 focus:ring-primary/25 transition-colors placeholder:text-muted-dark';
+const inputCls = 'w-full h-[44px] bg-input-background border border-border-strong rounded-lg px-3.5 text-[16px] text-foreground outline-none focus:border-primary focus:ring-2 focus:ring-primary/25 transition-colors placeholder:text-muted-dark';
 const labelCls = 'block text-[13px] font-medium text-foreground mb-1.5';
 // Shared primary CTA for every continue / sign in / create button.
-const primaryBtn = 'mt-6 w-full h-11 rounded-lg bg-[var(--auth-cta)] hover:bg-[var(--auth-cta-hover)] text-primary-foreground font-semibold text-[15px] flex items-center justify-center gap-2 disabled:opacity-60 transition-colors duration-150';
+const primaryBtn = 'mt-6 w-full h-[44px] rounded-lg bg-[var(--auth-cta)] hover:bg-[var(--auth-cta-hover)] text-primary-foreground font-semibold text-[15px] flex items-center justify-center gap-2 disabled:opacity-60 transition-colors duration-150';
 const EMAIL_RE = /^[^@\s]+@[^@\s]+\.[^@\s]+$/;
 
 function PasswordInput({ value, onChange, placeholder, onKeyDown, autoFocus }) {
@@ -251,7 +251,7 @@ function ThemeLangControls() {
           onClick={() => setOpen((o) => !o)}
           onBlur={() => setTimeout(() => setOpen(false), 120)}
           aria-haspopup="true" aria-expanded={open} aria-label={t('controls.language', { lang: cur.native })}
-          className="inline-flex items-center gap-1.5 h-11 px-3 rounded-lg border border-border-strong text-[14px] text-muted-foreground hover:text-foreground transition-colors"
+          className="inline-flex items-center gap-1.5 h-[44px] px-3 rounded-lg border border-border-strong text-[14px] text-muted-foreground hover:text-foreground transition-colors"
         >
           <Globe className="w-4 h-4" aria-hidden="true" /> {cur.native} <ChevronDown className="w-3.5 h-3.5" aria-hidden="true" />
         </button>
@@ -275,7 +275,7 @@ function ThemeLangControls() {
         onClick={() => setThemeState(setTheme(isDark ? 'light' : 'dark'))}
         title={isDark ? t('controls.toLight') : t('controls.toDark')}
         aria-label={isDark ? t('controls.toLight') : t('controls.toDark')}
-        className="h-11 w-11 grid place-items-center rounded-lg border border-border-strong text-muted-foreground hover:text-foreground transition-colors"
+        className="h-[44px] w-[44px] grid place-items-center rounded-lg border border-border-strong text-muted-foreground hover:text-foreground transition-colors"
       >
         {isDark ? <Sun className="w-4 h-4" aria-hidden="true" /> : <Moon className="w-4 h-4" aria-hidden="true" />}
       </button>
@@ -920,7 +920,7 @@ export default function Gate({ children }) {
   const showSuper = (phase === 'register' && step !== 'verify') || phase === 'login' || phase === 'pick';
   const SuperLink = () => (
     <span>
-      <button type="button" onClick={async () => { setPhase('super'); setErr(''); setSuperPass(''); setSuperPass2(''); try { const s = await softglazeApi.members.superStatus(); setSuperNeedsSetup(!(s && s.configured)); } catch (_) { setSuperNeedsSetup(false); } }} className="min-h-11 inline-flex items-center text-muted-foreground hover:text-foreground hover:underline underline-offset-4 transition-colors">
+      <button type="button" onClick={async () => { setPhase('super'); setErr(''); setSuperPass(''); setSuperPass2(''); try { const s = await softglazeApi.members.superStatus(); setSuperNeedsSetup(!(s && s.configured)); } catch (_) { setSuperNeedsSetup(false); } }} className="min-h-[44px] inline-flex items-center text-muted-foreground hover:text-foreground hover:underline underline-offset-4 transition-colors">
         {t('super.access')}
       </button>
     </span>
@@ -964,7 +964,7 @@ export default function Gate({ children }) {
           </div>
           <ThemeLangControls />
         </header>
-        <div className="flex-1 flex items-center px-8 xl:px-14 py-8 [@media(max-height:800px)]:py-3">
+        <div className="flex-1 flex items-start px-8 xl:px-14 pt-[clamp(0.5rem,6vh,4rem)] pb-6 [@media(max-height:800px)]:pt-1">
           <div className="w-full max-w-[400px] animate-fade-in">
             <div>
 
@@ -1173,8 +1173,8 @@ export default function Gate({ children }) {
               {account?.email && <p className="text-[13px] text-muted-foreground mt-1 mb-6 break-words">{ts('unlock.account', { email: account.email })}</p>}
               <SignInPanel purpose="unlock" heading={false} info={signin} lockedEmail={account?.email || ''} onDone={afterSignIn} />
               <div className="flex flex-wrap items-center gap-x-6 mt-5 text-[14px]">
-                <button onClick={() => { setPhase('memberlogin'); setErr(''); }} className="min-h-11 text-foreground underline underline-offset-4 decoration-border-strong hover:decoration-primary">{ts('unlock.passwordInstead')}</button>
-                <button onClick={() => { setPhase('invite'); setErr(''); }} className="min-h-11 text-foreground underline underline-offset-4 decoration-border-strong hover:decoration-primary">{ts('unlock.haveInvite')}</button>
+                <button onClick={() => { setPhase('memberlogin'); setErr(''); }} className="min-h-[44px] text-foreground underline underline-offset-4 decoration-border-strong hover:decoration-primary">{ts('unlock.passwordInstead')}</button>
+                <button onClick={() => { setPhase('invite'); setErr(''); }} className="min-h-[44px] text-foreground underline underline-offset-4 decoration-border-strong hover:decoration-primary">{ts('unlock.haveInvite')}</button>
               </div>
             </>
           )}
@@ -1261,7 +1261,7 @@ export default function Gate({ children }) {
                     <div><label className={labelCls}>{t('super.confirmPassword')}</label><PasswordInput value={superPass2} onChange={(e) => setSuperPass2(e.target.value)} placeholder={t('super.confirmPasswordPlaceholder')} onKeyDown={(e) => { if (e.key === 'Enter') doSuperSetup(); }} /></div>
                   </div>
                   {err && <p className="text-[14px] text-[var(--auth-error-fg)] mt-3">{err}</p>}
-                  <button disabled={busy} onClick={doSuperSetup} className="mt-6 w-full h-11 rounded-lg bg-amber-700 hover:bg-amber-800 text-white font-semibold text-[15px] flex items-center justify-center gap-2 disabled:opacity-60 transition-colors">
+                  <button disabled={busy} onClick={doSuperSetup} className="mt-6 w-full h-[44px] rounded-lg bg-amber-700 hover:bg-amber-800 text-white font-semibold text-[15px] flex items-center justify-center gap-2 disabled:opacity-60 transition-colors">
                     {busy ? <Loader2 className="w-4 h-4 animate-spin" /> : <>{t('super.createCredentials')} <ArrowRight className="w-4 h-4" /></>}
                   </button>
                 </>
@@ -1274,7 +1274,7 @@ export default function Gate({ children }) {
                   </div>
                   <RememberToggle checked={remember} onChange={setRemember} />
                   {err && <p className="text-[14px] text-[var(--auth-error-fg)] mt-3">{err}</p>}
-                  <button disabled={busy} onClick={doSuperLogin} className="mt-6 w-full h-11 rounded-lg bg-amber-700 hover:bg-amber-800 text-white font-semibold text-[15px] flex items-center justify-center gap-2 disabled:opacity-60 transition-colors">
+                  <button disabled={busy} onClick={doSuperLogin} className="mt-6 w-full h-[44px] rounded-lg bg-amber-700 hover:bg-amber-800 text-white font-semibold text-[15px] flex items-center justify-center gap-2 disabled:opacity-60 transition-colors">
                     {busy ? <Loader2 className="w-4 h-4 animate-spin" /> : <>{t('super.enterWorkspace')} <ArrowRight className="w-4 h-4" /></>}
                   </button>
                 </>

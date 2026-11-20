@@ -60,8 +60,9 @@ test('Gate layout: two columns, no carousel, both doors call the same sign-in', 
   assert.match(SIGNIN, /const returning = purpose === 'signup' && entry === 'returning';/);
   assert.equal((SIGNIN.match(/softglazeApi\.signin\.start\(/g) || []).length, 1);
   assert.match(SIGNIN, /aria-pressed=\{entry === k\}/);
-  // Inputs are 16 px and 44 px tall; buttons 44 px.
-  assert.match(SIGNIN, /const inputCls = 'w-full h-11 [^']*text-\[16px\]/);
-  assert.match(GATE, /const inputCls = 'w-full h-11 [^']*text-\[16px\]/);
-  assert.match(SIGNIN, /const bigBtn = 'w-full h-11 /);
+  // Inputs are 16 px and 44 px tall; buttons 44 px. The app's root font is 15 px, so h-11 would be 41 px: exact px.
+  assert.match(SIGNIN, /const inputCls = 'w-full h-\[44px\] [^']*text-\[16px\]/);
+  assert.match(GATE, /const inputCls = 'w-full h-\[44px\] [^']*text-\[16px\]/);
+  assert.match(SIGNIN, /const bigBtn = 'w-full h-\[44px\] /);
+  assert.doesNotMatch(SIGNIN + GATE, /\bh-11\b|\bmin-h-11\b/);
 });

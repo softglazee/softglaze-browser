@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { ArrowLeft, ArrowRight, Loader2, Mail, ExternalLink, Check } from 'lucide-react';
+import { ArrowLeft, ArrowRight, Loader2, Mail, ExternalLink } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { softglazeApi } from '@/lib/softglazeApi.js';
 import { getStoredLang } from '@/lib/lang.js';
@@ -12,9 +12,9 @@ import { signInErrorText, providerButtons, PROVIDER_NAMES, offerEmailRerequest, 
 // session token; this only draws the steps.
 
 // 16 px text and 44 px height in inputs and buttons (readable, and easy to hit). Flat colours, no glow.
-const inputCls = 'w-full h-11 bg-input-background border border-border-strong rounded-lg px-3.5 text-[16px] text-foreground outline-none focus:border-primary focus:ring-2 focus:ring-primary/25 transition-colors placeholder:text-muted-dark disabled:opacity-70';
+const inputCls = 'w-full h-[44px] bg-input-background border border-border-strong rounded-lg px-3.5 text-[16px] text-foreground outline-none focus:border-primary focus:ring-2 focus:ring-primary/25 transition-colors placeholder:text-muted-dark disabled:opacity-70';
 const labelCls = 'block text-[13px] font-medium text-foreground mb-1.5';
-const bigBtn = 'w-full h-11 rounded-lg font-semibold text-[15px] flex items-center justify-center gap-2.5 transition-colors duration-150 disabled:opacity-60';
+const bigBtn = 'w-full h-[44px] rounded-lg font-semibold text-[15px] flex items-center justify-center gap-2.5 transition-colors duration-150 disabled:opacity-60';
 // GitHub's own colours follow the theme: dark button on the light theme, light button on the dark one.
 const githubBtn = `${bigBtn} bg-foreground text-background hover:opacity-90`;
 // Google's own light button (branding guidelines): white, a thin grey border, dark text and the four-colour G, in
@@ -28,9 +28,9 @@ const facebookBtn = `${bigBtn} bg-[var(--facebook-btn-bg)] text-[var(--facebook-
 // LinkedIn's brand button: LinkedIn blue, the white "in" logo, white text. The colours are the --linkedin-btn-* tokens.
 const linkedinBtn = `${bigBtn} bg-[var(--linkedin-btn-bg)] text-[var(--linkedin-btn-fg)] hover:bg-[var(--linkedin-btn-hover)]`;
 const emailBtn = `${bigBtn} border border-border-strong bg-transparent text-foreground hover:bg-secondary`;
-const primaryBtn = 'mt-5 w-full h-11 rounded-lg bg-[var(--auth-cta)] hover:bg-[var(--auth-cta-hover)] text-primary-foreground font-semibold text-[15px] flex items-center justify-center gap-2 disabled:opacity-60 transition-colors duration-150';
-const linkBtn = 'min-h-11 inline-flex items-center justify-center text-[14px] text-muted-foreground hover:text-foreground underline-offset-4 hover:underline transition-colors disabled:opacity-60 disabled:no-underline';
-const inlineLink = 'font-semibold text-foreground underline underline-offset-4 decoration-border-strong hover:decoration-primary';
+const primaryBtn = 'mt-5 w-full h-[44px] rounded-lg bg-[var(--auth-cta)] hover:bg-[var(--auth-cta-hover)] text-primary-foreground font-semibold text-[15px] flex items-center justify-center gap-2 disabled:bg-secondary disabled:text-muted-foreground disabled:cursor-default transition-colors duration-150';
+const linkBtn = 'min-h-[44px] inline-flex items-center justify-center text-[14px] text-muted-foreground hover:text-foreground underline underline-offset-4 decoration-border-strong hover:decoration-primary transition-colors disabled:no-underline disabled:cursor-default disabled:hover:text-muted-foreground';
+const inlineLink = 'inline-flex items-center font-semibold text-foreground underline underline-offset-4 decoration-border-strong hover:decoration-primary';
 // Our text: the default size for every sentence on these screens.
 const bodyCls = 'text-[15px] text-muted-foreground leading-relaxed';
 
@@ -204,7 +204,7 @@ export default function SignInPanel({ purpose, info, lockedEmail = '', onDone, o
   if (step === 'email' || step === 'code') {
     return (
       <div>
-        <button type="button" onClick={() => { setStep(step === 'code' && !lockedEmail ? 'email' : 'choose'); setErr(''); }} className="-ml-1 mb-4 min-h-11 px-1 inline-flex items-center gap-1.5 text-[14px] text-muted-foreground hover:text-foreground">
+        <button type="button" onClick={() => { setStep(step === 'code' && !lockedEmail ? 'email' : 'choose'); setErr(''); }} className="-ml-1 mb-4 min-h-[44px] px-1 inline-flex items-center gap-1.5 text-[14px] text-muted-foreground hover:text-foreground">
           <ArrowLeft className="w-4 h-4" aria-hidden="true" /> {step === 'code' && !lockedEmail ? t('email.change') : t('back')}
         </button>
         {step === 'email' ? (
@@ -231,7 +231,7 @@ export default function SignInPanel({ purpose, info, lockedEmail = '', onDone, o
             {!devCode && <p className="mt-3 text-[14px] text-muted-foreground leading-relaxed">{t('email.checkSpam')}</p>}
             {errBox}
             <button type="submit" disabled={busy || code.length !== 6} aria-busy={busy} className={primaryBtn}>
-              {busy ? <Loader2 className="w-4 h-4 animate-spin" aria-hidden="true" /> : <>{t('email.verify')} <Check className="w-4 h-4" aria-hidden="true" /></>}
+              {busy ? <Loader2 className="w-4 h-4 animate-spin" aria-hidden="true" /> : <>{t('email.verify')} <ArrowRight className="w-4 h-4" aria-hidden="true" /></>}
             </button>
             <button type="button" onClick={() => sendCode()} disabled={resendIn > 0 || busy} className={`mt-2 w-full ${linkBtn}`}>
               {resendIn > 0 ? t('email.resendIn', { count: resendIn }) : t('email.resend')}
@@ -249,7 +249,7 @@ export default function SignInPanel({ purpose, info, lockedEmail = '', onDone, o
         <div role="group" aria-label={t('choose.entryLabel')} className="mb-6 [@media(max-height:800px)]:mb-4 grid grid-cols-2 gap-1 rounded-lg border border-border-strong p-1">
           {['new', 'returning'].map((k) => (
             <button key={k} type="button" aria-pressed={entry === k} onClick={() => { if (entry !== k) { setErr(''); setRerequest(false); onEntry(k); } }}
-              className={`h-10 rounded-md text-[14px] font-semibold transition-colors ${entry === k ? 'bg-elevated text-foreground shadow-[inset_0_0_0_1px_var(--border-strong)]' : 'text-muted-foreground hover:text-foreground'}`}>
+              className={`h-[44px] rounded-md text-[14px] font-semibold transition-colors ${entry === k ? 'bg-secondary text-foreground shadow-[inset_0_0_0_1px_var(--border-strong),inset_0_-2px_0_var(--primary)]' : 'text-muted-foreground hover:text-foreground'}`}>
               {k === 'new' ? t('choose.entryNew') : t('choose.entryReturning')}
             </button>
           ))}
@@ -261,7 +261,7 @@ export default function SignInPanel({ purpose, info, lockedEmail = '', onDone, o
           <p className={`${subCls} mb-6 [@media(max-height:800px)]:mb-4`}>{returning ? t('choose.signInSubtitle') : t('choose.subtitle')}</p>
         </>
       )}
-      <div className="flex flex-col gap-2.5">
+      <div className="flex flex-col gap-2.5 [@media(max-height:800px)]:gap-2">
         {buttons.includes('google') && (
           <button type="button" onClick={() => startProvider('google', 'auto')} className={googleBtn}>
             <GoogleMark /> {t('choose.google')}
@@ -296,7 +296,7 @@ export default function SignInPanel({ purpose, info, lockedEmail = '', onDone, o
         <div className="mt-4 rounded-lg border border-destructive/40 bg-destructive/10 px-3.5 py-2.5">
           {err && <p role="alert" className="m-0 text-[14px] leading-relaxed text-[var(--auth-error-fg)]">{err}</p>}
           {rerequest && buttons.includes('facebook') && (
-            <button type="button" onClick={() => startProvider('facebook', 'auto', true)} className={`${inlineLink} mt-1 min-h-11 inline-flex items-center gap-2 text-[14px]`}>
+            <button type="button" onClick={() => startProvider('facebook', 'auto', true)} className={`${inlineLink} mt-1 min-h-[44px] inline-flex items-center gap-2 text-[14px]`}>
               <FacebookMark className="w-[18px] h-[18px]" /> {t('choose.allowEmail')}
             </button>
           )}
@@ -305,13 +305,13 @@ export default function SignInPanel({ purpose, info, lockedEmail = '', onDone, o
       {!returning && onMoreOptions && (
         <p className="mt-5 text-[14px] text-muted-foreground">
           {t('choose.moreOptionsHint')}{' '}
-          <button type="button" onClick={onMoreOptions} className={`${inlineLink} min-h-11 align-middle`}>{t('choose.moreOptions')}</button>
+          <button type="button" onClick={onMoreOptions} className={`${inlineLink} min-h-[44px] align-middle`}>{t('choose.moreOptions')}</button>
         </p>
       )}
       {returning && onPasswordLogin && (
         <p className="mt-5 text-[14px] text-muted-foreground">
           {t('choose.haveAccount')}{' '}
-          <button type="button" onClick={onPasswordLogin} className={`${inlineLink} min-h-11 align-middle`}>{t('choose.logIn')}</button>
+          <button type="button" onClick={onPasswordLogin} className={`${inlineLink} min-h-[44px] align-middle`}>{t('choose.logIn')}</button>
         </p>
       )}
       {!compact && purpose === 'signup' && (
@@ -347,7 +347,7 @@ export function UseCaseStep({ onDone }) {
         <legend className="sr-only">{t('useCase.title')}</legend>
         <div className="grid gap-2">
           {USE_CASES.map((k) => (
-            <label key={k} className={`flex items-center gap-3 rounded-lg border px-3 min-h-11 cursor-pointer text-[14px] transition-colors ${useCase === k ? 'border-primary bg-primary/10 text-foreground' : 'border-border hover:bg-secondary text-foreground'}`}>
+            <label key={k} className={`flex items-center gap-3 rounded-lg border px-3 min-h-[44px] cursor-pointer text-[14px] transition-colors ${useCase === k ? 'border-primary bg-primary/10 text-foreground' : 'border-border hover:bg-secondary text-foreground'}`}>
               <input type="radio" name="usecase" value={k} checked={useCase === k} onChange={() => setUseCase(k)} className="accent-[var(--primary)]" />
               <span className="min-w-0">{tg(`lead.useCases.${k}`)}</span>
             </label>

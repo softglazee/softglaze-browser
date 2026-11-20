@@ -26,7 +26,7 @@ function ProfilesPreview() {
       <figcaption className="text-[12px] text-muted-foreground mb-2">{t('panel.exampleCaption')}</figcaption>
       <div aria-hidden="true" className="rounded-lg border border-border bg-card overflow-hidden">
         <table className="w-full border-collapse text-left text-[13px] whitespace-nowrap">
-          <thead className="bg-elevated text-muted-foreground text-[10px] uppercase tracking-wider font-semibold">
+          <thead className="bg-elevated text-muted-foreground text-[11px] uppercase tracking-wider font-semibold">
             <tr>
               <th className="px-4 py-2.5 font-semibold">{tp('table.name')}</th>
               <th className="px-3 py-2.5 font-semibold">{tp('general.os')}</th>
