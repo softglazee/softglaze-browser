@@ -233,7 +233,7 @@
       "title": "Language",
       "description": "Choose the display language for the SoftGlaze interface.",
       "label": "Display language",
-      "hint": "More languages are on the way. Changes apply instantly across the app."
+      "hint": "Changes apply instantly across the app."
     }
   },
   "startLinks": {
