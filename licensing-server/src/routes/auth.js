@@ -2,14 +2,17 @@
 // One-click sign-in (app 1.0.26). The flow and the security checks are described in src/auth/flow.js.
 //
 // Browser leg (HTML pages, never JSON):
-//   GET /auth/start?provider=github|google&tenant=<tenantId>&app_redirect=softglaze://auth|http://127.0.0.1:<port>/auth
-//       &code_challenge=<S256>&code_challenge_method=S256&state=<app state>  -> 302 to the provider
-//   GET /auth/callback/github|google?code&state  -> the app's redirect with ?code=<one-time code>&state=<app state>,
-//       or ?error=cancelled|email_not_verified|disposable_email|failed&state=<app state>. The same callback serves
+//   GET /auth/start?provider=github|google|facebook&tenant=<tenantId>&app_redirect=softglaze://auth|http://127.0.0.1:<port>/auth
+//       &code_challenge=<S256>&code_challenge_method=S256&state=<app state>[&auth_type=rerequest]  -> 302 to the provider
+//       (auth_type=rerequest: Facebook asks again for the email permission the person declined)
+//   GET /auth/callback/github|google|facebook?code&state  -> the app's redirect with ?code=<one-time code>&state=<app state>,
+//       or ?error=cancelled|email_not_verified|email_missing|disposable_email|failed&state=<app state>
+//       (email_missing: a Facebook account that shared no email and is not linked yet; the app offers
+//       "Allow email access", Google or email). The same callback serves
 //       the phone and web clients (src/routes/mobileAuth.js, webAuth.js): their AuthState names the client
 //       and the result goes to that client's redirect with a plain 302.
 // App calls (JSON, install-authenticated like /v1/account: tenantId, installId, installSecret):
-//   GET  /auth/providers?tenantId=..                       -> { providers: ['google', 'github'], email: true }
+//   GET  /auth/providers?tenantId=..                       -> { providers: ['google', 'facebook', 'github'], email: true }
 //        (only the providers whose keys are set on the server)
 //   POST /auth/exchange { code, codeVerifier, expectCustomerId? } -> the sign-in (below), or 400 invalid_grant,
 //        403 email_not_verified, 409 account_mismatch
@@ -21,6 +24,9 @@
 //   POST /auth/licence/move { session, move: true }                    -> { ok, moved, remaining } | 404 no_licence,
 //        429 move_limit { retryAt }, 409 move_conflict
 //   POST /auth/logout { session }            -> { ok: true } always
+// Meta's Data Deletion Request Callback (src/auth/facebookDeletion.js, docs/FACEBOOK-SIGNIN.md):
+//   POST /auth/facebook/data-deletion (form: signed_request) -> { url, confirmation_code } | 400 | 503
+//   GET  /auth/facebook/deletion-status?code=..             -> HTML status page
 // A sign-in answers { ok, session, provider, isNew, linked, customer: { id, email, name, useCase }, methods,
 // licence: { state: here | elsewhere | store | none, tier?, until?, movesLeft? } }. The session token is shown
 // once; only its SHA-256 is stored.
@@ -32,9 +38,27 @@ const { startVerification } = require('../account/verify');
 const { getProvider, availableProviders } = require('../auth/providers');
 const flow = require('../auth/flow');
 const accounts = require('../auth/accounts');
-const { sendPage, readCookies, secureCookies, ipHashOf, setNonceCookie, redirectTo } = require('./authHttp');
+const facebookDeletion = require('../auth/facebookDeletion');
+const { sendPage, readCookies, secureCookies, ipHashOf, setNonceCookie, redirectTo, PAGE_CSP } = require('./authHttp');
 
 const router = express.Router();
+
+// Meta posts the signed request as a form (application/x-www-form-urlencoded); JSON is accepted too.
+router.post('/facebook/data-deletion', express.urlencoded({ extended: false, limit: '16kb' }), asyncHandler(async (req, res) => {
+  const r = await facebookDeletion.handleDeletionRequest(prisma, req.body || {});
+  res.set('Cache-Control', 'no-store').status(r.status).json(r.body);
+}));
+
+router.get('/facebook/deletion-status', (req, res) => {
+  const { status, html } = facebookDeletion.statusPage(typeof req.query.code === 'string' ? req.query.code : '');
+  res.status(status)
+    .set('Content-Type', 'text/html; charset=utf-8')
+    .set('Cache-Control', 'no-store')
+    .set('Content-Security-Policy', PAGE_CSP)
+    .set('X-Content-Type-Options', 'nosniff')
+    .set('Referrer-Policy', 'no-referrer')
+    .send(html);
+});
 
 router.get('/providers', asyncHandler(async (req, res) => {
   const tenantId = typeof req.query.tenantId === 'string' ? req.query.tenantId : '';

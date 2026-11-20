@@ -52,7 +52,7 @@ const nonceCookieName = (authStateId) => `${NONCE_COOKIE_PREFIX}${String(authSta
 
 // Stores the AuthState of one browser sign-in and builds the provider URL. Shared by the desktop (startSignIn)
 // and the phone and web clients (startClientSignIn). -> { ok: true, location, cookie } or { ok: false, status, error }.
-async function createAuthState(db, tenant, provider, { codeChallenge, appState, appRedirect, clientId = null, ipHash = null, now = Date.now() }) {
+async function createAuthState(db, tenant, provider, { codeChallenge, appState, appRedirect, clientId = null, ipHash = null, rerequest = false, now = Date.now() }) {
   if (!provider.configured()) return { ok: false, status: 503, error: 'provider_unavailable' };
   if (ipHash) {
     const recent = await db.authState.count({ where: { tenantId: tenant.id, ipHash, createdAt: { gte: new Date(now - 3600000) } } });
@@ -68,12 +68,16 @@ async function createAuthState(db, tenant, provider, { codeChallenge, appState, 
     }
   });
   const location = provider.authorizeUrl({
-    state, codeChallenge: challengeOf(providerVerifier(state)), redirectUri: callbackUrl(provider.id), nonce
+    state, codeChallenge: challengeOf(providerVerifier(state)), redirectUri: callbackUrl(provider.id), nonce, rerequest
   });
   return { ok: true, location, cookie: { name: nonceCookieName(row.id), value: nonce, maxAgeSec: STATE_TTL_MS / 1000 } };
 }
 
-// GET /auth/start. query: { provider, tenant, app_redirect, code_challenge, code_challenge_method, state }.
+// "Allow email access" after a Facebook sign-in without an email: the app starts again with auth_type=rerequest,
+// so Facebook asks for the declined email permission once more. Other providers ignore it.
+const wantsRerequest = (q) => q.auth_type === 'rerequest';
+
+// GET /auth/start. query: { provider, tenant, app_redirect, code_challenge, code_challenge_method, state, auth_type? }.
 // -> { ok: true, location, cookie: { name, value, maxAgeSec } } or { ok: false, status, error }.
 async function startSignIn(db, query, { ipHash = null, now = Date.now() } = {}) {
   const q = query || {};
@@ -87,12 +91,12 @@ async function startSignIn(db, query, { ipHash = null, now = Date.now() } = {}) 
   if (q.code_challenge_method !== 'S256' || !isChallenge(q.code_challenge) || !isAppState(q.state)) {
     return { ok: false, status: 400, error: 'invalid_request' };
   }
-  return createAuthState(db, tenant, provider, { codeChallenge: q.code_challenge, appState: q.state, appRedirect: redirect.uri, ipHash, now });
+  return createAuthState(db, tenant, provider, { codeChallenge: q.code_challenge, appState: q.state, appRedirect: redirect.uri, ipHash, rerequest: wantsRerequest(q), now });
 }
 
 // GET /v1/mobile/auth/authorize and /v1/web/auth/authorize (OAuth 2.0 authorization request of a public
 // client, RFC 6749 4.1.1 + RFC 7636). query: { client_id, redirect_uri, response_type=code, state,
-// code_challenge, code_challenge_method=S256, provider, scope? }. `expectClient` is the client the route serves.
+// code_challenge, code_challenge_method=S256, provider, scope?, auth_type? }. `expectClient` is the client the route serves.
 // -> { ok: true, location, cookie } | { ok: false, status, error, redirect? } where `redirect` (only once the
 // redirect_uri is proven to belong to the client) is where the error may be sent (RFC 6749 4.1.2.1).
 async function startClientSignIn(db, tenant, query, expectClient, { ipHash = null, now = Date.now() } = {}) {
@@ -107,7 +111,7 @@ async function startClientSignIn(db, tenant, query, expectClient, { ipHash = nul
   const provider = getProvider(q.provider);
   if (!provider) return back(q.provider === 'apple' ? 'provider_not_configured' : 'invalid_request');
   const r = await createAuthState(db, tenant, provider, {
-    codeChallenge: q.code_challenge, appState: q.state, appRedirect: redirect.uri, clientId: expectClient, ipHash, now
+    codeChallenge: q.code_challenge, appState: q.state, appRedirect: redirect.uri, clientId: expectClient, ipHash, rerequest: wantsRerequest(q), now
   });
   if (!r.ok) return back(r.error === 'provider_unavailable' ? 'provider_not_configured' : r.error === 'rate_limited' ? 'rate_limited' : 'server_error');
   return r;
@@ -147,22 +151,44 @@ async function finishCallback(db, providerId, query, cookies, { now = Date.now()
     if (reason === 'failed') console.warn('[auth] provider sign-in failed:', provider.id, e && (e.detail || e.message));
     return toApp({ error: reason }, reason);
   }
-  const parsed = parseEmail(profile.email);
-  if (!parsed || profile.emailVerified !== true) return toApp({ error: 'email_not_verified' }, 'email_not_verified');
-  const { getSettings } = require('../settings');
-  const settings = await getSettings(db, st.tenantId);
-  if (isDisposableDomain(parsed.domain, { allow: settings.email.domainAllowlist, block: settings.email.domainBlocklist })) {
-    return toApp({ error: 'disposable_email' }, 'disposable_email');
+  // A provider that may send no email (Facebook: a phone-number account, or the email permission declined) signs
+  // in only a person who already linked this provider id; anyone else is told why (email_missing) and offered
+  // to allow email access (auth_type=rerequest), Google or email sign-in. Nothing is created without an email.
+  const noEmail = provider.emailOptional === true && !profile.email;
+  let parsed = null;
+  if (noEmail) {
+    if (!(await linkedIdentity(db, st.tenantId, provider.id, profile.providerUserId))) return toApp({ error: 'email_missing' }, 'email_missing');
+  } else {
+    parsed = parseEmail(profile.email);
+    if (!parsed || profile.emailVerified !== true) return toApp({ error: 'email_not_verified' }, 'email_not_verified');
+    const { getSettings } = require('../settings');
+    const settings = await getSettings(db, st.tenantId);
+    if (isDisposableDomain(parsed.domain, { allow: settings.email.domainAllowlist, block: settings.email.domainBlocklist })) {
+      return toApp({ error: 'disposable_email' }, 'disposable_email');
+    }
   }
   const appCode = randomToken(32);
   await db.authCode.create({
     data: {
       tenantId: st.tenantId, authStateId: st.id, provider: provider.id, codeHash: sha256Hex(appCode),
-      profile: { providerUserId: profile.providerUserId, email: parsed.email, emailVerified: true, name: profile.name || null, login: profile.login || null },
+      profile: {
+        providerUserId: profile.providerUserId, email: parsed ? parsed.email : null, emailVerified: Boolean(parsed),
+        name: profile.name || null, login: profile.login || null
+      },
       expiresAt: new Date(now + CODE_TTL_MS), createdAt: new Date(now)
     }
   });
   return toApp({ code: appCode }, 'signed_in');
+}
+
+// An Identity of this provider id whose customer still exists in the tenant (or null).
+async function linkedIdentity(db, tenantId, provider, providerUserId) {
+  const id = String(providerUserId || '');
+  if (!id) return null;
+  const identity = await db.identity.findUnique({ where: { tenantId_provider_providerUserId: { tenantId, provider, providerUserId: id } } });
+  if (!identity) return null;
+  const c = await db.customer.findUnique({ where: { id: identity.customerId } });
+  return c && c.tenantId === tenantId ? identity : null;
 }
 
 const INVALID_GRANT = { status: 400, body: { error: 'invalid_grant', message: 'This sign-in has expired or was already used. Please sign in again.' } };

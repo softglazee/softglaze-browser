@@ -3,20 +3,20 @@
 // is D:\SoftGlaze-Mobile\docs\features\SECURITY-VAULT.md ("Auth server contract"). JSON in and out; every error
 // body is { error: <code>, message }.
 //
-//   GET  /v1/mobile/auth/providers                    -> { providers: ['google', 'github'], email: true, apple: false }
+//   GET  /v1/mobile/auth/providers                    -> { providers: ['google', 'facebook', 'github'], email: true, apple: false }
 //   POST /v1/mobile/auth/email/start  { email, device, lang? }
 //        -> 200 { challengeId, resendAfterSec, expiresAt (ms) } | 400 invalid_email | disposable_email | no_mx,
 //           429 rate_limited, 503 email_unavailable, 502 email_failed
 //   POST /v1/mobile/auth/email/verify { challengeId, code, device }
 //        -> 200 <session> | 400 invalid_code | code_expired | invalid_request, 429 too_many_attempts, 403 phone_limit
 //   GET  /v1/mobile/auth/authorize ?client_id=softglaze-mobile&redirect_uri=softglaze-mobile://auth&response_type=code
-//        &scope=mobile&state&code_challenge&code_challenge_method=S256&provider=google|github|apple
+//        &scope=mobile&state&code_challenge&code_challenge_method=S256&provider=google|facebook|github|apple[&auth_type=rerequest]
 //        -> 302 to the provider; the result comes back to redirect_uri?code=<one-time code>&state=<state> or
-//           ?error=access_denied|email_not_verified|disposable_email|failed|provider_not_configured|invalid_request
+//           ?error=access_denied|email_not_verified|email_missing|disposable_email|failed|provider_not_configured|invalid_request
 //           |rate_limited&state=<state>. Apple answers provider_not_configured until it is set up.
 //   POST /v1/mobile/auth/token { grant_type: 'authorization_code', client_id, redirect_uri, code, code_verifier, device }
 //        -> 200 <session> | 400 invalid_grant | unsupported_grant_type | invalid_request, 403 phone_limit |
-//           email_not_verified
+//           email_not_verified | email_missing
 //   POST /v1/mobile/auth/refresh      (Authorization: Bearer <token>) -> 200 <session> with a NEW token | 401
 //   POST /v1/mobile/auth/sign-out     (Bearer) -> 204 (also when the token is already gone)
 //   POST /v1/mobile/auth/sign-out-all (Bearer) -> 200 { ok, revoked }: every phone of the account

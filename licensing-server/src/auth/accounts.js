@@ -19,6 +19,13 @@ const { createSession, isLive, slide } = require('./sessions');
 
 const err = (status, error, message, extra = {}) => ({ status, body: { error, message, ...extra } });
 
+// The text the apps show for a Facebook account that shared no email (docs/FACEBOOK-SIGNIN.md).
+const EMAIL_MISSING_MESSAGE = "Your Facebook account didn't share an email. Use Google or email sign-in, or allow email access.";
+function resolvedError(code) {
+  if (code === 'email_missing') return err(403, 'email_missing', EMAIL_MISSING_MESSAGE, { rerequest: true });
+  return err(403, 'email_not_verified', 'Your sign-in did not give us a verified email address.');
+}
+
 function cleanName(v) {
   if (typeof v !== 'string') return null;
   const s = v.replace(/[\u0000-\u001f\u007f<>]/g, '').replace(/\s+/g, ' ').trim();
@@ -39,10 +46,18 @@ async function attachInstall(db, tenantId, install, customer, { at, now, setting
 
 // Read-only: the customer a verified sign-in resolves to, before anything is written.
 // -> { identity, customer, how: 'identity' | 'email' | 'new', parsed } or { error }.
+// A profile without any email (Facebook only, see src/auth/flow.js) resolves ONLY through an existing Identity
+// of that provider id: { ..., parsed: null }; otherwise { error: 'email_missing' }.
 async function resolveCustomer(db, tenantId, provider, profile) {
+  const providerUserId = String((profile && profile.providerUserId) || '');
+  if (profile && !profile.email && providerUserId) {
+    const identity = await db.identity.findUnique({ where: { tenantId_provider_providerUserId: { tenantId, provider, providerUserId } } });
+    const c = identity ? await db.customer.findUnique({ where: { id: identity.customerId } }) : null;
+    if (c && c.tenantId === tenantId) return { identity, customer: c, how: 'identity', parsed: null, providerUserId };
+    return { error: 'email_missing' };
+  }
   const parsed = parseEmail(profile && profile.email);
   if (!parsed || !profile || profile.emailVerified !== true) return { error: 'email_not_verified' };
-  const providerUserId = String(profile.providerUserId || '');
   if (!providerUserId) return { error: 'email_not_verified' };
   let identity = await db.identity.findUnique({ where: { tenantId_provider_providerUserId: { tenantId, provider, providerUserId } } });
   if (identity) {
@@ -74,7 +89,7 @@ async function linkAccount(db, tenantId, provider, profile, resolved, { at, firs
     }
   }
   const restored = Boolean(customer.deletedAt);
-  const sameEmail = customer.emailKey === parsed.emailKey;
+  const sameEmail = Boolean(parsed) && customer.emailKey === parsed.emailKey;
   customer = await db.customer.update({
     where: { id: customer.id },
     data: {
@@ -91,10 +106,12 @@ async function linkAccount(db, tenantId, provider, profile, resolved, { at, firs
   const stale = resolved.identity && resolved.identity.stale;
   if (stale) await db.identity.delete({ where: { id: stale.id } }).catch(() => {});
   const live = resolved.identity && !stale ? resolved.identity : null;
-  const idData = { customerId: customer.id, email: parsed.email, emailVerified: true, login: cleanName(profile.login), lastUsedAt: at };
+  // Without an email (an existing Facebook link) the Identity keeps the address it had.
+  const idEmail = parsed ? parsed.email : (live ? live.email || null : null);
+  const idData = { customerId: customer.id, email: idEmail, emailVerified: Boolean(idEmail), login: cleanName(profile.login), lastUsedAt: at };
   let identity;
   if (live) {
-    identity = await db.identity.update({ where: { id: live.id }, data: { email: idData.email, emailVerified: true, login: idData.login, lastUsedAt: at } });
+    identity = await db.identity.update({ where: { id: live.id }, data: { email: idData.email, emailVerified: idData.emailVerified, login: idData.login, lastUsedAt: at } });
   } else {
     try {
       identity = await db.identity.create({ data: { tenantId, provider, providerUserId, ...idData, createdAt: at } });
@@ -140,7 +157,7 @@ async function applySignIn(db, tenant, install, provider, profile, resolved, { i
 // { status, body } to refuse or null. -> { status, body } on refusal, else { ok: true, customer, session, how }.
 async function accountSignIn(db, tenant, provider, profile, { kind, clientId, ipHash = null, userAgent = null, now = Date.now(), gate = null }) {
   const resolved = await resolveCustomer(db, tenant.id, provider, profile);
-  if (resolved.error) return err(403, 'email_not_verified', 'Your sign-in did not give us a verified email address.');
+  if (resolved.error) return resolvedError(resolved.error);
   if (gate) {
     const refused = await gate(resolved);
     if (refused) return refused;
@@ -161,7 +178,7 @@ async function accountSignIn(db, tenant, provider, profile, { kind, clientId, ip
 // unlocks or links an existing workspace) refuses another account before anything is written.
 async function signIn(db, tenant, install, provider, profile, { expectCustomerId = null, ipHash = null, now = Date.now(), settings }) {
   const resolved = await resolveCustomer(db, tenant.id, provider, profile);
-  if (resolved.error) return err(403, 'email_not_verified', 'Your sign-in did not give us a verified email address.');
+  if (resolved.error) return resolvedError(resolved.error);
   if (expectCustomerId && (!resolved.customer || resolved.customer.id !== String(expectCustomerId))) {
     return err(409, 'account_mismatch', 'This workspace belongs to a different SoftGlaze account.');
   }
@@ -311,5 +328,5 @@ async function signedInOnInstall(db, tenantId, installId, customerId, emailKey) 
 
 module.exports = {
   attachInstall, resolveCustomer, linkAccount, applySignIn, accountSignIn, signIn, methodsFor, licenceState, movesLeft, findSession, sessionInfo,
-  logout, saveProfile, moveLicence, signedInOnInstall, cleanName
+  logout, saveProfile, moveLicence, signedInOnInstall, cleanName, EMAIL_MISSING_MESSAGE
 };
