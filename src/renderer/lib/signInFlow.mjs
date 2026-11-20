@@ -4,7 +4,7 @@
 // App error codes main sends for a sign-in. Each has a `errors.<CODE>` string in signin.json, en and es. The
 // email-code calls also use the sign-up codes (gate.json `serverErrors.<CODE>`, signupFlow.mjs).
 export const SIGNIN_ERROR_CODES = Object.freeze([
-  'SIGNIN_OFFLINE', 'SIGNIN_EXPIRED', 'SIGNIN_ACCOUNT_MISMATCH', 'SIGNIN_EMAIL_MISMATCH', 'SIGNIN_EMAIL_NOT_VERIFIED',
+  'SIGNIN_OFFLINE', 'SIGNIN_EXPIRED', 'SIGNIN_ACCOUNT_MISMATCH', 'SIGNIN_EMAIL_MISMATCH', 'SIGNIN_EMAIL_NOT_VERIFIED', 'SIGNIN_EMAIL_MISSING',
   'SIGNIN_DISPOSABLE_EMAIL', 'SIGNIN_UNAVAILABLE', 'SIGNIN_FAILED', 'SIGNIN_TIMEOUT', 'SIGNIN_NOT_ALLOWED',
   'SIGNIN_KEY_LOST', 'SIGNIN_SESSION_ENDED', 'SIGNIN_BAD_INPUT', 'MOVE_FAILED'
 ]);
@@ -25,15 +25,24 @@ export function showProvider(info, provider) {
 }
 export function showGithub(info) { return showProvider(info, 'github'); }
 export function showGoogle(info) { return showProvider(info, 'google'); }
+export function showMicrosoft(info) { return showProvider(info, 'microsoft'); }
+export function showFacebook(info) { return showProvider(info, 'facebook'); }
+export function showLinkedin(info) { return showProvider(info, 'linkedin'); }
 
-// The provider buttons to draw, in the app's order (Google first, as most people have a Google account).
-export const PROVIDER_ORDER = Object.freeze(['google', 'github']);
+// The provider buttons to draw, in the app's order (Google first, as most people have a Google account, then
+// Microsoft, Facebook, LinkedIn and GitHub).
+export const PROVIDER_ORDER = Object.freeze(['google', 'microsoft', 'facebook', 'linkedin', 'github']);
 export function providerButtons(info) {
   return PROVIDER_ORDER.filter((p) => showProvider(info, p));
 }
 
 // The name shown in "Continue in your browser" texts.
-export const PROVIDER_NAMES = Object.freeze({ google: 'Google', github: 'GitHub' });
+export const PROVIDER_NAMES = Object.freeze({ google: 'Google', microsoft: 'Microsoft', facebook: 'Facebook', linkedin: 'LinkedIn', github: 'GitHub' });
+
+// A Facebook sign-in that shared no email: the panel offers "Allow email access" (Facebook asks again).
+export function offerEmailRerequest(err) {
+  return Boolean(err && err.code === 'SIGNIN_EMAIL_MISSING');
+}
 
 // Where the Gate goes after a sign-in: the optional use-case question once after a one-click sign-up when the
 // account has no answer yet, else the licence check.
@@ -51,9 +60,9 @@ export function moveErrorKey(err) {
   return err && err.code === 'MOVE_LIMIT' ? 'store.result.moveLimit' : null;
 }
 
-// Settings > Account rows: one per method, Google, then GitHub, then the email code.
+// Settings > Account rows: one per method, Google, Microsoft, Facebook, LinkedIn, GitHub, then the email code.
 export function methodRows(methods) {
-  const order = { google: 0, github: 1, email: 2 };
+  const order = { google: 0, microsoft: 1, facebook: 2, linkedin: 3, github: 4, email: 5 };
   const list = Array.isArray(methods) ? methods.filter((m) => m && Object.prototype.hasOwnProperty.call(order, m.provider)) : [];
   return list.slice().sort((a, b) => order[a.provider] - order[b.provider]).map((m) => ({
     provider: m.provider,

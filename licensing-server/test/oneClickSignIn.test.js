@@ -380,10 +380,10 @@ test('/auth/start refuses bad redirects, plain PKCE, bad state and unknown provi
   assert.equal((await startFlow({ challenge: p.challenge, state: st, method: 'plain' })).status, 400);
   assert.equal((await startFlow({ challenge: 'short', state: st })).status, 400);
   assert.equal((await startFlow({ challenge: p.challenge, state: 'x' })).status, 400);
-  assert.equal((await startFlow({ challenge: p.challenge, state: st, provider: 'facebook' })).status, 400);
+  assert.equal((await startFlow({ challenge: p.challenge, state: st, provider: 'myspace' })).status, 400);
   const noTenant = await fetch(`${base}/auth/start?provider=github&tenant=nope&app_redirect=softglaze://auth&code_challenge=${p.challenge}&code_challenge_method=S256&state=${st}`, { redirect: 'manual' });
   assert.equal(noTenant.status, 400);
-  assert.equal((await fetch(`${base}/auth/callback/facebook?code=x&state=y`)).status, 404);
+  assert.equal((await fetch(`${base}/auth/callback/myspace?code=x&state=y`)).status, 404);
 });
 
 test('/auth/start is limited per network per hour', async () => {

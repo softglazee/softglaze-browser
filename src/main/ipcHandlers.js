@@ -13294,7 +13294,7 @@ async function signinInfo() { return oneClick().info(); }
 
 async function signinStart(payload) {
   const p = signinPayload(payload);
-  return oneClick().start({ provider: String(p.provider || ''), purpose: String(p.purpose || ''), mode: p.mode });
+  return oneClick().start({ provider: String(p.provider || ''), purpose: String(p.purpose || ''), mode: p.mode, rerequest: p.rerequest === true });
 }
 
 async function signinCancel() { return oneClick().cancel(); }
