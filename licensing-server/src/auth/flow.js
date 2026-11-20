@@ -39,6 +39,8 @@ const CODE_TTL_MS = 60000;
 const STARTS_PER_HOUR_PER_IP = 30;
 
 const NONCE_COOKIE_PREFIX = 'sg_auth_';
+// What providers send back when the person cancelled (RFC 6749 access_denied; LinkedIn's own two codes).
+const PROVIDER_CANCELLED = Object.freeze(['access_denied', 'user_cancelled_login', 'user_cancelled_authorize']);
 
 function callbackUrl(providerId) {
   return `${String(publicBaseUrl).replace(/\/+$/, '')}/auth/callback/${providerId}`;
@@ -137,9 +139,11 @@ async function finishCallback(db, providerId, query, cookies, { now = Date.now()
   if (!redirect) return { kind: 'page', status: 400, page: 'expired' };
   const toApp = (params, outcome) => ({ kind: 'app', url: appRedirectUrl(redirect.uri, { ...params, state: st.appState }), redirectKind: redirect.kind, outcome });
 
-  // The phone and web clients speak OAuth: access_denied is the standard "the person said no".
+  // The phone and web clients speak OAuth: access_denied is the standard "the person said no". LinkedIn says
+  // user_cancelled_login / user_cancelled_authorize for the same thing.
   const cancelled = st.clientId ? 'access_denied' : 'cancelled';
-  if (typeof q.error === 'string' && q.error) return toApp({ error: q.error === 'access_denied' ? cancelled : 'failed' }, 'cancelled');
+  const said = typeof q.error === 'string' ? q.error : '';
+  if (said) return toApp({ error: PROVIDER_CANCELLED.includes(said) ? cancelled : 'failed' }, 'cancelled');
   const code = typeof q.code === 'string' ? q.code : '';
   if (!code || code.length > 200) return toApp({ error: 'failed' }, 'failed');
 

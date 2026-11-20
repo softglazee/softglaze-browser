@@ -18,12 +18,15 @@
 // email verification). Sign in with Apple is not configured yet: the phone's authorize endpoint answers
 // provider_not_configured for it (src/routes/mobileAuth.js). Facebook (src/auth/providers/facebook.js) is the
 // Facebook Login code flow with PKCE, appsecret_proof and a Data Deletion Request Callback (src/auth/facebookDeletion.js).
+// LinkedIn (src/auth/providers/linkedin.js) is Sign In with LinkedIn using OpenID Connect: ID token signature, iss,
+// aud and exp checked, userinfo for the email, only email_verified addresses used.
 const github = require('./github');
 const google = require('./google');
 const facebook = require('./facebook');
+const linkedin = require('./linkedin');
 
 // The order is the order of the buttons the apps show.
-const PROVIDERS = Object.freeze({ [google.id]: google, [facebook.id]: facebook, [github.id]: github });
+const PROVIDERS = Object.freeze({ [google.id]: google, [facebook.id]: facebook, [linkedin.id]: linkedin, [github.id]: github });
 
 function getProvider(id) {
   return typeof id === 'string' && Object.prototype.hasOwnProperty.call(PROVIDERS, id) ? PROVIDERS[id] : null;
