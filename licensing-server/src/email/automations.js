@@ -6,10 +6,13 @@
 //
 //   welcome         trial start + 0 h      lifecycle
 //   tips            trial start + 48 h     lifecycle
-//   trial_ending    trial end - 48 h       lifecycle (day 5 of a 7-day trial)
-//   trial_ended     trial end + 0 h        lifecycle
-//   locks_tomorrow  trial end + 48 h       lifecycle (the app locks after its 3 grace days)
+//   trial_ending    trial end - 48 h       lifecycle (day 5 of a 7-day trial: "then you move to Free")
+//   trial_ended     trial end + 0 h        lifecycle ("you are on the Free plan now")
 //   come_back       trial start + 336 h    marketing: needs marketing consent (day 14)
+// Free plan release: a trial ends on the Free plan, nothing locks, so locks_tomorrow (trial end + 48 h, "the
+// app stops opening profiles tomorrow") is no longer an automation. Its settings key stays (disabled) so an
+// admin client that saves the whole automations object still validates. free_plan_launch (the win back
+// email) is deliberately NOT here: the owner sends it by hand (docs/ADMIN-API.md).
 const { renderFor, enqueue, blockReason } = require('./outbox');
 const { getTemplate } = require('./templates');
 const { ms } = require('../util/time');
@@ -19,7 +22,6 @@ const AUTOMATIONS = Object.freeze([
   { key: 'tips', anchor: 'start', skipIfPaid: false },
   { key: 'trial_ending', anchor: 'end', skipIfPaid: true },
   { key: 'trial_ended', anchor: 'end', skipIfPaid: true },
-  { key: 'locks_tomorrow', anchor: 'end', skipIfPaid: true },
   { key: 'come_back', anchor: 'start', skipIfPaid: true }
 ]);
 const HOUR = 3600000;

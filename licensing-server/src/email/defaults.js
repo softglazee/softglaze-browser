@@ -137,6 +137,152 @@ Tu prueba dura hasta el {{trialEndsAt}}. Si tienes preguntas, responde a este co
       subject: 'Your SoftGlaze trial ends on {{trialEndsAt}}',
       html: `<p>{{greeting}}</p>
 <p>A quick reminder: your free trial of {{appName}} ends on {{trialEndsAt}}.</p>
+<p>After that you move to the Free plan by yourself. Nothing is locked and nothing is deleted: you keep all your profiles (25 can be opened), your proxies and fingerprints, and the phone and web app.</p>
+<p>To keep unlimited profiles, 3 running at once, team seats, cloud sync and unlimited AI actions, choose Pro in the app (open Billing), from US$5 a month. If you would rather pay by invoice, reply to this email and we will send one.</p>`,
+      text: `{{greeting}}
+
+A quick reminder: your free trial of {{appName}} ends on {{trialEndsAt}}.
+
+After that you move to the Free plan by yourself. Nothing is locked and nothing is deleted: you keep all your profiles (25 can be opened), your proxies and fingerprints, and the phone and web app.
+
+To keep unlimited profiles, 3 running at once, team seats, cloud sync and unlimited AI actions, choose Pro in the app (open Billing), from US$5 a month. If you would rather pay by invoice, reply to this email and we will send one.`
+    },
+    es: {
+      subject: 'Tu prueba de SoftGlaze termina el {{trialEndsAt}}',
+      html: `<p>{{greeting}}</p>
+<p>Un recordatorio: tu prueba gratuita de {{appName}} termina el {{trialEndsAt}}.</p>
+<p>Después pasas al plan gratuito sin hacer nada. No se bloquea nada y no se borra nada: conservas todos tus perfiles (puedes abrir 25), tus proxies y huellas digitales, y la aplicación del móvil y la web.</p>
+<p>Para seguir con perfiles ilimitados, 3 abiertos a la vez, puestos para tu equipo, sincronización en la nube y acciones de IA ilimitadas, elige Pro en la aplicación (abre Facturación), desde 5 US$ al mes. Si prefieres pagar con factura, responde a este correo y te la enviamos.</p>`,
+      text: `{{greeting}}
+
+Un recordatorio: tu prueba gratuita de {{appName}} termina el {{trialEndsAt}}.
+
+Después pasas al plan gratuito sin hacer nada. No se bloquea nada y no se borra nada: conservas todos tus perfiles (puedes abrir 25), tus proxies y huellas digitales, y la aplicación del móvil y la web.
+
+Para seguir con perfiles ilimitados, 3 abiertos a la vez, puestos para tu equipo, sincronización en la nube y acciones de IA ilimitadas, elige Pro en la aplicación (abre Facturación), desde 5 US$ al mes. Si prefieres pagar con factura, responde a este correo y te la enviamos.`
+    }
+  },
+
+  trial_ended: {
+    name: 'Trial ended: you are on Free now (day 7)',
+    category: 'lifecycle',
+    en: {
+      subject: 'You are on the SoftGlaze Free plan now',
+      html: `<p>{{greeting}}</p>
+<p>Your trial has ended. You are now on the Free plan.</p>
+<p>You keep: all your profiles (25 can be opened), your proxies and fingerprints, the phone and web app.</p>
+<p>Pro adds: unlimited profiles, 3 running at once, team seats, cloud sync and unlimited AI actions, from US$5 a month. To upgrade, open Billing in the app, or reply to this email to pay by invoice. If you already have a purchase code, enter it in Billing.</p>
+<p>Thanks for trying {{appName}}.</p>`,
+      text: `{{greeting}}
+
+Your trial has ended. You are now on the Free plan.
+
+You keep: all your profiles (25 can be opened), your proxies and fingerprints, the phone and web app.
+
+Pro adds: unlimited profiles, 3 running at once, team seats, cloud sync and unlimited AI actions, from US$5 a month. To upgrade, open Billing in the app, or reply to this email to pay by invoice. If you already have a purchase code, enter it in Billing.
+
+Thanks for trying {{appName}}.`
+    },
+    es: {
+      subject: 'Ya estás en el plan gratuito de SoftGlaze',
+      html: `<p>{{greeting}}</p>
+<p>Tu prueba ha terminado. Ahora estás en el plan gratuito (Free).</p>
+<p>Conservas: todos tus perfiles (puedes abrir 25), tus proxies y huellas digitales, y la aplicación del móvil y la web.</p>
+<p>Pro añade: perfiles ilimitados, 3 abiertos a la vez, puestos para tu equipo, sincronización en la nube y acciones de IA ilimitadas, desde 5 US$ al mes. Para cambiar de plan, abre Facturación en la aplicación o responde a este correo para pagar con factura. Si ya tienes un código de compra, introdúcelo en Facturación.</p>
+<p>Gracias por probar {{appName}}.</p>`,
+      text: `{{greeting}}
+
+Tu prueba ha terminado. Ahora estás en el plan gratuito (Free).
+
+Conservas: todos tus perfiles (puedes abrir 25), tus proxies y huellas digitales, y la aplicación del móvil y la web.
+
+Pro añade: perfiles ilimitados, 3 abiertos a la vez, puestos para tu equipo, sincronización en la nube y acciones de IA ilimitadas, desde 5 US$ al mes. Para cambiar de plan, abre Facturación en la aplicación o responde a este correo para pagar con factura. Si ya tienes un código de compra, introdúcelo en Facturación.
+
+Gracias por probar {{appName}}.`
+    }
+  },
+
+  // Retired with the Free plan: no automation sends it any more (src/email/automations.js). The copy no
+  // longer speaks of a lock, in case it is sent by hand.
+  locks_tomorrow: {
+    name: 'Retired: end of trial grace (not sent since the Free plan)',
+    category: 'lifecycle',
+    en: {
+      subject: 'Your SoftGlaze profiles are safe on the Free plan',
+      html: `<p>{{greeting}}</p>
+<p>Your trial ended on {{trialEndsAt}} and {{appName}} keeps working on the Free plan: up to 25 profiles can be opened, one at a time.</p>
+<p>Nothing is deleted: your profiles, proxies and settings stay on your computer. Pro adds unlimited profiles, 3 running at once, team seats, cloud sync and unlimited AI actions, from US$5 a month.</p>
+<p>To upgrade, open Billing in the app, or reply to this email to pay by invoice.</p>`,
+      text: `{{greeting}}
+
+Your trial ended on {{trialEndsAt}} and {{appName}} keeps working on the Free plan: up to 25 profiles can be opened, one at a time.
+
+Nothing is deleted: your profiles, proxies and settings stay on your computer. Pro adds unlimited profiles, 3 running at once, team seats, cloud sync and unlimited AI actions, from US$5 a month.
+
+To upgrade, open Billing in the app, or reply to this email to pay by invoice.`
+    },
+    es: {
+      subject: 'Tus perfiles de SoftGlaze siguen a salvo en el plan gratuito',
+      html: `<p>{{greeting}}</p>
+<p>Tu prueba terminó el {{trialEndsAt}} y {{appName}} sigue funcionando en el plan gratuito: puedes abrir hasta 25 perfiles, de uno en uno.</p>
+<p>No se borra nada: tus perfiles, proxies y ajustes se quedan en tu ordenador. Pro añade perfiles ilimitados, 3 abiertos a la vez, puestos para tu equipo, sincronización en la nube y acciones de IA ilimitadas, desde 5 US$ al mes.</p>
+<p>Para cambiar de plan, abre Facturación en la aplicación o responde a este correo para pagar con factura.</p>`,
+      text: `{{greeting}}
+
+Tu prueba terminó el {{trialEndsAt}} y {{appName}} sigue funcionando en el plan gratuito: puedes abrir hasta 25 perfiles, de uno en uno.
+
+No se borra nada: tus perfiles, proxies y ajustes se quedan en tu ordenador. Pro añade perfiles ilimitados, 3 abiertos a la vez, puestos para tu equipo, sincronización en la nube y acciones de IA ilimitadas, desde 5 US$ al mes.
+
+Para cambiar de plan, abre Facturación en la aplicación o responde a este correo para pagar con factura.`
+    }
+  },
+
+  come_back: {
+    name: 'Come back (day 14, marketing consent only)',
+    category: 'marketing',
+    en: {
+      subject: 'Is SoftGlaze Browser still on your list?',
+      html: `<p>{{greeting}}</p>
+<p>Your SoftGlaze trial finished a week ago. If you are still looking for a way to keep many accounts apart, the app is ready when you are: your profiles are still on your computer.</p>
+<p>If something stopped you, we would like to hear what it was. Reply to this email; we read every reply.</p>
+<p>The latest version is here: <a href="{{downloadUrl}}">{{downloadUrl}}</a></p>`,
+      text: `{{greeting}}
+
+Your SoftGlaze trial finished a week ago. If you are still looking for a way to keep many accounts apart, the app is ready when you are: your profiles are still on your computer.
+
+If something stopped you, we would like to hear what it was. Reply to this email; we read every reply.
+
+The latest version is here: {{downloadUrl}}`
+    },
+    es: {
+      subject: '¿Sigue SoftGlaze Browser en tu lista?',
+      html: `<p>{{greeting}}</p>
+<p>Tu prueba de SoftGlaze terminó hace una semana. Si todavía buscas una forma de mantener muchas cuentas separadas, la aplicación está lista cuando quieras: tus perfiles siguen en tu ordenador.</p>
+<p>Si algo te frenó, nos gustaría saber qué fue. Responde a este correo; leemos todas las respuestas.</p>
+<p>La última versión está aquí: <a href="{{downloadUrl}}">{{downloadUrl}}</a></p>`,
+      text: `{{greeting}}
+
+Tu prueba de SoftGlaze terminó hace una semana. Si todavía buscas una forma de mantener muchas cuentas separadas, la aplicación está lista cuando quieras: tus perfiles siguen en tu ordenador.
+
+Si algo te frenó, nos gustaría saber qué fue. Responde a este correo; leemos todas las respuestas.
+
+La última versión está aquí: {{downloadUrl}}`
+    }
+  }
+};
+
+// The copy migration 20261107120100 seeded for these keys, word for word. That migration must not change (a
+// test compares it with scripts/gen-data-migration.js), so defaultRows() still returns this copy. Migration
+// 20261120120000_free_plan_partner_deals replaces it with the Free plan copy above in the tenant rows the admin
+// has not edited (isDefault = 1).
+const SEED_COPY_20261107 = {
+  trial_ending: {
+    name: 'Trial ends in 2 days (day 5)',
+    category: 'lifecycle',
+    en: {
+      subject: 'Your SoftGlaze trial ends on {{trialEndsAt}}',
+      html: `<p>{{greeting}}</p>
+<p>A quick reminder: your free trial of {{appName}} ends on {{trialEndsAt}}.</p>
 <p>To keep working without a break, choose a plan in the app (open Billing). If you would rather pay by invoice, reply to this email and we will send one.</p>
 <p>Your profiles and settings stay on your computer whatever you decide.</p>`,
       text: `{{greeting}}
@@ -228,39 +374,6 @@ No se borra nada: tus perfiles, proxies y ajustes se quedan en tu ordenador y vu
 Para continuar, abre Facturación en la aplicación o responde a este correo para pagar con factura.`
     }
   },
-
-  come_back: {
-    name: 'Come back (day 14, marketing consent only)',
-    category: 'marketing',
-    en: {
-      subject: 'Is SoftGlaze Browser still on your list?',
-      html: `<p>{{greeting}}</p>
-<p>Your SoftGlaze trial finished a week ago. If you are still looking for a way to keep many accounts apart, the app is ready when you are: your profiles are still on your computer.</p>
-<p>If something stopped you, we would like to hear what it was. Reply to this email; we read every reply.</p>
-<p>The latest version is here: <a href="{{downloadUrl}}">{{downloadUrl}}</a></p>`,
-      text: `{{greeting}}
-
-Your SoftGlaze trial finished a week ago. If you are still looking for a way to keep many accounts apart, the app is ready when you are: your profiles are still on your computer.
-
-If something stopped you, we would like to hear what it was. Reply to this email; we read every reply.
-
-The latest version is here: {{downloadUrl}}`
-    },
-    es: {
-      subject: '¿Sigue SoftGlaze Browser en tu lista?',
-      html: `<p>{{greeting}}</p>
-<p>Tu prueba de SoftGlaze terminó hace una semana. Si todavía buscas una forma de mantener muchas cuentas separadas, la aplicación está lista cuando quieras: tus perfiles siguen en tu ordenador.</p>
-<p>Si algo te frenó, nos gustaría saber qué fue. Responde a este correo; leemos todas las respuestas.</p>
-<p>La última versión está aquí: <a href="{{downloadUrl}}">{{downloadUrl}}</a></p>`,
-      text: `{{greeting}}
-
-Tu prueba de SoftGlaze terminó hace una semana. Si todavía buscas una forma de mantener muchas cuentas separadas, la aplicación está lista cuando quieras: tus perfiles siguen en tu ordenador.
-
-Si algo te frenó, nos gustaría saber qué fue. Responde a este correo; leemos todas las respuestas.
-
-La última versión está aquí: {{downloadUrl}}`
-    }
-  }
 };
 
 // Built-in templates added after the 20261107120100 seed migration. They are not in that migration (it
@@ -336,6 +449,77 @@ Si algo no funciona, responde a este correo o escribe a {{supportEmail}}. Te ayu
 
 El equipo de SoftGlaze`
     }
+  },
+
+  // The win back email for people whose trial ended before the Free plan existed (their app stopped opening
+  // profiles). Marketing: only customers with marketing consent get it. NO automation or cron sends it; the
+  // owner sends it once by hand (POST /v1/admin/email/send, templateKey free_plan_launch, category marketing;
+  // docs/ADMIN-API.md "Free plan").
+  free_plan_launch: {
+    name: 'Free plan launch (win back, sent by hand only)',
+    category: 'marketing',
+    en: {
+      subject: 'Good news: SoftGlaze now has a free plan',
+      html: `<p>{{greeting}}</p>
+<p>When your trial of {{appName}} ended, the app stopped opening profiles. That has changed: SoftGlaze now has a Free plan, and it is yours as soon as you update the app.</p>
+<p>On the Free plan you can:</p>
+<ul>
+<li>keep 25 browser profiles and run 1 at a time</li>
+<li>use all fingerprint settings and your own proxies</li>
+<li>view profiles and approve AI requests from the phone and web app</li>
+<li>run 25 AI actions per day</li>
+</ul>
+<p>Your profiles, proxies and settings are still on your computer. Get the latest version here: <a href="{{downloadUrl}}">{{downloadUrl}}</a></p>
+<p>If you need more, Pro adds unlimited profiles, 3 running at once, team seats, cloud sync and unlimited AI actions, from US$5 a month.</p>
+<p>The SoftGlaze team</p>`,
+      text: `{{greeting}}
+
+When your trial of {{appName}} ended, the app stopped opening profiles. That has changed: SoftGlaze now has a Free plan, and it is yours as soon as you update the app.
+
+On the Free plan you can:
+
+* keep 25 browser profiles and run 1 at a time
+* use all fingerprint settings and your own proxies
+* view profiles and approve AI requests from the phone and web app
+* run 25 AI actions per day
+
+Your profiles, proxies and settings are still on your computer. Get the latest version here: {{downloadUrl}}
+
+If you need more, Pro adds unlimited profiles, 3 running at once, team seats, cloud sync and unlimited AI actions, from US$5 a month.
+
+The SoftGlaze team`
+    },
+    es: {
+      subject: 'Buenas noticias: SoftGlaze ya tiene un plan gratuito',
+      html: `<p>{{greeting}}</p>
+<p>Cuando terminó tu prueba de {{appName}}, la aplicación dejó de abrir perfiles. Eso ha cambiado: SoftGlaze ya tiene un plan gratuito, y es tuyo en cuanto actualices la aplicación.</p>
+<p>Con el plan gratuito puedes:</p>
+<ul>
+<li>guardar 25 perfiles de navegador y abrir 1 a la vez</li>
+<li>usar todos los ajustes de huella digital y tus propios proxies</li>
+<li>ver tus perfiles y aprobar las peticiones de IA desde la aplicación del móvil y la web</li>
+<li>hacer 25 acciones de IA al día</li>
+</ul>
+<p>Tus perfiles, proxies y ajustes siguen en tu ordenador. Descarga la última versión aquí: <a href="{{downloadUrl}}">{{downloadUrl}}</a></p>
+<p>Si necesitas más, Pro añade perfiles ilimitados, 3 abiertos a la vez, puestos para tu equipo, sincronización en la nube y acciones de IA ilimitadas, desde 5 US$ al mes.</p>
+<p>El equipo de SoftGlaze</p>`,
+      text: `{{greeting}}
+
+Cuando terminó tu prueba de {{appName}}, la aplicación dejó de abrir perfiles. Eso ha cambiado: SoftGlaze ya tiene un plan gratuito, y es tuyo en cuanto actualices la aplicación.
+
+Con el plan gratuito puedes:
+
+* guardar 25 perfiles de navegador y abrir 1 a la vez
+* usar todos los ajustes de huella digital y tus propios proxies
+* ver tus perfiles y aprobar las peticiones de IA desde la aplicación del móvil y la web
+* hacer 25 acciones de IA al día
+
+Tus perfiles, proxies y ajustes siguen en tu ordenador. Descarga la última versión aquí: {{downloadUrl}}
+
+Si necesitas más, Pro añade perfiles ilimitados, 3 abiertos a la vez, puestos para tu equipo, sincronización en la nube y acciones de IA ilimitadas, desde 5 US$ al mes.
+
+El equipo de SoftGlaze`
+    }
   }
 };
 
@@ -344,11 +528,11 @@ const SEEDED_KEYS = Object.keys(TEMPLATES);
 const BUILT_IN_KEYS = [...SEEDED_KEYS, ...Object.keys(ADDED_TEMPLATES)];
 const ALL = { ...TEMPLATES, ...ADDED_TEMPLATES };
 
-function rowsOf(keys) {
+function rowsOf(keys, source = ALL) {
   const out = [];
   for (const key of keys) {
     for (const lang of LANGS) {
-      const t = ALL[key];
+      const t = source[key] || ALL[key];
       out.push({ key, lang, name: t.name, category: t.category, ...t[lang] });
     }
   }
@@ -356,7 +540,9 @@ function rowsOf(keys) {
 }
 
 // The rows the seed migration inserted: [{ key, lang, name, category, subject, html, text }]
-function defaultRows() { return rowsOf(SEEDED_KEYS); }
+function defaultRows() { return rowsOf(SEEDED_KEYS, SEED_COPY_20261107); }
+// The rows migration 20261120120000 rewrites (the Free plan copy of SEED_COPY_20261107's keys).
+function freePlanCopyRows() { return rowsOf(Object.keys(SEED_COPY_20261107)); }
 // Every built-in row, including the ones added later (ensureDefaultTemplates).
 function allDefaultRows() { return rowsOf(BUILT_IN_KEYS); }
 
@@ -367,4 +553,4 @@ function builtIn(key, lang) {
   return { key, lang: t[lang] ? lang : 'en', name: t.name, category: t.category, ...copy };
 }
 
-module.exports = { TEMPLATES, ADDED_TEMPLATES, LANGS, BUILT_IN_KEYS, defaultRows, allDefaultRows, builtIn };
+module.exports = { TEMPLATES, ADDED_TEMPLATES, SEED_COPY_20261107, LANGS, BUILT_IN_KEYS, defaultRows, freePlanCopyRows, allDefaultRows, builtIn };
