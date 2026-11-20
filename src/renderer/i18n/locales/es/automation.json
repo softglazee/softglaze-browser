@@ -191,7 +191,7 @@
     "starting": "Iniciando…",
     "logStarted": "Se inició \"{{name}}\" · {{total}} paso(s) en {{profile}}",
     "logStepRunning": "▶ {{label}}: {{summary}}",
-    "logStepError": "✕ {{label}} - {{error}}",
+    "logStepError": "✕ {{label}}: {{error}}",
     "logStepFailed": "falló",
     "logStopped": "Detenido.",
     "logFinished": "Finalizado: {{ran}}/{{total}} paso(s).",
@@ -208,7 +208,7 @@
     "errors": {
       "run": "No se pudo ejecutar la macro."
     },
-    "logStepSkipped": "omitido {{label}} (opcional) - {{error}}"
+    "logStepSkipped": "omitido {{label}} (opcional): {{error}}"
   },
   "parallel": {
     "states": {
@@ -231,7 +231,7 @@
     "dataHint": "Opcional: vincula una hoja de cálculo (fila → perfil, en orden)",
     "clearDataBinding": "Borrar vinculación de datos",
     "bindData": "Vincular datos",
-    "columnsPrefix": "Columnas: {{columns}} - usa",
+    "columnsPrefix": "Columnas: {{columns}}. Usa",
     "columnsSuffix": "en los pasos de la macro.",
     "profilesLabel": "Perfiles ({{count}} seleccionados)",
     "selectAll": "Seleccionar todo",

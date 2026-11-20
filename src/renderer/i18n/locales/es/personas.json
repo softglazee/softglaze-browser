@@ -124,7 +124,7 @@
     "errors": {
       "noRows": "Ese archivo no tiene una fila de encabezados ni filas de datos legibles.",
       "readFile": "No se pudo leer ese archivo.",
-      "nothingMapped": "No hay filas para importar - asigna al menos uno de Nombre / Apellidos / Correo / Usuario.",
+      "nothingMapped": "No hay filas para importar. Asigna al menos uno de Nombre / Apellidos / Correo / Usuario.",
       "failed": "Falló la importación."
     }
   },

@@ -26,7 +26,7 @@
     "settings": "Configuración"
   },
   "shell": {
-    "footerDefault": "© {year} SoftGlaze - Creado por el [equipo de SoftGlaze](https://softglaze.com) · Desarrollado por [Azhar Ali](https://azhar.softglaze.com)",
+    "footerDefault": "© {year} SoftGlaze · Creado por el [equipo de SoftGlaze](https://softglaze.com) · Desarrollado por [Azhar Ali](https://azhar.softglaze.com)",
     "antiDetect": "Multiperfil",
     "darkMode": "Modo oscuro",
     "lightMode": "Modo claro",

@@ -175,7 +175,7 @@
       "targetingTitle": "Segmentación",
       "save": "Guardar credenciales",
       "saving": "Guardando…",
-      "saved": "Credenciales guardadas - listo para extraer",
+      "saved": "Credenciales guardadas, listo para extraer",
       "cleared": "Credenciales guardadas eliminadas"
     },
     "rotating": {
@@ -187,7 +187,7 @@
       "checkProxy": "Comprobar proxy",
       "ok": "OK",
       "failed": "Error",
-      "tip": "Consejo: una pasarela rotativa usa el mismo host:port en cada sesión - tu usuario/contraseña (o token de sesión fija) selecciona la IP de salida.",
+      "tip": "Consejo: una pasarela rotativa usa el mismo host:port en cada sesión; tu usuario/contraseña (o token de sesión fija) selecciona la IP de salida.",
       "saveCreds": "Guardar credenciales",
       "credsSaved": "Guardado"
     },

@@ -45,7 +45,7 @@
       "savedMsg": "Guardado.",
       "saveError": "No se pudo guardar.",
       "connectionOk": "La conexión funciona correctamente ✓",
-      "validationFailedKeys": "La validación falló - revisa las claves.",
+      "validationFailedKeys": "La validación falló. Revisa las claves.",
       "validationFailed": "La validación falló."
     },
     "manual": {
@@ -78,7 +78,7 @@
       "openLinkTitle": "Abrir el enlace de {{provider}}",
       "saving": "Guardando…",
       "saveButton": "Guardar enlaces",
-      "footnote": "Estos enlaces alimentan los botones «Comprar en…» / «Visitar panel» de la pestaña Grupo de proxy → Proveedores. Son solo URL de referido públicas - los tokens y credenciales de proxy nunca se ven afectados."
+      "footnote": "Estos enlaces alimentan los botones «Comprar en…» / «Visitar panel» de la pestaña Grupo de proxy → Proveedores. Son solo URL de referido públicas; los tokens y credenciales de proxy nunca se ven afectados."
     }
   },
   "developerApi": {
@@ -96,7 +96,7 @@
       "title": "Claves de API",
       "namePlaceholder": "Nombre de la clave (p. ej. Servidor CI)",
       "generate": "Generar nueva clave de API",
-      "copyOnce": "Copia esta clave ahora - se muestra solo una vez y no se puede recuperar.",
+      "copyOnce": "Copia esta clave ahora: se muestra solo una vez y no se puede recuperar.",
       "empty": "Aún no hay claves de API.",
       "lastUsed": "último uso {{when}}",
       "neverUsed": "nunca usada",

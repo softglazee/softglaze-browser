@@ -193,7 +193,7 @@
     "workspacePassword": "Workspace password",
     "passwordPlaceholder": "Workspace password",
     "unlock": "Unlock",
-    "corrupted": "If you're certain the password is right, the database file may be damaged. You can recover by reinstalling and restoring a workspace backup (Settings → Workspace Backup & Restore). There is no password reset - the data can only be opened with the correct password."
+    "corrupted": "If you're certain the password is right, the database file may be damaged. You can recover by reinstalling and restoring a workspace backup (Settings → Workspace Backup & Restore). There is no password reset: the data can only be opened with the correct password."
   },
   "errors": {
     "enterFirstLast": "Enter your first and last name.",

@@ -129,7 +129,7 @@
     "inviteTitle": "Invite member",
     "editTitle": "Edit {{name}}",
     "noCreatableRoles": "You're not allowed to create any sub-members.",
-    "invitePendingCode": "Invite pending - code"
+    "invitePendingCode": "Invite pending, code"
   },
   "fields": {
     "name": "Name",
@@ -204,14 +204,14 @@
     },
     "pickTarget": "Pick a member to receive the data.",
     "reassignTo": "Reassign to",
-    "noOtherMembers": "No other members available - pick another option."
+    "noOtherMembers": "No other members available. Pick another option."
   },
   "assign": {
     "title": "Assign profiles · {{name}}",
     "searchPlaceholder": "Search profiles",
     "noProfiles": "No profiles found.",
     "memberFallback": "member #{{id}}",
-    "updated": "Updated - {{assigned}} assigned, {{unassigned}} unassigned.",
+    "updated": "Updated: {{assigned}} assigned, {{unassigned}} unassigned.",
     "save": "Save assignment"
   },
   "activity": {
@@ -261,7 +261,7 @@
     "days": "{{count}}d ago"
   },
   "license": {
-    "intro": "Subscription state per owner workspace. Local-first and best-effort - a determined user can still edit the local DB or clock; durable enforcement needs the licensing backend.",
+    "intro": "Subscription state per owner workspace. Local-first and best-effort: a determined user can still edit the local DB or clock; durable enforcement needs the licensing backend.",
     "noOwners": "No owner workspaces yet.",
     "editTitle": "License · {{name}}",
     "setState": "Set state",

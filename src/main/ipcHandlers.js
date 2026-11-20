@@ -10245,7 +10245,7 @@ const GLOBAL_SETTINGS_DEFAULTS = Object.freeze({
   // URLs are auto-linked; keep it one short line.
   branding: {
     footerEnabled: true,
-    footerText: '© {year} SoftGlaze - Built by the [SoftGlaze Team](https://softglaze.com) · Developed by [Azhar Ali](https://azhar.softglaze.com)'
+    footerText: '© {year} SoftGlaze · Built by the [SoftGlaze Team](https://softglaze.com) · Developed by [Azhar Ali](https://azhar.softglaze.com)'
   },
   // launchConcurrency caps parallel spawns in a bulk launch (Chromium is RAM-heavy).
   // maxConcurrentProfiles caps running sessions (null = unlimited); launches past it are reported.

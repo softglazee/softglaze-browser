@@ -193,7 +193,7 @@
     "workspacePassword": "Contraseña del espacio de trabajo",
     "passwordPlaceholder": "Contraseña del espacio de trabajo",
     "unlock": "Desbloquear",
-    "corrupted": "Si estás seguro de que la contraseña es correcta, el archivo de la base de datos podría estar dañado. Puedes recuperarte reinstalando y restaurando una copia de seguridad del espacio de trabajo (Configuración → Copia de seguridad y restauración del espacio de trabajo). No hay restablecimiento de contraseña - los datos solo se pueden abrir con la contraseña correcta."
+    "corrupted": "Si estás seguro de que la contraseña es correcta, el archivo de la base de datos podría estar dañado. Puedes recuperarte reinstalando y restaurando una copia de seguridad del espacio de trabajo (Configuración → Copia de seguridad y restauración del espacio de trabajo). No hay restablecimiento de contraseña: los datos solo se pueden abrir con la contraseña correcta."
   },
   "errors": {
     "enterFirstLast": "Introduce tu nombre y apellidos.",

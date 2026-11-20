@@ -7,7 +7,7 @@
   },
   "header": {
     "title": "Billing & Plans",
-    "description": "Manage your subscription, compare plans, and upgrade - all in one place."
+    "description": "Manage your subscription, compare plans, and upgrade, all in one place."
   },
   "status": {
     "loading": "Loading…",
@@ -23,7 +23,7 @@
   "backend": {
     "licensedVerified": "Licensed & verified",
     "renews": "renews {{date}}",
-    "noLicense": "Licensing active - no paid license yet for this install.",
+    "noLicense": "Licensing active, no paid license yet for this install.",
     "trialVerified": "Free trial, verified",
     "trialEnds": "ends {{date}}"
   },
@@ -35,8 +35,8 @@
     "freeForever": "Free plan · free forever"
   },
   "grace": {
-    "message_one": "Your {{kind}} has ended - {{count}} grace day left. Renew below to avoid losing access.",
-    "message_other": "Your {{kind}} has ended - {{count}} grace days left. Renew below to avoid losing access.",
+    "message_one": "Your {{kind}} has ended: {{count}} grace day left. Renew below to avoid losing access.",
+    "message_other": "Your {{kind}} has ended: {{count}} grace days left. Renew below to avoid losing access.",
     "kindTrial": "free trial",
     "kindSubscription": "subscription"
   },
@@ -44,8 +44,8 @@
     "message": "Your subscription has ended and profile launching is locked. Subscribe or enter a purchase code to restore access."
   },
   "trialRemaining": {
-    "message_one": "Free trial - {{count}} day remaining.",
-    "message_other": "Free trial - {{count}} days remaining."
+    "message_one": "Free trial: {{count}} day remaining.",
+    "message_other": "Free trial: {{count}} days remaining."
   },
   "seats": {
     "label": "Team seats",
@@ -53,7 +53,7 @@
     "upgradeToAddMore": "· upgrade to add more"
   },
   "exempt": {
-    "note": "You are the source owner - exempt from the subscription system. All features are included."
+    "note": "You are the source owner and exempt from the subscription system. All features are included."
   },
   "checkout": {
     "waiting": "Waiting for your payment…",
@@ -91,7 +91,7 @@
   },
   "trial": {
     "started": "Your free trial is active of full access. Enjoy!",
-    "startedWithDays": "Your free trial is active - {{days}} days of full access. Enjoy!",
+    "startedWithDays": "Your free trial is active: {{days}} days of full access. Enjoy!",
     "errors": {
       "failed": "Could not start the trial."
     }
@@ -99,14 +99,14 @@
   "redeem": {
     "label": "Have a purchase code?",
     "apply": "Apply",
-    "success": "Purchase code applied - thank you!",
+    "success": "Purchase code applied. Thank you!",
     "errors": {
       "empty": "Enter your purchase code.",
       "failed": "Could not apply that code."
     }
   },
   "pay": {
-    "received": "Payment received - your plan is now active!",
+    "received": "Payment received. Your plan is now active!",
     "errors": {
       "noMethods": "Buying inside the app is paused while we add a new payment provider. Email support@softglaze.com to buy by invoice, then enter your purchase code below.",
       "checkoutFailed": "Could not start checkout.",
@@ -121,7 +121,7 @@
     "openPayLink": "Open payment link",
     "referencePlaceholder": "Payment reference / transaction ID",
     "notePlaceholder": "Note (optional)",
-    "submitForApproval": "I’ve paid - submit for approval",
+    "submitForApproval": "I’ve paid, submit for approval",
     "manualActivationNote": "Your plan activates once an administrator confirms the payment."
   },
   "admin": {
@@ -129,7 +129,7 @@
   },
   "invoices": {
     "title": "Invoices",
-    "subtitleAdmin": "All payments across owners - auto-captured + manual.",
+    "subtitleAdmin": "All payments across owners, auto-captured + manual.",
     "subtitleUser": "Your payment receipts.",
     "add": "Add",
     "empty": "No invoices yet.",
@@ -256,8 +256,8 @@
     "grantNoteFree": "Logged as a $0 grant.",
     "fallbackAccount": "account",
     "fallbackPlan": "plan",
-    "success_one": "Assigned {{plan}} to {{name}} - {{count}} month.",
-    "success_other": "Assigned {{plan}} to {{name}} - {{count}} months.",
+    "success_one": "Assigned {{plan}} to {{name}} for {{count}} month.",
+    "success_other": "Assigned {{plan}} to {{name}} for {{count}} months.",
     "errors": {
       "chooseAccount": "Choose an account.",
       "choosePlan": "Choose a plan.",

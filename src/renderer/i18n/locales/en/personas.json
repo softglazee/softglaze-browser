@@ -124,7 +124,7 @@
     "errors": {
       "noRows": "That file has no readable header row or data rows.",
       "readFile": "Could not read that file.",
-      "nothingMapped": "No rows to import - map at least one of First name / Last name / Email / Username.",
+      "nothingMapped": "No rows to import. Map at least one of First name / Last name / Email / Username.",
       "failed": "Import failed."
     }
   },

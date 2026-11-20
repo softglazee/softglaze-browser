@@ -175,7 +175,7 @@
       "targetingTitle": "Targeting",
       "save": "Save credentials",
       "saving": "Saving…",
-      "saved": "Credentials saved - ready to pull",
+      "saved": "Credentials saved, ready to pull",
       "cleared": "Saved credentials removed"
     },
     "rotating": {
@@ -187,7 +187,7 @@
       "checkProxy": "Check Proxy",
       "ok": "OK",
       "failed": "Failed",
-      "tip": "Tip: a rotating gateway uses the same host:port for every session - your username/password (or sticky-session token) selects the exit IP.",
+      "tip": "Tip: a rotating gateway uses the same host:port for every session; your username/password (or sticky-session token) selects the exit IP.",
       "saveCreds": "Save credentials",
       "credsSaved": "Saved"
     },

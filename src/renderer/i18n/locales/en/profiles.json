@@ -38,11 +38,11 @@
     "subtitle": "Reassign, swap, or clear the proxies on the selected profiles.",
     "modeLabel": "Action",
     "modes": {
-      "unique": "Unique - one distinct proxy per profile",
-      "pool": "Round-robin - spread a set across profiles",
+      "unique": "Unique: one distinct proxy per profile",
+      "pool": "Round-robin: spread a set across profiles",
       "single": "One proxy for all selected",
-      "shuffle": "Shuffle - swap the proxies they already have",
-      "clear": "Clear - remove proxy (direct)"
+      "shuffle": "Shuffle: swap the proxies they already have",
+      "clear": "Clear: remove proxy (direct)"
     },
     "sourceLabel": "Take proxies from",
     "sources": {
@@ -52,14 +52,14 @@
       "paste": "Paste a list"
     },
     "pickGroup": "Choose a group…",
-    "pastePlaceholder": "host:port:user:pass - one per line",
+    "pastePlaceholder": "host:port:user:pass, one per line",
     "verify": "Verify proxies are live first (slower)",
     "proxyLabel": "Proxy",
     "pickProxy": "Choose a proxy…",
     "shuffleNote": "Each selected profile swaps to another selected profile's proxy. Needs at least two proxied profiles.",
     "clearNote": "Removes the proxy from every selected profile (they connect directly).",
     "apply": "Apply",
-    "limited": "Assigned {{assigned}} - {{skipped}} profile(s) had no proxy left in the source.",
+    "limited": "Assigned {{assigned}}. {{skipped}} profile(s) had no proxy left in the source.",
     "socks4Chromium": "{{count}} profile(s) open in Chromium, which will not launch through a SOCKS4 proxy (DNS would leak). Switch them to Firefox or give them a SOCKS5 or HTTP proxy."
   },
   "tabs": {
@@ -95,7 +95,7 @@
     "noBuilds": "Google Chrome is not installed and no Chrome build is downloaded. Download a version below before you open this profile.",
     "downloadMore": "Download more versions",
     "identity": "Identity",
-    "identityHelpPre": "Runs the same real Chrome build above, but presents as the chosen Chromium browser - UA token, Sec-CH-UA brands and navigator identity all match, while TLS/JA4 stay genuine (it ",
+    "identityHelpPre": "Runs the same real Chrome build above, but presents as the chosen Chromium browser: UA token, Sec-CH-UA brands and navigator identity all match, while TLS/JA4 stay genuine (it ",
     "identityHelpEmph": "is",
     "identityHelpPost": " Chromium under the hood).",
     "os": "OS",
@@ -121,7 +121,7 @@
     "crossOsWarning": "This profile claims {{os}} but runs on {{host}}. Host fonts, canvas raster and the real TLS/JS-engine behaviour still say {{host}}, so scanners can spot the mismatch. Use {{host}} unless you specifically need a cross-OS profile.",
     "engine": "Engine",
     "antidetectLabel": "Fingerprint engine (fingerprint-chromium)",
-    "antidetectHelp": "Launch this profile on the native fingerprint-chromium engine - applies per-profile canvas / WebGL / UA / platform / timezone settings at the binary level, hides navigator.webdriver, and blocks the WebRTC leak. Requires the engine installed (Browsers page). Off = standard Chrome. The global Settings toggle still applies to profiles left off.",
+    "antidetectHelp": "Launch this profile on the native fingerprint-chromium engine. It applies per-profile canvas / WebGL / UA / platform / timezone settings at the binary level, hides navigator.webdriver, and blocks the WebRTC leak. Requires the engine installed (Browsers page). Off = standard Chrome. The global Settings toggle still applies to profiles left off.",
     "launchesAutoReal": "Auto: this profile opens in Google Chrome {{major}}, installed on this computer.",
     "launchesAutoDownloaded": "Auto: Google Chrome is not installed, so this profile opens in the newest downloaded build, Chrome {{major}}.",
     "launchesPinnedReal": "Chrome {{major}} is selected: this profile opens in the installed Google Chrome {{major}}.",
@@ -162,7 +162,7 @@
     "passPlaceholder": "Proxy Password (Optional)",
     "selectProxy": "Select Proxy",
     "chooseSaved": "-- Choose a saved proxy --",
-    "noSaved": "No saved proxies yet - add them on the Proxy Pool page.",
+    "noSaved": "No saved proxies yet. Add them on the Proxy Pool page.",
     "optgroupPaid": "Your proxies",
     "optgroupFree": "Free proxies",
     "freeWarning": "Free proxy, run by a stranger: never use this profile to sign in to accounts, enter passwords or pay.",
@@ -198,7 +198,7 @@
     "passwordPlaceholder": "Password",
     "twoFactor": "2FA Secret",
     "twoFactorPlaceholder": "Base32 authenticator seed, e.g. JBSWY3DPEHPK3PXP",
-    "twoFactorHint": "Paste the 2FA secret seed for this account. Softglaze generates live 6-digit codes - copy them with one click from the Profiles list (🔑 2FA badge)."
+    "twoFactorHint": "Paste the 2FA secret seed for this account. Softglaze generates live 6-digit codes. Copy them with one click from the Profiles list (🔑 2FA badge)."
   },
   "fp": {
     "coreIdentity": "Core Identity",
@@ -308,7 +308,7 @@
     "coreSettings": "Core Settings",
     "coreSettingsSub": "Extensions & browser behavior",
     "extension": "Extension",
-    "extensionDesc": "The enabled extensions from [Extensions - Team's Extensions] will be installed in the profile.",
+    "extensionDesc": "The enabled extensions from [Extensions > Team's Extensions] will be installed in the profile.",
     "teamExtensions": "Team's Extensions",
     "noExtensions": "No Extensions",
     "dataSync": "Data Sync",
@@ -468,7 +468,7 @@
     "savedFilters": "Saved filters…",
     "save": "Save",
     "savePresetTitle": "Save the current filters as a preset",
-    "savePresetPrompt": "Save the current filters as a preset - name:",
+    "savePresetPrompt": "Save the current filters as a preset. Name:",
     "profileCount_one": "{{count}} profile",
     "profileCount_other": "{{count}} profiles",
     "used": "Used",
@@ -515,7 +515,7 @@
   },
   "actions": {
     "stop": "Stop",
-    "inUseTitle": "In use by {{member}} - ask them to close it first",
+    "inUseTitle": "In use by {{member}}. Ask them to close it first",
     "launch": "Launch",
     "environmentOverview": "Environment Overview",
     "editConfig": "Edit Configuration",
