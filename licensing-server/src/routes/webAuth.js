@@ -10,7 +10,7 @@
 //        { grant_type: 'authorization_code', client_id, redirect_uri, code, code_verifier }
 //        { grant_type: 'refresh_token', client_id, refresh_token }
 //        -> 200 { access_token, token_type: 'Bearer', expires_in (s, 900), refresh_token, refresh_expires_at (ms),
-//                 account: { id, email, name, tier, status } }
+//                 account: { id, email, name, tier, status, plan } }
 //        | 400 invalid_grant | unsupported_grant_type, 403 email_not_verified | email_missing
 //        The refresh token rotates on every use; using an old one again ends the session.
 //   POST /v1/web/auth/email/start  { email, lang? }        -> { challengeId, resendAfterSec, expiresAt }

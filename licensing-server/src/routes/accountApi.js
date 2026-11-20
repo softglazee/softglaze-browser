@@ -3,7 +3,7 @@
 // token>). Mounted at /v1/account next to the desktop's install-authenticated /v1/account/verify/*; only the
 // paths below are handled here. CORS: the origins in WEB_APP_ORIGINS.
 //
-//   GET  /v1/account/me                      -> { account: { id, email, name, tier, status }, methods }
+//   GET  /v1/account/me                      -> { account: { id, email, name, tier, status, plan }, methods }
 //   GET  /v1/account/sessions                -> { sessions: [{ id, kind, provider, client, device, userAgent,
 //                                                createdAt, lastUsedAt, expiresAt, current, live }] }
 //   POST /v1/account/sessions/:id/revoke     -> { ok, revoked } | 404 not_found

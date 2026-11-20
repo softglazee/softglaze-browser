@@ -1,6 +1,6 @@
 'use strict';
 // What the phone and web apps read and change about the signed-in account (Bearer session, src/auth/sessions.js):
-//   me             { account: { id, email, name, tier, status }, methods }
+//   me             { account: { id, email, name, tier, status, plan }, methods }
 //   sessions       every desktop, phone and web sign-in of the account, newest first (never a token or hash)
 //   revoke         ends one of them (it must belong to this account)
 //   signOutAll     ends all of them, this one included
@@ -37,8 +37,19 @@ function accountTier(customer) {
   return customer.tier === 'pro' || customer.tier === 'enterprise' ? customer.tier : 'trial';
 }
 
+// The plan the apps show (Free plan release): 'trial' during a trial, the paid (or complimentary) tier, else
+// 'free' (trial ended, term ended, or never a trial). tier keeps its old values for older phone and web apps.
+function accountPlan(customer) {
+  const tier = accountTier(customer);
+  if (tier === 'pro' || tier === 'enterprise') return tier;
+  return customer && customer.status === 'trial' ? 'trial' : 'free';
+}
+
 function accountOf(customer) {
-  return { id: customer.id, email: customer.email, name: customer.name || null, tier: accountTier(customer), status: customer.status || 'lead' };
+  return {
+    id: customer.id, email: customer.email, name: customer.name || null, tier: accountTier(customer), status: customer.status || 'lead',
+    plan: accountPlan(customer)
+  };
 }
 
 // How many phones an account may have signed in at once (MOBILE_PHONES_ALLOWED, 1 to 100, default 3).
@@ -132,6 +143,8 @@ async function licenceSummary(db, found, { now = Date.now() } = {}) {
     status: 200,
     body: {
       tier: accountTier(customer),
+      plan: accountPlan(customer),
+      free: accountPlan(customer) === 'free',
       status: customer.status || 'lead',
       paidUntil: customer.paidUntil || null,
       trialEndsAt: customer.trialEndsAt || null,
@@ -145,5 +158,5 @@ async function licenceSummary(db, found, { now = Date.now() } = {}) {
 }
 
 module.exports = {
-  accountTenant, accountTier, accountOf, phonesAllowed, activePhones, me, listSessions, revoke, signOutAll, deleteRequest, licenceSummary
+  accountTenant, accountTier, accountPlan, accountOf, phonesAllowed, activePhones, me, listSessions, revoke, signOutAll, deleteRequest, licenceSummary
 };

@@ -16,6 +16,7 @@ const { hmacHex } = require('../crypto/derive');
 const { addEvent, recomputeCustomer } = require('../customers/sync');
 const { ms } = require('../util/time');
 const { signedInOnInstall } = require('../auth/accounts');
+const { TIER_LIMITS } = require('../plans/service');
 
 const DAY = 86400000;
 const emailKeyHash = (emailKey) => hmacHex('trial-email-v1', emailKey);
@@ -24,7 +25,11 @@ function trialLeaseBody(tenant, install, trial, email, now) {
   const lease = issueLease(tenant, {
     installId: install.id, account: email || null, tier: trial.tier, plan: 'trial', currentPeriodEnd: trial.endsAt
   }, now, { mid: install.machineHash, type: 'trial' });
-  return { lease: lease.token, exp: lease.exp, tier: lease.tier, type: 'trial', trialEndsAt: trial.endsAt, currentPeriodEnd: trial.endsAt };
+  // plan / limits (Free plan release): a trial has the limits of its tier (enterprise by default).
+  return {
+    lease: lease.token, exp: lease.exp, tier: lease.tier, type: 'trial', trialEndsAt: trial.endsAt, currentPeriodEnd: trial.endsAt,
+    plan: 'trial', limits: { ...(TIER_LIMITS[lease.tier] || TIER_LIMITS.enterprise) }
+  };
 }
 
 async function logAttempt(db, tenantId, installId, outcome, ipHash, now) {
