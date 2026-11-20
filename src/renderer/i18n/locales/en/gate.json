@@ -9,57 +9,25 @@
     "unavailable": "This device can't securely store a login (OS encryption is unavailable), so you'll be asked to sign in again next launch."
   },
   "brand": {
-    "tagline": "Multi-Profile",
-    "bullets": {
-      "fingerprints": "Unique, consistent fingerprints per profile",
-      "proxy": "A dedicated proxy for every identity",
-      "localFirst": "Local-first - your workspace is stored on this device"
-    },
-    "heroLine1": "Run hundreds of identities.",
-    "heroLine2": "Keep every one separate.",
-    "heroBody": "A local-first multi-profile browser for teams. Every profile keeps its own cookies, storage, proxy and fingerprint settings.",
-    "footer": "© {{year}} SoftGlaze · Local workspace",
-    "trust": {
-      "local": "Local-first",
-      "encrypted": "Workspace lock",
-      "private": "Zero telemetry"
-    },
-    "slides": {
-      "security": {
-        "title": "Robust data security",
-        "body": "Your profiles, cookies and browsing data stay on this device, and 2FA seeds and provider keys are sealed with your system keychain."
-      },
-      "fingerprint": {
-        "title": "Consistent fingerprints",
-        "body": "Every profile ships a unique, consistent fingerprint: canvas, WebGL, fonts, audio, and hardware."
-      },
-      "proxy": {
-        "title": "A proxy for every identity",
-        "body": "Bind a dedicated network identity to each profile and rotate with confidence."
-      },
-      "automation": {
-        "title": "Time-saving automation",
-        "body": "Warm cookies, generate profiles in bulk, and orchestrate everything at scale."
-      }
-    }
+    "footer": "© {{year}} SoftGlaze · Local workspace"
   },
   "license": {
     "machineMismatch": "This licence is registered to a different computer. Move it to this PC or ask your administrator to reset it."
   },
   "pay": {
     "noMethods": "Buying inside the app is paused while we add a new payment provider. Email support@softglaze.com to buy by invoice, then enter your purchase code.",
-    "submitted": "Payment submitted - an administrator will review it and activate your plan shortly.",
+    "submitted": "Payment submitted. An administrator will review it and activate your plan shortly.",
     "manualBadge": "Manual",
     "continueTo": "Continue to {{label}}",
     "openPaymentLink": "Open payment link",
     "referencePlaceholder": "Payment reference / transaction ID",
-    "submitForApproval": "I’ve paid - submit for approval"
+    "submitForApproval": "I’ve paid, submit for approval"
   },
   "banned": {
     "blockedHeading": "Your account is blocked",
     "endedHeading": "Your subscription has ended",
-    "blockedBodyNamed": "{{name}}, your account has been blocked by an administrator. Please contact them to restore access - your data is safe.",
-    "blockedBody": "Your account has been blocked by an administrator. Please contact them to restore access - your data is safe.",
+    "blockedBodyNamed": "{{name}}, your account has been blocked by an administrator. Please contact them to restore access. Your data is safe.",
+    "blockedBody": "Your account has been blocked by an administrator. Please contact them to restore access. Your data is safe.",
     "endedBodyNamed": "{{name}}, this licence is no longer active (refunded, revoked or registered to another computer). Choose a plan to unlock your workspace. Your profiles and data are safe and waiting.",
     "endedBody": "This licence is no longer active (refunded, revoked or registered to another computer). Choose a plan to unlock your workspace. Your profiles and data are safe and waiting.",
     "haveCode": "Have a purchase code?",
@@ -68,7 +36,7 @@
   },
   "register": {
     "title": "Create your account",
-    "subtitle": "This is your master account - the owner of the workspace.",
+    "subtitle": "This is your master account, the owner of the workspace.",
     "firstName": "First name",
     "lastName": "Last name",
     "email": "Email",
@@ -94,7 +62,7 @@
     "title": "Verify your email",
     "subtitlePrefix": "Enter the 6-digit code sent to",
     "subtitleSuffix": ".",
-    "devModePrefix": "Dev mode - no email is actually sent yet. Your code is",
+    "devModePrefix": "Dev mode: no email is actually sent yet. Your code is",
     "devModeSuffix": ".",
     "verifyCreate": "Verify & create account",
     "resendIn": "Resend code in {{count}}s",
@@ -138,10 +106,10 @@
     "trialHighlight": "7-day free trial",
     "subtitleSuffix": ". Start now, or activate a paid plan.",
     "startTrialTitle": "Start 7-day free trial",
-    "startTrialSubtitle": "No payment now - explore everything.",
+    "startTrialSubtitle": "No payment now. Every feature is open.",
     "activatePaid": "Activate a paid plan now",
     "haveCode": "Have a purchase code?",
-    "skip": "Skip - start the trial",
+    "skip": "Skip and start the trial",
     "tenantTitle": "Your account is ready",
     "tenantSubtitle": "Start your free trial, or choose a plan.",
     "tenantTrialSubtitle": "Full access, no payment. One free trial per computer and email.",
@@ -161,7 +129,7 @@
     "password": "Password",
     "forgot": "Forgot?",
     "passwordPlaceholder": "Master password",
-    "forgotBody": "Your master password isn't recoverable on a local install - it never leaves this device. If it's lost, the workspace has to be reset from Settings.",
+    "forgotBody": "Your master password isn't recoverable on a local install, because it never leaves this device. If it's lost, the workspace has to be reset from Settings.",
     "signIn": "Sign in",
     "noAccount": "Don't have an account?",
     "newHere": "New to SoftGlaze?",
@@ -239,7 +207,7 @@
     "verificationFailed": "Verification failed.",
     "incorrectPassword": "Incorrect password.",
     "couldNotSignIn": "Could not sign in.",
-    "superSetupRequired": "No Super Admin credential is set yet - create one below.",
+    "superSetupRequired": "No Super Admin credential is set yet. Create one below.",
     "invalidSuperCredentials": "Invalid Super Admin credentials.",
     "couldNotCreateSuper": "Could not create Super Admin credentials.",
     "enterInviteCode": "Enter your invite code.",
@@ -252,9 +220,9 @@
     "paymentNotStarted": "Payment could not be started.",
     "couldNotSubmitPayment": "Could not submit your payment.",
     "enterWorkspacePassword": "Enter your workspace password.",
-    "dbStillLocked": "The database is still locked - please try again.",
+    "dbStillLocked": "The database is still locked. Please try again.",
     "dbMissing": "The encrypted database file is missing. Restore from a workspace backup to recover.",
-    "dbUnlockFailed": "Incorrect password - or the file is corrupted.",
+    "dbUnlockFailed": "Incorrect password, or the file is corrupted.",
     "couldNotUnlockDb": "Could not unlock the database.",
     "trialFailed": "Could not start the free trial."
   },
@@ -277,5 +245,49 @@
     "SIGNUP_USE_CASE": "Choose what you will use SoftGlaze for.",
     "SIGNUP_USE_CASE_OTHER": "Tell us in a few words what you will use SoftGlaze for.",
     "CONFIRM_OFFLINE": "Connect to the internet to confirm your email."
+  },
+  "panel": {
+    "label": "SoftGlaze product tour",
+    "carousel": "carousel",
+    "slide": "slide",
+    "slideOf": "{{n}} of {{total}}",
+    "prev": "Previous slide",
+    "next": "Next slide",
+    "pause": "Pause the slides",
+    "play": "Play the slides",
+    "goTo": "Show slide {{n}}: {{title}}",
+    "trust": "Profiles, cookies and logins stay on this computer.",
+    "slides": {
+      "free": {
+        "title": "Start with 25 browser profiles, free",
+        "body": "No card and no time limit. Every new account can also try Pro free for 7 days.",
+        "alt": "The Profiles page with ten profiles, their proxies and when each was last used"
+      },
+      "fingerprint": {
+        "title": "Each profile keeps its own fingerprint",
+        "body": "Canvas, WebGL, fonts, audio and timezone are set per profile and stay the same on every launch. Give each one your own HTTP, HTTPS or SOCKS5 proxy.",
+        "alt": "The Fingerprint tab of a profile next to its environment overview"
+      },
+      "ai": {
+        "title": "AI agents do the work, you approve it",
+        "body": "Claude, ChatGPT, Cursor and other MCP apps run tasks in your profiles. You decide which actions need your approval, and every step is logged.",
+        "alt": "An approval request from Claude Desktop to fill in a sign-in form"
+      },
+      "phone": {
+        "title": "Approve requests from your phone",
+        "body": "The SoftGlaze phone app and web app show each request with its details. Allow it once, for an hour, or deny it. Included on every plan.",
+        "alt": "The Approvals screen on a phone with a request waiting for an answer"
+      },
+      "team": {
+        "title": "Work as a team with clear roles",
+        "body": "Owner, Admin, Manager and Operator roles control who can see and open each profile. Pro includes 3 seats and Enterprise 25.",
+        "alt": "The Members page with five team members and their roles"
+      }
+    }
+  },
+  "controls": {
+    "language": "Language: {{lang}}",
+    "toLight": "Switch to the light theme",
+    "toDark": "Switch to the dark theme"
   }
 }

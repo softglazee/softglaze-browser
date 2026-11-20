@@ -9,57 +9,25 @@
     "unavailable": "Este dispositivo no puede guardar un inicio de sesión de forma segura (el cifrado del sistema no está disponible), así que se te pedirá que inicies sesión de nuevo en el próximo arranque."
   },
   "brand": {
-    "tagline": "Multiperfil",
-    "bullets": {
-      "fingerprints": "Huellas digitales únicas y consistentes por perfil",
-      "proxy": "Un proxy dedicado para cada identidad",
-      "localFirst": "Local primero - tu espacio de trabajo se guarda en este dispositivo"
-    },
-    "heroLine1": "Ejecuta cientos de identidades.",
-    "heroLine2": "Cada una, por separado.",
-    "heroBody": "Un navegador multiperfil para equipos que prioriza lo local. Cada perfil mantiene sus propias cookies, almacenamiento, proxy y configuración de huella digital.",
-    "footer": "© {{year}} SoftGlaze · Espacio de trabajo local",
-    "trust": {
-      "local": "Local primero",
-      "encrypted": "Bloqueo del espacio",
-      "private": "Sin telemetría"
-    },
-    "slides": {
-      "security": {
-        "title": "Seguridad de datos robusta",
-        "body": "Tus perfiles, cookies y datos de navegación se quedan en este dispositivo, y las semillas 2FA y las claves de proveedores se sellan con el llavero del sistema."
-      },
-      "fingerprint": {
-        "title": "Huellas consistentes",
-        "body": "Cada perfil incluye una huella única y consistente: canvas, WebGL, fuentes, audio y hardware."
-      },
-      "proxy": {
-        "title": "Un proxy para cada identidad",
-        "body": "Asigna una identidad de red dedicada a cada perfil y rota con confianza."
-      },
-      "automation": {
-        "title": "Automatización que ahorra tiempo",
-        "body": "Calienta cookies, genera perfiles en lote y orquesta todo a escala."
-      }
-    }
+    "footer": "© {{year}} SoftGlaze · Espacio de trabajo local"
   },
   "license": {
     "machineMismatch": "Esta licencia está registrada en otro ordenador. Transfiérela a este PC o pide a tu administrador que la restablezca."
   },
   "pay": {
     "noMethods": "La compra dentro de la aplicación está en pausa mientras añadimos un nuevo proveedor de pago. Escribe a support@softglaze.com para comprar con factura y luego introduce tu código de compra.",
-    "submitted": "Pago enviado - un administrador lo revisará y activará tu plan en breve.",
+    "submitted": "Pago enviado. Un administrador lo revisará y activará tu plan en breve.",
     "manualBadge": "Manual",
     "continueTo": "Continuar a {{label}}",
     "openPaymentLink": "Abrir enlace de pago",
     "referencePlaceholder": "Referencia de pago / ID de transacción",
-    "submitForApproval": "He pagado - enviar para aprobación"
+    "submitForApproval": "Ya he pagado, enviar para aprobación"
   },
   "banned": {
     "blockedHeading": "Tu cuenta está bloqueada",
     "endedHeading": "Tu suscripción ha terminado",
-    "blockedBodyNamed": "{{name}}, tu cuenta ha sido bloqueada por un administrador. Por favor, contáctalo para restaurar el acceso - tus datos están a salvo.",
-    "blockedBody": "Tu cuenta ha sido bloqueada por un administrador. Por favor, contáctalo para restaurar el acceso - tus datos están a salvo.",
+    "blockedBodyNamed": "{{name}}, tu cuenta ha sido bloqueada por un administrador. Contáctalo para restaurar el acceso. Tus datos están a salvo.",
+    "blockedBody": "Tu cuenta ha sido bloqueada por un administrador. Contáctalo para restaurar el acceso. Tus datos están a salvo.",
     "endedBodyNamed": "{{name}}, esta licencia ya no está activa (reembolsada, revocada o registrada en otro ordenador). Elige un plan para desbloquear tu espacio de trabajo. Tus perfiles y datos están a salvo y esperando.",
     "endedBody": "Esta licencia ya no está activa (reembolsada, revocada o registrada en otro ordenador). Elige un plan para desbloquear tu espacio de trabajo. Tus perfiles y datos están a salvo y esperando.",
     "haveCode": "¿Tienes un código de compra?",
@@ -68,7 +36,7 @@
   },
   "register": {
     "title": "Crea tu cuenta",
-    "subtitle": "Esta es tu cuenta maestra - la propietaria del espacio de trabajo.",
+    "subtitle": "Esta es tu cuenta maestra, la propietaria del espacio de trabajo.",
     "firstName": "Nombre",
     "lastName": "Apellidos",
     "email": "Correo electrónico",
@@ -94,7 +62,7 @@
     "title": "Verifica tu correo electrónico",
     "subtitlePrefix": "Introduce el código de 6 dígitos enviado a",
     "subtitleSuffix": ".",
-    "devModePrefix": "Modo de desarrollo - todavía no se envía ningún correo. Tu código es",
+    "devModePrefix": "Modo de desarrollo: todavía no se envía ningún correo. Tu código es",
     "devModeSuffix": ".",
     "verifyCreate": "Verificar y crear cuenta",
     "resendIn": "Reenviar código en {{count}}s",
@@ -138,10 +106,10 @@
     "trialHighlight": "prueba gratuita de 7 días",
     "subtitleSuffix": ". Empieza ahora o activa un plan de pago.",
     "startTrialTitle": "Iniciar prueba gratuita de 7 días",
-    "startTrialSubtitle": "Sin pago ahora - explóralo todo.",
+    "startTrialSubtitle": "Sin pago ahora. Todas las funciones están abiertas.",
     "activatePaid": "Activar un plan de pago ahora",
     "haveCode": "¿Tienes un código de compra?",
-    "skip": "Omitir - iniciar la prueba",
+    "skip": "Omitir e iniciar la prueba",
     "tenantTitle": "Tu cuenta está lista",
     "tenantSubtitle": "Inicia tu prueba gratuita o elige un plan.",
     "tenantTrialSubtitle": "Acceso completo, sin pago. Una prueba gratuita por equipo y correo.",
@@ -161,7 +129,7 @@
     "password": "Contraseña",
     "forgot": "¿Olvidaste?",
     "passwordPlaceholder": "Contraseña maestra",
-    "forgotBody": "Tu contraseña maestra no se puede recuperar en una instalación local - nunca sale de este dispositivo. Si se pierde, el espacio de trabajo debe restablecerse desde Configuración.",
+    "forgotBody": "Tu contraseña maestra no se puede recuperar en una instalación local, porque nunca sale de este dispositivo. Si se pierde, el espacio de trabajo tiene que restablecerse desde Configuración.",
     "signIn": "Iniciar sesión",
     "noAccount": "¿No tienes una cuenta?",
     "newHere": "¿Nuevo en SoftGlaze?",
@@ -239,7 +207,7 @@
     "verificationFailed": "La verificación falló.",
     "incorrectPassword": "Contraseña incorrecta.",
     "couldNotSignIn": "No se pudo iniciar sesión.",
-    "superSetupRequired": "Aún no se ha establecido ninguna credencial de Super Admin - crea una abajo.",
+    "superSetupRequired": "Aún no se ha establecido ninguna credencial de Super Admin. Crea una abajo.",
     "invalidSuperCredentials": "Credenciales de Super Admin no válidas.",
     "couldNotCreateSuper": "No se pudieron crear las credenciales de Super Admin.",
     "enterInviteCode": "Introduce tu código de invitación.",
@@ -252,9 +220,9 @@
     "paymentNotStarted": "No se pudo iniciar el pago.",
     "couldNotSubmitPayment": "No se pudo enviar tu pago.",
     "enterWorkspacePassword": "Introduce tu contraseña del espacio de trabajo.",
-    "dbStillLocked": "La base de datos sigue bloqueada - inténtalo de nuevo.",
+    "dbStillLocked": "La base de datos sigue bloqueada. Inténtalo de nuevo.",
     "dbMissing": "Falta el archivo cifrado de la base de datos. Restaura desde una copia de seguridad del espacio de trabajo para recuperarlo.",
-    "dbUnlockFailed": "Contraseña incorrecta - o el archivo está dañado.",
+    "dbUnlockFailed": "Contraseña incorrecta, o el archivo está dañado.",
     "couldNotUnlockDb": "No se pudo desbloquear la base de datos.",
     "trialFailed": "No se pudo iniciar la prueba gratuita."
   },
@@ -277,5 +245,49 @@
     "SIGNUP_USE_CASE": "Elige para qué vas a usar SoftGlaze.",
     "SIGNUP_USE_CASE_OTHER": "Cuéntanos en pocas palabras para qué vas a usar SoftGlaze.",
     "CONFIRM_OFFLINE": "Conéctate a internet para confirmar tu correo."
+  },
+  "panel": {
+    "label": "Recorrido por SoftGlaze",
+    "carousel": "carrusel",
+    "slide": "diapositiva",
+    "slideOf": "{{n}} de {{total}}",
+    "prev": "Diapositiva anterior",
+    "next": "Diapositiva siguiente",
+    "pause": "Pausar las diapositivas",
+    "play": "Reproducir las diapositivas",
+    "goTo": "Ver la diapositiva {{n}}: {{title}}",
+    "trust": "Los perfiles, las cookies y las sesiones se quedan en este equipo.",
+    "slides": {
+      "free": {
+        "title": "Empieza con 25 perfiles de navegador gratis",
+        "body": "Sin tarjeta y sin límite de tiempo. Cada cuenta nueva también puede probar Pro gratis durante 7 días.",
+        "alt": "La página Perfiles con diez perfiles, sus proxies y su último uso"
+      },
+      "fingerprint": {
+        "title": "Cada perfil mantiene su propia huella digital",
+        "body": "Canvas, WebGL, fuentes, audio y zona horaria se configuran por perfil y se mantienen en cada inicio. Asigna a cada uno tu propio proxy HTTP, HTTPS o SOCKS5.",
+        "alt": "La pestaña Huella digital de un perfil junto a su resumen del entorno"
+      },
+      "ai": {
+        "title": "Los agentes de IA trabajan y tú apruebas",
+        "body": "Claude, ChatGPT, Cursor y otras apps MCP ejecutan tareas en tus perfiles. Tú decides qué acciones necesitan tu aprobación, y cada paso queda registrado.",
+        "alt": "Una solicitud de aprobación de Claude Desktop para rellenar un formulario de inicio de sesión"
+      },
+      "phone": {
+        "title": "Aprueba solicitudes desde tu teléfono",
+        "body": "La app del teléfono y la app web de SoftGlaze muestran cada solicitud con sus detalles. Permítela una vez, durante una hora, o recházala. Incluido en todos los planes.",
+        "alt": "La pantalla Aprobaciones en un teléfono con una solicitud pendiente de respuesta"
+      },
+      "team": {
+        "title": "Trabaja en equipo con roles claros",
+        "body": "Los roles Propietario, Administrador, Gerente y Operador controlan quién puede ver y abrir cada perfil. Pro incluye 3 plazas y Enterprise 25.",
+        "alt": "La página Miembros con cinco miembros del equipo y sus roles"
+      }
+    }
+  },
+  "controls": {
+    "language": "Idioma: {{lang}}",
+    "toLight": "Cambiar al tema claro",
+    "toDark": "Cambiar al tema oscuro"
   }
 }
