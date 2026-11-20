@@ -18,7 +18,7 @@
     "heading": "Fingerprint engine",
     "installed": "Installed",
     "notInstalled": "Not installed",
-    "description": "fingerprint-chromium - spoofs canvas / WebGL / UA / platform / timezone natively, hides webdriver, blocks the WebRTC leak. Turn it on in Settings → Browser.",
+    "description": "fingerprint-chromium sets canvas, WebGL, UA, platform and timezone natively, hides webdriver and blocks the WebRTC leak. Turn it on in Settings → Browser.",
     "progressInstalling": "installing",
     "progressVerifying": "verifying",
     "installing": "Installing",

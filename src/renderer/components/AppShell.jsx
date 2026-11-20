@@ -131,7 +131,8 @@ function NavItem({ path, label, icon: Icon, collapsed, badge, badgeTone, pill, r
         >
           <Icon className={`w-[18px] h-[18px] shrink-0 ${isActive ? 'text-primary' : ''}`} strokeWidth={1.75} />
           {collapsed && attention && <span className="absolute inset-s-7 top-2 h-2 w-2 rounded-full" style={{ background: 'var(--warning)' }} aria-hidden="true" />}
-          {!collapsed && <span className="flex-1 truncate">{label}</span>}
+          {/* Long labels (ru, de, uk...) wrap to a second line instead of being cut off. */}
+          {!collapsed && <span className="flex-1 min-w-0 leading-tight [overflow-wrap:anywhere]">{label}</span>}
           {/* With requests waiting, the count matters more than the Beta pill (and both do not fit). */}
           {!collapsed && pill && !attention && (
             <span className="text-[9.5px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded-full" style={{ background: 'color-mix(in srgb, var(--chart-2) 14%, transparent)', color: 'color-mix(in srgb, var(--chart-2) 72%, var(--foreground))' }}>{pill}</span>

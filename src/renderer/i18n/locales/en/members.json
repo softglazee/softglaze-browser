@@ -75,7 +75,7 @@
   "status": {
     "active": "Active",
     "suspended": "Suspended",
-    "banned": "Banned"
+    "banned": "Blocked"
   },
   "actions": {
     "inviteMember": "Invite member",
@@ -175,10 +175,10 @@
   "accountStatus": {
     "title": "Account status",
     "reason": "Reason: {{reason}}",
-    "unban": "Unban member",
-    "banHint": "Editing the fields above keeps the ban - use Unban to restore access.",
+    "unban": "Unblock member",
+    "banHint": "Editing the fields above keeps the block. Use Unblock to restore access.",
     "suspendToggle": "Suspend this member (blocks sign-in)",
-    "ban": "Ban member"
+    "ban": "Block member"
   },
   "delete": {
     "title": "Remove {{name}}",
@@ -271,7 +271,7 @@
       "paid": "Paid",
       "trialing": "Trial",
       "grace": "Grace",
-      "banned": "Banned"
+      "banned": "Blocked"
     },
     "type": {
       "trial": "trial",

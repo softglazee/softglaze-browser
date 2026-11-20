@@ -176,7 +176,7 @@
     "title": "Estado de la cuenta",
     "reason": "Motivo: {{reason}}",
     "unban": "Desbloquear miembro",
-    "banHint": "Editar los campos anteriores mantiene el bloqueo - usa Desbloquear para restaurar el acceso.",
+    "banHint": "Editar los campos anteriores mantiene el bloqueo. Usa Desbloquear para restaurar el acceso.",
     "suspendToggle": "Suspender este miembro (bloquea el inicio de sesión)",
     "ban": "Bloquear miembro"
   },

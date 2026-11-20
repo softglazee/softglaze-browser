@@ -202,7 +202,7 @@
       "desc": "In Chrome-based profiles, any Developer Tools window or panel (F12, Ctrl+Shift+I, Inspect) is closed as soon as it opens. Applies to profiles launched after you change it. Your own Chrome on this computer is not affected."
     },
     "minimizeCdpFootprint": {
-      "title": "Minimize CDP footprint (experimental - anti-CAPTCHA)",
+      "title": "Minimize CDP footprint (experimental, fewer CAPTCHAs)",
       "shortTitle": "Minimize CDP footprint",
       "desc": "Drops the persistent CDP Runtime.enable - the top automation signal Cloudflare/Turnstile detect. TRADE-OFF while ON: persona autofill, the start-page check-links, and synchronized-session mirroring stop working (they need the CDP binding). Off by default; turn on to A/B whether it reduces CAPTCHAs, then relaunch profiles."
     },

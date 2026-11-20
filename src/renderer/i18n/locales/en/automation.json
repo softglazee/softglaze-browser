@@ -404,7 +404,7 @@
       "save": "Could not save the autopilot settings.",
       "noGroups": "No groups yet. Create one on the Profiles page first.",
       "owner-missing": "The member who turned on the autopilot no longer exists. The workspace Owner can turn it off and on again to take it over.",
-      "owner-inactive": "The member who turned on the autopilot is suspended or banned.",
+      "owner-inactive": "The member who turned on the autopilot is suspended or blocked.",
       "owner-no-permission": "The member who turned on the autopilot may no longer run automation.",
       "warm-failed": "{{profile}}: {{error}}",
       "warmFailedHidden": "A profile you cannot see failed to warm up.",

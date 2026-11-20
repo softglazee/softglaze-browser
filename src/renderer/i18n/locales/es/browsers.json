@@ -18,7 +18,7 @@
     "heading": "Motor de huella digital",
     "installed": "Instalado",
     "notInstalled": "No instalado",
-    "description": "fingerprint-chromium: falsea de forma nativa canvas / WebGL / UA / plataforma / zona horaria, oculta webdriver y bloquea la fuga de WebRTC. Actívalo en Configuración → Navegador.",
+    "description": "fingerprint-chromium configura de forma nativa canvas, WebGL, UA, plataforma y zona horaria, oculta webdriver y bloquea la fuga de WebRTC. Actívalo en Configuración → Navegador.",
     "progressInstalling": "instalando",
     "progressVerifying": "verificando",
     "installing": "Instalando",

@@ -409,7 +409,7 @@ function SettingsNav({ groups, active, query, setQuery, onJump, searchRef }) {
           return (
             <div key={g.id} className={gi > 0 ? 'border-t border-border' : ''}>
               <div className="flex items-center justify-between gap-2 px-3 pt-3 pb-1.5">
-                <span className="truncate text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">{g.label}</span>
+                <span className="min-w-0 leading-tight [overflow-wrap:anywhere] text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">{g.label}</span>
                 <span className="inline-flex h-4 min-w-[1rem] shrink-0 items-center justify-center rounded-full border border-border bg-secondary px-1 text-[10px] font-medium tabular-nums text-muted-foreground">
                   {g.items.length}
                 </span>
@@ -428,14 +428,14 @@ function SettingsNav({ groups, active, query, setQuery, onJump, searchRef }) {
                           background: 'color-mix(in srgb, var(--primary) 12%, transparent)',
                           borderColor: 'color-mix(in srgb, var(--primary) 26%, transparent)'
                         } : undefined}
-                        className={`relative w-full text-start flex items-center h-8 ps-3 pe-2 rounded-lg border text-[13px] leading-tight transition-colors ${
+                        className={`relative w-full text-start flex items-center min-h-8 py-1.5 ps-3 pe-2 rounded-lg border text-[13px] leading-tight transition-colors ${
                           isActive
                             ? 'text-primary font-medium'
                             : 'border-transparent text-muted-foreground hover:bg-secondary hover:text-foreground'
                         } ${dim ? 'opacity-40' : ''}`}
                       >
                         {isActive && <span className="absolute inset-s-0 top-1/2 h-4 w-0.5 -translate-y-1/2 rounded-e bg-primary" />}
-                        <span className="truncate">{it.label}</span>
+                        <span className="min-w-0 [overflow-wrap:anywhere]">{it.label}</span>
                       </button>
                     </li>
                   );
@@ -772,7 +772,7 @@ function OnStartupSection({ sec, s, apply }) {
               <label htmlFor="set-onstartup-mode" className="text-sm font-medium text-foreground">{tx('onStartup.startPageLabel')}</label>
               <AppliedBadge />
             </div>
-            <CustomSelect id="set-onstartup-mode" className="w-full sm:w-72" value={s.onStartup.mode} onChange={(e) => apply({ onStartup: { mode: e.target.value } })}>
+            <CustomSelect id="set-onstartup-mode" className="w-full sm:w-[26rem] max-w-full" value={s.onStartup.mode} onChange={(e) => apply({ onStartup: { mode: e.target.value } })}>
               <option value="detection">{tx('onStartup.modeDetection')}</option>
               <option value="last">{tx('onStartup.modeLast')}</option>
               <option value="blank">{tx('onStartup.modeBlank')}</option>
