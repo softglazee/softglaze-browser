@@ -26,6 +26,7 @@
   "notEnough": "Datos insuficientes",
   "notEnoughTitle_one": "Solo {{count}} comprobación en los últimos {{days}} días. Una puntuación necesita {{min}}.",
   "notEnoughTitle_other": "Solo {{count}} comprobaciones en los últimos {{days}} días. Una puntuación necesita {{min}}.",
+  "notEnoughTitle_many": "Solo {{count}} comprobaciones en los últimos {{days}} días. Una puntuación necesita {{min}}.",
   "level": {
     "good": "Buena",
     "fair": "Regular",
@@ -34,6 +35,7 @@
   "scoreTitle": "{{level}}: {{score}} de 100",
   "checks_one": "{{count}} comprobación",
   "checks_other": "{{count}} comprobaciones",
+  "checks_many": "{{count}} comprobaciones",
   "ms": "{{ms}} ms",
   "working": "{{pct}} operativos",
   "noData": "Sin datos",

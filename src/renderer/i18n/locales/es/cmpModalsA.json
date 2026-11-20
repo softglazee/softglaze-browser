@@ -7,6 +7,7 @@
     "storedData": "Datos del navegador almacenados:",
     "storedFiles_one": "({{files}} archivo - cookies, caché, inicios de sesión)",
     "storedFiles_other": "({{files}} archivos - cookies, caché, inicios de sesión)",
+    "storedFiles_many": "({{files}} archivos - cookies, caché, inicios de sesión)",
     "noData": "Aún no hay datos locales del navegador en el disco.",
     "alsoDelete": "Eliminar también las cookies y la caché ahora",
     "alsoDeleteHint": "Borra permanentemente el directorio de datos del disco. El perfil aún se puede restaurar, pero empezará sin sesión iniciada y vacío.",
@@ -26,6 +27,7 @@
     "totalLaunches": "Lanzamientos totales",
     "launchTimes_one": "{{count}} vez",
     "launchTimes_other": "{{count}} veces",
+    "launchTimes_many": "{{count}} veces",
     "recentEvents": "Eventos recientes",
     "empty": "Aún no hay actividad registrada. Lanza este perfil para empezar a registrar.",
     "close": "Cerrar"

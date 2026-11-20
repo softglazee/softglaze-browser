@@ -44,6 +44,7 @@
     "colActions": "Acciones",
     "sitesUsed_one": "{{count}} sitio",
     "sitesUsed_other": "{{count}} sitios",
+    "sitesUsed_many": "{{count}} sitios",
     "never": "Nunca",
     "editIdentity": "Editar identidad",
     "deleteIdentity": "Eliminar identidad",
@@ -107,19 +108,23 @@
     "skipOption": "- omitir -",
     "mappedCount_one": "{{count}} campo asignado. Se omiten las filas sin nombre/correo/usuario.",
     "mappedCount_other": "{{count}} campos asignados. Se omiten las filas sin nombre/correo/usuario.",
+    "mappedCount_many": "{{count}} campos asignados. Se omiten las filas sin nombre/correo/usuario.",
     "done": "Listo",
     "cancel": "Cancelar",
     "back": "Atrás",
     "importing": "Importando...",
     "importRows_one": "Importar {{count}} fila",
     "importRows_other": "Importar {{count}} filas",
+    "importRows_many": "Importar {{count}} filas",
     "result": {
       "complete": "Importación completada",
       "addedPrefix": "Se añadieron",
       "addedSuffix_one": "identidad a la bóveda.",
       "addedSuffix_other": "identidades a la bóveda.",
+      "addedSuffix_many": "identidades a la bóveda.",
       "skipped_one": "Se omitió {{count}} fila vacía.",
-      "skipped_other": "Se omitieron {{count}} filas vacías."
+      "skipped_other": "Se omitieron {{count}} filas vacías.",
+      "skipped_many": "Se omitieron {{count}} filas vacías."
     },
     "errors": {
       "noRows": "Ese archivo no tiene una fila de encabezados ni filas de datos legibles.",
@@ -133,8 +138,10 @@
     "deleteOne": "¿Eliminar la identidad \"{{name}}\"? Esto no se puede deshacer.",
     "deleteSelected_one": "¿Eliminar {{count}} identidad seleccionada? Esto no se puede deshacer.",
     "deleteSelected_other": "¿Eliminar {{count}} identidades seleccionadas? Esto no se puede deshacer.",
+    "deleteSelected_many": "¿Eliminar {{count}} identidades seleccionadas? Esto no se puede deshacer.",
     "resetSelected_one": "¿Restablecer el historial de \"usado en\" de {{count}} identidad seleccionada? Volverá a estar disponible en todos los sitios.",
-    "resetSelected_other": "¿Restablecer el historial de \"usado en\" de {{count}} identidades seleccionadas? Volverán a estar disponibles en todos los sitios."
+    "resetSelected_other": "¿Restablecer el historial de \"usado en\" de {{count}} identidades seleccionadas? Volverán a estar disponibles en todos los sitios.",
+    "resetSelected_many": "¿Restablecer el historial de \"usado en\" de {{count}} identidades seleccionadas? Volverán a estar disponibles en todos los sitios."
   },
   "errors": {
     "load": "No se pudo cargar la bóveda de datos.",

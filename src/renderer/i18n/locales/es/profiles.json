@@ -16,6 +16,7 @@
     "ariaLabel": "Etiquetar perfiles seleccionados",
     "title_one": "Etiquetar {{count}} perfil",
     "title_other": "Etiquetar {{count}} perfiles",
+    "title_many": "Etiquetar {{count}} perfiles",
     "subtitle": "Añade o quita una etiqueta en los perfiles seleccionados.",
     "placeholder": "Nombre de la etiqueta…",
     "remove": "Quitar",
@@ -25,6 +26,7 @@
     "ariaLabel": "Renombrar perfiles seleccionados",
     "title_one": "Renombrar {{count}} perfil",
     "title_other": "Renombrar {{count}} perfiles",
+    "title_many": "Renombrar {{count}} perfiles",
     "subtitle": "Numera los perfiles seleccionados con un prefijo, en su orden visible actual.",
     "prefixPlaceholder": "Prefijo, p. ej. Cuenta",
     "startNumber": "Número inicial",
@@ -35,6 +37,7 @@
     "ariaLabel": "Reasignar proxies a los perfiles seleccionados",
     "title_one": "Proxies · {{count}} perfil",
     "title_other": "Proxies · {{count}} perfiles",
+    "title_many": "Proxies · {{count}} perfiles",
     "subtitle": "Reasigna, intercambia o quita los proxies de los perfiles seleccionados.",
     "modeLabel": "Acción",
     "modes": {
@@ -174,11 +177,12 @@
     "rotationNoProxies": "Aún no hay proxies en tu grupo. Añádelos en la página Proxies. Los proxies gratuitos no pueden entrar en un grupo de rotación.",
     "rotationSelected_one": "{{count}} proxy en el grupo",
     "rotationSelected_other": "{{count}} proxies en el grupo",
+    "rotationSelected_many": "{{count}} proxies en el grupo",
     "network": "Red",
     "quicDisableTitle": "Desactivar HTTP/3 (QUIC)",
     "quicEnableTitle": "Activar HTTP/3 (QUIC)",
     "quicLabel": "Activar HTTP/3 (compatibilidad con QUIC)",
-    "quicWarning": "⚠️ Advertencia: Actívalo solo en proxies premium de alta calidad que admitan por completo el aislamiento del seguimiento UDP. Activar QUIC desbloquea las velocidades de HTTP/3 pero puede causar fugas de red en configuraciones deficientes. Por defecto está desactivado (máximo sigilo).",
+    "quicWarning": "⚠️ Advertencia: Actívalo solo en proxies premium de alta calidad que admitan por completo el aislamiento del seguimiento UDP. Activar QUIC desbloquea las velocidades de HTTP/3 pero puede causar fugas de red en configuraciones deficientes. Por defecto está desactivado (máximo aislamiento).",
     "showPassword": "Mostrar contraseña",
     "hidePassword": "Ocultar contraseña",
     "typeLocal": "Local (este PC)",
@@ -247,6 +251,7 @@
     "cpuCores": "Núcleos de CPU",
     "coresUnit_one": "{{count}} núcleo",
     "coresUnit_other": "{{count}} núcleos",
+    "coresUnit_many": "{{count}} núcleos",
     "ram": "RAM",
     "gbUnit": "{{value}} GB",
     "deviceName": "Nombre del dispositivo",
@@ -281,6 +286,7 @@
     "fontsListPlaceholder": "Arial\nCalibri\nSegoe UI",
     "fontsCount_one": "{{count}} fuente permitida",
     "fontsCount_other": "{{count}} fuentes permitidas",
+    "fontsCount_many": "{{count}} fuentes permitidas",
     "fontsReset": "Restablecer las fuentes estándar de {{os}}",
     "mediaMics": "Micrófonos",
     "mediaSpeakers": "Altavoces",
@@ -362,7 +368,7 @@
     "enable": "Activado",
     "global": "Global",
     "customize": "Personalizar",
-    "allVersions": "Todas"
+    "allVersions": "Todas ({{os}})"
   },
   "env": {
     "overview": "Resumen del entorno",
@@ -370,6 +376,7 @@
     "savedProxy": "Proxy guardado",
     "rotatingProxy_one": "Rotativo, {{count}} proxy",
     "rotatingProxy_other": "Rotativo, {{count}} proxies",
+    "rotatingProxy_many": "Rotativo, {{count}} proxies",
     "directNoProxy": "Directo (sin proxy)",
     "real": "Real",
     "noise": "Ruido",
@@ -419,6 +426,7 @@
     "displaySameAsLanguage": "Igual que Idioma",
     "fontsCustom_one": "Personalizado ({{count}} fuente)",
     "fontsCustom_other": "Personalizado ({{count}} fuentes)",
+    "fontsCustom_many": "Personalizado ({{count}} fuentes)",
     "webgpuSameAsWebgl": "GPU real (como WebGL)",
     "mediaCounts": "Micrófonos {{mic}} · Altavoces {{spk}} · Cámaras {{cam}}",
     "webrtcFirefoxOff": "Desactivado (Firefox)",
@@ -471,6 +479,7 @@
     "savePresetPrompt": "Guarda los filtros actuales como un preajuste - nombre:",
     "profileCount_one": "{{count}} perfil",
     "profileCount_other": "{{count}} perfiles",
+    "profileCount_many": "{{count}} perfiles",
     "used": "Usado",
     "unused": "Sin usar",
     "cancel": "Cancelar"
@@ -505,9 +514,11 @@
     "createdToday": "Creado hoy",
     "createdDaysAgo_one": "Creado hace {{count}} día",
     "createdDaysAgo_other": "Creado hace {{count}} días",
+    "createdDaysAgo_many": "Creado hace {{count}} días",
     "neverWarmed": "nunca calentado",
     "warmedTimes_one": "calentado {{count}} vez, la última {{last}}",
     "warmedTimes_other": "calentado {{count}} veces, la última {{last}}",
+    "warmedTimes_many": "calentado {{count}} veces, la última {{last}}",
     "rotateIp": "Rotar IP",
     "rotateIpTitle": "Rotar IP: obtener una nueva IP de salida en el proxy de este perfil",
     "rotateIpDone": "Se pidió una nueva IP al proxy de \"{{title}}\". La nueva IP puede tardar unos segundos en aparecer.",
@@ -528,7 +539,8 @@
   },
   "confirm": {
     "bulkDelete_one": "¿Mover {{count}} perfil a la papelera?",
-    "bulkDelete_other": "¿Mover {{count}} perfiles a la papelera?"
+    "bulkDelete_other": "¿Mover {{count}} perfiles a la papelera?",
+    "bulkDelete_many": "¿Mover {{count}} perfiles a la papelera?"
   },
   "errors": {
     "noCookies": "Aún no se encontraron cookies guardadas para este perfil.",

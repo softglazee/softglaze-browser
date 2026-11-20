@@ -19,8 +19,10 @@
   "issues_zero": "No se encontraron problemas",
   "issues_one": "1 problema",
   "issues_other": "{{count}} problemas",
+  "issues_many": "{{count}} problemas",
   "fixable_one": "Arreglar todo resuelve 1",
   "fixable_other": "Arreglar todo resuelve {{count}}",
+  "fixable_many": "Arreglar todo resuelve {{count}}",
   "leakTest": "Prueba de fugas",
   "leakTestTitle": "Abre la comprobación de fugas detallada, con una prueba en vivo del perfil abierto",
   "loadFailed": "No se pudo puntuar este perfil.",
@@ -95,7 +97,8 @@
     },
     "sharedProxy": {
       "msg_one": "Otro perfil usa este proxy, así que comparten una IP y se pueden vincular.",
-      "msg_other": "Otros {{count}} perfiles usan este proxy, así que comparten una IP y se pueden vincular."
+      "msg_other": "Otros {{count}} perfiles usan este proxy, así que comparten una IP y se pueden vincular.",
+      "msg_many": "Otros {{count}} perfiles usan este proxy, así que comparten una IP y se pueden vincular."
     },
     "timezone": {
       "pass": "Sigue la IP del proxy.",
@@ -126,7 +129,8 @@
       "pass": "Tiene historial de navegación y cookies.",
       "warn": "Casi sin cookies ni historial todavía. Los sitios confían en un perfil que se ha usado.",
       "warmed_one": "Calentado {{count}} vez, así que tiene historial de navegación y cookies reales.",
-      "warmed_other": "Calentado {{count}} veces, así que tiene historial de navegación y cookies reales."
+      "warmed_other": "Calentado {{count}} veces, así que tiene historial de navegación y cookies reales.",
+      "warmed_many": "Calentado {{count}} veces, así que tiene historial de navegación y cookies reales."
     },
     "device": {
       "warn": "La tarjeta gráfica (WebGL) puede no encajar con este dispositivo o sistema.",
@@ -139,6 +143,7 @@
   "prelaunch": {
     "title_one": "Revisa este perfil antes de abrirlo",
     "title_other": "Revisa {{count}} perfiles antes de abrirlos",
+    "title_many": "Revisa {{count}} perfiles antes de abrirlos",
     "subtitle": "Los sitios ven estas incoherencias en cuanto se abre un perfil.",
     "issue": {
       "uaOs": "El user agent dice {{ua}}, pero el perfil está configurado como {{os}}.",
@@ -172,6 +177,7 @@
     "fixTitle": "Aplica las soluciones seguras de CAPTCHA a los perfiles seleccionados: zona horaria, idioma, ubicación, WebRTC y un proxy libre cuando reduce el riesgo",
     "confirm_one": "¿Arreglar los problemas de CAPTCHA de este perfil? Solo se cambian opciones de configuración y proxies que reducen el riesgo.",
     "confirm_other": "¿Arreglar los problemas de CAPTCHA en {{count}} perfiles? Solo se cambian opciones de configuración y proxies que reducen el riesgo.",
+    "confirm_many": "¿Arreglar los problemas de CAPTCHA en {{count}} perfiles? Solo se cambian opciones de configuración y proxies que reducen el riesgo.",
     "done": "Arreglados {{changed}} de {{total}} perfiles; {{swapped}} pasaron a un proxy libre.",
     "noBetter": "{{count}} no pudieron obtener un proxy mejor."
   },

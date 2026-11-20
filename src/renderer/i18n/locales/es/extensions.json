@@ -3,7 +3,8 @@
     "eyebrow": "Repositorio Empresarial",
     "title": "Extensiones",
     "summary_one": "{{count}} extensión instalada · {{enabled}} activadas para los perfiles que cargan extensiones",
-    "summary_other": "{{count}} extensiones instaladas · {{enabled}} activadas para los perfiles que cargan extensiones"
+    "summary_other": "{{count}} extensiones instaladas · {{enabled}} activadas para los perfiles que cargan extensiones",
+    "summary_many": "{{count}} extensiones instaladas · {{enabled}} activadas para los perfiles que cargan extensiones"
   },
   "stats": {
     "total": "Extensiones totales",

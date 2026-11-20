@@ -7,6 +7,7 @@
   },
   "exportNotice_one": "Se exportó {{count}} perfil a {{path}}",
   "exportNotice_other": "Se exportaron {{count}} perfiles a {{path}}",
+  "exportNotice_many": "Se exportaron {{count}} perfiles a {{path}}",
   "tabs": {
     "importFromFile": "Importar desde archivo",
     "quickGenerate": "Generación rápida"
@@ -57,6 +58,7 @@
   },
   "commitButton_one": "Confirmar {{count}} perfil",
   "commitButton_other": "Confirmar {{count}} perfiles",
+  "commitButton_many": "Confirmar {{count}} perfiles",
   "success": {
     "title": "Importación correcta",
     "importedPrefix": "Se importaron correctamente",

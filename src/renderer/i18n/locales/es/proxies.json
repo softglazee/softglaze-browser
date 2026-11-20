@@ -111,7 +111,8 @@
       "never": "Nunca",
       "notUsed": "Ningún perfil",
       "usedByCount_one": "{{count}} perfil",
-      "usedByCount_other": "{{count}} perfiles"
+      "usedByCount_other": "{{count}} perfiles",
+      "usedByCount_many": "{{count}} perfiles"
     },
     "actions": {
       "check": "Comprobar ahora",
@@ -129,10 +130,13 @@
       "delete": "¿Eliminar el proxy gratuito {{address}}?",
       "deleteUsed_one": "¿Eliminar el proxy gratuito {{address}}? {{count}} perfil lo usa y se quedará sin proxy.",
       "deleteUsed_other": "¿Eliminar el proxy gratuito {{address}}? {{count}} perfiles lo usan y se quedarán sin proxy.",
+      "deleteUsed_many": "¿Eliminar el proxy gratuito {{address}}? {{count}} perfiles lo usan y se quedarán sin proxy.",
       "deleteSelected_one": "¿Eliminar {{count}} proxy gratuito seleccionado?",
       "deleteSelected_other": "¿Eliminar {{count}} proxies gratuitos seleccionados?",
+      "deleteSelected_many": "¿Eliminar {{count}} proxies gratuitos seleccionados?",
       "deleteDead_one": "¿Eliminar {{count}} proxy gratuito que falló su última comprobación?",
-      "deleteDead_other": "¿Eliminar {{count}} proxies gratuitos que fallaron su última comprobación?"
+      "deleteDead_other": "¿Eliminar {{count}} proxies gratuitos que fallaron su última comprobación?",
+      "deleteDead_many": "¿Eliminar {{count}} proxies gratuitos que fallaron su última comprobación?"
     },
     "checkRun": {
       "running": "Comprobando {{done}} de {{total}} · {{ok}} funcionan, {{fail}} no funcionan",
@@ -199,6 +203,7 @@
     "button": "Eliminar todos los {{scope}} ({{count}})",
     "confirm_one": "¿Eliminar {{count}} proxy {{scope}}? Esto no se puede deshacer - los perfiles que lo usan se quedan sin él y no se abrirán hasta que les asignes otro proxy.",
     "confirm_other": "¿Eliminar los {{count}} proxies {{scope}}? Esto no se puede deshacer - los perfiles que los usan se quedan sin proxy y no se abrirán hasta que les asignes otro.",
+    "confirm_many": "¿Eliminar los {{count}} proxies {{scope}}? Esto no se puede deshacer - los perfiles que los usan se quedan sin proxy y no se abrirán hasta que les asignes otro.",
     "scope": {
       "all": "totales",
       "filtered": "filtrados",
@@ -227,7 +232,8 @@
     "buttonTooltip": "Crea grupos a partir del país/estado/ciudad verificado de cada proxy. Ejecuta Probar todo primero para que los proxies tengan una ubicación detectada.",
     "button": "Agrupar automáticamente",
     "result_one": "+{{count}} grupo · {{assigned}} asignados",
-    "result_other": "+{{count}} grupos · {{assigned}} asignados"
+    "result_other": "+{{count}} grupos · {{assigned}} asignados",
+    "result_many": "+{{count}} grupos · {{assigned}} asignados"
   },
   "sort": {
     "tooltip": "Ordenar por latencia",
@@ -300,6 +306,7 @@
     "colActions": "Acciones",
     "profileCount_one": "{{count}} perfil",
     "profileCount_other": "{{count}} perfiles",
+    "profileCount_many": "{{count}} perfiles",
     "defaultProxyName": "Proxy"
   },
   "rowActions": {
@@ -358,7 +365,8 @@
   },
   "bulkDelete": {
     "confirm_one": "¿Eliminar {{count}} proxy seleccionado? Los perfiles que lo usan se quedan sin él y no se abrirán hasta que les asignes otro proxy.",
-    "confirm_other": "¿Eliminar {{count}} proxies seleccionados? Los perfiles que los usan se quedan sin proxy y no se abrirán hasta que les asignes otro."
+    "confirm_other": "¿Eliminar {{count}} proxies seleccionados? Los perfiles que los usan se quedan sin proxy y no se abrirán hasta que les asignes otro.",
+    "confirm_many": "¿Eliminar {{count}} proxies seleccionados? Los perfiles que los usan se quedan sin proxy y no se abrirán hasta que les asignes otro."
   },
   "delete": {
     "confirm": "¿Eliminar el proxy \"{{name}}\"?",
@@ -374,6 +382,7 @@
     "fail": "fallidos",
     "checks_one": "{{count}} verificación",
     "checks_other": "{{count}} verificaciones",
+    "checks_many": "{{count}} verificaciones",
     "close": "Cerrar"
   },
   "historyCards": {
@@ -382,6 +391,7 @@
     "regressed": "Verificado antes, falló después",
     "regressedCount_one": "{{count}} verificado y luego falló",
     "regressedCount_other": "{{count}} verificados y luego fallaron",
+    "regressedCount_many": "{{count}} verificados y luego fallaron",
     "empty": "Aún no hay comprobaciones. Ejecuta Comprobar todo o Probar todo en la página Proxies y los resultados aparecerán aquí."
   },
   "form": {
@@ -492,9 +502,11 @@
     "expires": "Caduca",
     "daysLeft_one": "queda {{count}} día",
     "daysLeft_other": "quedan {{count}} días",
+    "daysLeft_many": "quedan {{count}} días",
     "endsToday": "termina hoy",
     "endedAgo_one": "terminó hace {{count}} día",
     "endedAgo_other": "terminó hace {{count}} días",
+    "endedAgo_many": "terminó hace {{count}} días",
     "traffic": "Tráfico",
     "trafficLeft": "{{left}} disponibles",
     "trafficUsedOf": "{{used}} usados de {{total}}",
