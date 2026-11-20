@@ -3,6 +3,7 @@
 // every price or currency change is written to PlanPriceHistory, and the admin audit log records
 // the whole change. Amounts are integers in minor units (cents): 2900 = US$29.00.
 const { asJson } = require('../util/json');
+const sales = require('./sales');
 
 // The app's own limits per tier (src/main/tierPolicy.js), used when a plan has no limits of its own.
 // profiles / aiActionsPerDay null = unlimited. Free (tier free, amount 0) is never sold and never gets a
@@ -133,7 +134,8 @@ function validatePlan(b, { partial = false, current = null } = {}) {
   }
   if (has('months') || !partial) {
     const m = b.months === undefined ? 1 : b.months;
-    if (!Number.isInteger(m) || m < 1 || m > 120) errors.months = 'integer 1-120'; else data.months = m;
+    // 1-120, or LIFETIME_MONTHS (1200) for a lifetime plan (interval once): src/plans/sales.js.
+    if (!Number.isInteger(m) || ((m < 1 || m > 120) && m !== sales.LIFETIME_MONTHS)) errors.months = `integer 1-120, or ${sales.LIFETIME_MONTHS} for lifetime (interval once)`; else data.months = m;
   }
   for (const k of ['recurring', 'active', 'highlight']) {
     if (has(k)) { if (typeof b[k] !== 'boolean') errors[k] = 'boolean'; else data[k] = b[k]; }
@@ -164,6 +166,7 @@ function validatePlan(b, { partial = false, current = null } = {}) {
   const recurring = data.recurring !== undefined ? data.recurring : current && current.recurring;
   if (!errors.tier && !errors.amount && tier === 'free' && amount != null && amount !== 0) errors.amount = 'a free plan has amount 0';
   if (tier === 'free' && recurring === true) errors.recurring = 'a free plan is not a subscription';
+  sales.validateSaleFields(b, data, errors);
   return { data, errors: Object.keys(errors).length ? errors : null };
 }
 
@@ -186,6 +189,7 @@ async function upsertPlan(db, tenantId, data, { actor, note } = {}) {
     : await db.plan.create({ data: { tenantId, key, ...rest } });
   await recordPrice(db, tenantId, key, before, plan, actor, note);
   invalidatePublicPlans(tenantId);
+  sales.invalidateOffers(tenantId);
   return { plan, before };
 }
 

@@ -83,6 +83,11 @@ model Plan {
   features    Json? // ["Unlimited profiles", ...]
   limits      Json? // { seats, maxParallel, auditExport, profiles, devices, aiActionsPerDay, sync, phoneControl, partnerDeals }; null = the tier defaults
   sortOrder   Int      @default(0)
+  // Sale rules (src/plans/sales.js): how many may be sold (null = no cap) and the UTC window in which
+  // checkout sells it (null = no limit on that side). Migration 20261120110000_black_friday_lifetime_sales.
+  saleCap      Int?
+  saleStartsAt DateTime?
+  saleEndsAt   DateTime?
   createdAt   DateTime @default(now())
   updatedAt   DateTime @default(now()) @updatedAt
 
@@ -177,6 +182,7 @@ model Payment {
   @@index([tenantId, providerRef])
   @@index([tenantId, customerId])
   @@index([tenantId, paidAt])
+  @@index([tenantId, plan, status])
 }
 
 // Idempotency / replay guard for inbound provider webhooks. The row is inserted

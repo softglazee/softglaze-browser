@@ -15,7 +15,16 @@
 //       refunded payments by refundedAt in M; net = gross - refunds. Per currency.
 // Revenue per paying customer (month M) = net(M) / customers who were paying at any time in M.
 // ARPA (now) = MRR / paying customers.
+// Lifetime   A licence on a lifetime plan (interval once, months 1200: src/plans/sales.js), or any paid licence
+//       that runs more than LIFETIME_AFTER_MONTHS from now (a lifetime activation code or grant has no plan
+//       key), is paying but has no monthly amount: it counts in payingLicences and lifetimeLicences, never
+//       in MRR. Its money is in revenue (month M) once, when it is paid.
 const { DAY, ms, monthKey, monthStart, nextMonthStart, dayKey, weekKey, monthRange } = require('../util/time');
+
+const LIFETIME_MONTHS = 1200;
+const LIFETIME_AFTER_MONTHS = 600; // 50 years: no monthly or yearly plan ever reaches it
+const isLifetimePlan = (plan) => Boolean(plan) && plan.interval === 'once' && Number(plan.months) >= LIFETIME_MONTHS;
+const runsForLifetime = (l, nowMs) => ms(l.currentPeriodEnd) - nowMs > LIFETIME_AFTER_MONTHS * 30 * DAY;
 
 function termMonths(plan) {
   const m = Math.max(1, Number(plan.months) || 1);
@@ -31,7 +40,7 @@ function planForLicence(lic, plans) {
     const byKey = plans.find((p) => p.key === lic.plan);
     if (byKey) return byKey;
   }
-  const sameTier = plans.filter((p) => p.active && p.tier === (lic.tier || 'pro') && p.amount > 0);
+  const sameTier = plans.filter((p) => p.active && p.tier === (lic.tier || 'pro') && p.amount > 0 && !isLifetimePlan(p));
   sameTier.sort((a, b) => termMonths(a) - termMonths(b) || (a.sortOrder || 0) - (b.sortOrder || 0) || a.amount - b.amount);
   return sameTier[0] || null;
 }
@@ -47,10 +56,13 @@ function computeMrr(licences, plans, now) {
   const customers = new Set();
   let paying = 0;
   let unpriced = 0;
+  let lifetime = 0;
   for (const l of licences) {
     if (!isPayingLicence(l, nowMs)) continue;
     paying += 1;
     customers.add(l.customerId || `install:${l.installId || l.id}`);
+    const byKey = l.plan ? plans.find((p) => p.key === l.plan) : null;
+    if (isLifetimePlan(byKey) || runsForLifetime(l, nowMs)) { lifetime += 1; continue; }
     const plan = planForLicence(l, plans);
     if (!plan) { unpriced += 1; continue; }
     const cur = plan.currency || 'USD';
@@ -60,7 +72,7 @@ function computeMrr(licences, plans, now) {
     const mrrCents = Math.round(v);
     return { currency, mrrCents, arrCents: mrrCents * 12 };
   });
-  return { byCurrency, payingCustomers: customers.size, payingLicences: paying, unpricedLicences: unpriced };
+  return { byCurrency, payingCustomers: customers.size, payingLicences: paying, unpricedLicences: unpriced, lifetimeLicences: lifetime };
 }
 
 // Status at time t for every customer, replaying status events in date order.
