@@ -16,6 +16,15 @@ const stripCrossorigin = {
   }
 };
 
+// Dev only: the first-run browser download lands in ./chrome and ./firefox (gitignored). Their
+// files are locked while a browser runs, and watching them crashed the dev server (EBUSY on a
+// Firefox DLL). Nothing in them is part of the renderer.
+const projectRoot = process.cwd();
+function isBrowserDownload(file) {
+  const rel = path.relative(projectRoot, path.resolve(projectRoot, String(file)));
+  return /^(chrome|firefox)(?:[\\/]|$)/i.test(rel);
+}
+
 export default defineConfig({
   root: '.',
   base: './',
@@ -28,7 +37,8 @@ export default defineConfig({
   server: {
     host: '127.0.0.1',
     port: 5173,
-    strictPort: true
+    strictPort: true,
+    watch: { ignored: isBrowserDownload }
   },
   build: {
     outDir: 'dist',
