@@ -1,0 +1,156 @@
+{
+  "billing": {
+    "status": {
+      "loading": "กำลังโหลด…",
+      "sourceOwner": "เจ้าของซอร์สโค้ด",
+      "active": "ใช้งานอยู่",
+      "activeUntil": "ใช้งานอยู่ · ถึง {{date}}",
+      "trialDaysLeft_other": "ทดลองใช้ · เหลือ {{count}} วัน",
+      "graceDaysLeft_other": "ผ่อนผัน · เหลือ {{count}} วัน",
+      "subscriptionEnded": "การสมัครสมาชิกสิ้นสุดแล้ว"
+    },
+    "subscription": {
+      "title": "การสมัครสมาชิก",
+      "planLine": "SoftGlaze Browser · แพ็กเกจ {{tier}}",
+      "manageButton": "จัดการการสมัครสมาชิกและแพ็กเกจ"
+    },
+    "seats": {
+      "label": "ที่นั่งของทีม",
+      "usage": "ใช้แล้ว {{used}} / {{total}}"
+    },
+    "gateway": {
+      "title": "วิธีการชำระเงิน",
+      "description": "เฉพาะผู้ดูแลระบบสูงสุดเท่านั้น เปิดใช้วิธีการชำระเงินที่จะแสดงให้เจ้าของเห็นตอนชำระเงิน และจัดเก็บคีย์ของผู้ให้บริการแต่ละราย",
+      "loadError": "โหลดการตั้งค่าการชำระเงินไม่ได้",
+      "footnote": "คีย์ถูกเข้ารหัสขณะจัดเก็บในเครื่องนี้และไม่ถูกส่งออกไปที่อื่น การชำระเงินใช้วิธีตรวจสอบเป็นระยะ (ไม่มี webhook) การบังคับใช้ข้ามการติดตั้งจึงยังต้องใช้ระบบหลังบ้านสำหรับไลเซนส์ Wise และแบบแมนนวลจะได้รับการอนุมัติโดยคุณในส่วน “การชำระเงินที่รอดำเนินการ” ด้านล่าง",
+      "retry": "ลองอีกครั้ง"
+    },
+    "provider": {
+      "kindManual": "แมนนวล",
+      "kindAutomated": "อัตโนมัติ",
+      "on": "เปิด",
+      "enabled": "เปิดใช้",
+      "disabled": "ปิดใช้",
+      "enableAria": "เปิดใช้ {{provider}}",
+      "documentation": "เอกสาร",
+      "secretStoredPlaceholder": "•••••••• (เว้นว่างไว้เพื่อใช้ค่าเดิม)",
+      "secretPlaceholder": "วางคีย์",
+      "save": "บันทึก",
+      "testConnection": "ทดสอบการเชื่อมต่อ",
+      "enabledMsg": "เปิดใช้แล้ว",
+      "disabledMsg": "ปิดใช้แล้ว",
+      "updateError": "อัปเดตไม่ได้",
+      "savedMsg": "บันทึกแล้ว",
+      "saveError": "บันทึกไม่ได้",
+      "connectionOk": "การเชื่อมต่อใช้งานได้ ✓",
+      "validationFailedKeys": "การตรวจสอบล้มเหลว โปรดตรวจสอบคีย์",
+      "validationFailed": "การตรวจสอบล้มเหลว"
+    },
+    "manual": {
+      "title": "การชำระเงินที่รอดำเนินการ",
+      "description": "รายการชำระเงินแบบแมนนวล (Wise / โอนผ่านธนาคาร) ที่รอการอนุมัติจากคุณ",
+      "loadError": "โหลดการชำระเงินแบบแมนนวลไม่ได้",
+      "resolveError": "อัปเดตการชำระเงินนี้ไม่ได้",
+      "ownerFallback": "เจ้าของ #{{id}}",
+      "refPrefix": "อ้างอิง:",
+      "approve": "อนุมัติ",
+      "reject": "ปฏิเสธ",
+      "statusLabel": {
+        "pending": "รอดำเนินการ",
+        "approved": "อนุมัติแล้ว",
+        "rejected": "ปฏิเสธแล้ว"
+      }
+    }
+  },
+  "monetization": {
+    "heading": "การสร้างรายได้",
+    "affiliate": {
+      "title": "ลิงก์พันธมิตรและลิงก์แนะนำ",
+      "ownerOnly": "เฉพาะเจ้าของ",
+      "description": "URL พันธมิตรของคุณสำหรับปุ่ม “ซื้อ” ในตลาดพร็อกซี เว้นว่างไว้เพื่อใช้ค่าเริ่มต้นของ Softglaze",
+      "loadError": "โหลดลิงก์พันธมิตรไม่ได้",
+      "saveError": "บันทึกลิงก์พันธมิตรไม่ได้",
+      "savedMsg": "บันทึกแล้ว ปุ่มในตลาดจะใช้ลิงก์ของคุณ",
+      "customLink": "ลิงก์ที่กำหนดเอง",
+      "defaultLink": "ลิงก์เริ่มต้น",
+      "openLinkTitle": "เปิดลิงก์ {{provider}}",
+      "saving": "กำลังบันทึก…",
+      "saveButton": "บันทึกลิงก์",
+      "footnote": "ลิงก์เหล่านี้ใช้กับปุ่ม “ซื้อที่…” / “ไปที่แดชบอร์ด” ในแท็บ คลังพร็อกซี → ผู้ให้บริการ เป็นเพียง URL แนะนำสาธารณะเท่านั้น โทเค็นและข้อมูลรับรองของพร็อกซีจะไม่ได้รับผลกระทบ"
+    }
+  },
+  "developerApi": {
+    "title": "การเข้าถึง API สำหรับนักพัฒนา",
+    "description": "สร้างคีย์ API และเรียกใช้เซิร์ฟเวอร์ REST ในเครื่องเพื่อควบคุม Softglaze ด้วยโปรแกรม",
+    "copy": "คัดลอก",
+    "errors": {
+      "load": "โหลดการตั้งค่า API สำหรับนักพัฒนาไม่ได้",
+      "nameRequired": "ตั้งชื่อคีย์ (เช่น \"CI server\")",
+      "generate": "สร้างคีย์ API ไม่ได้",
+      "revoke": "เพิกถอนคีย์ไม่ได้",
+      "toggleServer": "เปลี่ยนสถานะเซิร์ฟเวอร์ในเครื่องไม่ได้"
+    },
+    "keys": {
+      "title": "คีย์ API",
+      "namePlaceholder": "ชื่อคีย์ (เช่น CI server)",
+      "generate": "สร้างคีย์ API ใหม่",
+      "copyOnce": "คัดลอกคีย์นี้ตอนนี้ คีย์จะแสดงเพียงครั้งเดียวและกู้คืนไม่ได้",
+      "empty": "ยังไม่มีคีย์ API",
+      "lastUsed": "ใช้ล่าสุด {{when}}",
+      "neverUsed": "ไม่เคยใช้",
+      "never": "ไม่เคย",
+      "revoke": "เพิกถอน",
+      "revokeConfirm": "เพิกถอนคีย์ API \"{{name}}\" หรือไม่ สคริปต์ที่ใช้คีย์นี้จะหยุดทำงานทันที การดำเนินการนี้ย้อนกลับไม่ได้"
+    },
+    "server": {
+      "title": "REST API ในเครื่อง",
+      "runningAt": "ทำงานอยู่ที่",
+      "stoppedPrefix": "หยุดอยู่ · จะผูกกับ",
+      "loopbackOnly": "(loopback เท่านั้น)",
+      "disableTitle": "ปิดใช้ API ในเครื่อง",
+      "enableTitle": "เปิดใช้ API ในเครื่อง",
+      "curlExample": "ตัวอย่าง: เปิดโปรไฟล์ผ่าน cURL",
+      "footnote": "เซิร์ฟเวอร์รับคำขอจากเครื่องนี้เท่านั้น และต้องใช้คีย์ Bearer ที่ถูกต้อง"
+    }
+  },
+  "migration": {
+    "title": "ย้ายโปรไฟล์",
+    "ownerOnly": "เฉพาะเจ้าของ",
+    "description": "นำเข้าโปรไฟล์ที่มีอยู่จากเบราว์เซอร์หลายโปรไฟล์ตัวอื่นผ่าน API ของเบราว์เซอร์นั้น",
+    "sourcePlatform": "แพลตฟอร์มต้นทาง",
+    "noteLabel": "หมายเหตุ:",
+    "instructions": "คำแนะนำ",
+    "tokenSectionTitle": "โทเค็น API ของ {{platform}}",
+    "transferring": "กำลังย้าย…",
+    "startTransfer": "เริ่มย้าย",
+    "tokenFootnote": "โทเค็นของคุณใช้ครั้งเดียวสำหรับการย้ายนี้และจะไม่ถูกจัดเก็บ แพลตฟอร์มในเครื่อง (AdsPower, ixBrowser) ต้องเปิดอยู่และเปิดใช้ Local API",
+    "errors": {
+      "tokenRequired": "ป้อน {{placeholder}} ของ {{platform}}",
+      "transferFailed": "การย้ายล้มเหลว"
+    },
+    "log": {
+      "title": "บันทึกการย้าย",
+      "imported": "นำเข้าแล้ว {{created}}/{{total}}",
+      "errors_other": "ข้อผิดพลาด {{count}} รายการ",
+      "waiting": "กำลังรอการตอบกลับจากแพลตฟอร์ม…"
+    },
+    "platforms": {
+      "dolphin": {
+        "placeholder": "Dolphin_Token",
+        "warning": "คุกกี้จะไม่ถูกย้ายหากคุณย้ายจากแพ็กเกจฟรีของ Dolphin"
+      },
+      "gologin": {
+        "placeholder": "โทเค็น API ของ GoLogin"
+      },
+      "multilogin": {
+        "placeholder": "โทเค็นระบบอัตโนมัติของ Multilogin"
+      },
+      "adspower": {
+        "placeholder": "AdsPower Local API Key"
+      },
+      "ixbrowser": {
+        "placeholder": "ixBrowser Local API Key"
+      }
+    }
+  }
+}

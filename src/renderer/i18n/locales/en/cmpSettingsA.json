@@ -45,7 +45,7 @@
       "savedMsg": "Saved.",
       "saveError": "Could not save.",
       "connectionOk": "Connection looks good ✓",
-      "validationFailedKeys": "Validation failed - check the keys.",
+      "validationFailedKeys": "Validation failed. Check the keys.",
       "validationFailed": "Validation failed."
     },
     "manual": {
@@ -78,7 +78,7 @@
       "openLinkTitle": "Open {{provider}} link",
       "saving": "Saving…",
       "saveButton": "Save links",
-      "footnote": "These links power the “Purchase at…” / “Visit dashboard” buttons on the Proxy pool → Providers tab. They are public referral URLs only - proxy tokens and credentials are never affected."
+      "footnote": "These links power the “Purchase at…” / “Visit dashboard” buttons on the Proxy pool → Providers tab. They are public referral URLs only; proxy tokens and credentials are never affected."
     }
   },
   "developerApi": {
@@ -96,7 +96,7 @@
       "title": "API Keys",
       "namePlaceholder": "Key name (e.g. CI server)",
       "generate": "Generate New API Key",
-      "copyOnce": "Copy this key now - it is shown only once and cannot be recovered.",
+      "copyOnce": "Copy this key now: it is shown only once and cannot be recovered.",
       "empty": "No API keys yet.",
       "lastUsed": "last used {{when}}",
       "neverUsed": "never used",

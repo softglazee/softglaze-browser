@@ -115,7 +115,7 @@ export default function DbEncryptionSettings() {
             <span><strong>{t('dbEncryption.readFirstLabel')}</strong> {t('dbEncryption.readFirstBefore')} <strong>{t('dbEncryption.readFirstCannotRecover')}</strong>{t('dbEncryption.readFirstAfter')}</span>
           </div>
           <div>
-            <label className={labelCls}><KeyRound className="w-3 h-3 inline mr-1" />{t('dbEncryption.workspacePasswordLabel')}</label>
+            <label className={labelCls}><KeyRound className="w-3 h-3 inline me-1" />{t('dbEncryption.workspacePasswordLabel')}</label>
             <input type="password" className={inputCls} value={password} onChange={(e) => setPassword(e.target.value)} placeholder={t('dbEncryption.workspacePasswordPlaceholder')} />
           </div>
           <label className="flex items-start gap-2.5 text-[12.5px] text-muted-foreground cursor-pointer">
@@ -132,7 +132,7 @@ export default function DbEncryptionSettings() {
         <div className="mt-4 pt-4 border-t border-border space-y-3.5">
           <p className="text-[12px] text-muted-foreground">{t('dbEncryption.disableIntro')}</p>
           <div>
-            <label className={labelCls}><KeyRound className="w-3 h-3 inline mr-1" />{t('dbEncryption.workspacePasswordLabel')}</label>
+            <label className={labelCls}><KeyRound className="w-3 h-3 inline me-1" />{t('dbEncryption.workspacePasswordLabel')}</label>
             <input type="password" className={inputCls} value={password} onChange={(e) => setPassword(e.target.value)} placeholder={t('dbEncryption.workspacePasswordPlaceholder')} />
           </div>
           <button onClick={disable} disabled={busy === 'disable'} className="h-9 px-5 rounded-lg bg-secondary hover:bg-secondary/70 text-foreground font-semibold text-[12.5px] inline-flex items-center gap-2 disabled:opacity-60">

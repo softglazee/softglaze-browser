@@ -1,0 +1,111 @@
+{
+  "choose": {
+    "title": "Kostenloses Konto erstellen",
+    "subtitle": "Nutzen Sie ein Konto, das Sie schon haben. Kein neues Passwort.",
+    "google": "Weiter mit Google",
+    "microsoft": "Weiter mit Microsoft",
+    "facebook": "Weiter mit Facebook",
+    "linkedin": "Weiter mit LinkedIn",
+    "allowEmail": "E-Mail-Zugriff erlauben und Facebook erneut versuchen",
+    "github": "Weiter mit GitHub",
+    "email": "Weiter mit E-Mail",
+    "moreOptions": "Mit Passwort einrichten",
+    "moreOptionsHint": "Lieber mit Name und Passwort?",
+    "privacy": "Wir erhalten nur Ihren Namen und Ihre bestätigte E-Mail-Adresse.",
+    "haveAccount": "Haben Sie schon einen Arbeitsbereich auf diesem Computer?",
+    "logIn": "Mit Passwort anmelden",
+    "signInTitle": "Bei SoftGlaze anmelden",
+    "signInSubtitle": "Nutzen Sie das Konto, mit dem Sie sich registriert haben. Liegt Ihr Tarif auf einem anderen Computer, können Sie ihn hierher übertragen.",
+    "entryLabel": "Neu oder wiederkehrend",
+    "entryNew": "Neues Konto",
+    "entryReturning": "Ich habe ein Konto"
+  },
+  "unlock": {
+    "title": "Willkommen zurück",
+    "titleNamed": "Willkommen zurück, {{name}}",
+    "subtitle": "Melden Sie sich mit dem Konto an, zu dem dieser Arbeitsbereich gehört.",
+    "account": "Konto des Arbeitsbereichs: {{email}}",
+    "passwordInstead": "Mit Passwort anmelden",
+    "haveInvite": "Ich habe einen Einladungscode",
+    "teamSignIn": "Anmeldung für Teammitglieder"
+  },
+  "link": {
+    "title": "Bei Ihrem SoftGlaze-Konto anmelden",
+    "subtitle": "Nutzen Sie die Ein-Klick-Anmeldung hier und auf anderen Computern. Ihr Arbeitsbereich bleibt, wie er ist."
+  },
+  "email": {
+    "title": "Weiter mit E-Mail",
+    "subtitle": "Wir senden Ihnen einen 6-stelligen Code per E-Mail. Kein Passwort nötig.",
+    "label": "E-Mail-Adresse",
+    "placeholder": "sie@firma.de",
+    "send": "Code senden",
+    "codeTitle": "Prüfen Sie Ihre E-Mails",
+    "codeBody": "Geben Sie den 6-stelligen Code ein, den wir an {{email}} gesendet haben.",
+    "codeLabel": "6-stelliger Code",
+    "verify": "Weiter",
+    "resend": "Neuen Code senden",
+    "resendIn": "Neuen Code senden in {{count}} s",
+    "checkSpam": "Das kann eine Minute dauern. Sehen Sie im Spam-Ordner nach, falls die E-Mail nicht ankommt.",
+    "devCode": "In diesem Build ist kein E-Mail-Server eingerichtet, daher hier der Code: {{code}}",
+    "change": "Andere E-Mail verwenden"
+  },
+  "waiting": {
+    "title": "Im Browser abschließen",
+    "body": "Wir haben {{provider}} in Ihrem Browser geöffnet. Melden Sie sich dort an und kehren Sie dann hierher zurück.",
+    "status": "Warte auf {{provider}}...",
+    "reopen": "Seite erneut öffnen",
+    "anotherWay": "Nicht zurückgekommen? Anderen Weg versuchen",
+    "cancel": "Abbrechen"
+  },
+  "back": "Zurück",
+  "useCase": {
+    "title": "Wofür werden Sie SoftGlaze nutzen?",
+    "subtitle": "Optional. Es hilft uns, SoftGlaze für Sie zu verbessern.",
+    "continue": "Weiter",
+    "skip": "Überspringen"
+  },
+  "move": {
+    "title": "Ihr Abonnement",
+    "moved": "Fertig. Ihr Abonnement funktioniert jetzt auf diesem Computer."
+  },
+  "account": {
+    "title": "Anmeldemethoden",
+    "subtitle": "So melden Sie sich bei Ihrem SoftGlaze-Konto an. Eine Anmeldung auf einem neuen Computer verschiebt auch Ihre Lizenz dorthin.",
+    "signedInAs": "Angemeldet als {{email}}",
+    "google": "Google",
+    "microsoft": "Microsoft",
+    "facebook": "Facebook",
+    "linkedin": "LinkedIn",
+    "github": "GitHub",
+    "githubLogin": "GitHub (@{{login}})",
+    "email": "E-Mail-Code",
+    "lastUsed": "Zuletzt genutzt {{date}}",
+    "linkedOn": "Verknüpft {{date}}",
+    "signOut": "Abmelden",
+    "signOutConfirm": "Von Ihrem SoftGlaze-Konto auf diesem Computer abmelden? Sie können sich jederzeit mit demselben Konto wieder anmelden.",
+    "signingOut": "Wird abgemeldet...",
+    "offline": "Offline: Es wird angezeigt, was dieser Computer gespeichert hat.",
+    "notSignedIn": "Melden Sie sich bei Ihrem SoftGlaze-Konto an, um die Ein-Klick-Anmeldung hier und auf anderen Computern zu nutzen.",
+    "signInWorkspace": "Dieser Arbeitsbereich öffnet sich mit Ihrer Anmeldung. Legen Sie oben ein Passwort fest, wenn Sie sich auch ohne Internet anmelden möchten.",
+    "linked": "Angemeldet. Ihre Anmeldemethoden stehen unten.",
+    "loading": "Anmeldemethoden werden geladen...",
+    "notAvailable": "Die Ein-Klick-Anmeldung braucht den SoftGlaze-Lizenzserver, den dieser Build nicht nutzt."
+  },
+  "errors": {
+    "SIGNIN_OFFLINE": "Verbinden Sie sich mit dem Internet, um sich anzumelden.",
+    "SIGNIN_EXPIRED": "Diese Anmeldung ist abgelaufen oder wurde schon verwendet. Bitte versuchen Sie es erneut.",
+    "SIGNIN_ACCOUNT_MISMATCH": "Dieser Arbeitsbereich gehört zu einem anderen SoftGlaze-Konto. Melden Sie sich mit dem Konto an, mit dem Sie ihn erstellt haben.",
+    "SIGNIN_EMAIL_MISMATCH": "Verwenden Sie die E-Mail-Adresse dieses Arbeitsbereichs.",
+    "SIGNIN_EMAIL_NOT_VERIFIED": "Das Konto, mit dem Sie sich angemeldet haben, hat keine bestätigte E-Mail-Adresse. Bestätigen Sie sie dort (bei GitHub: Settings > Emails) oder fahren Sie mit E-Mail fort.",
+    "SIGNIN_EMAIL_MISSING": "Ihr Facebook-Konto hat keine E-Mail-Adresse geteilt. Nutzen Sie Google oder die E-Mail-Anmeldung, oder erlauben Sie den E-Mail-Zugriff.",
+    "SIGNIN_DISPOSABLE_EMAIL": "Bitte verwenden Sie eine dauerhafte E-Mail-Adresse.",
+    "SIGNIN_UNAVAILABLE": "Diese Anmeldung ist noch nicht verfügbar. Fahren Sie mit E-Mail fort oder nutzen Sie „Weitere Optionen“.",
+    "SIGNIN_FAILED": "Die Anmeldung wurde nicht abgeschlossen. Versuchen Sie es in einer Minute erneut.",
+    "SIGNIN_TIMEOUT": "Die Anmeldung hat zu lange gedauert. Versuchen Sie es erneut.",
+    "SIGNIN_NOT_ALLOWED": "Diese Anmeldung ist für diesen Arbeitsbereich nicht verfügbar.",
+    "SIGNIN_KEY_LOST": "Dieser Arbeitsbereich ließ sich auf diesem Computer nicht mit Ihrer Anmeldung öffnen. Melden Sie sich mit Ihrem Passwort an.",
+    "SIGNIN_SESSION_ENDED": "Ihre Anmeldung ist beendet. Melden Sie sich erneut an.",
+    "SIGNIN_BAD_INPUT": "Geben Sie eine gültige E-Mail-Adresse ein.",
+    "MOVE_FAILED": "Die Lizenz konnte gerade nicht verschoben werden. Versuchen Sie es in einer Minute erneut."
+  }
+}

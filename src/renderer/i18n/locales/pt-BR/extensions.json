@@ -1,0 +1,53 @@
+{
+  "header": {
+    "eyebrow": "Repositório Enterprise",
+    "title": "Extensões",
+    "summary_one": "{{count}} extensão instalada · {{enabled}} ativadas para perfis que carregam extensões",
+    "summary_many": "{{count}} extensões instaladas · {{enabled}} ativadas para perfis que carregam extensões",
+    "summary_other": "{{count}} extensões instaladas · {{enabled}} ativadas para perfis que carregam extensões"
+  },
+  "stats": {
+    "total": "Total de extensões",
+    "injected": "Ativadas",
+    "disabled": "Desativadas"
+  },
+  "caveat": {
+    "before": "As extensões não são adicionadas a todos os perfis. Elas só carregam em perfis Chromium que têm \"Carregar extensões do SoftGlaze (usa Chrome for Testing)\" marcado na aba Avançado do editor de perfil (desligado por padrão). Esses perfis as montam com a flag do Chromium",
+    "middle": "na abertura, então uma alteração vale na",
+    "nextLaunch": "próxima abertura",
+    "after": "desse perfil. O Chrome comum ignora essa flag, por isso esses perfis abrem em uma versão do Chrome for Testing: baixe uma na página Navegadores antes, ou o perfil abre sem as extensões. Perfis Firefox não as carregam."
+  },
+  "importer": {
+    "title": "Importar para a equipe",
+    "description": "Cole uma URL da Chrome Web Store ou o ID de 32 caracteres: o Softglaze baixa e descompacta o pacote real.",
+    "inputPlaceholder": "https://chromewebstore.google.com/detail/…  ou  cjpalhdlnbpafiamejdnhcphjbkeiagm",
+    "submit": "Importar para a equipe"
+  },
+  "installPhase": {
+    "downloading": "Baixando pacote…",
+    "extracting": "Extraindo arquivo…",
+    "registering": "Registrando…"
+  },
+  "permissionNotice": "Só Admins ou acima podem gerenciar as extensões da equipe. Você pode ver o repositório.",
+  "searchPlaceholder": "Buscar por nome ou ID…",
+  "empty": {
+    "loadErrorTitle": "Não foi possível carregar as extensões",
+    "noExtTitle": "Ainda não há extensões",
+    "noMatchTitle": "Nenhuma extensão corresponde à sua busca",
+    "noExtDesc": "Importe uma extensão da Chrome Web Store acima para adicioná-la ao repositório da sua equipe. Ela carrega em perfis que têm \"Carregar extensões do SoftGlaze\" marcado na aba Avançado.",
+    "noMatchDesc": "Tente outro nome ou ID."
+  },
+  "card": {
+    "unpacked": "Extensão descompactada",
+    "removeTitle": "Remover da equipe",
+    "injected": "Ativada",
+    "disabled": "Desativada"
+  },
+  "confirmRemove": "Remover \"{{name}}\" do repositório da equipe? Os arquivos locais dela serão excluídos.",
+  "errors": {
+    "couldNotLoad": "Não foi possível carregar as extensões.",
+    "installFailed": "Falha na instalação.",
+    "couldNotUpdate": "Não foi possível atualizar a extensão.",
+    "couldNotRemove": "Não foi possível remover a extensão."
+  }
+}

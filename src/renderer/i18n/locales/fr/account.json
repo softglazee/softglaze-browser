@@ -1,0 +1,62 @@
+{
+  "header": {
+    "eyebrow": "Votre compte",
+    "title": "Paramètres du compte",
+    "description": "Gérez votre photo de profil, votre nom, votre e-mail et votre mot de passe."
+  },
+  "notice": {
+    "superAdmin": "Il s'agit d'une session Super Admin / propriétaire du code source : aucune fiche de membre modifiable ici."
+  },
+  "fields": {
+    "fullName": "Nom complet",
+    "fullNamePlaceholder": "Votre nom",
+    "email": "E-mail",
+    "newPassword": "Nouveau mot de passe",
+    "newPasswordPlaceholder": "Laissez vide pour conserver l'actuel",
+    "confirmPassword": "Confirmer le nouveau mot de passe",
+    "confirmPasswordPlaceholder": "Répétez le nouveau mot de passe",
+    "verificationRequired": "vérification requise"
+  },
+  "avatar": {
+    "alt": "avatar",
+    "changeTitle": "Changer la photo",
+    "newSelected": "Nouvelle photo sélectionnée : enregistrez pour l'appliquer.",
+    "notImage": "Veuillez choisir un fichier image.",
+    "tooLarge": "Cette image dépasse 2 Mo. Choisissez-en une plus petite.",
+    "readFailed": "Impossible de lire cette image."
+  },
+  "verification": {
+    "banner": "Pour modifier votre e-mail ou votre mot de passe, un code à 6 chiffres est envoyé à votre e-mail actuel"
+  },
+  "actions": {
+    "save": "Enregistrer",
+    "saving": "Enregistrement…",
+    "verifyAndSave": "Vérifier et enregistrer",
+    "discard": "Annuler"
+  },
+  "validation": {
+    "nameEmpty": "Le nom ne peut pas être vide.",
+    "emailInvalid": "Saisissez une adresse e-mail valide.",
+    "passwordTooShort": "Le nouveau mot de passe doit comporter au moins 8 caractères.",
+    "passwordMismatch": "Les mots de passe ne correspondent pas."
+  },
+  "messages": {
+    "profileUpdated": "Profil mis à jour.",
+    "accountUpdated": "Compte mis à jour."
+  },
+  "errors": {
+    "loadFailed": "Impossible de charger votre compte.",
+    "saveFailed": "Impossible d'enregistrer vos modifications."
+  },
+  "verify": {
+    "title": "Confirmez votre identité",
+    "codeSentTo": "Code envoyé à {{email}}",
+    "codeLabel": "Code à 6 chiffres",
+    "devMode": "Mode dev : aucun e-mail configuré. Votre code est",
+    "apply": "Vérifier et appliquer",
+    "resend": "Renvoyer",
+    "enterCode": "Saisissez le code à 6 chiffres.",
+    "failed": "Échec de la vérification.",
+    "resendFailed": "Impossible de renvoyer le code."
+  }
+}

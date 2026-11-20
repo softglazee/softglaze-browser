@@ -1,0 +1,25 @@
+{
+  "contextMenu": {
+    "undo": "เลิกทำ",
+    "redo": "ทำซ้ำ",
+    "cut": "ตัด",
+    "copy": "คัดลอก",
+    "paste": "วาง",
+    "selectAll": "เลือกทั้งหมด",
+    "copyLink": "คัดลอกลิงก์"
+  },
+  "dialogs": {
+    "exportArchiveTitle": "ส่งออกไฟล์เก็บถาวรโปรไฟล์ที่เข้ารหัส",
+    "archiveFilter": "ไฟล์เก็บถาวรที่เข้ารหัสของ SoftGlaze",
+    "importProfilesTitle": "เลือกสเปรดชีตโปรไฟล์ SoftGlaze ที่จะนำเข้า",
+    "spreadsheetFilter": "ไฟล์สเปรดชีต",
+    "exportProfilesTitle": "ส่งออกโปรไฟล์ SoftGlaze",
+    "excelFilter": "เวิร์กบุ๊ก Excel",
+    "importIdentitiesTitle": "เลือกสเปรดชีตข้อมูลระบุตัวตนที่จะนำเข้า",
+    "backupTitle": "สำรองข้อมูลพื้นที่ทำงาน",
+    "backupFilter": "ไฟล์สำรองพื้นที่ทำงาน SoftGlaze",
+    "restoreTitle": "กู้คืนข้อมูลสำรองพื้นที่ทำงาน",
+    "exportActivityTitle": "ส่งออกบันทึกกิจกรรม",
+    "bindSpreadsheetTitle": "เลือกสเปรดชีตที่จะผูกกับการรันแบบขนานนี้"
+  }
+}

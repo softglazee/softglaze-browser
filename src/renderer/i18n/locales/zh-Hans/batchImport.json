@@ -1,0 +1,80 @@
+{
+  "header": {
+    "eyebrow": "自动化",
+    "title": "批量创建配置文件",
+    "description": "通过电子表格或按序生成，快速部署多个浏览器环境。",
+    "exportProfiles": "导出配置文件"
+  },
+  "exportNotice_one": "已将 {{count}} 个配置文件导出到 {{path}}",
+  "exportNotice_other": "已将 {{count}} 个配置文件导出到 {{path}}",
+  "tabs": {
+    "importFromFile": "从文件导入",
+    "quickGenerate": "快速生成"
+  },
+  "step1": {
+    "title": "下载模板",
+    "description": "为确保顺利解析，请使用我们的标准 Excel 或 CSV 模板。填写配置文件名称、代理和指纹规则。",
+    "downloadButton": "下载 .CSV 模板"
+  },
+  "step2": {
+    "title": "上传并预览",
+    "description": "选择填写好的电子表格。我们会在本地解析，并在保存前检查格式错误。",
+    "selectButton": "选择文件"
+  },
+  "step3": {
+    "title": "预览并提交数据"
+  },
+  "awaiting": {
+    "title": "等待数据",
+    "description": "选择一个文件，在这里预览结构化的配置文件。"
+  },
+  "preview": {
+    "file": "文件：",
+    "validRows": "有效行：",
+    "errors": "错误："
+  },
+  "processing": {
+    "importing": "正在导入… {{index}}/{{total}}",
+    "backendLog": "后台处理日志",
+    "connecting": "正在连接导入引擎…"
+  },
+  "table": {
+    "row": "行",
+    "title": "标题",
+    "group": "分组",
+    "proxyMethod": "代理方式",
+    "dataDir": "数据目录",
+    "auto": "自动"
+  },
+  "autoBind": {
+    "label": "按国家/地区自动绑定代理",
+    "descPrefix": "- 对于没有自带代理的行，分配一个已保存的代理，其健康检查得出的国家/地区需与该行的",
+    "descSuffix": "列一致（在匹配项之间轮流分配）。",
+    "sourceLabel": "绑定来源",
+    "sourcePaid": "你的代理",
+    "sourceFree": "免费代理（仅可用的）",
+    "freeWarn": "免费代理由陌生人运营：切勿使用这些配置文件登录账号或付款。"
+  },
+  "commitButton_one": "提交 {{count}} 个配置文件",
+  "commitButton_other": "提交 {{count}} 个配置文件",
+  "success": {
+    "title": "导入成功",
+    "importedPrefix": "已成功导入",
+    "importedMiddle": "个配置文件，并映射了",
+    "importedSuffix": "个新代理",
+    "autoBoundPrefix": "· 按国家/地区自动绑定了",
+    "autoBoundSuffix": "个",
+    "importAnother": "继续导入"
+  },
+  "quick": {
+    "engineTitle": "按序生成引擎",
+    "description": "无需电子表格即可立即创建多个配置文件：独立的指纹、按序编号的名称、目标分组（可直接新建），并从指定分组或服务商分配代理。使用与“配置文件”页面完全相同的引擎。",
+    "openButton": "打开快速生成"
+  },
+  "errors": {
+    "parse": "无法解析该文件。请确认它是有效的电子表格。",
+    "commit": "无法将配置文件提交到数据库。",
+    "importFailed": "导入失败。",
+    "export": "无法导出配置文件。"
+  }
+}

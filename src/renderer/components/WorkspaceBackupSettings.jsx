@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next';
 import { DatabaseBackup, Download, ArchiveRestore, AlertTriangle, Loader2, Check } from 'lucide-react';
 import { softglazeApi } from '@/lib/softglazeApi.js';
 import { backupKb } from '@/lib/backupSize.mjs';
+import { fmtDateTime } from '@/lib/intl.mjs';
 
 // Passphrase-protected .sgzw backup of the database and settings; restore verifies the file
 // before touching the live database.
@@ -76,7 +77,7 @@ export default function WorkspaceBackupSettings() {
       </div>
 
       {status?.lastBackupAt && (
-        <p className="mt-3 text-[12px] text-muted-foreground">{t('workspaceBackup.lastBackup')} <span className="text-foreground">{new Date(status.lastBackupAt).toLocaleString()}</span></p>
+        <p className="mt-3 text-[12px] text-muted-foreground">{t('workspaceBackup.lastBackup')} <span className="text-foreground">{fmtDateTime(status.lastBackupAt)}</span></p>
       )}
 
       <div className="mt-4 grid gap-4 lg:grid-cols-2">

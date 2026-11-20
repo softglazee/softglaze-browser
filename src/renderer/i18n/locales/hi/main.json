@@ -1,0 +1,25 @@
+{
+  "contextMenu": {
+    "undo": "पहले जैसा करें",
+    "redo": "फिर से करें",
+    "cut": "काटें",
+    "copy": "कॉपी करें",
+    "paste": "पेस्ट करें",
+    "selectAll": "सभी चुनें",
+    "copyLink": "लिंक कॉपी करें"
+  },
+  "dialogs": {
+    "exportArchiveTitle": "एन्क्रिप्टेड प्रोफ़ाइल आर्काइव एक्सपोर्ट करें",
+    "archiveFilter": "SoftGlaze एन्क्रिप्टेड आर्काइव",
+    "importProfilesTitle": "इंपोर्ट करने के लिए SoftGlaze प्रोफ़ाइल स्प्रेडशीट चुनें",
+    "spreadsheetFilter": "स्प्रेडशीट फ़ाइलें",
+    "exportProfilesTitle": "SoftGlaze प्रोफ़ाइल एक्सपोर्ट करें",
+    "excelFilter": "Excel वर्कबुक",
+    "importIdentitiesTitle": "इंपोर्ट करने के लिए पहचानों की स्प्रेडशीट चुनें",
+    "backupTitle": "वर्कस्पेस का बैकअप लें",
+    "backupFilter": "SoftGlaze वर्कस्पेस बैकअप",
+    "restoreTitle": "वर्कस्पेस बैकअप रीस्टोर करें",
+    "exportActivityTitle": "गतिविधि लॉग एक्सपोर्ट करें",
+    "bindSpreadsheetTitle": "इस पैरेलल रन से जोड़ने के लिए स्प्रेडशीट चुनें"
+  }
+}

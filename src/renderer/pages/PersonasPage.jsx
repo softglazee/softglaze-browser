@@ -13,17 +13,10 @@ import { Card, CardContent } from '@/components/ui/Card.jsx';
 import { Dialog, DialogBody, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/Dialog.jsx';
 import Input from '@/components/ui/Input.jsx';
 import Pager from '@/components/ui/Pager.jsx';
-import i18n from '@/i18n/index.js';
-import personasEn from '@/i18n/locales/en/personas.json';
-import personasEs from '@/i18n/locales/es/personas.json';
 import { softglazeApi } from '@/lib/softglazeApi.js';
 import { formatDateTime } from '@/lib/utils.js';
 import { intersectSelection } from '@/lib/uiGuards.mjs';
 import { usePermissions } from '@/lib/usePermissions.js';
-
-// Register the "personas" namespace here; the central i18n config only bundles "common".
-if (!i18n.hasResourceBundle('en', 'personas')) i18n.addResourceBundle('en', 'personas', personasEn);
-if (!i18n.hasResourceBundle('es', 'personas')) i18n.addResourceBundle('es', 'personas', personasEs);
 
 // The five fields the schema requires (NOT NULL). Marked with * in the forms.
 const CORE_FIELDS = new Set(['firstName', 'lastName', 'email', 'username', 'password']);
@@ -100,10 +93,10 @@ function StatCard({ icon: Icon, label, value, color, onClick, active }) {
     <Tag
       type={onClick ? 'button' : undefined}
       onClick={onClick}
-      className={`rounded-xl p-4 relative overflow-hidden group animate-fade-up text-left w-full ${onClick ? 'cursor-pointer transition-transform hover:-translate-y-0.5' : ''}`}
+      className={`rounded-xl p-4 relative overflow-hidden group animate-fade-up text-start w-full ${onClick ? 'cursor-pointer transition-transform hover:-translate-y-0.5' : ''}`}
       style={{ background: `color-mix(in srgb, ${color} 8%, var(--card))`, border: `1px solid ${active ? color : `color-mix(in srgb, ${color} 20%, transparent)`}`, boxShadow: active ? `0 0 0 1px ${color}` : undefined }}
     >
-      <div className="absolute -top-5 -right-5 w-16 h-16 rounded-full opacity-10 group-hover:opacity-20 transition-opacity" style={{ background: color, filter: 'blur(18px)' }} />
+      <div className="absolute -top-5 -inset-e-5 w-16 h-16 rounded-full opacity-10 group-hover:opacity-20 transition-opacity" style={{ background: color, filter: 'blur(18px)' }} />
       <div className="relative z-10 flex items-center gap-3">
         <div className="w-9 h-9 rounded-lg grid place-items-center shrink-0" style={{ background: `color-mix(in srgb, ${color} 16%, transparent)`, border: `1px solid color-mix(in srgb, ${color} 28%, transparent)` }}>
           <Icon className="w-[18px] h-[18px]" style={{ color }} />
@@ -135,12 +128,12 @@ function MapSelect({ value, onChange, headers }) {
       <select
         value={value}
         onChange={onChange}
-        className="w-full appearance-none bg-input-background border border-border rounded pl-3 pr-9 py-2 text-foreground text-sm outline-none focus:border-primary focus:ring-1 focus:ring-primary transition cursor-pointer text-ellipsis overflow-hidden whitespace-nowrap"
+        className="w-full appearance-none bg-input-background border border-border rounded ps-3 pe-9 py-2 text-foreground text-sm outline-none focus:border-primary focus:ring-1 focus:ring-primary transition cursor-pointer text-ellipsis overflow-hidden whitespace-nowrap"
       >
         <option value="">{t('import.skipOption')}</option>
         {headers.map((h) => <option key={h} value={h}>{h}</option>)}
       </select>
-      <div className="absolute right-3 pointer-events-none text-muted-foreground"><ChevronDown className="w-4 h-4" /></div>
+      <div className="absolute inset-e-3 pointer-events-none text-muted-foreground"><ChevronDown className="w-4 h-4" /></div>
     </div>
   );
 }
@@ -455,7 +448,7 @@ function DataVault() {
           <Button size="sm" variant="danger" onClick={handleDeleteSelected} disabled={busy}>
             {busy ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Trash2 className="h-3.5 w-3.5" />} {t('bulk.deleteSelected')}
           </Button>
-          <Button size="sm" variant="ghost" onClick={clearSelection} className="ml-auto px-2.5" title={t('bulk.clearSelectionTitle')}>
+          <Button size="sm" variant="ghost" onClick={clearSelection} className="ms-auto px-2.5" title={t('bulk.clearSelectionTitle')}>
             <X className="h-4 w-4" /> {t('bulk.clear')}
           </Button>
         </div>
@@ -480,7 +473,7 @@ function DataVault() {
             <div className="w-full">
               {/* Fits a 1440 px window (the sidebar takes 232): Phone and Created, also in the edit dialog, show
                   from 2xl; narrower windows scroll the table sideways inside the card. */}
-              <table className="w-full min-w-[900px] border-collapse text-left text-sm">
+              <table className="w-full min-w-[900px] border-collapse text-start text-sm">
                 <thead className="bg-surface text-muted-foreground text-xs uppercase tracking-wider font-semibold border-b border-border sticky top-0 z-10 shadow-sm whitespace-nowrap">
                   <tr>
                     <th className="px-3 py-4 w-10">
@@ -502,7 +495,7 @@ function DataVault() {
                     <th className="px-3 py-4">{t('table.colLabel')}</th>
                     <th className="px-3 py-4">{t('table.colTimesUsed')}</th>
                     <th className="px-3 py-4 hidden 2xl:table-cell">{t('table.colCreated')}</th>
-                    <th className="px-3 py-4 text-right">{t('table.colActions')}</th>
+                    <th className="px-3 py-4 text-end">{t('table.colActions')}</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-border">
@@ -580,9 +573,9 @@ function DataVault() {
                               onChange={(e) => updateForm(key, e.target.value)}
                               required={CORE_FIELDS.has(key)}
                               placeholder={t(`fields.${key}`)}
-                              className="pr-10"
+                              className="pe-10"
                             />
-                            <button type="button" onClick={() => setShowFormPassword((v) => !v)} aria-label={showFormPassword ? t('form.hidePassword') : t('form.showPassword')} title={showFormPassword ? t('form.hidePassword') : t('form.showPassword')} className="absolute right-2 top-1/2 -translate-y-1/2 p-1 rounded text-muted-foreground hover:text-foreground">
+                            <button type="button" onClick={() => setShowFormPassword((v) => !v)} aria-label={showFormPassword ? t('form.hidePassword') : t('form.showPassword')} title={showFormPassword ? t('form.hidePassword') : t('form.showPassword')} className="absolute inset-e-2 top-1/2 -translate-y-1/2 p-1 rounded text-muted-foreground hover:text-foreground">
                               {showFormPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                             </button>
                           </div>

@@ -1,0 +1,330 @@
+{
+  "header": {
+    "eyebrow": "Ekip",
+    "title": "Üyeler",
+    "manageCount_one": "Yönettiğiniz {{count}} üye",
+    "manageCount_other": "Yönettiğiniz {{count}} üye",
+    "workspaceStats": "Çalışma alanında {{profiles}} profil · {{proxies}} proxy"
+  },
+  "tabs": {
+    "members": "Üyeler",
+    "activity": "Etkinlik",
+    "licenses": "Lisanslar"
+  },
+  "memberCount_one": "{{count}} üye",
+  "memberCount_other": "{{count}} üye",
+  "roles": {
+    "SUPER_ADMIN": "Süper Yönetici",
+    "OWNER": "Sahip",
+    "ADMIN": "Yönetici",
+    "MANAGER": "Müdür",
+    "OPERATOR": "Operatör"
+  },
+  "roleDesc": {
+    "OWNER": "Üyeler ve kasa dahil tam kontrol.",
+    "ADMIN": "Profilleri, proxy'leri, grupları ve kendi oluşturduğu müdürleri/operatörleri yönetir.",
+    "MANAGER": "Profil oluşturur, düzenler, başlatır ve operatör ekler.",
+    "OPERATOR": "Yalnızca atanan profilleri başlatır ve kullanır."
+  },
+  "actionCategories": {
+    "Profiles": "Profiller",
+    "Proxies": "Proxy'ler",
+    "Automation": "Otomasyon",
+    "Workspace": "Çalışma alanı",
+    "Team": "Ekip"
+  },
+  "actionLabels": {
+    "profiles_launch": "Profilleri başlatma",
+    "profiles_create": "Profil oluşturma",
+    "profiles_edit": "Profilleri düzenleme",
+    "profiles_export": "Profilleri dışa aktarma",
+    "profiles_share": "Profilleri üyelerle paylaşma",
+    "profiles_delete": "Profilleri silme (çöp kutusuna)",
+    "profiles_purge": "Profilleri kalıcı olarak silme",
+    "proxies_manage": "Proxy ekleme / düzenleme / silme",
+    "proxies_reveal": "Ham proxy kimlik bilgilerini görme",
+    "automation_run": "Otomasyon / makro çalıştırma",
+    "extensions_manage": "Ekip uzantılarını yönetme",
+    "settings_manage": "Çalışma alanı ayarlarını değiştirme",
+    "vault_manage": "Kimlik Kasası'nı yönetme",
+    "members_manage": "Ekip üyelerini yönetme",
+    "members_delete": "Üye silme / rol değiştirme"
+  },
+  "features": {
+    "dashboard": "Pano (yalnızca sayfa)",
+    "profiles": "Profiller",
+    "groups": "Gruplar",
+    "proxies": "Proxy havuzu",
+    "browsers": "Tarayıcılar",
+    "extensions": "Uzantılar",
+    "batchImport": "Toplu içe aktarma",
+    "trash": "Çöp kutusu",
+    "members": "Üyeler",
+    "settings": "Ayarlar"
+  },
+  "caps": {
+    "maxAdmins": "Yöneticiler",
+    "maxManagers": "Müdürler",
+    "maxOperators": "Operatörler"
+  },
+  "labels": {
+    "profiles": "Profiller",
+    "proxies": "Proxy'ler",
+    "browsers": "Tarayıcılar"
+  },
+  "status": {
+    "active": "Etkin",
+    "suspended": "Askıya alındı",
+    "banned": "Engellendi"
+  },
+  "actions": {
+    "inviteMember": "Üye davet et",
+    "inviteTeamMember": "Ekip üyesi davet et",
+    "remove": "Kaldır",
+    "removeMember": "Üyeyi kaldır",
+    "assignProfiles": "Profil ata",
+    "cancel": "İptal",
+    "close": "Kapat",
+    "clear": "Temizle",
+    "save": "Kaydet",
+    "createInvite": "Davet oluştur",
+    "done": "Bitti",
+    "copy": "Kopyala",
+    "copied": "Kopyalandı"
+  },
+  "empty": {
+    "title": "Henüz üye yok",
+    "canCreate": "İş dağıtmaya başlamak için ilk ekip üyenizi davet edin.",
+    "noMembers": "Henüz altınızda üye yok."
+  },
+  "member": {
+    "you": "Siz",
+    "noEmail": "E-posta yok",
+    "invitePending": "Davet bekliyor",
+    "loginSet": "Giriş ayarlandı",
+    "subMembers_one": "{{count}} alt üye",
+    "subMembers_other": "{{count}} alt üye"
+  },
+  "time": {
+    "neverActive": "Hiç etkin olmadı",
+    "activeJustNow": "Az önce etkindi",
+    "activeMinutes": "{{count}} dk önce etkindi",
+    "activeHours": "{{count}} sa önce etkindi",
+    "activeDays": "{{count}} gün önce etkindi"
+  },
+  "errors": {
+    "loadMembers": "Üyeler yüklenemedi.",
+    "changeStatus": "Durum değiştirilemedi.",
+    "nameRequired": "Ad gerekli.",
+    "saveMember": "Üye kaydedilemedi.",
+    "resetPerms": "İzinler sıfırlanamadı.",
+    "removeMember": "Üye kaldırılamadı.",
+    "loadProfiles": "Profiller yüklenemedi.",
+    "reassignProfiles": "Profiller yeniden atanamadı."
+  },
+  "confirm": {
+    "revertPerms": "{{name}} için sınırlar ve özellikler rolünün varsayılanlarına sıfırlansın mı?"
+  },
+  "modal": {
+    "inviteTitle": "Üye davet et",
+    "editTitle": "Düzenle: {{name}}",
+    "noCreatableRoles": "Alt üye oluşturma izniniz yok.",
+    "invitePendingCode": "Davet bekliyor, kod"
+  },
+  "fields": {
+    "name": "Ad",
+    "namePlaceholder": "Ad soyad",
+    "email": "E-posta",
+    "role": "Rol",
+    "color": "Renk",
+    "instructions": "Talimatlar",
+    "optional": "(isteğe bağlı)",
+    "instructionsPlaceholder": "Bu üyenin sorumlu olduğu işler…"
+  },
+  "invite": {
+    "createdTitle": "Davet oluşturuldu",
+    "sharePrefix": "Bu kodu şu kişiyle paylaşın: ",
+    "shareSuffix": ". SoftGlaze Browser → “Davet kodunuz mu var?” bölümünü açar, kodu girer ve parolasını belirler.",
+    "code": "Davet kodu",
+    "link": "Davet bağlantısı",
+    "emailedTo": "{{email}} adresine e-postalandı.",
+    "emailNotSent": "E-posta gönderilmedi (Ayarlar → E-posta bölümünden SMTP'yi yapılandırın). Kodu elle paylaşın."
+  },
+  "alloc": {
+    "heading_one": "{{count}} alt üyeye ayrıldı",
+    "heading_other": "{{count}} alt üyeye ayrıldı",
+    "allocated": "{{cap}} içinden {{allocated}} ayrıldı",
+    "left": "· {{remaining}} kaldı"
+  },
+  "perms": {
+    "title": "İzinler ve sınırlar",
+    "resourceLimits": "Kaynak sınırları",
+    "subMemberCaps": "Alt üye sınırları",
+    "visibleFeatures": "Görünür özellikler",
+    "actionPermissions": "İşlem izinleri",
+    "actionHint": "Bu rol için varsayılan olarak açık. Yalnızca bu üye için geri almak üzere birini kapatın.",
+    "revertDefaults": "Rol varsayılanlarına dön",
+    "max": "(en fazla {{max}})",
+    "canInvite": {
+      "canCreateAdmins": "Yönetici davet edebilir",
+      "canCreateManagers": "Müdür davet edebilir",
+      "canCreateOperators": "Operatör davet edebilir"
+    },
+    "featuresHint": "Kapatılan bir özellik kenar çubuğunda gizlenir ve işlemleri her yerde reddedilir (örneğin proxy eklemek, çöp kutusundan geri yüklemek veya tarayıcı indirmek). Diğer sayfaların ihtiyaç duyduğu listeler, örneğin profil düzenleyicide proxy veya grup seçimi, yine yüklenir."
+  },
+  "accountStatus": {
+    "title": "Hesap durumu",
+    "reason": "Neden: {{reason}}",
+    "unban": "Üyenin engelini kaldır",
+    "banHint": "Yukarıdaki alanları düzenlemek engeli korur. Erişimi geri vermek için Engeli kaldır'ı kullanın.",
+    "suspendToggle": "Bu üyeyi askıya al (girişi engeller)",
+    "ban": "Üyeyi engelle"
+  },
+  "delete": {
+    "title": "Kaldır: {{name}}",
+    "warnPrefix": "Bu işlem şunu kaldırır: ",
+    "warnMiddle": " ve alt üyeleri size taşır. Verilerine ne olacağını seçin:",
+    "profilesWord_one": "profil",
+    "profilesWord_other": "profil",
+    "proxiesWord_one": "proxy",
+    "proxiesWord_other": "proxy",
+    "options": {
+      "reassignMe": {
+        "label": "Koru ve bana ata",
+        "desc": "Profillerinin ve proxy'lerinin sahibi siz olursunuz."
+      },
+      "reassignOther": {
+        "label": "Koru ve başka bir üyeye ata",
+        "desc": "Verilerini belirli bir ekip arkadaşına devredin."
+      },
+      "delete": {
+        "label": "Bağlı tüm verileri sil",
+        "desc": "Proxy'leri ve proxy grupları silinir; profiller çöp kutusuna taşınır (kurtarılabilir)."
+      }
+    },
+    "pickTarget": "Verileri alacak bir üye seçin.",
+    "reassignTo": "Atanacak kişi",
+    "noOtherMembers": "Başka üye yok. Başka bir seçenek belirleyin."
+  },
+  "assign": {
+    "title": "Profil ata · {{name}}",
+    "searchPlaceholder": "Profillerde ara",
+    "noProfiles": "Profil bulunamadı.",
+    "memberFallback": "üye #{{id}}",
+    "updated": "Güncellendi: {{assigned}} atandı, {{unassigned}} kaldırıldı.",
+    "save": "Atamayı kaydet"
+  },
+  "activity": {
+    "title": "Ekip etkinliği",
+    "subtitle": "bu çalışma alanında kim ne yaptı",
+    "exported": "{{count}} satır dışa aktarıldı → {{path}}",
+    "exportError": "Etkinlik günlüğü dışa aktarılamadı.",
+    "filterByMember": "Üyeye göre filtrele",
+    "filterByAction": "İşleme göre filtrele",
+    "allMembers": "Tüm üyeler",
+    "allActions": "Tüm işlemler",
+    "fromDate": "Başlangıç tarihi",
+    "toDate": "Bitiş tarihi",
+    "empty": "Henüz kayıtlı etkinlik yok.",
+    "noMatch": "Bu filtrelerle eşleşen etkinlik yok.",
+    "enterpriseFeature": "Enterprise özelliği",
+    "seeBilling": "Faturalandırmaya bakın",
+    "exportEnterpriseOnly": "Denetim günlüğü dışa aktarma (CSV / JSON) bir Enterprise özelliğidir. Etkinlik günlüğünü dışa aktarmak için Faturalandırma sayfasından yükseltin."
+  },
+  "activityActions": {
+    "launched": "başlattı",
+    "stopped": "durdurdu",
+    "created": "oluşturdu",
+    "edited": "düzenledi",
+    "deleted": "sildi",
+    "restored": "geri yükledi",
+    "imported": "içe aktardı",
+    "assigned": "atadı",
+    "reassigned": "yeniden atadı",
+    "parallel_run": "paralel çalıştırma",
+    "macro_run": "makro çalıştırma",
+    "member_added": "üye eklendi",
+    "member_edited": "üye düzenlendi",
+    "member_removed": "üye kaldırıldı",
+    "permissions_changed": "izinler değişti",
+    "status_changed": "durum değişti",
+    "signed_in": "giriş yaptı",
+    "signed_out": "çıkış yaptı",
+    "invite_accepted": "davet kabul edildi",
+    "proxies_copied_for_extension": "proxy'ler uzantı için kopyalandı",
+    "devtools_address_shown": "DevTools adresi gösterildi"
+  },
+  "feedTime": {
+    "justNow": "az önce",
+    "minutes": "{{count}} dk önce",
+    "hours": "{{count}} sa önce",
+    "days": "{{count}} gün önce"
+  },
+  "license": {
+    "intro": "Her sahip çalışma alanının abonelik durumu. Önce yerel ve elden geldiğince. Kararlı bir kullanıcı yerel veritabanını veya saati yine de düzenleyebilir; kalıcı denetim için lisans sunucusu gerekir.",
+    "noOwners": "Henüz sahip çalışma alanı yok.",
+    "editTitle": "Lisans · {{name}}",
+    "setState": "Durum ayarla",
+    "grantPlan": "Plan ver",
+    "lifecycle": "Yaşam döngüsü",
+    "state": {
+      "paid": "Ücretli",
+      "trialing": "Deneme",
+      "grace": "Ek süre",
+      "banned": "Engellendi"
+    },
+    "type": {
+      "trial": "deneme",
+      "paid": "ücretli"
+    },
+    "tier": {
+      "pro": "pro",
+      "enterprise": "enterprise"
+    },
+    "fields": {
+      "type": "Tür",
+      "tier": "Seviye",
+      "expiry": "Bitiş",
+      "plan": "Plan",
+      "months": "Ay"
+    },
+    "detail": {
+      "trial": "{{count}} deneme günü kaldı",
+      "grace": "Ek süre: {{count}} gün kaldı",
+      "paid": "{{date}} tarihine kadar ödendi",
+      "clockAnomaly": "⚠ saat tutarsızlığı"
+    },
+    "actions": {
+      "grantMonth": "1 ay ver",
+      "extend7": "+7 gün",
+      "startTrial": "Deneme başlat",
+      "resetTrial": "Denemeyi sıfırla",
+      "edit": "Düzenle",
+      "terminate": "Sonlandır",
+      "unblock": "Engeli kaldır",
+      "block": "Engelle",
+      "saveState": "Durumu kaydet",
+      "grantPlan": "Plan ver",
+      "startFreeTrial": "Ücretsiz deneme başlat",
+      "terminateNow": "Şimdi sonlandır"
+    },
+    "confirm": {
+      "terminate": "{{name}} aboneliği şimdi sonlandırılsın mı? Siz yeniden erişim verene kadar profilleri kilitlenir.",
+      "terminateModal": "Bu abonelik şimdi sonlandırılsın mı? Siz yeniden erişim verene kadar profiller kilitlenir.",
+      "resetTrial": "{{name}} denemesi sıfırlansın mı? Deneme süresi baştan başlar ve mevcut lisans durumu değiştirilir.",
+      "block": "{{name}} engellensin mi? Bu kişi ve tüm alt üyelerinin oturumu kapatılır ve siz engeli kaldırana kadar uygulamayı kullanamazlar."
+    },
+    "errors": {
+      "load": "Lisanslar yüklenemedi.",
+      "action": "İşlem başarısız oldu."
+    }
+  },
+  "seats": {
+    "usage": "{{total}} üyeden {{used}}",
+    "fullNotice": "Planınızdaki {{total}} ekip koltuğunun tümü kullanımda, bu yüzden yeni kimse eklenemez. Koltuk açmak için bir üyeyi askıya alın veya {{enterpriseSeats}} ekip üyesine kadar Enterprise'a yükseltin.",
+    "fullNoticeTop": "Planınızdaki {{total}} ekip koltuğunun tümü kullanımda, bu yüzden yeni kimse eklenemez. Koltuk açmak için bir üyeyi askıya alın.",
+    "overNotice": "Bu ekipte {{used}} üye var ve planınız {{total}} üye içeriyor. Herkes erişimini korur; ekip sınırın altına indiğinde yeni üyeler eklenebilir.",
+    "seeBilling": "Faturalandırmaya bakın",
+    "limitError": "Planınızdaki tüm ekip koltukları kullanımda. Koltuk açmak için bir üyeyi askıya alın veya plan seçenekleri için Faturalandırma'ya bakın."
+  }
+}

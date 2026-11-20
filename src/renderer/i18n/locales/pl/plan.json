@@ -1,0 +1,97 @@
+{
+  "upgrade": {
+    "title": {
+      "profiles": "Osiągnięto limit {{limit}} profili w planie Free",
+      "running": "Plan Free uruchamia naraz profile: {{limit}}",
+      "openable": "Ten profil nie należy do Twoich {{limit}} w planie Free",
+      "seats": "Członkowie zespołu są częścią planu Pro",
+      "ai": "Dzisiejszy limit {{limit}} akcji AI został wykorzystany",
+      "sync": "Synchronizacja w chmurze jest częścią planu Pro",
+      "phone": "Otwieranie profili z telefonu jest częścią planu Pro",
+      "generic": "To jest część planu Pro"
+    },
+    "body": {
+      "profiles": "Twoje profile ({{used}}) są bezpieczne. Przejdź na Pro, aby mieć nieograniczoną liczbę profili, lub usuń jeden, aby zrobić miejsce.",
+      "running": "Zamknij otwarty profil, aby uruchomić inny, lub przejdź na Pro, aby uruchamiać 3 naraz.",
+      "openable": "Każdy profil jest zachowany. W planie Free wybierasz, które {{limit}} można otwierać; Pro otwiera wszystkie.",
+      "seats": "Plan Free jest dla jednej osoby. Pro obejmuje 3 członków zespołu, Enterprise 25.",
+      "ai": "Plan Free obejmuje {{limit}} akcji AI dziennie; licznik zeruje się jutro. Pro ma nielimitowane akcje AI.",
+      "sync": "Pro synchronizuje profile między Twoimi komputerami i telefonem.",
+      "phone": "W planie Free telefon i aplikacja webowa mogą przeglądać profile i zatwierdzać prośby AI. Pro pozwala też je otwierać i zatrzymywać.",
+      "generic": "Przejdź na Pro, aby z tego korzystać."
+    },
+    "price": "Pro kosztuje {{price}} miesięcznie.",
+    "priceFallback": "Pro od US$5 miesięcznie.",
+    "upgradeButton": "Przejdź na Pro",
+    "chooseProfiles": "Wybierz profile",
+    "notNow": "Nie teraz"
+  },
+  "welcome": {
+    "title": "Okres próbny Pro się zakończył. Korzystasz teraz z planu Free.",
+    "keepTitle": "Zachowujesz",
+    "keep": "Wszystkie profile (można otwierać {{limit}}), proxy i odciski przeglądarki, aplikację na telefon i aplikację webową.",
+    "proTitle": "Pro dodaje",
+    "pro": "Nielimitowane profile, 3 uruchomione naraz, miejsca w zespole, synchronizację w chmurze i nielimitowane akcje AI, za {{price}} miesięcznie.",
+    "upgrade": "Przejdź na Pro",
+    "stay": "Zostań na Free"
+  },
+  "counter": {
+    "freeBadge": "Plan Free",
+    "profiles": "{{used}} z {{limit}} profili",
+    "running": "Uruchomione: {{used}} z {{limit}}",
+    "ai": "Akcje AI dzisiaj: {{used}} z {{limit}}",
+    "upgrade": "Ulepsz"
+  },
+  "choose": {
+    "title": "Wybierz, które profile można otwierać",
+    "body": "W planie Free można otwierać {{limit}} z {{total}} profili. Każdy profil jest zachowany; przejdź na Pro, aby otwierać wszystkie.",
+    "selected": "Wybrano {{count}} z {{limit}}",
+    "search": "Szukaj profili",
+    "save": "Zapisz",
+    "cancel": "Anuluj",
+    "saved": "Zapisano. Te profile można otwierać w planie Free."
+  },
+  "billing": {
+    "currentFree": "Plan Free",
+    "currentFreeBody": "Bezpłatny na zawsze, bez karty. Przejdź na wyższy plan w dowolnym momencie, aby mieć więcej profili, zespoły i nielimitowane akcje AI.",
+    "currentBadge": "Obecny plan",
+    "compareTitle": "Porównaj plany",
+    "colFeature": "Funkcja",
+    "colFree": "Free",
+    "colPro": "Pro",
+    "colEnterprise": "Enterprise",
+    "rows": {
+      "profiles": "Zapisane profile",
+      "running": "Profile uruchomione naraz",
+      "seats": "Miejsca (członkowie zespołu)",
+      "pcs": "Komputery na konto",
+      "fingerprints": "Własne proxy, wszystkie ustawienia odcisku",
+      "ai": "Automatyzacja AI i MCP",
+      "phone": "Aplikacja na telefon i webowa",
+      "sync": "Synchronizacja w chmurze między komputerami",
+      "support": "Wsparcie"
+    },
+    "values": {
+      "unlimited": "Bez limitu",
+      "unlimitedAudit": "Bez limitu + eksport audytu",
+      "yes": "Tak",
+      "no": "Nie",
+      "aiPerDay": "{{count}} akcji dziennie",
+      "viewApprove": "Podgląd + zatwierdzanie próśb AI",
+      "openStop": "+ otwieranie i zatrzymywanie profili",
+      "teamApprovals": "+ zatwierdzenia zespołu",
+      "helpCentre": "Centrum pomocy",
+      "email": "E-mail",
+      "priorityEmail": "Priorytetowy e-mail"
+    }
+  },
+  "deals": {
+    "title": "Polecane oferty proxy",
+    "disclosure": "Oferta partnera. SoftGlaze może otrzymać prowizję.",
+    "code": "Kod {{code}}",
+    "copyCode": "Kopiuj kod",
+    "copied": "Skopiowano",
+    "open": "Skorzystaj z oferty",
+    "hidden": "Pro i Enterprise nigdy nie pokazują ofert partnerów."
+  }
+}

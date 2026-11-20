@@ -1,0 +1,56 @@
+{
+  "header": {
+    "eyebrow": "Espaço de trabalho",
+    "title": "Lixeira e recuperação",
+    "description": "Recupere perfis excluídos ou apague-os de vez do seu armazenamento."
+  },
+  "actions": {
+    "emptyTrash": "Esvaziar lixeira",
+    "restore": "Restaurar",
+    "deleteForever": "Excluir de vez",
+    "clear": "Limpar",
+    "restoreTitle": "Restaurar perfil",
+    "purgeTitle": "Excluir permanentemente"
+  },
+  "errors": {
+    "loadFailed": "Falha ao carregar a lixeira."
+  },
+  "warning": {
+    "title": "Exclusão permanente",
+    "body": "Restaurar devolve o perfil à sua lista sem alterações. A exclusão permanente remove o perfil e apaga todos os dados de navegação dele (cookies, cache, logins) deste computador."
+  },
+  "toolbar": {
+    "searchPlaceholder": "Buscar perfis excluídos..."
+  },
+  "bulk": {
+    "selected": "{{count}} selecionados"
+  },
+  "table": {
+    "profileName": "Nome do perfil",
+    "proxy": "Proxy",
+    "deletedDate": "Data de exclusão",
+    "actions": "Ações",
+    "directProxy": "Direto",
+    "defaultBrowser": "Chrome"
+  },
+  "empty": {
+    "title": "A lixeira está vazia",
+    "noMatch": "Nenhum perfil excluído corresponde à sua busca.",
+    "none": "Você não tem perfis excluídos. Tudo limpo!"
+  },
+  "confirm": {
+    "purgeWithData": "Excluir \"{{title}}\" permanentemente? Isso não pode ser desfeito e os dados locais de navegação serão apagados.",
+    "bulkPurgeWithData_one": "Excluir {{count}} perfil permanentemente? Isso não pode ser desfeito e os dados locais de navegação serão apagados.",
+    "bulkPurgeWithData_many": "Excluir {{count}} perfis permanentemente? Isso não pode ser desfeito e os dados locais de navegação serão apagados.",
+    "bulkPurgeWithData_other": "Excluir {{count}} perfis permanentemente? Isso não pode ser desfeito e os dados locais de navegação serão apagados.",
+    "emptyTrashWithData_one": "Excluir permanentemente o único perfil ({{count}}) da lixeira? Isso não pode ser desfeito e os dados locais de navegação serão apagados.",
+    "emptyTrashWithData_many": "Excluir permanentemente TODOS os {{count}} perfis da lixeira? Isso não pode ser desfeito e os dados locais de navegação serão apagados.",
+    "emptyTrashWithData_other": "Excluir permanentemente TODOS os {{count}} perfis da lixeira? Isso não pode ser desfeito e os dados locais de navegação serão apagados."
+  },
+  "pager": {
+    "showing": "Mostrando {{from}}-{{to}} de {{total}}",
+    "prev": "Anterior",
+    "next": "Próxima"
+  },
+  "bulkSkipped": "Não alterados: {{count}} perfil(is). {{reason}}"
+}

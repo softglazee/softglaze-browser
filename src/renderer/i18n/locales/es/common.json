@@ -26,7 +26,7 @@
     "settings": "Configuración"
   },
   "shell": {
-    "footerDefault": "© {year} SoftGlaze - Creado por el [equipo de SoftGlaze](https://softglaze.com) · Desarrollado por [Azhar Ali](https://azhar.softglaze.com)",
+    "footerDefault": "© {year} SoftGlaze · Creado por el [equipo de SoftGlaze](https://softglaze.com) · Desarrollado por [Azhar Ali](https://azhar.softglaze.com)",
     "antiDetect": "Multiperfil",
     "darkMode": "Modo oscuro",
     "lightMode": "Modo claro",
@@ -54,14 +54,14 @@
     "couldNotSwitch": "No se pudo cambiar de miembro.",
     "subscribe": "Suscribirse",
     "dismiss": "Descartar",
-    "trialEndingDays_one": "La prueba gratuita termina en {{count}} día. Elige un plan para continuar.",
-    "trialEndingDays_other": "La prueba gratuita termina en {{count}} días. Elige un plan para continuar.",
-    "trialEnded": "Tu prueba gratuita ha terminado. Elige un plan antes de que termine el periodo de gracia o la aplicación se bloqueará hasta que lo hagas. Tus perfiles y datos siguen en este dispositivo.",
-    "subscriptionEnded": "Tu suscripción ha terminado. Renuévala antes de que termine el periodo de gracia o la aplicación se bloqueará hasta que lo hagas. Tus perfiles y datos siguen en este dispositivo.",
+    "trialEndingDays_one": "Tu prueba de Pro termina en {{count}} día. Después pasarás al plan Gratis: no se borra nada. Elige Pro para conservar todas las funciones.",
+    "trialEndingDays_other": "Tu prueba de Pro termina en {{count}} días. Después pasarás al plan Gratis: no se borra nada. Elige Pro para conservar todas las funciones.",
+    "trialEnded": "Tu prueba de Pro ha terminado. Ahora estás en el plan Gratis; tus perfiles y datos siguen en este dispositivo.",
+    "subscriptionEnded": "Tu suscripción ha terminado. Renuévala antes de que termine el periodo de gracia o tu espacio de trabajo pasará al plan Gratis (25 perfiles, 1 abierto a la vez). Tus perfiles y datos siguen en este dispositivo.",
     "renew": "Renovar",
     "graceDaysLeft_one": "Queda {{count}} día de gracia.",
     "graceDaysLeft_other": "Quedan {{count}} días de gracia.",
-    "accessEnded": "Tu prueba y el periodo de gracia han terminado. Suscríbete para seguir usando la aplicación; tus perfiles y datos siguen en este dispositivo.",
+    "accessEnded": "Esta licencia ya no está activa (reembolsada, revocada o registrada en otro ordenador). Elige un plan para seguir usando la aplicación; tus perfiles y datos siguen en este dispositivo.",
     "licenceOtherComputer": "Esta licencia está registrada en otro ordenador. Transfiérela a este PC o pide a tu administrador que la restablezca.",
     "trialChip_one": "Prueba · queda {{count}} día",
     "trialChip_other": "Prueba · quedan {{count}} días"
@@ -83,14 +83,14 @@
       "Cada perfil que creas es una nueva puerta que se abre.",
       "Disciplina hoy, dominio mañana.",
       "Las pequeñas acciones constantes se convierten en grandes victorias.",
-      "Mantente alerta - la ventaja vive en los detalles.",
+      "Mantente alerta: la ventaja vive en los detalles.",
       "El enfoque vence al ajetreo. Apunta y luego dispara.",
       "El trabajo silencioso de hoy construye el imperio de mañana.",
       "La precisión es un hábito, no un accidente.",
       "Preséntate, concéntrate y deja que los resultados hablen.",
       "Una sesión más, una victoria más.",
       "La grandeza es solo una serie de días bien llevados.",
-      "Tu yo del futuro te observa - hazlo sentir orgulloso.",
+      "Tu yo del futuro te observa. Hazlo sentir orgulloso.",
       "Avanza con intención. Escala con confianza."
     ],
     "overview": "Resumen",
@@ -233,7 +233,7 @@
       "title": "Idioma",
       "description": "Elige el idioma de la interfaz de SoftGlaze.",
       "label": "Idioma de la interfaz",
-      "hint": "Pronto habrá más idiomas. Los cambios se aplican al instante en toda la aplicación."
+      "hint": "Los cambios se aplican al instante en toda la aplicación."
     }
   },
   "startLinks": {
@@ -273,5 +273,15 @@
     "settingsHidden": "Un administrador desactivó Configuración para tu cuenta.",
     "proxiesHidden": "Un administrador desactivó Proxies para tu cuenta.",
     "profilesHidden": "Un administrador desactivó Perfiles para tu cuenta."
+  },
+  "promo": {
+    "bf2026": {
+      "text": "Black Friday: Pro de por vida {{pro}} o Enterprise de por vida {{enterprise}}, un solo pago. Termina el 1 de diciembre, 23:59 UTC."
+    },
+    "xmas2026": {
+      "text": "Lote de Navidad: Pro de por vida {{pro}} o Enterprise de por vida {{enterprise}}, un solo pago. Termina el 31 de diciembre, 23:59 UTC."
+    },
+    "cta": "Ver la oferta",
+    "dismiss": "Ocultar esta oferta"
   }
 }

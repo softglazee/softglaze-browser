@@ -1,0 +1,93 @@
+{
+  "title": "Teléfonos",
+  "description": "Usa la app SoftGlaze del teléfono con este equipo: mira tus perfiles, inícialos y detenlos, y responde solicitudes de IA desde el teléfono. Todo entre el teléfono y este equipo va cifrado de extremo a extremo.",
+  "enable": "Activar el acompañante del teléfono",
+  "loading": "Cargando",
+  "offOwner": "Actívalo para emparejar un teléfono. Este equipo mantiene entonces una conexión segura con el relé de SoftGlaze, que solo reenvía mensajes cifrados.",
+  "offOther": "El Propietario no ha activado el acompañante del teléfono.",
+  "copy": "Copiar",
+  "cancel": "Cancelar",
+  "relay": {
+    "connected": "Conectado al relé",
+    "connecting": "Conectando con el relé",
+    "authFailed": "El relé rechazó este equipo. Revisa la dirección del relé en Avanzado."
+  },
+  "pair": {
+    "title": "Emparejar un teléfono",
+    "help": "Instala SoftGlaze en tu teléfono y escanea un código desde esta pantalla.",
+    "start": "Emparejar un teléfono",
+    "qrAlt": "Código de emparejamiento para la app SoftGlaze del teléfono",
+    "scanTitle": "Escanea este código con la app SoftGlaze del teléfono",
+    "step1": "Abre SoftGlaze en tu teléfono.",
+    "step2": "Ve a Configuración, Emparejar con un PC, y escanea este código.",
+    "step3": "Comprueba que ambas pantallas muestran los mismos seis dígitos.",
+    "expiresIn": "El código sirve una vez y caduca en {{time}}.",
+    "textTitle": "¿No puedes escanear? Copia el código como texto",
+    "attemptFailed": "Un teléfono probó un código incorrecto o dañado. El código sigue abierto."
+  },
+  "confirm": {
+    "title": "{{name}} quiere emparejarse",
+    "help": "Continúa solo si tu teléfono muestra exactamente estos seis dígitos.",
+    "helpBrowser": "Continúa solo si el navegador muestra exactamente estos seis dígitos. Un navegador puede ver perfiles y responder solicitudes de IA; marca Iniciar y detener perfiles solo si también lo quieres.",
+    "codeLabel": "Código {{code}}",
+    "name": "Nombre del teléfono",
+    "member": "Actúa como",
+    "scopes": "Qué puede hacer este teléfono",
+    "match": "Los códigos coinciden, emparejar",
+    "noMatch": "Los códigos no coinciden"
+  },
+  "scopes": {
+    "view": { "label": "Ver perfiles y estado", "help": "Siempre activo. Solo los perfiles que el miembro puede ver." },
+    "control_profiles": { "label": "Iniciar y detener perfiles", "help": "Las mismas reglas que en este equipo." },
+    "approve_ai": { "label": "Responder solicitudes de IA", "help": "Permitir o denegar acciones de apps de IA, para tokens que este miembro puede responder." },
+    "approve_team": { "label": "Responder solicitudes del equipo", "help": "Aprobar solicitudes de acceso de miembros del equipo." },
+    "totp": { "label": "Mostrar códigos 2FA", "help": "Códigos de dos pasos guardados en los perfiles." },
+    "phone_profiles_linked": { "label": "Sincronizar perfiles", "help": "Los perfiles que elijas abajo también se abren en este teléfono." }
+  },
+  "roles": { "OWNER": "Propietario", "ADMIN": "Administrador", "MANAGER": "Gerente", "OPERATOR": "Operador" },
+  "devices": {
+    "title": "Teléfonos y navegadores",
+    "kindPhone": "Teléfono",
+    "kindBrowser": "Navegador",
+    "empty": "Aún no hay teléfonos.",
+    "online": "En línea",
+    "offline": "Sin conexión",
+    "lastSeen": "Visto por última vez {{when}}",
+    "actsAs": "actúa como {{name}}",
+    "edit": "Editar {{name}}",
+    "remove": "Quitar {{name}}",
+    "removeConfirm": "¿Quitar {{name}}? Deja de funcionar con este equipo al instante y tendrá que emparejarse de nuevo.",
+    "rename": "Renombrar",
+    "saveScopes": "Guardar permisos"
+  },
+  "sync": {
+    "title": "Sincronización de perfiles",
+    "help": "Los perfiles elegidos también se abren en la app del teléfono. La configuración, las páginas de inicio y las cookies siguen al perfil; un perfil se abre en un solo dispositivo a la vez.",
+    "noPhone": "Ningún teléfono puede sincronizar aún. Dale a un teléfono el permiso Sincronizar perfiles arriba.",
+    "now": "Sincronizar ahora",
+    "search": "Buscar un perfil",
+    "toggle": "Sincronizar {{name}} con teléfonos",
+    "proxyPassword": "Contraseña del proxy",
+    "offConfirm": "¿Dejar de sincronizar {{name}}? Los teléfonos conservan su copia.",
+    "removeAll": "Quitar todos los datos sincronizados del relé",
+    "removeAllConfirm": "¿Quitar todos los perfiles sincronizados del relé? Los perfiles de este equipo y de los teléfonos se quedan como están.",
+    "lastOk": "Última sincronización {{when}}",
+    "lastError": "La última sincronización falló ({{code}}). Se reintenta cada minuto.",
+    "limits": "El almacenamiento de sitios, las extensiones, las contraseñas guardadas y las descargas no se sincronizan. Las contraseñas del proxy solo se sincronizan donde lo permitas."
+  },
+  "advanced": {
+    "title": "Avanzado",
+    "pcName": "Nombre de este equipo en los teléfonos",
+    "relay": "Dirección del relé",
+    "relayFromEnv": "Definida por SG_RELAY_URL para pruebas.",
+    "save": "Guardar",
+    "reset": "Restablecer las claves del teléfono",
+    "resetConfirm": "¿Restablecer las claves de teléfono de este equipo? Se quitan todos los teléfonos emparejados y tendrán que emparejarse de nuevo.",
+    "protocol": "Protocolo {{version}}"
+  },
+  "errors": {
+    "load": "No se pudo cargar la configuración de los teléfonos.",
+    "generic": "Eso no funcionó. Inténtalo de nuevo.",
+    "unavailable": "Los teléfonos no están disponibles en esta versión."
+  }
+}

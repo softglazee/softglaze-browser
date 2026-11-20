@@ -311,6 +311,7 @@ function loadCookies() {
     importStoredCookies: async (_o, params) => ({ imported: params.length }),
     listActiveSessions: () => [100, 101, 104, 106, 'temp'].map((id) => ({ sessionId: String(id), profileName: `p${id}` })),
     getRuntimeConfig: () => ({ profileRoot: 'profiles' }),
+    i18nMain: require('../src/main/i18nMain.js'),
     dialog: { showSaveDialog: async () => ({ canceled: true }) },
     profileArchive: {}
   }, ['REVEAL_LABELS']);

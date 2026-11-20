@@ -1,0 +1,146 @@
+{
+  "header": {
+    "eyebrow": "身分",
+    "title": "資料保險庫",
+    "description": "供智慧自動填入引擎使用的可複用身分庫。可以手動新增或匯入試算表；每個身分都會記住它已用過的網站。",
+    "refresh": "重新整理",
+    "import": "匯入 Excel/CSV",
+    "addManually": "手動新增"
+  },
+  "stats": {
+    "totalIdentities": "身分總數",
+    "neverUsed": "從未使用",
+    "usedAtLeastOnce": "至少使用過一次",
+    "totalUses": "總使用次數",
+    "filtering": "篩選中"
+  },
+  "toolbar": {
+    "searchPlaceholder": "按姓名、電子郵件、使用者名稱或標籤搜尋...",
+    "showing": "顯示 {{count}} 個{{kind}}身分",
+    "kindNeverUsed": "從未使用的",
+    "kindUsed": "已使用的",
+    "clear": "清除"
+  },
+  "bulk": {
+    "selected": "已選擇 {{count}} 個",
+    "resetUsedStatus": "重設使用狀態",
+    "deleteSelected": "刪除所選",
+    "clear": "清除",
+    "clearSelectionTitle": "清除選擇"
+  },
+  "table": {
+    "loading": "正在載入身分...",
+    "selectAll": "選擇所有身分",
+    "selectRow": "選擇 {{name}}",
+    "colName": "姓名",
+    "colEmail": "電子郵件",
+    "colUsername": "使用者名稱",
+    "colPassword": "密碼",
+    "colPhone": "電話",
+    "colAddress": "地址",
+    "colLabel": "標籤",
+    "colTimesUsed": "使用次數",
+    "colCreated": "建立時間",
+    "colActions": "操作",
+    "sitesUsed_one": "{{count}} 個網站",
+    "sitesUsed_other": "{{count}} 個網站",
+    "never": "從未",
+    "editIdentity": "編輯身分",
+    "deleteIdentity": "刪除身分",
+    "hidePassword": "隱藏",
+    "revealPassword": "顯示",
+    "reuse": "♻ 複用 · {{count}}"
+  },
+  "empty": {
+    "title": "你的資料保險庫是空的",
+    "description": "手動新增一個身分，或匯入 Excel/CSV 表格，開始建立你的自動填入庫。",
+    "filteredTitle": "沒有符合篩選條件的身分",
+    "filteredDescription": "請嘗試其他搜尋詞，或清除篩選。"
+  },
+  "groups": {
+    "identity": "身分",
+    "account": "帳號",
+    "address": "地址",
+    "meta": "其他資訊"
+  },
+  "fields": {
+    "firstName": "名",
+    "lastName": "姓",
+    "email": "電子郵件",
+    "username": "使用者名稱",
+    "password": "密碼",
+    "phone": "電話",
+    "dateOfBirth": "出生日期",
+    "addressLine1": "地址第 1 行",
+    "addressLine2": "地址第 2 行",
+    "city": "城市",
+    "state": "州/省",
+    "zipCode": "郵政編碼",
+    "country": "國家/地區",
+    "company": "公司",
+    "companyAddress": "公司地址",
+    "label": "批次標籤"
+  },
+  "form": {
+    "dialogTitleEdit": "編輯身分",
+    "dialogTitleAdd": "新增身分",
+    "titleEdit": "編輯身分",
+    "titleAdd": "新增身分",
+    "descEdit": "更新此人物設定的詳細資訊。",
+    "descAdd": "向資料保險庫新增一個人物設定。帶 * 的欄位為必填項。",
+    "cancel": "取消",
+    "saving": "正在儲存...",
+    "saveChanges": "儲存更改",
+    "addIdentity": "新增身分",
+    "showPassword": "顯示密碼",
+    "hidePassword": "隱藏密碼"
+  },
+  "import": {
+    "dialogTitle": "匯入身分",
+    "title": "從 Excel / CSV 匯入",
+    "descStep1": "選擇 .xlsx、.xls 或 .csv 檔案。第一列應為欄標題。每次最多匯入 1000 列。",
+    "descStep2": "將你的欄對應到身分欄位。在 {{fileName}} 中偵測到 {{count}} 列。",
+    "yourFile": "你的檔案",
+    "chooseSpreadsheet": "選擇試算表",
+    "colIdentityField": "身分欄位",
+    "colYourColumn": "你的欄",
+    "skipOption": "- 跳過 -",
+    "mappedCount_one": "已對應 {{count}} 個欄位。沒有姓名/電子郵件/使用者名稱的列將被跳過。",
+    "mappedCount_other": "已對應 {{count}} 個欄位。沒有姓名/電子郵件/使用者名稱的列將被跳過。",
+    "done": "完成",
+    "cancel": "取消",
+    "back": "返回",
+    "importing": "正在匯入...",
+    "importRows_one": "匯入 {{count}} 列",
+    "importRows_other": "匯入 {{count}} 列",
+    "result": {
+      "complete": "匯入完成",
+      "addedPrefix": "已向保險庫新增",
+      "addedSuffix_one": "個身分。",
+      "addedSuffix_other": "個身分。",
+      "skipped_one": "已跳過 {{count}} 個空白列。",
+      "skipped_other": "已跳過 {{count}} 個空白列。"
+    },
+    "errors": {
+      "noRows": "該檔案沒有可讀取的標題列或資料列。",
+      "readFile": "無法讀取該檔案。",
+      "nothingMapped": "沒有可匯入的列：請至少對應「名」「姓」「電子郵件」「使用者名稱」中的一項。",
+      "failed": "匯入失敗。"
+    }
+  },
+  "confirm": {
+    "fallbackName": "人物設定",
+    "deleteOne": "刪除身分「{{name}}」？此操作無法復原。",
+    "deleteSelected_one": "刪除所選的 {{count}} 個身分？此操作無法復原。",
+    "deleteSelected_other": "刪除所選的 {{count}} 個身分？此操作無法復原。",
+    "resetSelected_one": "重設所選 {{count}} 個身分的「已用於」記錄？它們將再次可用於所有網站。",
+    "resetSelected_other": "重設所選 {{count}} 個身分的「已用於」記錄？它們將再次可用於所有網站。"
+  },
+  "errors": {
+    "load": "無法載入資料保險庫。",
+    "save": "無法儲存此身分。",
+    "deleteOne": "無法刪除該身分。",
+    "deleteSelected": "無法刪除所選身分。",
+    "resetSelected": "無法重設所選身分。"
+  }
+}

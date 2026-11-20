@@ -186,7 +186,8 @@ const api = {
   register: (machineId, account, installSecret) => postJson('/v1/register', { tenantId: tenantConfig().tenantId, machineId, account, installSecret, machineHash: machineHash(), channel: installChannel() }),
   checkout: ({ planKey, installId, account, provider }) => postJson('/v1/checkout', { tenantId: tenantConfig().tenantId, planKey, installId, account, provider }),
   // license() resolving means this machine is accepted, so any machine_mismatch is cleared.
-  license: ({ installId, installSecret }) => postJson('/v1/license', { tenantId: tenantConfig().tenantId, installId, installSecret, machineHash: machineHash(), appVersion: appVersion(), channel: installChannel() })
+  // usage (1.0.27, optional): { aiActionsToday, profiles, running }, so the server can check the Free limits daily.
+  license: ({ installId, installSecret, usage }) => postJson('/v1/license', { tenantId: tenantConfig().tenantId, installId, installSecret, machineHash: machineHash(), appVersion: appVersion(), channel: installChannel(), ...(usage ? { usage } : {}) })
     .then((r) => { clearLicenseIssue(); return r; }),
   // Self-service move to this PC: install secret + proof of purchase (redeemed code or
   // payment reference), at most 2 per licence per 30 days (server-enforced).
@@ -209,7 +210,11 @@ const api = {
   // every start (signupConfirm.js), so it gives up quickly when the server cannot be reached.
   accountStatus: ({ installId, installSecret }) => requestJson('POST', '/v1/account/status', { tenantId: tenantConfig().tenantId, installId, installSecret, appVersion: appVersion(), channel: installChannel() }, { timeoutMs: 6000 }),
   // Public price list (no auth): the active plans and their prices.
-  plans: () => requestJson('GET', `/v1/plans/public?tenantId=${encodeURIComponent(tenantConfig().tenantId)}`, null, { timeoutMs: 8000 }),
+  // include=free (1.0.27): the server also lists the Free plan, first; older apps never ask for it.
+  plans: () => requestJson('GET', `/v1/plans/public?tenantId=${encodeURIComponent(tenantConfig().tenantId)}&include=free`, null, { timeoutMs: 8000 }),
+  // The Free plan's partner deals card (public, our own server only) and its click counter (no personal data).
+  partnerDeals: () => requestJson('GET', `/v1/partner-deals?tenantId=${encodeURIComponent(tenantConfig().tenantId)}`, null, { timeoutMs: 8000 }),
+  partnerDealClick: (id) => requestJson('POST', `/v1/partner-deals/${encodeURIComponent(String(id))}/click`, { tenantId: tenantConfig().tenantId }, { timeoutMs: 6000 }),
   // Public (no auth): the website payment providers switched on for this tenant, with their names, and
   // whether Microsoft Store sales are on. -> { providers: [{ id, label, kind }], store: { salesEnabled } }
   checkoutMethods: () => requestJson('GET', `/v1/checkout/methods?tenantId=${encodeURIComponent(tenantConfig().tenantId)}`, null, { timeoutMs: 8000 }),

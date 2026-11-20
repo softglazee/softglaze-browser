@@ -12,13 +12,15 @@ const TIMEOUT_MS = 10 * 60000; // the server's own limit for the browser leg
 const ERRORS = Object.freeze({
   cancelled: 'SIGNIN_CANCELLED',
   email_not_verified: 'SIGNIN_EMAIL_NOT_VERIFIED',
+  email_missing: 'SIGNIN_EMAIL_MISSING',
   disposable_email: 'SIGNIN_DISPOSABLE_EMAIL',
   failed: 'SIGNIN_FAILED'
 });
 const MESSAGES = Object.freeze({
   SIGNIN_CANCELLED: 'Sign-in was cancelled.',
   SIGNIN_TIMEOUT: 'The sign-in took too long. Try again.',
-  SIGNIN_EMAIL_NOT_VERIFIED: 'Your GitHub account has no verified primary email. Verify it on GitHub, or continue with email.',
+  SIGNIN_EMAIL_NOT_VERIFIED: 'The account you signed in with has no verified email address. Verify it there (on GitHub: Settings > Emails), or continue with email.',
+  SIGNIN_EMAIL_MISSING: "Your Facebook account didn't share an email. Use Google or email sign-in, or allow email access.",
   SIGNIN_DISPOSABLE_EMAIL: 'Please use a permanent email address.',
   SIGNIN_FAILED: "The sign-in didn't finish. Try again in a minute."
 });
@@ -49,7 +51,8 @@ function createSignInFlow(deps) {
   }
 
   // mode: 'auto' (the protocol when it is registered, else loopback) or 'loopback' ("Try another way").
-  async function begin(provider, { mode = 'auto' } = {}) {
+  // rerequest: Facebook asks again for the declined email permission ("Allow email access").
+  async function begin(provider, { mode = 'auto', rerequest = false } = {}) {
     cancel();
     const cfg = deps.tenantConfig();
     const { verifier, challenge } = newPkce();
@@ -60,7 +63,7 @@ function createSignInFlow(deps) {
       loop = await deps.startLoopback({ expectState: state, timeoutMs });
       redirect = loop.redirectUri;
     }
-    const url = startUrl({ apiBaseUrl: cfg.apiBaseUrl, tenantId: cfg.tenantId, provider, appRedirect: redirect, codeChallenge: challenge, state });
+    const url = startUrl({ apiBaseUrl: cfg.apiBaseUrl, tenantId: cfg.tenantId, provider, appRedirect: redirect, codeChallenge: challenge, state, rerequest: rerequest === true });
     const p = { provider, state, verifier, loop, timer: null, via: loop ? 'loopback' : 'protocol' };
     const done = new Promise((resolve, reject) => { p.resolve = resolve; p.reject = reject; });
     p.timer = setTimeout(() => { if (pending === p) { end(p); p.reject(coded('SIGNIN_TIMEOUT')); } }, timeoutMs);

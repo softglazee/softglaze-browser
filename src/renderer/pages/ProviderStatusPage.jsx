@@ -8,12 +8,7 @@ import Button from '@/components/ui/Button.jsx';
 import { Card } from '@/components/ui/Card.jsx';
 import { TONE, daysUntil, parseDay, shortDate, toneText, useProviderStates } from '@/lib/providerStates.js';
 import { cn } from '@/lib/utils.js';
-import i18n from '@/i18n/index.js';
-import providersPageEn from '@/i18n/locales/en/providersPage.json';
-import providersPageEs from '@/i18n/locales/es/providersPage.json';
 
-if (!i18n.hasResourceBundle('en', 'providersPage')) i18n.addResourceBundle('en', 'providersPage', providersPageEn);
-if (!i18n.hasResourceBundle('es', 'providersPage')) i18n.addResourceBundle('es', 'providersPage', providersPageEs);
 
 // Super Admin only, for in-house vendor testing; customers buy their own proxies and never see it.
 // The role exists only on the machine holding the source owner's certificate.
@@ -25,7 +20,7 @@ function CardHead({ title, count, aside }) {
     <div className="flex items-center gap-2 px-5 py-3.5 border-b border-border">
       <h2 className="text-[14px] font-semibold text-foreground font-display">{title}</h2>
       {count != null && <span className="text-[11px] font-semibold px-1.5 py-0.5 rounded-full bg-secondary text-muted-foreground">{count}</span>}
-      {aside && <span className="ml-auto text-[12px] text-muted-foreground">{aside}</span>}
+      {aside && <span className="ms-auto text-[12px] text-muted-foreground">{aside}</span>}
     </div>
   );
 }
@@ -109,17 +104,17 @@ export default function ProviderStatusPage() {
                       <span className="text-[13px] font-semibold text-foreground sm:w-28 shrink-0 truncate" title={a.name}>{a.name}</span>
                       <span className="text-[12.5px] text-muted-foreground min-w-0">
                         {a.text}
-                        {a.emphasis && <span className="ml-2 font-semibold whitespace-nowrap" style={toneText(a.tone)}>{a.emphasis}</span>}
+                        {a.emphasis && <span className="ms-2 font-semibold whitespace-nowrap" style={toneText(a.tone)}>{a.emphasis}</span>}
                       </span>
                     </span>
-                    <Button variant="secondary" size="sm" className="shrink-0 ml-7 sm:ml-auto" onClick={() => open(a.key, a.tab)}>{a.action}</Button>
+                    <Button variant="secondary" size="sm" className="shrink-0 ms-7 sm:ms-auto" onClick={() => open(a.key, a.tab)}>{a.action}</Button>
                   </li>
                 );
               })}
             </ul>
           )}
           {attention.length > ATTENTION_PREVIEW && (
-            <button type="button" onClick={() => setShowAll((v) => !v)} className="w-full px-5 py-2.5 border-t border-border text-[12.5px] font-medium text-primary hover:bg-secondary text-left">
+            <button type="button" onClick={() => setShowAll((v) => !v)} className="w-full px-5 py-2.5 border-t border-border text-[12.5px] font-medium text-primary hover:bg-secondary text-start">
               {showAll ? t('attention.showLess') : t('attention.showAll', { count: attention.length })}
             </button>
           )}
@@ -135,10 +130,10 @@ export default function ProviderStatusPage() {
                 const left = day ? daysUntil(day) : null;
                 return (
                   <li key={r.p.key}>
-                    <button type="button" onClick={() => open(r.p.key)} className="w-full grid grid-cols-[minmax(0,1fr)_auto] sm:grid-cols-[minmax(0,1fr)_auto_auto] items-center gap-x-4 gap-y-0.5 px-5 py-3 text-left hover:bg-secondary/60 transition-colors">
+                    <button type="button" onClick={() => open(r.p.key)} className="w-full grid grid-cols-[minmax(0,1fr)_auto] sm:grid-cols-[minmax(0,1fr)_auto_auto] items-center gap-x-4 gap-y-0.5 px-5 py-3 text-start hover:bg-secondary/60 transition-colors">
                       <span className="text-[13px] font-semibold text-foreground truncate">{r.p.name}</span>
-                      <span className="text-[12.5px] text-foreground text-right">{r.trial.allowance || <span className="text-muted-foreground">{t('trials.noAllowance')}</span>}</span>
-                      <span className="text-[12px] col-span-2 sm:col-span-1 sm:text-right" style={left != null && left <= 3 ? toneText('danger') : undefined}>
+                      <span className="text-[12.5px] text-foreground text-end">{r.trial.allowance || <span className="text-muted-foreground">{t('trials.noAllowance')}</span>}</span>
+                      <span className="text-[12px] col-span-2 sm:col-span-1 sm:text-end" style={left != null && left <= 3 ? toneText('danger') : undefined}>
                         <span className={left != null && left <= 3 ? '' : 'text-muted-foreground'}>
                           {day ? (left < 0 ? t('trials.ended', { date: shortDate(day, lang) }) : t('trials.ends', { date: shortDate(day, lang) })) : t('trials.noEnd')}
                         </span>

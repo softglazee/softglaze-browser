@@ -1,0 +1,62 @@
+{
+  "header": {
+    "eyebrow": "Akun Anda",
+    "title": "Pengaturan akun",
+    "description": "Kelola foto profil, nama, email, dan kata sandi Anda."
+  },
+  "notice": {
+    "superAdmin": "Ini sesi Super-Admin / pemilik kode sumber: tidak ada data anggota yang bisa diubah di sini."
+  },
+  "fields": {
+    "fullName": "Nama lengkap",
+    "fullNamePlaceholder": "Nama Anda",
+    "email": "Email",
+    "newPassword": "Kata sandi baru",
+    "newPasswordPlaceholder": "Kosongkan untuk tetap memakai yang lama",
+    "confirmPassword": "Konfirmasi kata sandi baru",
+    "confirmPasswordPlaceholder": "Ulangi kata sandi baru",
+    "verificationRequired": "perlu verifikasi"
+  },
+  "avatar": {
+    "alt": "avatar",
+    "changeTitle": "Ganti foto",
+    "newSelected": "Foto baru dipilih: simpan untuk menerapkan.",
+    "notImage": "Pilih file gambar.",
+    "tooLarge": "Gambar itu lebih dari 2 MB. Pilih yang lebih kecil.",
+    "readFailed": "Tidak bisa membaca gambar itu."
+  },
+  "verification": {
+    "banner": "Mengubah email atau kata sandi perlu kode 6 digit yang dikirim ke email Anda saat ini"
+  },
+  "actions": {
+    "save": "Simpan perubahan",
+    "saving": "Menyimpan…",
+    "verifyAndSave": "Verifikasi & simpan",
+    "discard": "Buang"
+  },
+  "validation": {
+    "nameEmpty": "Nama tidak boleh kosong.",
+    "emailInvalid": "Masukkan alamat email yang valid.",
+    "passwordTooShort": "Kata sandi baru minimal 8 karakter.",
+    "passwordMismatch": "Kata sandi tidak cocok."
+  },
+  "messages": {
+    "profileUpdated": "Profil diperbarui.",
+    "accountUpdated": "Akun berhasil diperbarui."
+  },
+  "errors": {
+    "loadFailed": "Tidak bisa memuat akun Anda.",
+    "saveFailed": "Tidak bisa menyimpan perubahan Anda."
+  },
+  "verify": {
+    "title": "Pastikan ini Anda",
+    "codeSentTo": "Kode dikirim ke {{email}}",
+    "codeLabel": "Kode 6 digit",
+    "devMode": "Mode dev: email belum diatur. Kode Anda adalah",
+    "apply": "Verifikasi & terapkan",
+    "resend": "Kirim ulang",
+    "enterCode": "Masukkan kode 6 digit.",
+    "failed": "Verifikasi gagal.",
+    "resendFailed": "Tidak bisa mengirim ulang kode."
+  }
+}

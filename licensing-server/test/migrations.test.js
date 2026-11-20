@@ -149,8 +149,92 @@ test('the one-click sign-in migration only creates its own four tables, last', (
   assert.ok(!/ADD COLUMN/.test(sql), 'no column on an existing table');
   for (const t of EXISTING) assert.ok(!new RegExp('CREATE TABLE `' + t + '`').test(sql), `${t} is not re-created`);
   const dirs = migrationDirs();
-  assert.equal(dirs[dirs.length - 1], name, 'the newest migration');
+  assert.ok(dirs.indexOf(name) > dirs.indexOf('20261108140000_signup_lead_fields'), 'after the earlier November ones');
   // No secret or token column in clear: hashes only.
   for (const col of ['stateHash', 'nonceHash', 'codeHash', 'tokenHash']) assert.match(sql, new RegExp('`' + col + '` VARCHAR[(]64[)] NOT NULL'));
   assert.ok(!/`(token|code|state|nonce|accessToken|secret)` /.test(sql), 'no raw token column');
+});
+
+test('the accounts migration (Google, phone, web) only adds NULL or defaulted columns, MobileDevice and indexes', () => {
+  const name = '20261119120000_accounts_google_mobile_web';
+  const sql = read(name);
+  // Statements only (the header comment explains in words what is NOT done).
+  const stmts = sql.split('\n').filter((l) => !l.trim().startsWith('--')).join('\n');
+  assert.ok(!/\bDROP\b|\bRENAME\b|\bMODIFY\b|\bCHANGE\s+COLUMN\b|^\s*(UPDATE|DELETE|TRUNCATE|INSERT)\b/im.test(stmts), 'additive only');
+  assert.deepEqual([...sql.matchAll(/CREATE TABLE `(\w+)`/g)].map((m) => m[1]), ['MobileDevice']);
+  // Every added column is NULL, or NOT NULL with a DEFAULT (existing AuthSession rows become kind 'desktop').
+  const added = [...sql.matchAll(/ADD COLUMN `(\w+)` ([^,;]+)/g)];
+  assert.equal(added.length, 9);
+  for (const [, col, def] of added) assert.ok(/\bNULL\b/.test(def) && (!/NOT NULL/.test(def) || /DEFAULT/.test(def)), `${col}: ${def}`);
+  assert.match(sql, /ADD COLUMN `kind` VARCHAR\(10\) NOT NULL DEFAULT 'desktop'/);
+  assert.match(sql, /ADD COLUMN `expiresAt` DATETIME\(3\) NULL/, 'legacy sessions keep NULL = no end');
+  assert.match(sql, /UNIQUE INDEX `AuthSession_refreshHash_key`/);
+  assert.match(sql, /UNIQUE INDEX `MobileDevice_authSessionId_key`/);
+  assert.ok(!/`(token|refreshToken|accessToken|code|secret)` /.test(sql), 'hashes only');
+  const dirs = migrationDirs();
+  assert.ok(dirs.indexOf(name) > dirs.indexOf('20261110120000_one_click_signin'), 'after the one-click sign-in one');
+});
+
+// November 2026, Free plan: the PartnerDeal table, the Free plan row per tenant and the Free plan copy of the
+// trial emails (untouched template rows only). Generated, re-runnable, the newest.
+test('the Free plan migration is the generator output, re-runnable, additive, guarded, and the newest', () => {
+  const { build, NAME } = require('../scripts/gen-free-plan-migration');
+  const { freePlanCopyRows } = require('../src/email/defaults');
+  const { TIER_LIMITS } = require('../src/plans/service');
+  const name = '20261120120000_free_plan_partner_deals';
+  assert.equal(NAME, name);
+  const dirs = migrationDirs();
+  assert.equal(dirs[dirs.length - 1], name, 'the newest migration');
+  assert.ok(dirs.indexOf(name) > dirs.indexOf('20261119120000_accounts_google_mobile_web'), 'after the accounts one');
+  const sql = read(name);
+  assert.equal(sql, build().replace(/\r\n/g, '\n'));
+  const stmts = sql.split('\n').filter((l) => !l.trim().startsWith('--')).join('\n');
+  assert.ok(!/\bDROP\b|\bRENAME\b|\bMODIFY\b|\bCHANGE\s+COLUMN\b|\bALTER\s+TABLE\b|\bTRUNCATE\b|^\s*DELETE\b/im.test(stmts), 'additive only');
+  assert.deepEqual([...sql.matchAll(/CREATE TABLE (IF NOT EXISTS )?`(\w+)`/g)].map((m) => [m[1], m[2]]), [['IF NOT EXISTS ', 'PartnerDeal']]);
+  assert.match(sql, /`url` VARCHAR\(500\) NOT NULL/);
+  assert.match(sql, /`clicks` INTEGER NOT NULL DEFAULT 0/);
+  assert.match(sql, /INDEX `PartnerDeal_tenantId_active_sortOrder_idx`\(`tenantId`, `active`, `sortOrder`\)/);
+  assert.match(sql, /FOREIGN KEY \(`tenantId`\) REFERENCES `Tenant`\(`id`\) ON DELETE CASCADE/);
+  // The Free plan: one per tenant, only where none exists, deterministic id within VARCHAR(191).
+  assert.match(sql, /INSERT INTO `Plan` \([^)]*`key`[^)]*`interval`[^)]*\)/);
+  assert.match(sql, /CONCAT\('freeplan', SUBSTRING\(SHA2\(t\.`id`, 256\), 1, 17\)\), t\.`id`, 'free', 'Free', 'free', 0, 'USD', 'month', 1, FALSE, TRUE/);
+  assert.match(sql, /WHERE NOT EXISTS \(SELECT 1 FROM `Plan` p WHERE p\.`tenantId` = t\.`id` AND p\.`key` = 'free'\);/);
+  assert.ok(sql.includes(`'${JSON.stringify(TIER_LIMITS.free)}'`), 'the free limits');
+  // Every INSERT and UPDATE is guarded; the UPDATEs touch only unedited built-in rows.
+  for (const stmt of sql.split(/;\n/).filter((s) => /^\s*(INSERT|UPDATE)/m.test(s))) {
+    assert.ok(/NOT EXISTS|`isDefault` = TRUE/.test(stmt), `guarded: ${stmt.slice(0, 80)}`);
+  }
+  const updates = [...sql.matchAll(/WHERE `key` = '(\w+)' AND `lang` = '(\w+)' AND `builtIn` = TRUE AND `isDefault` = TRUE;/g)].map((m) => `${m[1]}/${m[2]}`);
+  assert.deepEqual(updates, ['trial_ending/en', 'trial_ending/es', 'trial_ended/en', 'trial_ended/es', 'locks_tomorrow/en', 'locks_tomorrow/es']);
+  for (const r of freePlanCopyRows()) assert.ok(sql.includes(`'${r.text.replace(/'/g, "''")}'`), `${r.key}/${r.lang} text`);
+  // The schema says the same thing as the SQL.
+  const schema = fs.readFileSync(path.join(__dirname, '..', 'prisma', 'schema.prisma'), 'utf8').replace(/\r\n/g, '\n');
+  const block = (/model PartnerDeal \{([\s\S]*?)\n\}/.exec(schema) || [])[1] || '';
+  for (const [col, n] of [['title', 120], ['vendor', 80], ['url', 500], ['code', 60], ['badge', 40], ['logoUrl', 500], ['description', 300]]) {
+    assert.match(block, new RegExp(`\\n\\s+${col}\\s+String\\??\\s+@db\\.VarChar\\(${n}\\)`), col);
+  }
+  assert.match(block, /@@index\(\[tenantId, active, sortOrder\]\)/);
+  assert.match(block, /onDelete: Cascade/);
+  assert.match(schema, /partnerDeals\s+PartnerDeal\[\]/);
+});
+
+// Black Friday 2026: Plan.saleCap / saleStartsAt / saleEndsAt and one Payment index (src/plans/sales.js).
+// Named before 20261120120000_free_plan_partner_deals (feat/free-plan-server) so both branches can merge in
+// either order; the two touch different tables and do not depend on each other.
+test('the Black Friday migration only adds three NULL Plan columns and one Payment index', () => {
+  const name = '20261120110000_black_friday_lifetime_sales';
+  const sql = read(name);
+  const stmts = sql.split('\n').filter((l) => !l.trim().startsWith('--')).join('\n');
+  assert.ok(!/\bDROP\b|\bRENAME\b|\bMODIFY\b|\bCHANGE\s+COLUMN\b|^\s*(UPDATE|DELETE|TRUNCATE|INSERT)\b|CREATE TABLE/im.test(stmts), 'additive only');
+  const added = [...stmts.matchAll(/ADD COLUMN `(\w+)` ([^,;]+)/g)];
+  assert.deepEqual(added.map((m) => m[1]), ['saleCap', 'saleStartsAt', 'saleEndsAt']);
+  for (const [, col, def] of added) assert.ok(/\bNULL\b/.test(def) && !/NOT NULL/.test(def), `${col}: ${def}`);
+  assert.match(stmts, /^ALTER TABLE `Plan` ADD COLUMN/m);
+  assert.match(stmts, /CREATE INDEX `Payment_tenantId_plan_status_idx` ON `Payment`\(`tenantId`, `plan`, `status`\);/);
+  const dirs = migrationDirs();
+  assert.ok(dirs.indexOf(name) > dirs.indexOf('20261119120000_accounts_google_mobile_web'), 'after the accounts one');
+  const schema = fs.readFileSync(path.join(__dirname, '..', 'prisma', 'schema.prisma'), 'utf8');
+  assert.match(schema, /saleCap\s+Int\?/);
+  assert.match(schema, /saleStartsAt\s+DateTime\?/);
+  assert.match(schema, /@@index\(\[tenantId, plan, status\]\)/);
 });

@@ -1,0 +1,54 @@
+{
+  "header": {
+    "eyebrow": "Arbeitsbereich",
+    "title": "Papierkorb & Wiederherstellung",
+    "description": "Stellen Sie gelöschte Profile wieder her oder löschen Sie sie endgültig von Ihrem Speicher."
+  },
+  "actions": {
+    "emptyTrash": "Papierkorb leeren",
+    "restore": "Wiederherstellen",
+    "deleteForever": "Endgültig löschen",
+    "clear": "Leeren",
+    "restoreTitle": "Profil wiederherstellen",
+    "purgeTitle": "Endgültig löschen"
+  },
+  "errors": {
+    "loadFailed": "Papierkorb konnte nicht geladen werden."
+  },
+  "warning": {
+    "title": "Endgültiges Löschen",
+    "body": "Beim Wiederherstellen kehrt ein Profil unverändert in Ihre Liste zurück. Endgültiges Löschen entfernt das Profil und löscht alle seine Browserdaten (Cookies, Cache, Logins) von diesem Computer."
+  },
+  "toolbar": {
+    "searchPlaceholder": "Gelöschte Profile suchen..."
+  },
+  "bulk": {
+    "selected": "{{count}} ausgewählt"
+  },
+  "table": {
+    "profileName": "Profilname",
+    "proxy": "Proxy",
+    "deletedDate": "Gelöscht am",
+    "actions": "Aktionen",
+    "directProxy": "Direkt",
+    "defaultBrowser": "Chrome"
+  },
+  "empty": {
+    "title": "Der Papierkorb ist leer",
+    "noMatch": "Keine gelöschten Profile passen zu Ihrer Suche.",
+    "none": "Sie haben keine gelöschten Profile. Alles sauber!"
+  },
+  "confirm": {
+    "purgeWithData": "„{{title}}“ endgültig löschen? Das kann nicht rückgängig gemacht werden, und die lokalen Browserdaten werden gelöscht.",
+    "bulkPurgeWithData_one": "{{count}} Profil endgültig löschen? Das kann nicht rückgängig gemacht werden, und die lokalen Browserdaten werden gelöscht.",
+    "bulkPurgeWithData_other": "{{count}} Profile endgültig löschen? Das kann nicht rückgängig gemacht werden, und die lokalen Browserdaten werden gelöscht.",
+    "emptyTrashWithData_one": "ALLE {{count}} Profil im Papierkorb endgültig löschen? Das kann nicht rückgängig gemacht werden, und die lokalen Browserdaten werden gelöscht.",
+    "emptyTrashWithData_other": "ALLE {{count}} Profile im Papierkorb endgültig löschen? Das kann nicht rückgängig gemacht werden, und die lokalen Browserdaten werden gelöscht."
+  },
+  "pager": {
+    "showing": "{{from}} bis {{to}} von {{total}}",
+    "prev": "Zurück",
+    "next": "Weiter"
+  },
+  "bulkSkipped": "Nicht geändert: {{count}} Profil(e). {{reason}}"
+}

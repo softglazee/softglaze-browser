@@ -1,0 +1,43 @@
+{
+  "title": "Bảng điểm nhà cung cấp",
+  "note": "Từ các lần kiểm tra proxy của chính bạn trong {{days}} ngày qua.",
+  "refresh": "Làm mới",
+  "show": "Hiện bảng điểm nhà cung cấp",
+  "hide": "Ẩn bảng điểm nhà cung cấp",
+  "loading": "Đang tải bảng điểm...",
+  "loadError": "Không tải được bảng điểm: {{message}}",
+  "empty": "Chưa có proxy nào. Hãy lấy proxy từ một nhà cung cấp hoặc thêm proxy của bạn, rồi kiểm tra để xem từng nhà cung cấp hoạt động thế nào.",
+  "truncated": "Chỉ tính {{max}} lần kiểm tra mới nhất.",
+  "scoreHelp": "Điểm trên thang 100. Tỷ lệ kiểm tra thành công quan trọng nhất, sau đó là càng ít proxy trong danh sách chặn càng tốt, rồi đến tốc độ, rồi số lần bị trang web chặn trên mỗi proxy. Dòng có ít hơn {{min}} lần kiểm tra không được chấm điểm.",
+  "own": "Proxy của bạn",
+  "free": "Proxy miễn phí",
+  "col": {
+    "vendor": "Nhà cung cấp",
+    "score": "Điểm",
+    "success": "Kiểm tra thành công",
+    "speed": "Tốc độ trung vị",
+    "blocklisted": "Trong danh sách chặn",
+    "datacenter": "Datacenter",
+    "blocks": "Bị trang chặn",
+    "proxies": "Proxy",
+    "lastChecked": "Kiểm tra lần cuối"
+  },
+  "sortBy": "Sắp xếp theo {{column}}",
+  "notEnough": "Chưa đủ dữ liệu",
+  "notEnoughTitle_one": "Chỉ có {{count}} lần kiểm tra trong {{days}} ngày qua. Cần {{min}} lần để chấm điểm.",
+  "notEnoughTitle_other": "Chỉ có {{count}} lần kiểm tra trong {{days}} ngày qua. Cần {{min}} lần để chấm điểm.",
+  "level": {
+    "good": "Tốt",
+    "fair": "Khá",
+    "poor": "Kém"
+  },
+  "scoreTitle": "{{level}}: {{score}} trên 100",
+  "checks_one": "{{count}} lần kiểm tra",
+  "checks_other": "{{count}} lần kiểm tra",
+  "ms": "{{ms}} ms",
+  "working": "{{pct}} hoạt động",
+  "noData": "Không có dữ liệu",
+  "never": "Chưa bao giờ",
+  "openProvider": "Mở {{name}}",
+  "topSites": "Chặn nhiều nhất: {{sites}}"
+}

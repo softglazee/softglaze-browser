@@ -1,0 +1,293 @@
+{
+  "common": {
+    "back": "Voltar",
+    "redeem": "Resgatar",
+    "go": "Ir"
+  },
+  "remember": {
+    "label": "Manter conectado neste dispositivo",
+    "unavailable": "Este dispositivo não consegue guardar um login com segurança (a criptografia do sistema não está disponível), então você vai precisar entrar de novo na próxima abertura."
+  },
+  "brand": {
+    "footer": "© {{year}} SoftGlaze · Espaço de trabalho local"
+  },
+  "license": {
+    "machineMismatch": "Esta licença está registrada em outro computador. Transfira-a para este PC ou peça ao seu administrador para redefini-la."
+  },
+  "pay": {
+    "noMethods": "A compra dentro do app está pausada enquanto adicionamos um novo provedor de pagamento. Escreva para support@softglaze.com para comprar por fatura e depois digite seu código de compra.",
+    "submitted": "Pagamento enviado. Um administrador vai revisá-lo e ativar seu plano em breve.",
+    "manualBadge": "Manual",
+    "continueTo": "Continuar para {{label}}",
+    "openPaymentLink": "Abrir link de pagamento",
+    "referencePlaceholder": "Referência do pagamento / ID da transação",
+    "submitForApproval": "Já paguei, enviar para aprovação"
+  },
+  "banned": {
+    "blockedHeading": "Sua conta está bloqueada",
+    "endedHeading": "Sua assinatura terminou",
+    "blockedBodyNamed": "{{name}}, sua conta foi bloqueada por um administrador. Fale com ele para recuperar o acesso. Seus dados estão seguros.",
+    "blockedBody": "Sua conta foi bloqueada por um administrador. Fale com ele para recuperar o acesso. Seus dados estão seguros.",
+    "endedBodyNamed": "{{name}}, esta licença não está mais ativa (reembolsada, revogada ou registrada em outro computador). Escolha um plano para desbloquear seu espaço de trabalho. Seus perfis e dados estão seguros esperando por você.",
+    "endedBody": "Esta licença não está mais ativa (reembolsada, revogada ou registrada em outro computador). Escolha um plano para desbloquear seu espaço de trabalho. Seus perfis e dados estão seguros esperando por você.",
+    "haveCode": "Tem um código de compra?",
+    "needHelp": "Precisa de ajuda? Fale com seu administrador.",
+    "signOut": "Sair"
+  },
+  "register": {
+    "title": "Crie sua conta",
+    "subtitle": "Esta é sua conta principal, a dona do espaço de trabalho.",
+    "firstName": "Nome",
+    "lastName": "Sobrenome",
+    "email": "E-mail",
+    "emailPlaceholder": "voce@empresa.com",
+    "phone": "Telefone",
+    "phonePlaceholder": "+55 11 91234-5678",
+    "password": "Senha",
+    "passwordPlaceholder": "8+ caracteres",
+    "confirm": "Confirmar",
+    "confirmPlaceholder": "Repita",
+    "continue": "Continuar",
+    "storedLocally": "Guardado localmente e criptografado neste dispositivo",
+    "haveAccount": "Já tem uma conta?",
+    "logIn": "Entrar",
+    "consent": "Quero receber novidades e dicas do produto por e-mail",
+    "consentNote": "Seu código, lembretes do teste e e-mails da conta são sempre enviados. Novidades do produto só se você marcar a caixa.",
+    "checkedByServer": "Enviamos um código por e-mail para confirmar este endereço. Seus perfis e dados ficam neste dispositivo.",
+    "phoneOptional": "Telefone (opcional)",
+    "phoneIntlPlaceholder": "+55 11 3456-7890",
+    "phoneHint": "Comece com + e o código do seu país."
+  },
+  "verify": {
+    "title": "Verifique seu e-mail",
+    "subtitlePrefix": "Digite o código de 6 dígitos enviado para",
+    "subtitleSuffix": ".",
+    "devModePrefix": "Modo dev: nenhum e-mail é enviado de verdade ainda. Seu código é",
+    "devModeSuffix": ".",
+    "verifyCreate": "Verificar e criar conta",
+    "resendIn": "Reenviar código em {{count}}s",
+    "resend": "Reenviar código",
+    "checkSpam": "O código pode levar um minuto para chegar. Confira a pasta de spam se não encontrar."
+  },
+  "lead": {
+    "useCase": "Para que você vai usar o SoftGlaze?",
+    "useCasePlaceholder": "Escolha uma opção",
+    "useCases": {
+      "ecommerce": "Lojas virtuais e marketplaces",
+      "social_media": "Contas de redes sociais",
+      "affiliate_marketing": "Marketing de afiliados e compra de mídia",
+      "agency": "Trabalho de agência para clientes",
+      "web_research": "Pesquisa na web e QA",
+      "other": "Outra coisa"
+    },
+    "useCaseOther": "Conte em poucas palavras",
+    "useCaseOtherPlaceholder": "Por exemplo: checar preços por país",
+    "company": "Empresa ou site (opcional)",
+    "companyPlaceholder": "Acme Ltda ou acme.com"
+  },
+  "confirm": {
+    "title": "Confirme seu e-mail",
+    "subtitle": "Todo espaço de trabalho SoftGlaze agora precisa de um e-mail confirmado. Confira seus dados e enviaremos um código de 6 dígitos.",
+    "sendCode": "Enviar o código",
+    "codeTitle": "Digite o código",
+    "codeBody": "Enviamos um código de 6 dígitos para {{email}}. Digite-o para confirmar o e-mail deste espaço de trabalho.",
+    "confirmContinue": "Confirmar e continuar",
+    "changeDetails": "Alterar dados",
+    "dataNote": "Seus perfis e dados ficam neste computador. Guardamos estes dados para cuidar da sua conta.",
+    "later": "Continuar por enquanto",
+    "laterNote": "Não conseguimos acessar nosso servidor. Você pode usar o app agora, e pediremos de novo na próxima vez que ele abrir.",
+    "memberTitle": "O proprietário precisa confirmar este espaço de trabalho",
+    "memberBody": "Antes de usar este espaço de trabalho, o proprietário precisa confirmar o e-mail dele. Peça ao proprietário para entrar e fazer isso, ou entre como proprietário.",
+    "signInAsOwner": "Entrar como proprietário"
+  },
+  "plan": {
+    "title": "Tudo pronto",
+    "subtitlePrefix": "Sua conta está pronta com um",
+    "trialHighlight": "teste grátis de 7 dias",
+    "subtitleSuffix": ". Comece agora ou ative um plano pago.",
+    "startTrialTitle": "Começar teste grátis de 7 dias",
+    "startTrialSubtitle": "Nada a pagar agora. Todos os recursos liberados.",
+    "activatePaid": "Ativar um plano pago agora",
+    "haveCode": "Tem um código de compra?",
+    "skip": "Pular e começar o teste",
+    "tenantTitle": "Sua conta está pronta",
+    "tenantSubtitle": "Comece seu teste grátis ou escolha um plano.",
+    "tenantTrialSubtitle": "Acesso completo, sem pagamento. Um teste grátis por computador e e-mail.",
+    "choosePlan": "Ou escolha um plano",
+    "verifyTitle": "Confirme seu e-mail",
+    "verifyBody": "Enviamos um código de 6 dígitos para {{email}}. Digite-o para começar o teste grátis.",
+    "verifyStart": "Confirmar e começar o teste",
+    "continueFreeTitle": "Continuar no Free",
+    "continueFreeSubtitle": "Grátis para sempre: 25 perfis, 1 aberto por vez. Assine quando quiser.",
+    "trialUsedFree": "O teste grátis já foi usado neste computador ou e-mail. Você pode continuar no plano Free."
+  },
+  "login": {
+    "welcomeBackNamed": "Que bom ver você de novo, {{name}}",
+    "welcomeBack": "Que bom ver você de novo",
+    "subtitle": "Entre para desbloquear seu espaço de trabalho.",
+    "email": "E-mail",
+    "password": "Senha",
+    "forgot": "Esqueceu?",
+    "passwordPlaceholder": "Senha mestra",
+    "forgotBody": "Sua senha mestra não pode ser recuperada em uma instalação local, porque ela nunca sai deste dispositivo. Se você perdê-la, o espaço de trabalho precisa ser redefinido em Configurações.",
+    "signIn": "Entrar",
+    "noAccount": "Não tem uma conta?",
+    "newHere": "Novo no SoftGlaze?",
+    "createOne": "Crie sua conta",
+    "haveInvite": "Tem um código de convite?",
+    "teamSignIn": "Entrada de membro da equipe"
+  },
+  "invite": {
+    "title": "Resgate seu convite",
+    "subtitle": "Digite o código que você recebeu e defina uma senha para sua conta.",
+    "code": "Código de convite",
+    "codePlaceholder": "SG-XXXX-XXXX",
+    "yourName": "Seu nome",
+    "optional": "(opcional)",
+    "namePlaceholder": "Nome completo",
+    "setPassword": "Defina uma senha",
+    "passwordPlaceholder": "6+ caracteres",
+    "join": "Entrar no espaço de trabalho"
+  },
+  "member": {
+    "title": "Entrada de membro da equipe",
+    "subtitle": "Use o e-mail/nome e a senha definidos quando você resgatou o convite.",
+    "identifier": "E-mail ou nome",
+    "identifierPlaceholder": "voce@empresa.com",
+    "password": "Senha",
+    "passwordPlaceholder": "Sua senha",
+    "signIn": "Entrar",
+    "haveInviteInstead": "Tem um código de convite?",
+    "redeemIt": "Resgatar"
+  },
+  "super": {
+    "title": "Super Admin",
+    "access": "Acesso de Super Admin",
+    "setupSubtitlePrefix": "Configuração inicial. Crie a credencial de Super Admin para",
+    "setupSubtitleHighlight": "esta instalação",
+    "setupSubtitleSuffix": ": ela fica guardada como hash neste dispositivo e é o único jeito de entrar, então guarde-a bem.",
+    "username": "Usuário",
+    "usernamePlaceholder": "superadmin",
+    "password": "Senha",
+    "setupPasswordPlaceholder": "Pelo menos 8 caracteres",
+    "confirmPassword": "Confirmar senha",
+    "confirmPasswordPlaceholder": "Digite a senha de novo",
+    "createCredentials": "Criar credenciais",
+    "loginSubtitle": "Acesso do dono do código. Pula o cadastro e desbloqueia todo o espaço de trabalho.",
+    "usernameOrEmail": "Usuário ou e-mail",
+    "loginPasswordPlaceholder": "Senha",
+    "enterWorkspace": "Entrar no espaço de trabalho"
+  },
+  "pick": {
+    "title": "Quem está trabalhando?",
+    "subtitle": "Selecione seu perfil de membro para continuar.",
+    "pin": "PIN",
+    "suspended": "Suspenso",
+    "pinPlaceholder": "Digite o PIN",
+    "haveInvite": "Tem um código de convite?",
+    "teamSignIn": "Entrada de membro da equipe"
+  },
+  "db": {
+    "title": "Desbloqueie seu banco de dados",
+    "subtitle": "O banco de dados deste espaço de trabalho está criptografado. Digite a senha do espaço de trabalho para descriptografá-lo e abri-lo.",
+    "workspacePassword": "Senha do espaço de trabalho",
+    "passwordPlaceholder": "Senha do espaço de trabalho",
+    "unlock": "Desbloquear",
+    "corrupted": "Se você tem certeza de que a senha está certa, o arquivo do banco de dados pode estar danificado. Você pode recuperar reinstalando e restaurando um backup do espaço de trabalho (Configurações → Backup e restauração do espaço de trabalho). Não há redefinição de senha: os dados só abrem com a senha correta."
+  },
+  "errors": {
+    "enterFirstLast": "Digite seu nome e sobrenome.",
+    "validEmail": "Digite um endereço de e-mail válido.",
+    "validPhone": "Digite um telefone válido.",
+    "password8": "A senha precisa ter pelo menos 8 caracteres.",
+    "passwordsNoMatch": "As senhas não coincidem.",
+    "couldNotSendCode": "Não foi possível enviar o código de verificação.",
+    "couldNotResendCode": "Não foi possível reenviar o código.",
+    "enter6Digit": "Digite o código de 6 dígitos.",
+    "verificationFailed": "Falha na verificação.",
+    "incorrectPassword": "Senha incorreta.",
+    "couldNotSignIn": "Não foi possível entrar.",
+    "superSetupRequired": "Ainda não há credencial de Super Admin. Crie uma abaixo.",
+    "invalidSuperCredentials": "Credenciais de Super Admin inválidas.",
+    "couldNotCreateSuper": "Não foi possível criar as credenciais de Super Admin.",
+    "enterInviteCode": "Digite seu código de convite.",
+    "password6": "A senha precisa ter pelo menos 6 caracteres.",
+    "couldNotRedeemInvite": "Não foi possível resgatar esse código de convite.",
+    "enterEmailNamePassword": "Digite seu e-mail/nome e sua senha.",
+    "enterPurchaseCode": "Digite seu código de compra.",
+    "invalidPurchaseCode": "Esse código de compra não é válido.",
+    "noPaymentMethod": "Ainda não há forma de pagamento disponível.",
+    "paymentNotStarted": "Não foi possível iniciar o pagamento.",
+    "couldNotSubmitPayment": "Não foi possível enviar seu pagamento.",
+    "enterWorkspacePassword": "Digite a senha do espaço de trabalho.",
+    "dbStillLocked": "O banco de dados continua bloqueado. Tente de novo.",
+    "dbMissing": "O arquivo do banco de dados criptografado não foi encontrado. Restaure um backup do espaço de trabalho para recuperar.",
+    "dbUnlockFailed": "Senha incorreta, ou o arquivo está corrompido.",
+    "couldNotUnlockDb": "Não foi possível desbloquear o banco de dados.",
+    "trialFailed": "Não foi possível começar o teste grátis."
+  },
+  "serverErrors": {
+    "SIGNUP_INVALID_EMAIL": "Digite um endereço de e-mail válido.",
+    "SIGNUP_DISPOSABLE_EMAIL": "Use um endereço de e-mail permanente.",
+    "SIGNUP_NO_MX": "Não encontramos um servidor de e-mail para esse endereço.",
+    "SIGNUP_BAD_CODE": "Esse código está errado ou expirou. Confira o e-mail ou peça um código novo.",
+    "SIGNUP_OFFLINE": "Conecte-se à internet para criar sua conta.",
+    "SIGNUP_FAILED": "Não conseguimos verificar esse e-mail agora. Tente de novo em alguns minutos.",
+    "RATE_LIMITED": "Tentativas demais. Tente de novo em alguns minutos.",
+    "TRIAL_USED": "Um teste grátis já foi usado neste computador ou e-mail. Escolha um plano ou digite um código de compra.",
+    "TRIAL_OFFLINE": "Conecte-se à internet para começar o teste grátis.",
+    "TRIAL_VERIFY_EMAIL": "Confirme seu endereço de e-mail para começar o teste grátis. Enviamos um código de 6 dígitos.",
+    "TRIAL_NO_EMAIL": "Adicione um endereço de e-mail à conta do proprietário antes e depois comece o teste grátis.",
+    "TRIAL_FAILED": "Não foi possível começar o teste grátis agora. Tente de novo em alguns minutos.",
+    "SERVER_UNAVAILABLE": "Nosso servidor de licenças não está respondendo agora. Tente de novo em alguns minutos.",
+    "MACHINE_MISMATCH": "Esta licença está registrada em outro computador. Transfira-a para este PC ou peça ao seu administrador para redefini-la.",
+    "SIGNUP_INVALID_PHONE": "Digite o telefone com + e o código do país, ou deixe em branco.",
+    "SIGNUP_USE_CASE": "Escolha para que você vai usar o SoftGlaze.",
+    "SIGNUP_USE_CASE_OTHER": "Conte em poucas palavras para que você vai usar o SoftGlaze.",
+    "CONFIRM_OFFLINE": "Conecte-se à internet para confirmar seu e-mail."
+  },
+  "panel": {
+    "label": "Tour do produto SoftGlaze",
+    "carousel": "carrossel",
+    "slide": "slide",
+    "slideOf": "{{n}} de {{total}}",
+    "prev": "Slide anterior",
+    "next": "Próximo slide",
+    "pause": "Pausar os slides",
+    "play": "Reproduzir os slides",
+    "goTo": "Mostrar o slide {{n}}: {{title}}",
+    "trust": "Perfis, cookies e logins ficam neste computador.",
+    "slides": {
+      "free": {
+        "title": "Comece com 25 perfis de navegador, grátis",
+        "body": "Sem cartão e sem limite de tempo. Toda conta nova também pode testar o Pro grátis por 7 dias.",
+        "alt": "A página Perfis com dez perfis, seus proxies e quando cada um foi usado pela última vez"
+      },
+      "fingerprint": {
+        "title": "Cada perfil mantém a própria impressão digital",
+        "body": "Canvas, WebGL, fontes, áudio e fuso horário são definidos por perfil e continuam iguais a cada abertura. Dê a cada um o seu próprio proxy HTTP, HTTPS ou SOCKS5.",
+        "alt": "A aba Impressão digital de um perfil ao lado da visão geral do ambiente"
+      },
+      "ai": {
+        "title": "Agentes de IA fazem o trabalho, você aprova",
+        "body": "Claude, ChatGPT, Cursor e outros apps MCP executam tarefas nos seus perfis. Você decide quais ações precisam da sua aprovação, e cada passo fica registrado.",
+        "alt": "Uma solicitação de aprovação do Claude Desktop para preencher um formulário de login"
+      },
+      "phone": {
+        "title": "Aprove solicitações pelo celular",
+        "body": "O app de celular e o app web do SoftGlaze mostram cada solicitação com os detalhes. Permita uma vez, por uma hora, ou negue. Incluído em todos os planos.",
+        "alt": "A tela Aprovações em um celular com uma solicitação aguardando resposta"
+      },
+      "team": {
+        "title": "Trabalhe em equipe com funções claras",
+        "body": "As funções Proprietário, Admin, Gerente e Operador controlam quem pode ver e abrir cada perfil. O Pro inclui 3 vagas e o Enterprise, 25.",
+        "alt": "A página Membros com cinco membros da equipe e suas funções"
+      }
+    }
+  },
+  "controls": {
+    "language": "Idioma: {{lang}}",
+    "toLight": "Mudar para o tema claro",
+    "toDark": "Mudar para o tema escuro"
+  }
+}

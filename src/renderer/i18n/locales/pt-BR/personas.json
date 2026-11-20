@@ -1,0 +1,153 @@
+{
+  "header": {
+    "eyebrow": "Identidades",
+    "title": "Cofre de dados",
+    "description": "Um cofre reutilizável de identidades para o preenchimento inteligente. Adicione-as à mão ou importe uma planilha; cada uma lembra os sites em que já foi usada.",
+    "refresh": "Atualizar",
+    "import": "Importar Excel/CSV",
+    "addManually": "Adicionar à mão"
+  },
+  "stats": {
+    "totalIdentities": "Total de identidades",
+    "neverUsed": "Nunca usadas",
+    "usedAtLeastOnce": "Usadas ao menos uma vez",
+    "totalUses": "Total de usos",
+    "filtering": "filtrando"
+  },
+  "toolbar": {
+    "searchPlaceholder": "Buscar por nome, e-mail, usuário ou rótulo...",
+    "showing": "Mostrando {{count}} {{kind}}",
+    "kindNeverUsed": "nunca usadas",
+    "kindUsed": "usadas",
+    "clear": "limpar"
+  },
+  "bulk": {
+    "selected": "{{count}} selecionadas",
+    "resetUsedStatus": "Redefinir status de uso",
+    "deleteSelected": "Excluir selecionadas",
+    "clear": "Limpar",
+    "clearSelectionTitle": "Limpar seleção"
+  },
+  "table": {
+    "loading": "Carregando identidades...",
+    "selectAll": "Selecionar todas as identidades",
+    "selectRow": "Selecionar {{name}}",
+    "colName": "Nome",
+    "colEmail": "E-mail",
+    "colUsername": "Usuário",
+    "colPassword": "Senha",
+    "colPhone": "Telefone",
+    "colAddress": "Endereço",
+    "colLabel": "Rótulo",
+    "colTimesUsed": "Vezes usada",
+    "colCreated": "Criada",
+    "colActions": "Ações",
+    "sitesUsed_one": "{{count}} site",
+    "sitesUsed_many": "{{count}} sites",
+    "sitesUsed_other": "{{count}} sites",
+    "never": "Nunca",
+    "editIdentity": "Editar identidade",
+    "deleteIdentity": "Excluir identidade",
+    "hidePassword": "Ocultar",
+    "revealPassword": "Mostrar",
+    "reuse": "♻ Reusar · {{count}}"
+  },
+  "empty": {
+    "title": "Seu cofre de dados está vazio",
+    "description": "Adicione uma identidade à mão ou importe uma planilha Excel/CSV para começar seu cofre de preenchimento.",
+    "filteredTitle": "Nenhuma identidade corresponde ao seu filtro",
+    "filteredDescription": "Tente outra busca ou limpe o filtro."
+  },
+  "groups": {
+    "identity": "Identidade",
+    "account": "Conta",
+    "address": "Endereço",
+    "meta": "Meta"
+  },
+  "fields": {
+    "firstName": "Nome",
+    "lastName": "Sobrenome",
+    "email": "E-mail",
+    "username": "Usuário",
+    "password": "Senha",
+    "phone": "Telefone",
+    "dateOfBirth": "Data de nascimento",
+    "addressLine1": "Endereço, linha 1",
+    "addressLine2": "Endereço, linha 2",
+    "city": "Cidade",
+    "state": "Estado / Província",
+    "zipCode": "CEP / Código postal",
+    "country": "País",
+    "company": "Empresa",
+    "companyAddress": "Endereço da empresa",
+    "label": "Rótulo do lote"
+  },
+  "form": {
+    "dialogTitleEdit": "Editar identidade",
+    "dialogTitleAdd": "Adicionar identidade",
+    "titleEdit": "Editar identidade",
+    "titleAdd": "Adicionar identidade",
+    "descEdit": "Atualize os dados desta persona.",
+    "descAdd": "Adicione uma persona ao seu cofre de dados. Campos marcados com * são obrigatórios.",
+    "cancel": "Cancelar",
+    "saving": "Salvando...",
+    "saveChanges": "Salvar alterações",
+    "addIdentity": "Adicionar identidade",
+    "showPassword": "Mostrar senha",
+    "hidePassword": "Ocultar senha"
+  },
+  "import": {
+    "dialogTitle": "Importar identidades",
+    "title": "Importar de Excel / CSV",
+    "descStep1": "Escolha um arquivo .xlsx, .xls ou .csv. A primeira linha deve ter os cabeçalhos das colunas. Até 1000 linhas por importação.",
+    "descStep2": "Associe suas colunas aos campos da identidade. {{count}} linha(s) detectada(s) em {{fileName}}.",
+    "yourFile": "seu arquivo",
+    "chooseSpreadsheet": "Escolher uma planilha",
+    "colIdentityField": "Campo da identidade",
+    "colYourColumn": "Sua coluna",
+    "skipOption": "- pular -",
+    "mappedCount_one": "{{count}} campo associado. Linhas sem nome/e-mail/usuário são puladas.",
+    "mappedCount_many": "{{count}} campos associados. Linhas sem nome/e-mail/usuário são puladas.",
+    "mappedCount_other": "{{count}} campos associados. Linhas sem nome/e-mail/usuário são puladas.",
+    "done": "Pronto",
+    "cancel": "Cancelar",
+    "back": "Voltar",
+    "importing": "Importando...",
+    "importRows_one": "Importar {{count}} linha",
+    "importRows_many": "Importar {{count}} linhas",
+    "importRows_other": "Importar {{count}} linhas",
+    "result": {
+      "complete": "Importação concluída",
+      "addedPrefix": "Adicionadas",
+      "addedSuffix_one": "identidade ao cofre.",
+      "addedSuffix_many": "identidades ao cofre.",
+      "addedSuffix_other": "identidades ao cofre.",
+      "skipped_one": "{{count}} linha vazia pulada.",
+      "skipped_many": "{{count}} linhas vazias puladas.",
+      "skipped_other": "{{count}} linhas vazias puladas."
+    },
+    "errors": {
+      "noRows": "Esse arquivo não tem linha de cabeçalho nem linhas de dados legíveis.",
+      "readFile": "Não foi possível ler esse arquivo.",
+      "nothingMapped": "Não há linhas para importar: associe pelo menos um destes: Nome / Sobrenome / E-mail / Usuário.",
+      "failed": "Falha na importação."
+    }
+  },
+  "confirm": {
+    "fallbackName": "persona",
+    "deleteOne": "Excluir a identidade \"{{name}}\"? Isso não pode ser desfeito.",
+    "deleteSelected_one": "Excluir {{count}} identidade selecionada? Isso não pode ser desfeito.",
+    "deleteSelected_many": "Excluir {{count}} identidades selecionadas? Isso não pode ser desfeito.",
+    "deleteSelected_other": "Excluir {{count}} identidades selecionadas? Isso não pode ser desfeito.",
+    "resetSelected_one": "Redefinir o histórico de \"usada em\" de {{count}} identidade selecionada? Ela volta a ficar disponível em todos os sites.",
+    "resetSelected_many": "Redefinir o histórico de \"usada em\" de {{count}} identidades selecionadas? Elas voltam a ficar disponíveis em todos os sites.",
+    "resetSelected_other": "Redefinir o histórico de \"usada em\" de {{count}} identidades selecionadas? Elas voltam a ficar disponíveis em todos os sites."
+  },
+  "errors": {
+    "load": "Não foi possível carregar o cofre de dados.",
+    "save": "Não foi possível salvar esta identidade.",
+    "deleteOne": "Não foi possível excluir a identidade.",
+    "deleteSelected": "Não foi possível excluir as identidades selecionadas.",
+    "resetSelected": "Não foi possível redefinir as identidades selecionadas."
+  }
+}

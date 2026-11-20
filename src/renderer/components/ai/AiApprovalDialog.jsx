@@ -169,7 +169,7 @@ export default function AiApprovalDialog() {
           >
             {current && (
               <>
-                <div className="flex items-start gap-3 border-b border-border px-5 py-4 pr-14">
+                <div className="flex items-start gap-3 border-b border-border px-5 py-4 pe-14">
                   <span className="grid h-10 w-10 shrink-0 place-items-center rounded-lg" style={{ ...toneSurface('warning', 16, 0), color: AI_TONE.warning }}>
                     <ShieldAlert className="h-5 w-5" strokeWidth={1.75} />
                   </span>
@@ -203,7 +203,7 @@ export default function AiApprovalDialog() {
                 </div>
 
                 <DialogPrimitive.Close
-                  className="absolute right-4 top-4 rounded-md p-1 text-muted-foreground transition hover:bg-secondary hover:text-foreground"
+                  className="absolute inset-e-4 top-4 rounded-md p-1 text-muted-foreground transition hover:bg-secondary hover:text-foreground"
                   title={t('approval.later')}
                 >
                   <X className="h-4 w-4" />
@@ -237,7 +237,7 @@ export default function AiApprovalDialog() {
                   ? t('approval.timedOut', { app: clientLabel(t, n.clientName) || t('approval.unknownApp') })
                   : t('approval.gone')}
               </p>
-              <button type="button" onClick={() => dismissNotice(n.id)} className="ml-1 rounded p-0.5 text-muted-foreground hover:text-foreground" aria-label={t('close')}>
+              <button type="button" onClick={() => dismissNotice(n.id)} className="ms-1 rounded p-0.5 text-muted-foreground hover:text-foreground" aria-label={t('close')}>
                 <X className={cn('h-3.5 w-3.5')} />
               </button>
             </div>

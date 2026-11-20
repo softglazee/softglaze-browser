@@ -1,0 +1,25 @@
+{
+  "contextMenu": {
+    "undo": "تراجع",
+    "redo": "إعادة",
+    "cut": "قص",
+    "copy": "نسخ",
+    "paste": "لصق",
+    "selectAll": "تحديد الكل",
+    "copyLink": "نسخ الرابط"
+  },
+  "dialogs": {
+    "exportArchiveTitle": "تصدير أرشيف ملفات مشفّر",
+    "archiveFilter": "أرشيف SoftGlaze مشفّر",
+    "importProfilesTitle": "اختر جدول ملفات SoftGlaze للاستيراد",
+    "spreadsheetFilter": "ملفات الجداول",
+    "exportProfilesTitle": "تصدير ملفات SoftGlaze",
+    "excelFilter": "مصنّف Excel",
+    "importIdentitiesTitle": "اختر جدول هويات للاستيراد",
+    "backupTitle": "نسخ احتياطي لمساحة العمل",
+    "backupFilter": "نسخة احتياطية لمساحة عمل SoftGlaze",
+    "restoreTitle": "استعادة نسخة احتياطية لمساحة العمل",
+    "exportActivityTitle": "تصدير سجل النشاط",
+    "bindSpreadsheetTitle": "اختر جدولًا لربطه بهذا التشغيل المتوازي"
+  }
+}

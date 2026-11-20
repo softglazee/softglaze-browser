@@ -129,7 +129,7 @@
     "inviteTitle": "Invitar miembro",
     "editTitle": "Editar {{name}}",
     "noCreatableRoles": "No tienes permiso para crear submiembros.",
-    "invitePendingCode": "Invitación pendiente - código"
+    "invitePendingCode": "Invitación pendiente, código"
   },
   "fields": {
     "name": "Nombre",
@@ -176,7 +176,7 @@
     "title": "Estado de la cuenta",
     "reason": "Motivo: {{reason}}",
     "unban": "Desbloquear miembro",
-    "banHint": "Editar los campos anteriores mantiene el bloqueo - usa Desbloquear para restaurar el acceso.",
+    "banHint": "Editar los campos anteriores mantiene el bloqueo. Usa Desbloquear para restaurar el acceso.",
     "suspendToggle": "Suspender este miembro (bloquea el inicio de sesión)",
     "ban": "Bloquear miembro"
   },
@@ -204,14 +204,14 @@
     },
     "pickTarget": "Elige un miembro para recibir los datos.",
     "reassignTo": "Reasignar a",
-    "noOtherMembers": "No hay otros miembros disponibles - elige otra opción."
+    "noOtherMembers": "No hay otros miembros disponibles. Elige otra opción."
   },
   "assign": {
     "title": "Asignar perfiles · {{name}}",
     "searchPlaceholder": "Buscar perfiles",
     "noProfiles": "No se encontraron perfiles.",
     "memberFallback": "miembro n.º {{id}}",
-    "updated": "Actualizado - {{assigned}} asignados, {{unassigned}} desasignados.",
+    "updated": "Actualizado: {{assigned}} asignados, {{unassigned}} desasignados.",
     "save": "Guardar asignación"
   },
   "activity": {

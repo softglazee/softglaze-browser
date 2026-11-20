@@ -1,0 +1,191 @@
+{
+  "badgeTitle": "CAPTCHA riski {{score}}/100. Nedenler ve çözümler için tıklayın.",
+  "title": "CAPTCHA puanı",
+  "subtitle": "Sitelerin bu profilden doğrulama isteme olasılığı ve bunu ne azaltır",
+  "outOf100": "/ 100",
+  "level": {
+    "low": "Düşük risk",
+    "some": "Orta risk",
+    "high": "Yüksek risk",
+    "veryHigh": "Çok yüksek risk"
+  },
+  "levelShort": {
+    "low": "Düşük",
+    "some": "Orta",
+    "high": "Yüksek",
+    "veryHigh": "Çok yüksek"
+  },
+  "column": "CAPTCHA riski",
+  "issues_zero": "Sorun bulunamadı",
+  "issues_one": "1 sorun",
+  "issues_other": "{{count}} sorun",
+  "fixable_one": "Tümünü düzelt 1 sorunu çözer",
+  "fixable_other": "Tümünü düzelt {{count}} sorunu çözer",
+  "leakTest": "Sızıntı testi",
+  "leakTestTitle": "Çalışan profilin canlı testi dahil ayrıntılı sızıntı kontrolünü aç",
+  "loadFailed": "Bu profil puanlanamadı.",
+  "fixAll": "Tümünü düzelt",
+  "fixAllTitle": "Yalnızca bu profilin ayarlarını veya proxy'sini değiştiren tüm düzeltmeleri uygula",
+  "rescore": "Yeniden puanla",
+  "done": "Bitti",
+  "runningNote": "Bu profil açık. Değişiklikler bir sonraki başlatmada uygulanır.",
+  "adviceOnly": "Bunu profil düzenleyicide değiştirin; buradaki bir düzeltme sitelerin zaten tanıdığı cihazı değiştirir.",
+  "status": {
+    "pass": "Tamam",
+    "warn": "Risk",
+    "fail": "Yüksek risk"
+  },
+  "fix": {
+    "assign-proxy": "Yedek bir proxy ver",
+    "swap-proxy": "Yedek proxy'ye geç",
+    "check-proxy": "Proxy'yi şimdi kontrol et",
+    "tz-auto": "Proxy'nin saat dilimini kullan",
+    "lang-auto": "Proxy'nin dilini kullan",
+    "geo-auto": "Proxy'nin konumunu kullan",
+    "webrtc-safe": "WebRTC'yi Forward yap",
+    "allow-3p-cookies": "Üçüncü taraf çerezlere izin ver",
+    "warm-up": "Isındır"
+  },
+  "result": {
+    "swapped": "Artık {{name}} kullanılıyor.",
+    "checked": "Proxy kontrol edildi.",
+    "checkFailed": "Proxy kontrolü geçemedi: {{error}}",
+    "warming": "Isınma başladı: profil açılır ve birkaç popüler sitede gezinir. Otomasyon sayfasından takip edin.",
+    "cookies": "Üçüncü taraf çerezlere artık her profil için izin veriliyor.",
+    "applied": "Tamam."
+  },
+  "label": {
+    "proxy": "Proxy",
+    "proxyHealth": "Proxy sağlığı",
+    "blocklist": "Spam kara listeleri",
+    "freeProxy": "Ücretsiz proxy",
+    "ipType": "IP türü",
+    "sharedProxy": "Paylaşılan proxy",
+    "timezone": "Saat dilimi",
+    "language": "Dil",
+    "geolocation": "Konum",
+    "webrtc": "WebRTC",
+    "thirdPartyCookies": "Üçüncü taraf çerezler",
+    "history": "Gezinme geçmişi",
+    "device": "Cihaz",
+    "osMismatch": "İşletim sistemi"
+  },
+  "factor": {
+    "proxy": {
+      "pass": "{{name}} kullanıyor.",
+      "warn": "Proxy yok: bu profil kendi bağlantınızı kullanıyor ve bu bağlantıyı proxy'siz her profil paylaşıyor."
+    },
+    "proxyHealth": {
+      "pass": "Son kontrolü geçti.",
+      "fail": "Son kontrolü geçemedi, bu yüzden sayfalar zaman aşımına uğrar veya hata gösterir.",
+      "never": "Hiç kontrol edilmedi, bu yüzden sağlığı ve kara liste durumu bilinmiyor.",
+      "stale": "Son kontrol {{days}} gün önce."
+    },
+    "blocklist": {
+      "pass": "Kontrol edilen hiçbir spam kara listesinde değil.",
+      "warn": "Henüz spam kara listelerine karşı kontrol edilmedi.",
+      "fail": "Çıkış IP'si bir spam kara listesinde. Google ve Cloudflare listelenen IP'lerden çok daha sık doğrulama ister."
+    },
+    "freeProxy": {
+      "fail": "Ücretsiz, herkese açık bir proxy. Çoğu işaretlidir, bu yüzden sık CAPTCHA bekleyin."
+    },
+    "ipType": {
+      "pass": "Ev veya mobil ağ{{isp}}.",
+      "warn": "Veri merkezi IP'si{{isp}}. Siteler barındırma şirketi IP'lerinden ev IP'lerine göre çok daha sık doğrulama ister."
+    },
+    "sharedProxy": {
+      "msg_one": "1 başka profil bu proxy'yi kullanıyor, bu yüzden aynı IP'yi paylaşıyorlar ve ilişkilendirilebilirler.",
+      "msg_other": "{{count}} başka profil bu proxy'yi kullanıyor, bu yüzden aynı IP'yi paylaşıyorlar ve ilişkilendirilebilirler."
+    },
+    "timezone": {
+      "pass": "Proxy'nin IP'sini izliyor.",
+      "warn": "Elle ayarlandı ({{zone}}), bu yüzden proxy ile eşleşmeyebilir.",
+      "fail": "Bu bilgisayarın saat dilimini kullanıyor ve proxy'nin ülkesiyle eşleşmiyor."
+    },
+    "language": {
+      "pass": "Proxy'nin ülkesiyle eşleşiyor.",
+      "warn": "Dil bölgesi {{region}}, proxy'nin ülkesi {{country}} ile eşleşmiyor.",
+      "unverified": "Elle ayarlandı ({{lang}}); proxy'nin ülkesi henüz bilinmediği için karşılaştırılamıyor."
+    },
+    "geolocation": {
+      "pass": "Proxy'nin IP'sini izliyor veya engellenmiş.",
+      "warn": "Elle ayarlandı, bu yüzden proxy ile eşleşmeyebilir."
+    },
+    "webrtc": {
+      "pass": "{{mode}} modu gerçek IP'nizi gizli tutar.",
+      "realNoProxy": "Proxy olmadan Real: siteler zaten bu bilgisayarın IP'sini görüyor, bu yüzden WebRTC onlara yeni bir şey göstermez.",
+      "firefoxOff": "Firefox profillerinde WebRTC kapalıdır ve bunu çok az gerçek tarayıcı yapar. Hiçbir ayar bunu değiştirmez.",
+      "warn": "WebRTC devre dışı ve bunu çok az gerçek tarayıcı yapar.",
+      "fail": "Real olarak ayarlı; proxy'nin arkasındaki gerçek IP'nizi gösterir."
+    },
+    "thirdPartyCookies": {
+      "pass": "Normal Chrome'daki gibi izinli.",
+      "warn": "Ayarlar'da her profil için engellendi. reCAPTCHA ve hCaptcha bunlara dayanır."
+    },
+    "history": {
+      "pass": "Gezinme geçmişi ve çerezleri var.",
+      "warn": "Neredeyse hiç çerez veya geçmiş yok. Siteler kullanılmış bir profile güvenir.",
+      "warmed_one": "{{count}} kez ısındırıldı, bu yüzden gerçek gezinme geçmişi ve çerezleri var.",
+      "warmed_other": "{{count}} kez ısındırıldı, bu yüzden gerçek gezinme geçmişi ve çerezleri var."
+    },
+    "device": {
+      "warn": "Grafik kartı (WebGL) bu cihaza veya sisteme uymayabilir.",
+      "fail": "Grafik kartı (WebGL) bu cihaza veya sisteme uymuyor."
+    },
+    "osMismatch": {
+      "warn": "{{claimed}} olduğunu söylüyor ama {{host}} üzerinde çalışıyor; yazı tipleri ve diğer ayrıntılar gerçek sistemi gösterebilir."
+    }
+  },
+  "prelaunch": {
+    "title_one": "Bu profili açılmadan önce kontrol edin",
+    "title_other": "{{count}} profili açılmadan önce kontrol edin",
+    "subtitle": "Siteler bu uyumsuzlukları profil açılır açılmaz görebilir.",
+    "issue": {
+      "uaOs": "User agent {{ua}} diyor, ancak profil {{os}} olarak ayarlı.",
+      "gpuOs": "Grafik kartı (WebGL) {{os}} ile uyumlu değil.",
+      "screen": {
+        "mobile": "{{width}}x{{height}} ekranlı bir telefon; telefon ekranları dar ve dikeydir.",
+        "desktop": "{{width}}x{{height}} ekranlı bir bilgisayar; bilgisayar ekranları en az 1024x600'dür."
+      },
+      "language": "Dil bölgesi {{region}}, proxy'nin ülkesi {{country}} ile eşleşmiyor.",
+      "timezone": "Saat dilimi proxy'den değil, bu bilgisayardan geliyor.",
+      "webrtc": "WebRTC Real olarak ayarlı; proxy'nin arkasındaki gerçek IP'nizi gösterir.",
+      "proxyDead": "Proxy son kontrolü geçemedi.",
+      "socks4Dns": "SOCKS4 proxy {{proxy}} kullanıyor. Chromium DNS sorgularını SOCKS4 üzerinden gönderemez, bu yüzden her site proxy dışında sorgulanır (DNS sızıntısı) ve profil açılmaz. Firefox'ta açın veya SOCKS5 ya da HTTP proxy verin."
+    },
+    "os": {
+      "windows": "Windows",
+      "mac": "macOS",
+      "linux": "Linux",
+      "android": "Android",
+      "ios": "iOS"
+    },
+    "editorOnly": "(profil düzenleyicide değiştirin)",
+    "blocking": "(profil düzenleyicide değiştirene kadar bu profil açılmaz)",
+    "stopAsking": "Başlatmadan önce bir daha kontrol etme (Ayarlar'dan tekrar açabilirsiniz)",
+    "cancel": "İptal",
+    "launchAnyway": "Yine de başlat",
+    "fixAndLaunch": "Düzelt ve başlat"
+  },
+  "bulk": {
+    "fix": "CAPTCHA sorunlarını düzelt",
+    "fixTitle": "Seçili profillere güvenli CAPTCHA düzeltmelerini uygula: saat dilimi, dil, konum, WebRTC ve riski azalttığında yedek proxy",
+    "confirm_one": "Bu profildeki CAPTCHA sorunları düzeltilsin mi? Yalnızca riski azaltan ayarlar ve proxy'ler değiştirilir.",
+    "confirm_other": "{{count}} profildeki CAPTCHA sorunları düzeltilsin mi? Yalnızca riski azaltan ayarlar ve proxy'ler değiştirilir.",
+    "done": "{{total}} profilden {{changed}} tanesi düzeltildi; {{swapped}} tanesi yedek proxy'ye taşındı.",
+    "noBetter": "{{count}} profil için daha iyi proxy bulunamadı."
+  },
+  "filter": {
+    "any": "Herhangi bir CAPTCHA riski",
+    "low": "Düşük risk",
+    "some": "Biraz risk",
+    "high": "Yüksek risk",
+    "veryHigh": "Çok yüksek risk",
+    "fixable": "Tek tıkla düzeltilebilir"
+  },
+  "sort": {
+    "default": "Varsayılan sıra",
+    "riskDesc": "En riskli önce",
+    "riskAsc": "En güvenli önce"
+  }
+}

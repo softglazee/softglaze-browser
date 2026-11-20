@@ -3,16 +3,17 @@ import { KeyRound, LogOut, Loader2, Mail, WifiOff, CheckCircle2, AlertTriangle }
 import { useTranslation } from 'react-i18next';
 import { softglazeApi } from '@/lib/softglazeApi.js';
 import { methodRows } from '@/lib/signInFlow.mjs';
-import SignInPanel, { GithubMark } from '@/components/SignInPanel.jsx';
+import SignInPanel, { GithubMark, GoogleMark, MicrosoftMark, FacebookMark, LinkedinMark } from '@/components/SignInPanel.jsx';
+import { intlLocale } from '@/lib/intl.mjs';
 
-// Settings > Account: the SoftGlaze account's sign-in methods (GitHub, email code) and Sign out (1.0.26).
+// Settings > Account: the SoftGlaze account's sign-in methods (Google, Microsoft, Facebook, LinkedIn, GitHub, email code) and Sign out (1.0.26).
 // Only the workspace Owner (or the Super Admin) sees it; main decides what can be done (oneClickSignIn.js).
 
 function formatDate(value, lang) {
   if (!value) return '';
   const d = new Date(value);
   if (Number.isNaN(d.getTime())) return '';
-  try { return d.toLocaleDateString(lang || undefined, { year: 'numeric', month: 'short', day: 'numeric' }); } catch (_) { return d.toISOString().slice(0, 10); }
+  try { return d.toLocaleDateString(intlLocale(lang), { year: 'numeric', month: 'short', day: 'numeric' }); } catch (_) { return d.toISOString().slice(0, 10); }
 }
 
 export default function SignInMethodsCard({ isOwner }) {
@@ -61,10 +62,10 @@ export default function SignInMethodsCard({ isOwner }) {
             {rows.map((m) => (
               <li key={`${m.provider}-${m.login || m.email}`} className="flex items-center gap-3 px-3 py-2.5 min-w-0">
                 <span className="w-8 h-8 rounded-lg bg-secondary grid place-items-center shrink-0 text-foreground">
-                  {m.provider === 'github' ? <GithubMark className="w-4 h-4" /> : <Mail className="w-4 h-4" />}
+                  {m.provider === 'google' ? <GoogleMark className="w-4 h-4" /> : m.provider === 'microsoft' ? <MicrosoftMark className="w-4 h-4" /> : m.provider === 'facebook' ? <FacebookMark className="w-4 h-4" /> : m.provider === 'linkedin' ? <LinkedinMark className="w-4 h-4" /> : m.provider === 'github' ? <GithubMark className="w-4 h-4" /> : <Mail className="w-4 h-4" />}
                 </span>
                 <span className="min-w-0 flex-1">
-                  <span className="block text-[13px] font-medium text-foreground truncate">{m.provider === 'github' ? (m.login ? t('account.githubLogin', { login: m.login }) : t('account.github')) : t('account.email')}</span>
+                  <span className="block text-[13px] font-medium text-foreground truncate">{m.provider === 'google' ? t('account.google') : m.provider === 'microsoft' ? t('account.microsoft') : m.provider === 'facebook' ? t('account.facebook') : m.provider === 'linkedin' ? t('account.linkedin') : m.provider === 'github' ? (m.login ? t('account.githubLogin', { login: m.login }) : t('account.github')) : t('account.email')}</span>
                   <span className="block text-[11.5px] text-muted-foreground truncate">{m.email || ''}</span>
                 </span>
                 <span className="text-[11px] text-muted-foreground shrink-0 hidden sm:block">

@@ -1,0 +1,330 @@
+{
+  "header": {
+    "eyebrow": "团队",
+    "title": "成员",
+    "manageCount_one": "你管理 {{count}} 位成员",
+    "manageCount_other": "你管理 {{count}} 位成员",
+    "workspaceStats": "工作区中有 {{profiles}} 个配置文件 · {{proxies}} 个代理"
+  },
+  "tabs": {
+    "members": "成员",
+    "activity": "活动",
+    "licenses": "许可证"
+  },
+  "memberCount_one": "{{count}} 位成员",
+  "memberCount_other": "{{count}} 位成员",
+  "roles": {
+    "SUPER_ADMIN": "超级管理员",
+    "OWNER": "所有者",
+    "ADMIN": "管理员",
+    "MANAGER": "经理",
+    "OPERATOR": "操作员"
+  },
+  "roleDesc": {
+    "OWNER": "完全控制，包括成员和保险库。",
+    "ADMIN": "管理配置文件、代理、分组，以及自己创建的经理和操作员。",
+    "MANAGER": "创建、编辑和启动配置文件，并添加操作员。",
+    "OPERATOR": "只能启动和使用分配给自己的配置文件。"
+  },
+  "actionCategories": {
+    "Profiles": "配置文件",
+    "Proxies": "代理",
+    "Automation": "自动化",
+    "Workspace": "工作区",
+    "Team": "团队"
+  },
+  "actionLabels": {
+    "profiles_launch": "启动配置文件",
+    "profiles_create": "创建配置文件",
+    "profiles_edit": "编辑配置文件",
+    "profiles_export": "导出配置文件",
+    "profiles_share": "与成员共享配置文件",
+    "profiles_delete": "删除配置文件（移到回收站）",
+    "profiles_purge": "永久清除配置文件",
+    "proxies_manage": "添加/编辑/删除代理",
+    "proxies_reveal": "显示原始代理凭据",
+    "automation_run": "运行自动化/宏",
+    "extensions_manage": "管理团队扩展程序",
+    "settings_manage": "更改工作区设置",
+    "vault_manage": "管理身份保险库",
+    "members_manage": "管理团队成员",
+    "members_delete": "删除成员/更改角色"
+  },
+  "features": {
+    "dashboard": "仪表板（仅页面）",
+    "profiles": "配置文件",
+    "groups": "分组",
+    "proxies": "代理池",
+    "browsers": "浏览器",
+    "extensions": "扩展程序",
+    "batchImport": "批量导入",
+    "trash": "回收站",
+    "members": "成员",
+    "settings": "设置"
+  },
+  "caps": {
+    "maxAdmins": "管理员",
+    "maxManagers": "经理",
+    "maxOperators": "操作员"
+  },
+  "labels": {
+    "profiles": "配置文件",
+    "proxies": "代理",
+    "browsers": "浏览器"
+  },
+  "status": {
+    "active": "活跃",
+    "suspended": "已暂停",
+    "banned": "已阻止"
+  },
+  "actions": {
+    "inviteMember": "邀请成员",
+    "inviteTeamMember": "邀请团队成员",
+    "remove": "移除",
+    "removeMember": "移除成员",
+    "assignProfiles": "分配配置文件",
+    "cancel": "取消",
+    "close": "关闭",
+    "clear": "清除",
+    "save": "保存",
+    "createInvite": "创建邀请",
+    "done": "完成",
+    "copy": "复制",
+    "copied": "已复制"
+  },
+  "empty": {
+    "title": "还没有成员",
+    "canCreate": "邀请你的第一位团队成员，开始分派工作。",
+    "noMembers": "你名下还没有成员。"
+  },
+  "member": {
+    "you": "你",
+    "noEmail": "无邮箱",
+    "invitePending": "邀请待接受",
+    "loginSet": "已设置登录",
+    "subMembers_one": "{{count}} 位下级成员",
+    "subMembers_other": "{{count}} 位下级成员"
+  },
+  "time": {
+    "neverActive": "从未活跃",
+    "activeJustNow": "刚刚活跃",
+    "activeMinutes": "{{count}} 分钟前活跃",
+    "activeHours": "{{count}} 小时前活跃",
+    "activeDays": "{{count}} 天前活跃"
+  },
+  "errors": {
+    "loadMembers": "无法加载成员。",
+    "changeStatus": "无法更改状态。",
+    "nameRequired": "名称为必填项。",
+    "saveMember": "无法保存成员。",
+    "resetPerms": "无法重置权限。",
+    "removeMember": "无法移除成员。",
+    "loadProfiles": "无法加载配置文件。",
+    "reassignProfiles": "无法重新分配配置文件。"
+  },
+  "confirm": {
+    "revertPerms": "将 {{name}} 的限额和功能重置为其角色的默认值？"
+  },
+  "modal": {
+    "inviteTitle": "邀请成员",
+    "editTitle": "编辑 {{name}}",
+    "noCreatableRoles": "你无权创建任何下级成员。",
+    "invitePendingCode": "邀请待接受：邀请码"
+  },
+  "fields": {
+    "name": "名称",
+    "namePlaceholder": "姓名",
+    "email": "邮箱",
+    "role": "角色",
+    "color": "颜色",
+    "instructions": "说明",
+    "optional": "（可选）",
+    "instructionsPlaceholder": "此成员负责的工作…"
+  },
+  "invite": {
+    "createdTitle": "邀请已创建",
+    "sharePrefix": "请将此邀请码分享给 ",
+    "shareSuffix": "。对方打开 SoftGlaze Browser →“有邀请码？”，输入邀请码并设置密码。",
+    "code": "邀请码",
+    "link": "邀请链接",
+    "emailedTo": "已发送邮件至 {{email}}。",
+    "emailNotSent": "邮件未发送（请在“设置 → 邮件”中配置 SMTP）。请手动分享邀请码。"
+  },
+  "alloc": {
+    "heading_one": "已分配给 {{count}} 位下级成员",
+    "heading_other": "已分配给 {{count}} 位下级成员",
+    "allocated": "已分配 {{allocated}}/{{cap}}",
+    "left": "· 剩余 {{remaining}}"
+  },
+  "perms": {
+    "title": "权限和限额",
+    "resourceLimits": "资源限额",
+    "subMemberCaps": "下级成员上限",
+    "visibleFeatures": "可见功能",
+    "actionPermissions": "操作权限",
+    "actionHint": "此角色默认开启。关闭某项即可仅对此成员撤销该权限。",
+    "revertDefaults": "恢复为角色默认值",
+    "max": "（最多 {{max}}）",
+    "canInvite": {
+      "canCreateAdmins": "可以邀请管理员",
+      "canCreateManagers": "可以邀请经理",
+      "canCreateOperators": "可以邀请操作员"
+    },
+    "featuresHint": "关闭的功能会从侧边栏中隐藏，其相关操作在任何地方都会被拒绝（例如添加代理、从回收站恢复或下载浏览器）。其他页面所需的列表（例如在配置文件编辑器中选择代理或分组）仍会加载。"
+  },
+  "accountStatus": {
+    "title": "账号状态",
+    "reason": "原因：{{reason}}",
+    "unban": "解除阻止成员",
+    "banHint": "编辑上方字段不会解除阻止。请使用“解除阻止成员”恢复访问。",
+    "suspendToggle": "暂停此成员（阻止登录）",
+    "ban": "阻止成员"
+  },
+  "delete": {
+    "title": "移除 {{name}}",
+    "warnPrefix": "此操作将移除 ",
+    "warnMiddle": "，并将其所有下级成员转到你名下。请选择如何处理其数据：",
+    "profilesWord_one": "个配置文件",
+    "profilesWord_other": "个配置文件",
+    "proxiesWord_one": "个代理",
+    "proxiesWord_other": "个代理",
+    "options": {
+      "reassignMe": {
+        "label": "保留并重新分配给我",
+        "desc": "你将成为其配置文件和代理的所有者。"
+      },
+      "reassignOther": {
+        "label": "保留并重新分配给其他成员",
+        "desc": "将其数据移交给指定的队友。"
+      },
+      "delete": {
+        "label": "删除所有关联数据",
+        "desc": "其代理和代理分组将被删除；配置文件会移到回收站（可恢复）。"
+      }
+    },
+    "pickTarget": "请选择接收数据的成员。",
+    "reassignTo": "重新分配给",
+    "noOtherMembers": "没有其他可选成员，请选择其他选项。"
+  },
+  "assign": {
+    "title": "分配配置文件 · {{name}}",
+    "searchPlaceholder": "搜索配置文件",
+    "noProfiles": "未找到配置文件。",
+    "memberFallback": "成员 #{{id}}",
+    "updated": "已更新：分配 {{assigned}} 个，取消分配 {{unassigned}} 个。",
+    "save": "保存分配"
+  },
+  "activity": {
+    "title": "团队活动",
+    "subtitle": "此工作区中谁做了什么",
+    "exported": "已导出 {{count}} 行 → {{path}}",
+    "exportError": "无法导出活动日志。",
+    "filterByMember": "按成员筛选",
+    "filterByAction": "按操作筛选",
+    "allMembers": "所有成员",
+    "allActions": "所有操作",
+    "fromDate": "开始日期",
+    "toDate": "结束日期",
+    "empty": "还没有活动记录。",
+    "noMatch": "没有符合这些筛选条件的活动。",
+    "enterpriseFeature": "Enterprise 功能",
+    "seeBilling": "查看账单",
+    "exportEnterpriseOnly": "审计日志导出（CSV/JSON）是 Enterprise 功能。请在“账单”页面升级以导出活动日志。"
+  },
+  "activityActions": {
+    "launched": "启动了",
+    "stopped": "停止了",
+    "created": "创建了",
+    "edited": "编辑了",
+    "deleted": "删除了",
+    "restored": "恢复了",
+    "imported": "导入了",
+    "assigned": "分配了",
+    "reassigned": "重新分配了",
+    "parallel_run": "并行运行",
+    "macro_run": "运行了宏",
+    "member_added": "添加了成员",
+    "member_edited": "编辑了成员",
+    "member_removed": "移除了成员",
+    "permissions_changed": "更改了权限",
+    "status_changed": "更改了状态",
+    "signed_in": "登录",
+    "signed_out": "退出登录",
+    "invite_accepted": "接受了邀请",
+    "proxies_copied_for_extension": "为扩展程序复制了代理",
+    "devtools_address_shown": "显示了 DevTools 地址"
+  },
+  "feedTime": {
+    "justNow": "刚刚",
+    "minutes": "{{count}} 分钟前",
+    "hours": "{{count}} 小时前",
+    "days": "{{count}} 天前"
+  },
+  "license": {
+    "intro": "每个所有者工作区的订阅状态。基于本地并尽力而为：有心的用户仍可修改本地数据库或系统时钟；可靠的限制需要许可证后端。",
+    "noOwners": "还没有所有者工作区。",
+    "editTitle": "许可证 · {{name}}",
+    "setState": "设置状态",
+    "grantPlan": "授予套餐",
+    "lifecycle": "生命周期",
+    "state": {
+      "paid": "已付费",
+      "trialing": "试用",
+      "grace": "宽限期",
+      "banned": "已阻止"
+    },
+    "type": {
+      "trial": "试用",
+      "paid": "付费"
+    },
+    "tier": {
+      "pro": "pro",
+      "enterprise": "enterprise"
+    },
+    "fields": {
+      "type": "类型",
+      "tier": "级别",
+      "expiry": "到期时间",
+      "plan": "套餐",
+      "months": "月数"
+    },
+    "detail": {
+      "trial": "试用剩余 {{count}} 天",
+      "grace": "宽限期：剩余 {{count}} 天",
+      "paid": "付费至 {{date}}",
+      "clockAnomaly": "⚠ 时钟异常"
+    },
+    "actions": {
+      "grantMonth": "授予 1 个月",
+      "extend7": "+7 天",
+      "startTrial": "开始试用",
+      "resetTrial": "重置试用",
+      "edit": "编辑",
+      "terminate": "终止",
+      "unblock": "解除阻止",
+      "block": "阻止",
+      "saveState": "保存状态",
+      "grantPlan": "授予套餐",
+      "startFreeTrial": "开始免费试用",
+      "terminateNow": "立即终止"
+    },
+    "confirm": {
+      "terminate": "立即终止 {{name}} 的订阅？在你再次授予访问权限之前，其配置文件将被锁定。",
+      "terminateModal": "立即终止此订阅？在你再次授予访问权限之前，配置文件将被锁定。",
+      "resetTrial": "重置 {{name}} 的试用？其试用期将重新计时，当前的许可证状态将被替换。",
+      "block": "阻止 {{name}}？对方及其所有下级成员都将被退出登录，在你解除阻止之前无法使用应用。"
+    },
+    "errors": {
+      "load": "无法加载许可证。",
+      "action": "操作失败。"
+    }
+  },
+  "seats": {
+    "usage": "{{used}}/{{total}} 位成员",
+    "fullNotice": "你套餐中的全部 {{total}} 个团队席位都已使用，无法再添加新成员。暂停一位成员即可空出席位，或升级到 Enterprise，最多可有 {{enterpriseSeats}} 位团队成员。",
+    "fullNoticeTop": "你套餐中的全部 {{total}} 个团队席位都已使用，无法再添加新成员。暂停一位成员即可空出席位。",
+    "overNotice": "此团队有 {{used}} 位成员，而你的套餐包含 {{total}} 位。所有人都会保留访问权限；团队人数低于上限后才能添加新成员。",
+    "seeBilling": "查看账单",
+    "limitError": "你套餐中的所有团队席位都已使用。暂停一位成员即可空出席位，或在“账单”中查看套餐选项。"
+  }
+}

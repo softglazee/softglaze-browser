@@ -388,7 +388,7 @@ test('87: after a fill the autofill list opens again with "Mark as used", and th
 
 test('87: the Data Vault table fits a 1440 px window; Phone and Created show from 2xl', () => {
   const page = read('src', 'renderer', 'pages', 'PersonasPage.jsx');
-  assert.match(page, /<table className="w-full min-w-\[900px\] border-collapse text-left text-sm">/);
+  assert.match(page, /<table className="w-full min-w-\[900px\] border-collapse text-start text-sm">/);
   assert.doesNotMatch(page, /min-w-\[1200px\]/);
   assert.match(page, /<th className="px-3 py-4 hidden 2xl:table-cell">\{t\('table\.colPhone'\)\}<\/th>/);
   assert.match(page, /<th className="px-3 py-4 hidden 2xl:table-cell">\{t\('table\.colCreated'\)\}<\/th>/);

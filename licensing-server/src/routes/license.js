@@ -1,8 +1,17 @@
 'use strict';
-// POST /v1/license { tenantId, installId, installSecret, machineHash, appVersion?, channel? } -> { lease, exp, tier,
-// currentPeriodEnd, type: 'paid' } | the running trial { lease, exp, tier, type: 'trial', trialEndsAt,
-// currentPeriodEnd } | { lease: null, status, trialEndsAt? }; 401 bad install/secret, 400 machine_required,
-// 403 machine_mismatch. The licence is found only by the authenticated installId, never by email.
+// POST /v1/license { tenantId, installId, installSecret, machineHash, appVersion?, channel?, usage? } ->
+//   paid:  { lease, exp, tier, currentPeriodEnd, type: 'paid', plan, limits }
+//   trial: { lease, exp, tier, type: 'trial', trialEndsAt, currentPeriodEnd, plan: 'trial', limits }
+//   Free:  { lease: null, status, trialEndsAt?, free: true, plan: 'free', tier: 'free', limits, usageFlags? }
+//   lock:  { lease: null, status, trialEndsAt?, free: false, lockReason: 'revoked' | 'refunded' }
+// 401 bad install/secret, 400 machine_required, 403 machine_mismatch. The licence is found only by the
+// authenticated installId, never by email.
+// Free plan (reverse trial): with no active paid licence and no running trial the install is on Free, which
+// is "no lease + free: true" and never a signed lease (app 1.0.26 reads any lease as paid; it reads
+// lease: null exactly as before). Only an admin revoke or a refund locks instead (lockReason).
+// usage (optional): { aiActionsToday, profiles, running } (integers; anything else is ignored). On Free, more
+// AI actions today than limits.aiActionsPerDay answers usageFlags: ['ai_over_limit'] and records one
+// customer event free_limit_exceeded per install per UTC day (src/plans/entitlement.js).
 // appVersion (optional) is recorded so the admin shows which version each customer runs; channel
 // (optional: store | website | base) records where the app was installed from, anything else is ignored.
 const express = require('express');
@@ -14,11 +23,13 @@ const { checkMachine, transferMachine } = require('../machineBinding');
 const { trialLeaseFor } = require('../trials/ledger');
 const { touchInstall } = require('../customers/sync');
 const { pickLeaseLicence } = require('../licensing');
+const { freeLimits } = require('../plans/service');
+const { limitsForLicence, lockReasonFor, parseUsage, checkFreeUsage } = require('../plans/entitlement');
 
 const router = express.Router();
 
 router.post('/', asyncHandler(async (req, res) => {
-  const { tenantId, installId, installSecret, machineHash, appVersion, channel } = req.body || {};
+  const { tenantId, installId, installSecret, machineHash, appVersion, channel, usage } = req.body || {};
   if (!tenantId) return res.status(400).json({ error: 'tenantId is required.' });
   if (!installId || !installSecret) return res.status(400).json({ error: 'installId and installSecret are required.' });
 
@@ -42,11 +53,20 @@ router.post('/', asyncHandler(async (req, res) => {
     // No paid licence: a running server-side trial keeps the app licensed with a trial lease.
     const trial = await trialLeaseFor(prisma, tenant, install, now);
     if (trial.active) return res.json(trial.active);
-    return res.json({ lease: null, status: lic ? lic.status : 'none', ...(trial.last ? { trialEndsAt: trial.last.endsAt } : {}) });
+    const base = { lease: null, status: lic ? lic.status : 'none', ...(trial.last ? { trialEndsAt: trial.last.endsAt } : {}) };
+    const lockReason = lockReasonFor(lic);
+    if (lockReason) return res.json({ ...base, free: false, lockReason });
+    // Trial ended, term ended, subscription cancelled at its end, or never a trial: the Free plan.
+    const limits = await freeLimits(prisma, tenant.id);
+    const usageFlags = await checkFreeUsage(prisma, tenant.id, install, parseUsage(usage), limits, now);
+    return res.json({ ...base, free: true, plan: 'free', tier: 'free', limits, ...(usageFlags.length ? { usageFlags } : {}) });
   }
 
   const lease = issueLease(tenant, lic, now, { mid: install.machineHash });
-  res.json({ lease: lease.token, exp: lease.exp, tier: lease.tier, currentPeriodEnd: lic.currentPeriodEnd, type: 'paid' });
+  res.json({
+    lease: lease.token, exp: lease.exp, tier: lease.tier, currentPeriodEnd: lic.currentPeriodEnd, type: 'paid',
+    plan: lic.plan || lease.tier, limits: await limitsForLicence(prisma, tenant.id, lic)
+  });
 }));
 
 // POST /v1/license/transfer { tenantId, installId, installSecret, machineHash, proof }

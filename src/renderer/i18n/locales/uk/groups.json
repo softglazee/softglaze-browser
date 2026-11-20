@@ -1,0 +1,53 @@
+{
+  "header": {
+    "eyebrow": "Організація",
+    "title": "Групи й теги",
+    "description": "Розподіляйте профілі за групами й позначайте їх тегами для швидкого фільтрування."
+  },
+  "filters": {
+    "allProfiles": "Усі профілі",
+    "ungrouped": "Без групи",
+    "group": "Група"
+  },
+  "sidebar": {
+    "directories": "Каталоги",
+    "createGroup": "Створити групу",
+    "renameGroup": "Перейменувати групу {{name}}",
+    "deleteGroup": "Видалити групу {{name}}",
+    "groupNamePlaceholder": "Назва групи..."
+  },
+  "table": {
+    "searchPlaceholder": "Пошук профілів...",
+    "loading": "Завантаження груп...",
+    "colProfileName": "Назва профілю",
+    "colGroupAssignment": "Група",
+    "colTags": "Теги"
+  },
+  "tagFilter": {
+    "label": "Фільтри",
+    "clear": "скинути"
+  },
+  "bulk": {
+    "selected_one": "Вибрано {{count}}",
+    "selected_few": "Вибрано {{count}}",
+    "selected_many": "Вибрано {{count}}",
+    "selected_other": "Вибрано {{count}}",
+    "moveTo": "Перемістити до:",
+    "chooseGroup": "Оберіть групу…",
+    "clear": "Скинути"
+  },
+  "empty": {
+    "title": "Профілів не знайдено",
+    "noMatch": "Немає профілів, що відповідають фільтрам.",
+    "groupEmpty": "Ця група порожня. Переміщуйте сюди профілі через список «Група»."
+  },
+  "tags": {
+    "add": "Додати тег",
+    "remove": "Видалити тег",
+    "inputPlaceholder": "тег + Enter"
+  },
+  "deleteConfirm": "Видалити групу «{{name}}»? Її профілі стануть «Без групи» (самі профілі не видаляються).",
+  "errors": {
+    "loadFailed": "Не вдалося завантажити групи."
+  }
+}

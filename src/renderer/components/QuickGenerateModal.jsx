@@ -13,7 +13,7 @@ const inputCls = 'w-full h-10 bg-background border border-border rounded-lg px-3
 const labelCls = 'block text-[11px] font-medium text-muted mb-1.5';
 // Hide the native arrow and paint an inset chevron, matching the app's other selects.
 const chevronStyle = { backgroundImage: "url(\"data:image/svg+xml;charset=utf8,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%239aa0aa' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'/%3E%3C/svg%3E\")", backgroundRepeat: 'no-repeat', backgroundPosition: 'right 0.7rem center', backgroundSize: '1rem' };
-const selectCls = inputCls + ' appearance-none pr-9 cursor-pointer';
+const selectCls = inputCls + ' appearance-none pe-9 cursor-pointer';
 
 // A provider tag shows its Proxy providers name, as on the Proxy pool page (Decodo (Smartproxy), Node4, ...);
 // a tag no connector has any more shows the vendor name its proxies were pulled with.
@@ -228,7 +228,7 @@ export default function QuickGenerateModal({ osPlatforms = [], groups = [], prox
           </label>
 
           <div>
-            <label className={labelCls}><Link2 className="inline w-3 h-3 mr-1 -mt-0.5" />{t('quickGenerate.startupLinks')} <span className="text-muted-dark">{t('quickGenerate.startupLinksHint')}</span></label>
+            <label className={labelCls}><Link2 className="inline w-3 h-3 me-1 -mt-0.5" />{t('quickGenerate.startupLinks')} <span className="text-muted-dark">{t('quickGenerate.startupLinksHint')}</span></label>
             <textarea rows={2} className={inputCls + ' h-auto py-2 text-[12px] resize-none'} value={startupUrls} onChange={(e) => setStartupUrls(e.target.value)} placeholder={'https://facebook.com\nhttps://mail.google.com'} />
           </div>
 

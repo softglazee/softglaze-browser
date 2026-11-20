@@ -1,0 +1,56 @@
+{
+  "header": {
+    "eyebrow": "مستودع Enterprise",
+    "title": "الإضافات",
+    "summary_zero": "لا توجد إضافات مثبّتة · {{enabled}} مفعّلة للملفات التي تحمّل الإضافات",
+    "summary_one": "إضافة واحدة مثبّتة · {{enabled}} مفعّلة للملفات التي تحمّل الإضافات",
+    "summary_two": "إضافتان مثبّتتان · {{enabled}} مفعّلة للملفات التي تحمّل الإضافات",
+    "summary_few": "{{count}} إضافات مثبّتة · {{enabled}} مفعّلة للملفات التي تحمّل الإضافات",
+    "summary_many": "{{count}} إضافةً مثبّتة · {{enabled}} مفعّلة للملفات التي تحمّل الإضافات",
+    "summary_other": "{{count}} إضافة مثبّتة · {{enabled}} مفعّلة للملفات التي تحمّل الإضافات"
+  },
+  "stats": {
+    "total": "إجمالي الإضافات",
+    "injected": "مفعّلة",
+    "disabled": "معطّلة"
+  },
+  "caveat": {
+    "before": "لا تُضاف الإضافات إلى كل ملف. فهي تُحمَّل فقط في ملفات Chromium التي فُعّل فيها خيار «تحميل إضافات SoftGlaze (يستخدم Chrome-for-Testing)» في علامة التبويب «متقدم» بمحرر الملف (معطّل افتراضيًا). تحمّلها هذه الملفات عبر خيار Chromium",
+    "middle": "عند التشغيل، لذا يسري أي تغيير عند",
+    "nextLaunch": "التشغيل التالي",
+    "after": "لمثل هذا الملف. يتجاهل Chrome العادي هذا الخيار، لذا تُفتح هذه الملفات على إصدار Chrome for Testing: نزّل واحدًا من صفحة المتصفحات أولًا، وإلا فسيُفتح الملف بدون الإضافات. ملفات Firefox لا تحمّلها."
+  },
+  "importer": {
+    "title": "استيراد إلى الفريق",
+    "description": "الصق رابط Chrome Web Store أو معرّفه المكوّن من 32 حرفًا، وسينزّل SoftGlaze الحزمة الحقيقية ويفك ضغطها.",
+    "inputPlaceholder": "https://chromewebstore.google.com/detail/…  أو  cjpalhdlnbpafiamejdnhcphjbkeiagm",
+    "submit": "استيراد إلى الفريق"
+  },
+  "installPhase": {
+    "downloading": "جارٍ تنزيل الحزمة…",
+    "extracting": "جارٍ فك ضغط الأرشيف…",
+    "registering": "جارٍ التسجيل…"
+  },
+  "permissionNotice": "يمكن للمسؤولين ومن هم أعلى فقط إدارة إضافات الفريق. يمكنك عرض المستودع.",
+  "searchPlaceholder": "ابحث بالاسم أو المعرّف…",
+  "empty": {
+    "loadErrorTitle": "تعذّر تحميل الإضافات",
+    "noExtTitle": "لا توجد إضافات بعد",
+    "noMatchTitle": "لا توجد إضافات تطابق بحثك",
+    "noExtDesc": "استورد إضافة من Chrome Web Store أعلاه لإضافتها إلى مستودع فريقك. تُحمَّل في الملفات التي فُعّل فيها خيار «تحميل إضافات SoftGlaze» في علامة التبويب «متقدم».",
+    "noMatchDesc": "جرّب اسمًا أو معرّفًا مختلفًا."
+  },
+  "card": {
+    "unpacked": "إضافة غير مضغوطة",
+    "removeTitle": "إزالة من الفريق",
+    "injected": "مفعّلة",
+    "disabled": "معطّلة"
+  },
+  "confirmRemove": "هل تريد إزالة «{{name}}» من مستودع الفريق؟ ستُحذف ملفاتها المحلية.",
+  "errors": {
+    "couldNotLoad": "تعذّر تحميل الإضافات.",
+    "installFailed": "فشل التثبيت.",
+    "couldNotUpdate": "تعذّر تحديث الإضافة.",
+    "couldNotRemove": "تعذّرت إزالة الإضافة."
+  }
+}

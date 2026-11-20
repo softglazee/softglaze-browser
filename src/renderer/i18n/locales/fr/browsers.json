@@ -1,0 +1,70 @@
+{
+  "header": {
+    "eyebrow": "Moteurs",
+    "title": "Navigateurs",
+    "subtitle": "Téléchargez de vraies versions de Chrome et Firefox à la demande : installées automatiquement et prêtes à lancer.",
+    "refresh": "Actualiser"
+  },
+  "stats": {
+    "chromeInstalled": "Chrome installés",
+    "chromeAvailable": "Chrome disponibles",
+    "firefoxInstalled": "Firefox installés",
+    "firefoxAvailable": "Firefox disponibles"
+  },
+  "counts": {
+    "installedAvailable": "· {{installed}} installé(s) · {{available}} disponible(s)"
+  },
+  "engine": {
+    "heading": "Moteur d'empreinte",
+    "installed": "Installé",
+    "notInstalled": "Non installé",
+    "description": "fingerprint-chromium définit nativement canvas, WebGL, UA, plateforme et fuseau horaire, masque webdriver et bloque la fuite WebRTC. Activez-le dans Paramètres → Navigateur.",
+    "progressInstalling": "installation",
+    "progressVerifying": "vérification",
+    "installing": "Installation",
+    "verifying": "Vérification",
+    "downloading": "Téléchargement",
+    "download": "Télécharger (~180 Mo)"
+  },
+  "firefox": {
+    "heading": "Firefox",
+    "ready": "Prêt",
+    "notDetected": "Non détecté",
+    "detectedDesc": "Prêt. Détecté dans {{path}}. Les profils Firefox lancent le vrai Firefox avec proxy, UA, langue, fuseau horaire et WebRTC désactivé.",
+    "notDetectedDesc": "Aucun Firefox système détecté. Téléchargez une version ci-dessous : elle s'installe dans l'application et les profils Firefox lanceront le vrai Firefox avec proxy, UA, langue, fuseau horaire et WebRTC désactivé.",
+    "fetching": "Récupération du catalogue des versions de Firefox…",
+    "empty": "Aucune version de Firefox disponible (êtes-vous hors ligne ?)."
+  },
+  "chromium": {
+    "heading": "Chromium (Chrome for Testing)",
+    "subtitle": "Versions réelles : UA, Client-Hints, TLS et workers correspondent tous réellement à la version.",
+    "fetching": "Récupération du catalogue Chrome for Testing…",
+    "empty": "Aucune version disponible (êtes-vous hors ligne ?)."
+  },
+  "row": {
+    "versionLabel": "{{brand}} {{major}}",
+    "ready": "Prêt",
+    "paused": "En pause",
+    "interrupted": "Interrompu",
+    "resume": "Reprendre",
+    "download": "Télécharger",
+    "retry": "Réessayer",
+    "downloading": "Téléchargement",
+    "installing": "Installation…",
+    "installingShort": "Installation",
+    "queued": "En file d'attente…",
+    "pauseDownload": "Mettre en pause",
+    "pausedPercent": "En pause · {{percent}} %",
+    "interruptedPercent": "Interrompu · {{percent}} %"
+  },
+  "errors": {
+    "catalogUnreachable": "Impossible d'accéder au catalogue des navigateurs. Vérifiez votre connexion Internet.",
+    "downloadFailed": "Échec du téléchargement.",
+    "pauseFailed": "Échec de la mise en pause.",
+    "resumeFailed": "Échec de la reprise."
+  },
+  "browsers": {
+    "showAll": "Afficher les {{n}} versions",
+    "showLess": "Afficher moins"
+  }
+}

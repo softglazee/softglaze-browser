@@ -16,9 +16,14 @@ const TEXT = {
     es: 'Se canceló el inicio de sesión. Puedes cerrar esta pestaña e intentarlo de nuevo.'
   },
   email_not_verified: {
-    title: 'Your GitHub email is not verified',
-    body: 'Verify your primary email address on GitHub (Settings > Emails), then try again. Or go back and continue with email.',
-    es: 'Verifica tu correo principal en GitHub (Settings > Emails) e inténtalo de nuevo, o continúa con tu correo.'
+    title: 'Your email address is not verified',
+    body: 'The account you signed in with has no verified email address. Verify it there (on GitHub: Settings > Emails), then try again. Or go back and continue with email.',
+    es: 'La cuenta con la que iniciaste sesión no tiene un correo verificado. Verifícalo allí (en GitHub: Settings > Emails) e inténtalo de nuevo, o continúa con tu correo.'
+  },
+  email_missing: {
+    title: "Your Facebook account didn't share an email",
+    body: 'Go back to SoftGlaze Browser and choose "Allow email access" to try Facebook again, or continue with Google or email.',
+    es: 'Tu cuenta de Facebook no compartió un correo. Vuelve a SoftGlaze Browser y elige "Permitir acceso al correo", o continúa con Google o tu correo.'
   },
   disposable_email: {
     title: 'Please use a permanent email address',

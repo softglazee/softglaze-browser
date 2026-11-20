@@ -1,0 +1,52 @@
+{
+  "header": {
+    "eyebrow": "Enterprise-Repository",
+    "title": "Erweiterungen",
+    "summary_one": "{{count}} Erweiterung installiert · {{enabled}} aktiv für Profile, die Erweiterungen laden",
+    "summary_other": "{{count}} Erweiterungen installiert · {{enabled}} aktiv für Profile, die Erweiterungen laden"
+  },
+  "stats": {
+    "total": "Erweiterungen gesamt",
+    "injected": "Aktiv",
+    "disabled": "Deaktiviert"
+  },
+  "caveat": {
+    "before": "Erweiterungen werden nicht jedem Profil hinzugefügt. Sie laden nur in Chromium-Profilen, bei denen im Profil-Editor auf dem Tab „Erweitert“ die Option „SoftGlaze-Erweiterungen laden (nutzt Chrome for Testing)“ angehakt ist (standardmäßig aus). Diese Profile binden sie beim Start mit Chromiums",
+    "middle": "-Flag ein, daher gilt eine Änderung beim",
+    "nextLaunch": "nächsten Start",
+    "after": "eines solchen Profils. Normales Chrome ignoriert dieses Flag, daher öffnen diese Profile mit einem Chrome-for-Testing-Build: Laden Sie zuerst einen auf der Seite „Browser“ herunter, sonst öffnet das Profil ohne die Erweiterungen. Firefox-Profile laden sie nicht."
+  },
+  "importer": {
+    "title": "Ins Team importieren",
+    "description": "Fügen Sie eine Chrome-Web-Store-URL oder ihre 32-stellige ID ein. SoftGlaze lädt das echte Paket herunter und entpackt es.",
+    "inputPlaceholder": "https://chromewebstore.google.com/detail/…  oder  cjpalhdlnbpafiamejdnhcphjbkeiagm",
+    "submit": "Ins Team importieren"
+  },
+  "installPhase": {
+    "downloading": "Paket wird geladen…",
+    "extracting": "Archiv wird entpackt…",
+    "registering": "Wird registriert…"
+  },
+  "permissionNotice": "Nur Admins und höher können Team-Erweiterungen verwalten. Sie können das Repository ansehen.",
+  "searchPlaceholder": "Nach Name oder ID suchen…",
+  "empty": {
+    "loadErrorTitle": "Erweiterungen konnten nicht geladen werden",
+    "noExtTitle": "Noch keine Erweiterungen",
+    "noMatchTitle": "Keine Erweiterungen passen zu Ihrer Suche",
+    "noExtDesc": "Importieren Sie oben eine Erweiterung aus dem Chrome Web Store, um sie dem Team-Repository hinzuzufügen. Sie lädt in Profilen, bei denen auf dem Tab „Erweitert“ „SoftGlaze-Erweiterungen laden“ angehakt ist.",
+    "noMatchDesc": "Versuchen Sie einen anderen Namen oder eine andere ID."
+  },
+  "card": {
+    "unpacked": "Entpackte Erweiterung",
+    "removeTitle": "Aus dem Team entfernen",
+    "injected": "Aktiv",
+    "disabled": "Deaktiviert"
+  },
+  "confirmRemove": "„{{name}}“ aus dem Team-Repository entfernen? Die lokalen Dateien werden gelöscht.",
+  "errors": {
+    "couldNotLoad": "Erweiterungen konnten nicht geladen werden.",
+    "installFailed": "Installation fehlgeschlagen.",
+    "couldNotUpdate": "Die Erweiterung konnte nicht aktualisiert werden.",
+    "couldNotRemove": "Die Erweiterung konnte nicht entfernt werden."
+  }
+}

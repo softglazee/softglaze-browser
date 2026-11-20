@@ -2,12 +2,18 @@
 // One-click sign-in (app 1.0.26). The flow and the security checks are described in src/auth/flow.js.
 //
 // Browser leg (HTML pages, never JSON):
-//   GET /auth/start?provider=github&tenant=<tenantId>&app_redirect=softglaze://auth|http://127.0.0.1:<port>/auth
-//       &code_challenge=<S256>&code_challenge_method=S256&state=<app state>  -> 302 to the provider
-//   GET /auth/callback/github?code&state  -> the app's redirect with ?code=<one-time code>&state=<app state>,
-//       or ?error=cancelled|email_not_verified|disposable_email|failed&state=<app state>
+//   GET /auth/start?provider=github|google|microsoft|facebook|linkedin&tenant=<tenantId>&app_redirect=softglaze://auth|http://127.0.0.1:<port>/auth
+//       &code_challenge=<S256>&code_challenge_method=S256&state=<app state>[&auth_type=rerequest]  -> 302 to the provider
+//       (auth_type=rerequest: Facebook asks again for the email permission the person declined)
+//   GET /auth/callback/github|google|microsoft|facebook|linkedin?code&state  -> the app's redirect with ?code=<one-time code>&state=<app state>,
+//       or ?error=cancelled|email_not_verified|email_missing|disposable_email|failed&state=<app state>
+//       (email_missing: a Facebook account that shared no email and is not linked yet; the app offers
+//       "Allow email access", Google or email). The same callback serves
+//       the phone and web clients (src/routes/mobileAuth.js, webAuth.js): their AuthState names the client
+//       and the result goes to that client's redirect with a plain 302.
 // App calls (JSON, install-authenticated like /v1/account: tenantId, installId, installSecret):
-//   GET  /auth/providers?tenantId=..                       -> { providers: ['github'], email: true }
+//   GET  /auth/providers?tenantId=..                       -> { providers: ['google', 'microsoft', 'facebook', 'linkedin', 'github'], email: true }
+//        (only the providers whose keys are set on the server)
 //   POST /auth/exchange { code, codeVerifier, expectCustomerId? } -> the sign-in (below), or 400 invalid_grant,
 //        403 email_not_verified, 409 account_mismatch
 //   POST /auth/email/start { email, lang?, name?, consentMarketing? }  -> as POST /v1/account/verify/start
@@ -18,6 +24,9 @@
 //   POST /auth/licence/move { session, move: true }                    -> { ok, moved, remaining } | 404 no_licence,
 //        429 move_limit { retryAt }, 409 move_conflict
 //   POST /auth/logout { session }            -> { ok: true } always
+// Meta's Data Deletion Request Callback (src/auth/facebookDeletion.js, docs/FACEBOOK-SIGNIN.md):
+//   POST /auth/facebook/data-deletion (form: signed_request) -> { url, confirmation_code } | 400 | 503
+//   GET  /auth/facebook/deletion-status?code=..             -> HTML status page
 // A sign-in answers { ok, session, provider, isNew, linked, customer: { id, email, name, useCase }, methods,
 // licence: { state: here | elsewhere | store | none, tier?, until?, movesLeft? } }. The session token is shown
 // once; only its SHA-256 is stored.
@@ -25,43 +34,31 @@ const express = require('express');
 const prisma = require('../db');
 const asyncHandler = require('../middleware/asyncHandler');
 const { installRequest } = require('./installRequest');
-const { clientIp, ipHash } = require('../net/clientIp');
 const { startVerification } = require('../account/verify');
 const { getProvider, availableProviders } = require('../auth/providers');
 const flow = require('../auth/flow');
 const accounts = require('../auth/accounts');
-const { renderPage } = require('../auth/pages');
+const facebookDeletion = require('../auth/facebookDeletion');
+const { sendPage, readCookies, secureCookies, ipHashOf, setNonceCookie, redirectTo, PAGE_CSP } = require('./authHttp');
 
 const router = express.Router();
 
-const PAGE_CSP = "default-src 'none'; style-src 'unsafe-inline'; base-uri 'none'; form-action 'none'; frame-ancestors 'none'";
+// Meta posts the signed request as a form (application/x-www-form-urlencoded); JSON is accepted too.
+router.post('/facebook/data-deletion', express.urlencoded({ extended: false, limit: '16kb' }), asyncHandler(async (req, res) => {
+  const r = await facebookDeletion.handleDeletionRequest(prisma, req.body || {});
+  res.set('Cache-Control', 'no-store').status(r.status).json(r.body);
+}));
 
-function sendPage(res, status, key, appUrl) {
+router.get('/facebook/deletion-status', (req, res) => {
+  const { status, html } = facebookDeletion.statusPage(typeof req.query.code === 'string' ? req.query.code : '');
   res.status(status)
     .set('Content-Type', 'text/html; charset=utf-8')
     .set('Cache-Control', 'no-store')
     .set('Content-Security-Policy', PAGE_CSP)
     .set('X-Content-Type-Options', 'nosniff')
     .set('Referrer-Policy', 'no-referrer')
-    .send(renderPage(key, { appUrl }));
-}
-
-function readCookies(req) {
-  const out = {};
-  const raw = req.headers && req.headers.cookie;
-  if (typeof raw !== 'string') return out;
-  for (const part of raw.split(';')) {
-    const i = part.indexOf('=');
-    if (i <= 0) continue;
-    const k = part.slice(0, i).trim();
-    if (!k.startsWith(flow.NONCE_COOKIE_PREFIX)) continue;
-    try { out[k] = decodeURIComponent(part.slice(i + 1).trim()); } catch (_) { /* skip a bad cookie */ }
-  }
-  return out;
-}
-
-const secureCookies = () => /^https:/i.test(String(require('../env').publicBaseUrl));
-const ipHashOf = (req) => { const ip = clientIp(req); return ip ? ipHash(ip) : null; };
+    .send(html);
+});
 
 router.get('/providers', asyncHandler(async (req, res) => {
   const tenantId = typeof req.query.tenantId === 'string' ? req.query.tenantId : '';
@@ -76,12 +73,8 @@ router.get('/start', asyncHandler(async (req, res) => {
     const key = r.error === 'provider_unavailable' ? 'unavailable' : r.error === 'rate_limited' ? 'rate_limited' : 'invalid';
     return sendPage(res, r.status, key);
   }
-  // The nonce cookie binds the callback to the browser that started the sign-in. Lax, so the provider's
-  // top-level redirect back carries it; HttpOnly, only for the callback path, gone after 10 minutes.
-  res.cookie(r.cookie.name, r.cookie.value, {
-    httpOnly: true, secure: secureCookies(), sameSite: 'lax', path: '/auth/callback', maxAge: r.cookie.maxAgeSec * 1000
-  });
-  res.set('Cache-Control', 'no-store').set('Referrer-Policy', 'no-referrer').redirect(302, r.location);
+  setNonceCookie(res, r.cookie);
+  redirectTo(res, r.location);
 }));
 
 router.get('/callback/:provider', asyncHandler(async (req, res) => {
@@ -90,9 +83,10 @@ router.get('/callback/:provider', asyncHandler(async (req, res) => {
   if (r.kind === 'page') return sendPage(res, r.status, r.page);
   // The used nonce cookie is cleared either way.
   for (const name of Object.keys(readCookies(req))) res.clearCookie(name, { path: '/auth/callback', httpOnly: true, secure: secureCookies(), sameSite: 'lax' });
-  // A loopback listener takes a plain redirect; the protocol gets a page with a button too, because the browser
-  // may ask before opening the app.
-  if (r.redirectKind === 'loopback') return res.set('Cache-Control', 'no-store').set('Referrer-Policy', 'no-referrer').redirect(302, r.url);
+  // A loopback listener, the phone's auth session (ASWebAuthenticationSession / Custom Tabs, which catch the
+  // redirect to its scheme) and the web app take a plain redirect; the desktop protocol gets a page with a
+  // button too, because the browser may ask before opening the app.
+  if (r.redirectKind === 'loopback' || r.redirectKind === 'client') return redirectTo(res, r.url);
   return sendPage(res, 200, r.outcome === 'signed_in' ? 'signed_in' : r.outcome, r.url);
 }));
 

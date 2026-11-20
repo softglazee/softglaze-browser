@@ -1,0 +1,165 @@
+{
+  "billing": {
+    "status": {
+      "loading": "Wczytywanie…",
+      "sourceOwner": "Właściciel kodu",
+      "active": "Aktywna",
+      "activeUntil": "Aktywna · do {{date}}",
+      "trialDaysLeft_one": "Okres próbny · zostało {{count}} dn.",
+      "trialDaysLeft_few": "Okres próbny · zostało {{count}} dn.",
+      "trialDaysLeft_many": "Okres próbny · zostało {{count}} dn.",
+      "trialDaysLeft_other": "Okres próbny · zostało {{count}} dn.",
+      "graceDaysLeft_one": "Okres karencji · zostało {{count}} dn.",
+      "graceDaysLeft_few": "Okres karencji · zostało {{count}} dn.",
+      "graceDaysLeft_many": "Okres karencji · zostało {{count}} dn.",
+      "graceDaysLeft_other": "Okres karencji · zostało {{count}} dn.",
+      "subscriptionEnded": "Subskrypcja wygasła"
+    },
+    "subscription": {
+      "title": "Subskrypcja",
+      "planLine": "SoftGlaze Browser · plan {{tier}}",
+      "manageButton": "Zarządzaj subskrypcją i planami"
+    },
+    "seats": {
+      "label": "Miejsca w zespole",
+      "usage": "Użyto {{used}} / {{total}}"
+    },
+    "gateway": {
+      "title": "Metody płatności",
+      "description": "Tylko Super Admin. Włącz metody pokazywane właścicielom przy płatności i zapisz klucze każdego dostawcy.",
+      "loadError": "Nie udało się wczytać ustawień płatności.",
+      "footnote": "Klucze są przechowywane zaszyfrowane na tym komputerze i nigdy go nie opuszczają. Płatność działa przez odpytywanie (bez webhooków), więc egzekwowanie między instalacjami wciąż wymaga serwera licencji. Płatności Wise i ręczne zatwierdzasz sam w sekcji „Oczekujące płatności” poniżej.",
+      "retry": "Ponów"
+    },
+    "provider": {
+      "kindManual": "Ręczna",
+      "kindAutomated": "Automatyczna",
+      "on": "wł.",
+      "enabled": "Włączona",
+      "disabled": "Wyłączona",
+      "enableAria": "Włącz {{provider}}",
+      "documentation": "Dokumentacja",
+      "secretStoredPlaceholder": "•••••••• (zostaw puste, aby zachować obecny)",
+      "secretPlaceholder": "Wklej klucz",
+      "save": "Zapisz",
+      "testConnection": "Testuj połączenie",
+      "enabledMsg": "Włączono.",
+      "disabledMsg": "Wyłączono.",
+      "updateError": "Nie udało się zaktualizować.",
+      "savedMsg": "Zapisano.",
+      "saveError": "Nie udało się zapisać.",
+      "connectionOk": "Połączenie działa ✓",
+      "validationFailedKeys": "Weryfikacja nie powiodła się. Sprawdź klucze.",
+      "validationFailed": "Weryfikacja nie powiodła się."
+    },
+    "manual": {
+      "title": "Oczekujące płatności",
+      "description": "Zgłoszenia ręczne (Wise / przelew bankowy) czekające na Twoje zatwierdzenie.",
+      "loadError": "Nie udało się wczytać płatności ręcznych.",
+      "resolveError": "Nie udało się zaktualizować tej płatności.",
+      "ownerFallback": "Właściciel #{{id}}",
+      "refPrefix": "ref.:",
+      "approve": "Zatwierdź",
+      "reject": "Odrzuć",
+      "statusLabel": {
+        "pending": "oczekuje",
+        "approved": "zatwierdzona",
+        "rejected": "odrzucona"
+      }
+    }
+  },
+  "monetization": {
+    "heading": "Monetyzacja",
+    "affiliate": {
+      "title": "Linki partnerskie i polecające",
+      "ownerOnly": "Tylko właściciel",
+      "description": "Twoje adresy partnerskie dla przycisków „Kup” w katalogu proxy. Zostaw puste, aby użyć domyślnych SoftGlaze.",
+      "loadError": "Nie udało się wczytać linków partnerskich.",
+      "saveError": "Nie udało się zapisać linków partnerskich.",
+      "savedMsg": "Zapisano. Przyciski katalogu używają teraz Twoich linków.",
+      "customLink": "Własny link",
+      "defaultLink": "Domyślny link",
+      "openLinkTitle": "Otwórz link {{provider}}",
+      "saving": "Zapisywanie…",
+      "saveButton": "Zapisz linki",
+      "footnote": "Te linki obsługują przyciski „Kup w…” / „Otwórz panel” na karcie Pula proxy → Dostawcy. To tylko publiczne adresy polecające. Tokeny proxy i dane logowania nie są nigdy zmieniane."
+    }
+  },
+  "developerApi": {
+    "title": "Dostęp do API dla deweloperów",
+    "description": "Generuj klucze API i uruchom lokalny serwer REST, aby sterować SoftGlaze programowo.",
+    "copy": "Kopiuj",
+    "errors": {
+      "load": "Nie udało się wczytać ustawień API.",
+      "nameRequired": "Nazwij klucz (np. \"Serwer CI\").",
+      "generate": "Nie udało się wygenerować klucza API.",
+      "revoke": "Nie udało się unieważnić klucza.",
+      "toggleServer": "Nie udało się zmienić stanu lokalnego serwera."
+    },
+    "keys": {
+      "title": "Klucze API",
+      "namePlaceholder": "Nazwa klucza (np. Serwer CI)",
+      "generate": "Wygeneruj nowy klucz API",
+      "copyOnce": "Skopiuj ten klucz teraz. Jest pokazywany tylko raz i nie można go odzyskać.",
+      "empty": "Brak kluczy API.",
+      "lastUsed": "ostatnio użyty {{when}}",
+      "neverUsed": "nigdy nieużyty",
+      "never": "nigdy",
+      "revoke": "Unieważnij",
+      "revokeConfirm": "Unieważnić klucz API \"{{name}}\"? Każdy skrypt, który go używa, natychmiast przestanie działać. Tej operacji nie można cofnąć."
+    },
+    "server": {
+      "title": "Lokalne REST API",
+      "runningAt": "Działa pod adresem",
+      "stoppedPrefix": "Zatrzymany · nasłuchiwałby na",
+      "loopbackOnly": "(tylko loopback)",
+      "disableTitle": "Wyłącz lokalne API",
+      "enableTitle": "Włącz lokalne API",
+      "curlExample": "Przykład: uruchomienie profilu przez cURL",
+      "footnote": "Serwer przyjmuje żądania tylko z tego komputera i wymaga poprawnego klucza Bearer."
+    }
+  },
+  "migration": {
+    "title": "Przenoszenie profili",
+    "ownerOnly": "Tylko właściciel",
+    "description": "Zaimportuj istniejące profile z innej przeglądarki wieloprofilowej przez jej API.",
+    "sourcePlatform": "Platforma źródłowa",
+    "noteLabel": "Uwaga:",
+    "instructions": "Instrukcja",
+    "tokenSectionTitle": "Token API {{platform}}",
+    "transferring": "Przenoszenie…",
+    "startTransfer": "Rozpocznij przenoszenie",
+    "tokenFootnote": "Token jest użyty jednorazowo do tego przeniesienia i nigdy nie jest zapisywany. Platformy lokalne (AdsPower, ixBrowser) muszą być uruchomione z włączonym Local API.",
+    "errors": {
+      "tokenRequired": "Wpisz {{placeholder}} dla {{platform}}.",
+      "transferFailed": "Przenoszenie nie powiodło się."
+    },
+    "log": {
+      "title": "Dziennik migracji",
+      "imported": "Zaimportowano {{created}}/{{total}}",
+      "errors_one": "{{count}} błąd",
+      "errors_few": "{{count}} błędy",
+      "errors_many": "{{count}} błędów",
+      "errors_other": "{{count}} błędu",
+      "waiting": "Oczekiwanie na odpowiedź platformy…"
+    },
+    "platforms": {
+      "dolphin": {
+        "placeholder": "Dolphin_Token",
+        "warning": "Pliki cookie nie zostaną przeniesione, jeśli przenosisz z darmowego planu Dolphin."
+      },
+      "gologin": {
+        "placeholder": "Token API GoLogin"
+      },
+      "multilogin": {
+        "placeholder": "Token automatyzacji Multilogin"
+      },
+      "adspower": {
+        "placeholder": "Klucz Local API AdsPower"
+      },
+      "ixbrowser": {
+        "placeholder": "Klucz Local API ixBrowser"
+      }
+    }
+  }
+}

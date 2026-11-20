@@ -1,0 +1,25 @@
+{
+  "contextMenu": {
+    "undo": "واپس کریں",
+    "redo": "دوبارہ کریں",
+    "cut": "کٹ",
+    "copy": "کاپی",
+    "paste": "پیسٹ",
+    "selectAll": "سب منتخب کریں",
+    "copyLink": "لنک کاپی کریں"
+  },
+  "dialogs": {
+    "exportArchiveTitle": "انکرپٹڈ پروفائل آرکائیو ایکسپورٹ کریں",
+    "archiveFilter": "SoftGlaze انکرپٹڈ آرکائیو",
+    "importProfilesTitle": "امپورٹ کے لیے SoftGlaze پروفائل اسپریڈشیٹ منتخب کریں",
+    "spreadsheetFilter": "اسپریڈشیٹ فائلیں",
+    "exportProfilesTitle": "SoftGlaze پروفائلز ایکسپورٹ کریں",
+    "excelFilter": "Excel ورک بک",
+    "importIdentitiesTitle": "امپورٹ کے لیے پرسوناز کی اسپریڈشیٹ منتخب کریں",
+    "backupTitle": "ورک اسپیس کا بیک اپ لیں",
+    "backupFilter": "SoftGlaze ورک اسپیس بیک اپ",
+    "restoreTitle": "ورک اسپیس بیک اپ بحال کریں",
+    "exportActivityTitle": "ایکٹیویٹی لاگ ایکسپورٹ کریں",
+    "bindSpreadsheetTitle": "اس متوازی رن سے جوڑنے کے لیے اسپریڈشیٹ منتخب کریں"
+  }
+}

@@ -67,7 +67,10 @@ test('tenant: Start trial calls the server ledger and the signed lease drives th
   assert.equal(view.isTrial, true);
   assert.equal(view.tier, 'enterprise');
   assert.equal(view.daysLeftTrial, 7);
-  assert.deepEqual(plain(view.limits), { tier: 'enterprise', seats: 3, maxParallel: 10, auditExport: true }, 'Enterprise limits, 3 seats');
+  const l = plain(view.limits);
+  assert.deepEqual({ tier: l.tier, seats: l.seats, maxParallel: l.maxParallel, auditExport: l.auditExport }, { tier: 'enterprise', seats: 3, maxParallel: 10, auditExport: true }, 'Enterprise limits, 3 seats');
+  assert.equal(l.profiles, null, 'the trial has no saved-profile cap');
+  assert.equal(l.aiActionsPerDay, null, 'and unlimited AI actions');
   assert.ok(Math.abs(Date.parse(view.endsAt) - (Date.now() + 7 * DAY)) < 60000, 'ends on the server end date');
   // Stored and verified the way refreshBackendLease does it.
   const cached = JSON.parse(m.settings.get('backendLease').replace(/^sealed:/, ''));
@@ -135,7 +138,7 @@ test('tenant: an account made before server sign-up confirms its email with a co
 
 // ---- local trials ---------------------------------------------------------------------------------
 
-test('tenant: a local trialEndsAt alone no longer grants a trial', async () => {
+test('tenant: a local trialEndsAt alone no longer grants a trial (the workspace is on Free)', async () => {
   // The cutover was recorded before this row existed, so the row is not a legacy trial.
   const m = buildMain({
     tenant: true, members: [owner()], activeMemberId: 1,
@@ -144,8 +147,11 @@ test('tenant: a local trialEndsAt alone no longer grants a trial', async () => {
   });
   const lic = await m.fns.getLicense();
   assert.equal(lic.isTrial, false);
-  assert.equal(lic.needsPlan, true);
-  await assert.rejects(m.fns.assertNotBanned(), (e) => e.code === 'LICENSE_BANNED');
+  // Free forever (1.0.27): a used trial without a lease is Free, not a lock and not Enterprise.
+  assert.equal(lic.type, 'free');
+  assert.equal(lic.isFree, true);
+  assert.equal(lic.limits.profiles, 25);
+  await m.fns.assertNotBanned();
 });
 
 test('tenant: a trial already running before this update keeps going until it ends, never longer', async () => {
@@ -167,31 +173,37 @@ test('tenant: a trial already running before this update keeps going until it en
   assert.equal(m.calls.length, 0, 'the server was never asked');
 });
 
-test('tenant: a legacy trial that ended goes through grace, and the server is not asked for another', async () => {
+test('tenant: a legacy trial that ended goes to Free, and the server is not asked for another', async () => {
   const m = buildMain({
     tenant: true, members: [owner()], activeMemberId: 1,
     licenses: [{ id: 1, ownerMemberId: 1, type: 'trial', tier: 'enterprise', status: 'active', trialEndsAt: new Date(Date.now() - DAY), createdAt: new Date(Date.now() - 8 * DAY) }]
   });
   const lic = await m.fns.getLicense();
-  assert.equal(lic.isGrace, true);
+  assert.equal(lic.isGrace, false, 'no grace days for an ended trial any more');
+  assert.equal(lic.type, 'free');
+  assert.equal(lic.endedFrom, 'trial');
   assert.equal(lic.trialUsed, true);
   await assert.rejects(m.fns.startTrial(), (e) => e.code === 'TRIAL_USED');
   assert.equal(m.calls.length, 0);
 });
 
-test('tenant: after the server trial ends, grace and lock follow the recorded end date', async () => {
+test('tenant: after the server trial ends the workspace is on Free at once and stays there (no lock)', async () => {
   const m = buildMain({
     tenant: true, members: [owner()], activeMemberId: 1,
     settings: { tenantTrialCutover: { v: 1, at: new Date(Date.now() - 9 * DAY).toISOString(), legacy: {} } },
     licenses: [{ id: 2, ownerMemberId: 1, type: 'trial', tier: 'enterprise', status: 'active', trialEndsAt: new Date(Date.now() - DAY), createdAt: new Date(Date.now() - 8 * DAY) }]
   });
-  const grace = await m.fns.getLicense();
-  assert.equal(grace.isGrace, true);
-  assert.equal(grace.trialUsed, true);
-  m.db.licenses[0].trialEndsAt = new Date(Date.now() - 5 * DAY);
-  const ended = await m.fns.getLicense();
-  assert.equal(ended.isBanned, true);
-  assert.notEqual(ended.needsPlan, true, 'ended, not "no plan yet"');
+  const day8 = await m.fns.getLicense();
+  assert.equal(day8.type, 'free');
+  assert.equal(day8.isBanned, false);
+  assert.equal(day8.isGrace, false);
+  assert.equal(day8.trialUsed, true);
+  m.db.licenses[0].trialEndsAt = new Date(Date.now() - 50 * DAY);
+  const later = await m.fns.getLicense();
+  assert.equal(later.type, 'free');
+  assert.equal(later.isBanned, false, 'Free forever: never locked for trial expiry');
+  await m.fns.assertNotBanned();
+  assert.equal(m.db.members[0].status, 'active', 'the owner is not locked');
 });
 
 test('tenant: lease refresh keeps a valid trial lease when the server lists no licence, and clears a paid one', async () => {
@@ -202,7 +214,10 @@ test('tenant: lease refresh keeps a valid trial lease when the server lists no l
     api: { license: async () => ({ lease: null, status: 'none' }) }
   });
   assert.equal(await m.fns.refreshBackendLease(), null);
-  assert.deepEqual(plain(m.calls[0].args[0]), { installId: 'inst_1', installSecret: 'secret_1' });
+  const sent = plain(m.calls[0].args[0]);
+  assert.equal(sent.installId, 'inst_1');
+  assert.equal(sent.installSecret, 'secret_1');
+  assert.deepEqual(sent.usage, { aiActionsToday: 0, profiles: 0, running: 0 }, 'usage rides along for the daily Free check');
   assert.ok(m.settings.get('backendLease'), 'trial lease kept');
   assert.equal((await m.fns.getLicense()).isTrial, true);
 

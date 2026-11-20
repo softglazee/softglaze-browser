@@ -96,7 +96,7 @@ export default function CopyForProxyExtensionDialog({ open, onOpenChange, ids })
                   />
                   <span>{t('copyForExtension.includeCredentials')}</span>
                 </label>
-                {credsReason && <p id="copy-ext-creds-reason" className="pl-[26px] text-xs text-muted-foreground">{credsReason}</p>}
+                {credsReason && <p id="copy-ext-creds-reason" className="ps-[26px] text-xs text-muted-foreground">{credsReason}</p>}
               </div>
               {withCreds && info.socks5WithLogin > 0 && <Note>{t('copyForExtension.socks5Note', { count: info.socks5WithLogin })}</Note>}
               {withCreds && info.socks4WithLogin > 0 && <Note>{t('copyForExtension.socks4Note', { count: info.socks4WithLogin })}</Note>}

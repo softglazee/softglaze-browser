@@ -1,0 +1,146 @@
+{
+  "header": {
+    "eyebrow": "Identitäten",
+    "title": "Datentresor",
+    "description": "Ein wiederverwendbarer Tresor mit Identitäten für die Smart-Autofill-Engine. Fügen Sie sie von Hand hinzu oder importieren Sie eine Tabelle; jede merkt sich die Websites, auf denen sie schon verwendet wurde.",
+    "refresh": "Aktualisieren",
+    "import": "Excel/CSV importieren",
+    "addManually": "Von Hand hinzufügen"
+  },
+  "stats": {
+    "totalIdentities": "Identitäten gesamt",
+    "neverUsed": "Nie verwendet",
+    "usedAtLeastOnce": "Mindestens einmal verwendet",
+    "totalUses": "Verwendungen gesamt",
+    "filtering": "Filter aktiv"
+  },
+  "toolbar": {
+    "searchPlaceholder": "Nach Name, E-Mail, Benutzername oder Label suchen...",
+    "showing": "{{count}} {{kind}} angezeigt",
+    "kindNeverUsed": "nie verwendete",
+    "kindUsed": "verwendete",
+    "clear": "leeren"
+  },
+  "bulk": {
+    "selected": "{{count}} ausgewählt",
+    "resetUsedStatus": "Verwendet-Status zurücksetzen",
+    "deleteSelected": "Auswahl löschen",
+    "clear": "Leeren",
+    "clearSelectionTitle": "Auswahl aufheben"
+  },
+  "table": {
+    "loading": "Identitäten werden geladen...",
+    "selectAll": "Alle Identitäten auswählen",
+    "selectRow": "{{name}} auswählen",
+    "colName": "Name",
+    "colEmail": "E-Mail",
+    "colUsername": "Benutzername",
+    "colPassword": "Passwort",
+    "colPhone": "Telefon",
+    "colAddress": "Adresse",
+    "colLabel": "Label",
+    "colTimesUsed": "Verwendungen",
+    "colCreated": "Erstellt",
+    "colActions": "Aktionen",
+    "sitesUsed_one": "{{count}} Website",
+    "sitesUsed_other": "{{count}} Websites",
+    "never": "Nie",
+    "editIdentity": "Identität bearbeiten",
+    "deleteIdentity": "Identität löschen",
+    "hidePassword": "Verbergen",
+    "revealPassword": "Anzeigen",
+    "reuse": "♻ Wiederverwenden · {{count}}"
+  },
+  "empty": {
+    "title": "Ihr Datentresor ist leer",
+    "description": "Fügen Sie eine Identität von Hand hinzu oder importieren Sie eine Excel-/CSV-Tabelle, um Ihren Autofill-Tresor aufzubauen.",
+    "filteredTitle": "Keine Identitäten passen zu Ihrem Filter",
+    "filteredDescription": "Versuchen Sie eine andere Suche oder leeren Sie den Filter."
+  },
+  "groups": {
+    "identity": "Identität",
+    "account": "Konto",
+    "address": "Adresse",
+    "meta": "Meta"
+  },
+  "fields": {
+    "firstName": "Vorname",
+    "lastName": "Nachname",
+    "email": "E-Mail",
+    "username": "Benutzername",
+    "password": "Passwort",
+    "phone": "Telefon",
+    "dateOfBirth": "Geburtsdatum",
+    "addressLine1": "Adresszeile 1",
+    "addressLine2": "Adresszeile 2",
+    "city": "Stadt",
+    "state": "Bundesland / Region",
+    "zipCode": "PLZ",
+    "country": "Land",
+    "company": "Firma",
+    "companyAddress": "Firmenadresse",
+    "label": "Serien-Label"
+  },
+  "form": {
+    "dialogTitleEdit": "Identität bearbeiten",
+    "dialogTitleAdd": "Identität hinzufügen",
+    "titleEdit": "Identität bearbeiten",
+    "titleAdd": "Identität hinzufügen",
+    "descEdit": "Aktualisieren Sie die Angaben dieser Persona.",
+    "descAdd": "Fügen Sie Ihrem Datentresor eine einzelne Persona hinzu. Mit * markierte Felder sind Pflichtfelder.",
+    "cancel": "Abbrechen",
+    "saving": "Speichert...",
+    "saveChanges": "Änderungen speichern",
+    "addIdentity": "Identität hinzufügen",
+    "showPassword": "Passwort anzeigen",
+    "hidePassword": "Passwort verbergen"
+  },
+  "import": {
+    "dialogTitle": "Identitäten importieren",
+    "title": "Aus Excel / CSV importieren",
+    "descStep1": "Wählen Sie eine .xlsx-, .xls- oder .csv-Datei. Die erste Zeile sollte Ihre Spaltenüberschriften enthalten. Bis zu 1000 Zeilen pro Import.",
+    "descStep2": "Ordnen Sie Ihre Spalten den Identitätsfeldern zu. {{count}} Zeile(n) in {{fileName}} erkannt.",
+    "yourFile": "Ihre Datei",
+    "chooseSpreadsheet": "Tabelle wählen",
+    "colIdentityField": "Identitätsfeld",
+    "colYourColumn": "Ihre Spalte",
+    "skipOption": "(überspringen)",
+    "mappedCount_one": "{{count}} Feld zugeordnet. Zeilen ohne Name/E-Mail/Benutzername werden übersprungen.",
+    "mappedCount_other": "{{count}} Felder zugeordnet. Zeilen ohne Name/E-Mail/Benutzername werden übersprungen.",
+    "done": "Fertig",
+    "cancel": "Abbrechen",
+    "back": "Zurück",
+    "importing": "Importiert...",
+    "importRows_one": "{{count}} Zeile importieren",
+    "importRows_other": "{{count}} Zeilen importieren",
+    "result": {
+      "complete": "Import abgeschlossen",
+      "addedPrefix": "Hinzugefügt:",
+      "addedSuffix_one": "Identität zum Tresor.",
+      "addedSuffix_other": "Identitäten zum Tresor.",
+      "skipped_one": "{{count}} leere Zeile übersprungen.",
+      "skipped_other": "{{count}} leere Zeilen übersprungen."
+    },
+    "errors": {
+      "noRows": "Diese Datei hat keine lesbare Kopfzeile oder Datenzeilen.",
+      "readFile": "Die Datei konnte nicht gelesen werden.",
+      "nothingMapped": "Keine Zeilen zum Importieren. Ordnen Sie mindestens eines von Vorname / Nachname / E-Mail / Benutzername zu.",
+      "failed": "Import fehlgeschlagen."
+    }
+  },
+  "confirm": {
+    "fallbackName": "Persona",
+    "deleteOne": "Identität „{{name}}“ löschen? Das kann nicht rückgängig gemacht werden.",
+    "deleteSelected_one": "{{count}} ausgewählte Identität löschen? Das kann nicht rückgängig gemacht werden.",
+    "deleteSelected_other": "{{count}} ausgewählte Identitäten löschen? Das kann nicht rückgängig gemacht werden.",
+    "resetSelected_one": "Den „Verwendet auf“-Verlauf für {{count}} ausgewählte Identität zurücksetzen? Sie ist dann wieder auf jeder Website verfügbar.",
+    "resetSelected_other": "Den „Verwendet auf“-Verlauf für {{count}} ausgewählte Identitäten zurücksetzen? Sie sind dann wieder auf jeder Website verfügbar."
+  },
+  "errors": {
+    "load": "Der Datentresor konnte nicht geladen werden.",
+    "save": "Diese Identität konnte nicht gespeichert werden.",
+    "deleteOne": "Die Identität konnte nicht gelöscht werden.",
+    "deleteSelected": "Die ausgewählten Identitäten konnten nicht gelöscht werden.",
+    "resetSelected": "Die ausgewählten Identitäten konnten nicht zurückgesetzt werden."
+  }
+}

@@ -10,6 +10,7 @@ const { generateTenantKeypair, newApiKey, sha256Hex } = require('../src/crypto/k
 const { seal } = require('../src/crypto/secrets');
 const { publicBaseUrl } = require('../src/env');
 const { ensureDefaultTemplates } = require('../src/email/templates');
+const { ensureFreePlan } = require('../src/plans/service');
 
 async function main() {
   const name = process.argv.slice(2).join(' ').trim();
@@ -30,6 +31,8 @@ async function main() {
   });
   // The built-in email templates (verification code, trial emails), editable in the admin.
   await ensureDefaultTemplates(prisma, tenant.id);
+  // The Free plan (tier free, US$0): every tenant has one; the paid plans are added in step 3 below.
+  await ensureFreePlan(prisma, tenant.id);
 
   const config = { tenantId: tenant.id, apiBaseUrl: publicBaseUrl, publicKeyPem };
   const outDir = path.join(__dirname, '..', 'tenants');

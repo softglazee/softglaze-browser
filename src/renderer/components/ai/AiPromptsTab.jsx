@@ -77,7 +77,7 @@ export default function AiPromptsTab() {
                       type="button"
                       aria-current={on ? 'true' : undefined}
                       onClick={() => setSelected(p.name)}
-                      className={cn('w-full rounded-lg border px-3 py-2 text-left transition-colors', on ? '' : 'border-transparent hover:bg-secondary')}
+                      className={cn('w-full rounded-lg border px-3 py-2 text-start transition-colors', on ? '' : 'border-transparent hover:bg-secondary')}
                       style={on ? { background: 'color-mix(in srgb, var(--primary) 12%, transparent)', borderColor: 'color-mix(in srgb, var(--primary) 26%, transparent)' } : undefined}
                     >
                       <span className="block truncate text-[13px] font-medium text-foreground">{p.title || p.name}</span>
@@ -116,7 +116,7 @@ function PromptDetail({ prompt }) {
             <p className="text-[12.5px] text-muted-foreground">{t('prompts.noArguments')}</p>
           ) : (
             <div className="overflow-x-auto rounded-lg border border-border">
-              <table className="w-full border-collapse text-left text-[12.5px]">
+              <table className="w-full border-collapse text-start text-[12.5px]">
                 <thead className="bg-surface text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
                   <tr>
                     <th scope="col" className="px-3 py-2">{t('prompts.argName')}</th>

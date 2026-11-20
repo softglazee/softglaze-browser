@@ -1,0 +1,80 @@
+{
+  "header": {
+    "eyebrow": "Otomasyon",
+    "title": "Toplu Profil Oluşturma",
+    "description": "Tablo dosyasıyla veya sıralı üretimle çok sayıda tarayıcı ortamını hızla oluşturun.",
+    "exportProfiles": "Profilleri dışa aktar"
+  },
+  "exportNotice_one": "{{count}} profil {{path}} konumuna aktarıldı",
+  "exportNotice_other": "{{count}} profil {{path}} konumuna aktarıldı",
+  "tabs": {
+    "importFromFile": "Dosyadan içe aktar",
+    "quickGenerate": "Hızlı oluştur"
+  },
+  "step1": {
+    "title": "Şablonu indirin",
+    "description": "Dosyanın sorunsuz okunması için standart Excel veya CSV şablonumuzu kullanın. Profil adlarını, proxy'leri ve parmak izi kurallarını doldurun.",
+    "downloadButton": ".CSV şablonunu indir"
+  },
+  "step2": {
+    "title": "Yükleyin ve önizleyin",
+    "description": "Doldurduğunuz tabloyu seçin. Kaydetmeden önce yerel olarak okuyup biçim hatalarını kontrol ederiz.",
+    "selectButton": "Dosya seç"
+  },
+  "step3": {
+    "title": "Önizle ve verileri kaydet"
+  },
+  "awaiting": {
+    "title": "Veri bekleniyor",
+    "description": "Profillerinizi burada önizlemek için bir dosya seçin."
+  },
+  "preview": {
+    "file": "Dosya:",
+    "validRows": "Geçerli satırlar:",
+    "errors": "Hatalar:"
+  },
+  "processing": {
+    "importing": "İçe aktarılıyor… {{index}}/{{total}}",
+    "backendLog": "İşlem günlüğü",
+    "connecting": "İçe aktarma motoruna bağlanılıyor…"
+  },
+  "table": {
+    "row": "Satır",
+    "title": "Ad",
+    "group": "Grup",
+    "proxyMethod": "Proxy yöntemi",
+    "dataDir": "Veri klasörü",
+    "auto": "Otomatik"
+  },
+  "autoBind": {
+    "label": "Proxy'leri ülkeye göre otomatik bağla",
+    "descPrefix": "(kendi proxy'si olmayan satırlara, kontrol edilen ülkesi satırın şu sütunuyla eşleşen kayıtlı bir proxy atar:",
+    "descSuffix": "eşleşenler arasında sırayla)",
+    "sourceLabel": "Kaynak",
+    "sourcePaid": "Proxy'leriniz",
+    "sourceFree": "Ücretsiz proxy'ler (yalnızca çalışanlar)",
+    "freeWarn": "Ücretsiz proxy'leri yabancılar işletir: bu profillerle asla hesaplara giriş yapmayın veya ödeme yapmayın."
+  },
+  "commitButton_one": "{{count}} profili kaydet",
+  "commitButton_other": "{{count}} profili kaydet",
+  "success": {
+    "title": "İçe aktarma başarılı",
+    "importedPrefix": "Başarıyla içe aktarıldı:",
+    "importedMiddle": "profil, eşlenen:",
+    "importedSuffix": "yeni proxy",
+    "autoBoundPrefix": "· otomatik bağlanan:",
+    "autoBoundSuffix": "ülkeye göre",
+    "importAnother": "Başka bir tane içe aktar"
+  },
+  "quick": {
+    "engineTitle": "Sıralı Üretim Motoru",
+    "description": "Tablo olmadan anında çok sayıda profil oluşturun: benzersiz parmak izleri, sıralı adlar, hedef grup (yerinde oluşturulabilir) ve belirli bir gruptan veya sağlayıcıdan proxy ataması. Profiller sayfasıyla tamamen aynı motoru kullanır.",
+    "openButton": "Hızlı oluşturmayı aç"
+  },
+  "errors": {
+    "parse": "Dosya okunamadı. Geçerli bir tablo dosyası olduğundan emin olun.",
+    "commit": "Profiller veritabanına kaydedilemedi.",
+    "importFailed": "İçe aktarma başarısız oldu.",
+    "export": "Profiller dışa aktarılamadı."
+  }
+}

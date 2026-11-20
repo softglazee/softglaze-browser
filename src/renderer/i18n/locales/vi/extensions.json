@@ -1,0 +1,52 @@
+{
+  "header": {
+    "eyebrow": "Kho Enterprise",
+    "title": "Tiện ích",
+    "summary_one": "Đã cài {{count}} tiện ích · {{enabled}} được bật cho hồ sơ có tải tiện ích",
+    "summary_other": "Đã cài {{count}} tiện ích · {{enabled}} được bật cho hồ sơ có tải tiện ích"
+  },
+  "stats": {
+    "total": "Tổng số tiện ích",
+    "injected": "Đã bật",
+    "disabled": "Đã tắt"
+  },
+  "caveat": {
+    "before": "Tiện ích không được thêm vào mọi hồ sơ. Chúng chỉ tải trong các hồ sơ Chromium đã đánh dấu \"Tải tiện ích SoftGlaze (dùng Chrome-for-Testing)\" ở thẻ Nâng cao của trình sửa hồ sơ (mặc định tắt). Các hồ sơ đó gắn tiện ích bằng cờ",
+    "middle": "của Chromium khi khởi chạy, nên thay đổi sẽ áp dụng ở",
+    "nextLaunch": "lần khởi chạy tới",
+    "after": "của hồ sơ đó. Chrome thông thường bỏ qua cờ này, nên các hồ sơ này mở trên bản Chrome for Testing: hãy tải một bản ở trang Trình duyệt trước, nếu không hồ sơ sẽ mở mà không có tiện ích. Hồ sơ Firefox không tải chúng."
+  },
+  "importer": {
+    "title": "Nhập vào nhóm",
+    "description": "Dán URL Chrome Web Store hoặc ID 32 ký tự. Softglaze sẽ tải và giải nén gói thật.",
+    "inputPlaceholder": "https://chromewebstore.google.com/detail/…  hoặc  cjpalhdlnbpafiamejdnhcphjbkeiagm",
+    "submit": "Nhập vào nhóm"
+  },
+  "installPhase": {
+    "downloading": "Đang tải gói…",
+    "extracting": "Đang giải nén…",
+    "registering": "Đang đăng ký…"
+  },
+  "permissionNotice": "Chỉ Quản trị trở lên mới quản lý được tiện ích của nhóm. Bạn có thể xem kho.",
+  "searchPlaceholder": "Tìm theo tên hoặc ID…",
+  "empty": {
+    "loadErrorTitle": "Không tải được tiện ích",
+    "noExtTitle": "Chưa có tiện ích nào",
+    "noMatchTitle": "Không có tiện ích nào khớp với tìm kiếm",
+    "noExtDesc": "Nhập một tiện ích từ Chrome Web Store ở trên để thêm vào kho của nhóm. Tiện ích tải trong các hồ sơ đã đánh dấu \"Tải tiện ích SoftGlaze\" ở thẻ Nâng cao.",
+    "noMatchDesc": "Hãy thử tên hoặc ID khác."
+  },
+  "card": {
+    "unpacked": "Tiện ích đã giải nén",
+    "removeTitle": "Gỡ khỏi nhóm",
+    "injected": "Đã bật",
+    "disabled": "Đã tắt"
+  },
+  "confirmRemove": "Gỡ \"{{name}}\" khỏi kho của nhóm? Các tệp cục bộ của nó sẽ bị xóa.",
+  "errors": {
+    "couldNotLoad": "Không tải được tiện ích.",
+    "installFailed": "Cài đặt thất bại.",
+    "couldNotUpdate": "Không cập nhật được tiện ích.",
+    "couldNotRemove": "Không gỡ được tiện ích."
+  }
+}

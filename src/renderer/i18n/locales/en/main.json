@@ -1,0 +1,25 @@
+{
+  "contextMenu": {
+    "undo": "Undo",
+    "redo": "Redo",
+    "cut": "Cut",
+    "copy": "Copy",
+    "paste": "Paste",
+    "selectAll": "Select all",
+    "copyLink": "Copy link"
+  },
+  "dialogs": {
+    "exportArchiveTitle": "Export encrypted profile archive",
+    "archiveFilter": "SoftGlaze encrypted archive",
+    "importProfilesTitle": "Select a SoftGlaze profile spreadsheet to import",
+    "spreadsheetFilter": "Spreadsheet files",
+    "exportProfilesTitle": "Export SoftGlaze profiles",
+    "excelFilter": "Excel Workbook",
+    "importIdentitiesTitle": "Select a spreadsheet of identities to import",
+    "backupTitle": "Back up workspace",
+    "backupFilter": "SoftGlaze workspace backup",
+    "restoreTitle": "Restore workspace backup",
+    "exportActivityTitle": "Export activity log",
+    "bindSpreadsheetTitle": "Select a spreadsheet to bind to this parallel run"
+  }
+}

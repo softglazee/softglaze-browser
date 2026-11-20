@@ -79,7 +79,7 @@ export default function DbGate({ children }) {
         <h1 className="font-display text-[20px] font-semibold tracking-tight">{t('db.title')}</h1>
         <p className="text-[12.5px] text-muted mt-1 mb-6">{t('db.subtitle')}</p>
 
-        <label className="block text-[11px] font-medium text-muted mb-1.5"><KeyRound className="w-3 h-3 inline mr-1" />{t('db.workspacePassword')}</label>
+        <label className="block text-[11px] font-medium text-muted mb-1.5"><KeyRound className="w-3 h-3 inline me-1" />{t('db.workspacePassword')}</label>
         <input
           type="password"
           className={inputCls}

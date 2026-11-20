@@ -194,7 +194,7 @@ test('17: the default footer is shown in the window\'s language; a custom one as
   assert.ok(def);
   assert.ok(IPC.includes(`footerText: '${def}'`), 'the same default main seeds');
   assert.equal(loc('en', 'common').shell.footerDefault, def);
-  assert.match(loc('es', 'common').shell.footerDefault, /^© \{year\} SoftGlaze - Creado por el \[equipo de SoftGlaze\]\(https:\/\/softglaze\.com\) · Desarrollado por \[Azhar Ali\]\(https:\/\/azhar\.softglaze\.com\)$/);
+  assert.match(loc('es', 'common').shell.footerDefault, /^© \{year\} SoftGlaze · Creado por el \[equipo de SoftGlaze\]\(https:\/\/softglaze\.com\) · Desarrollado por \[Azhar Ali\]\(https:\/\/azhar\.softglaze\.com\)$/);
   // Round 9: an older stored default (round9.test.js) counts as the default too.
   assert.match(lib, /const isDefault = text === DEFAULT_FOOTER_TEXT \|\| LEGACY_DEFAULT_FOOTER_TEXTS\.includes\(text\);\s*return isDefault \? t\('shell\.footerDefault', \{ defaultValue: DEFAULT_FOOTER_TEXT \}\) : text;/);
   assert.match(read('src', 'renderer', 'components', 'AppShell.jsx'), /\{renderFooterNodes\(footerTextFor\(text, t\)\)\}/);
@@ -208,7 +208,7 @@ test('10: the sidebar says "Dark mode" and its switch is on while the dark theme
   assert.match(toggle, /\{t\('shell\.darkMode'\)\}/);
   assert.doesNotMatch(toggle, /t\('shell\.lightMode'\)/);
   assert.match(toggle, /background: isDark \? 'var\(--primary\)' : 'var\(--switch-background\)'/);
-  assert.match(toggle, /\$\{isDark \? 'translate-x-4' : ''\}/);
+  assert.match(toggle, /\$\{isDark \? 'translate-x-4 rtl:-translate-x-4' : ''\}/);
 });
 
 // ---- 8. Delete-proxy confirmations ----
@@ -371,6 +371,7 @@ test('14: a workspace restore runs the pass for links imported before 1.0.26 on 
     getPrisma: () => db, readSetting, writeSetting, logAudit: async () => {}, require,
     rotationLinksAdoptedThisRun: false,
     requireOwnerOrSuper: async () => {},
+    i18nMain: require('../src/main/i18nMain.js'),
     dialog: { showOpenDialog: async () => ({ canceled: false, filePaths: ['C:/backups/ws.sgzw'] }) },
     profileArchive: { restoreWorkspaceArchive: async () => ({ db: Buffer.from('SQLite format 3\0'), exportedAt: '2026-10-02' }) },
     getRuntimeConfig: () => ({ dbPath: 'C:/data/softglaze.db' }),
@@ -401,7 +402,12 @@ test('15: the Store package declares English and Spanish; the manifest fix-up le
     if (old === undefined) delete process.env.SG_STORE_COMMERCE; else process.env.SG_STORE_COMMERCE = old;
     delete require.cache[cfgPath];
   }
-  assert.deepEqual(fs.readdirSync(path.join(ROOT, 'src', 'renderer', 'i18n', 'locales')).sort(), ['en', 'es'], 'the app\'s own languages');
+  // The app ships more UI languages than the Store package declares (each declared language needs
+  // its own Store listing); every locale folder must be a supported UI language.
+  const localeDirs = fs.readdirSync(path.join(ROOT, 'src', 'renderer', 'i18n', 'locales'));
+  assert.ok(localeDirs.includes('en') && localeDirs.includes('es'), 'the app\'s own languages');
+  const i18nSrc = read('src', 'renderer', 'i18n', 'langs.mjs');
+  for (const d of localeDirs) assert.match(i18nSrc, new RegExp(`code: '${d}'`), `${d} is a supported language`);
   // electron-builder writes one <Resource Language> per entry (AppxTarget resourceLanguageTag).
   const target = fs.readFileSync(require.resolve('app-builder-lib/out/targets/AppxTarget.js'), 'utf8');
   assert.match(target, /userLanguages\.map\(it => `<Resource Language="\$\{it\.replace\(\/_\/g, "-"\)\}" \/>`\)/);

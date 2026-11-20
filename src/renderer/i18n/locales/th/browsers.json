@@ -1,0 +1,70 @@
+{
+  "header": {
+    "eyebrow": "เอนจิน",
+    "title": "เบราว์เซอร์",
+    "subtitle": "ดาวน์โหลดบิลด์ Chrome และ Firefox จริงได้ตามต้องการ ติดตั้งให้อัตโนมัติและพร้อมเปิดใช้งาน",
+    "refresh": "รีเฟรช"
+  },
+  "stats": {
+    "chromeInstalled": "Chrome ที่ติดตั้งแล้ว",
+    "chromeAvailable": "Chrome ที่มีให้ใช้",
+    "firefoxInstalled": "Firefox ที่ติดตั้งแล้ว",
+    "firefoxAvailable": "Firefox ที่มีให้ใช้"
+  },
+  "counts": {
+    "installedAvailable": "· ติดตั้งแล้ว {{installed}} · มีให้ใช้ {{available}}"
+  },
+  "engine": {
+    "heading": "เอนจินฟิงเกอร์พรินต์",
+    "installed": "ติดตั้งแล้ว",
+    "notInstalled": "ยังไม่ได้ติดตั้ง",
+    "description": "fingerprint-chromium ตั้งค่า canvas, WebGL, UA, แพลตฟอร์ม และเขตเวลาในระดับเนทีฟ ซ่อน webdriver และบล็อกไม่ให้ WebRTC รั่วไหล เปิดใช้ได้ที่ การตั้งค่า → เบราว์เซอร์",
+    "progressInstalling": "กำลังติดตั้ง",
+    "progressVerifying": "กำลังตรวจสอบ",
+    "installing": "กำลังติดตั้ง",
+    "verifying": "กำลังตรวจสอบ",
+    "downloading": "กำลังดาวน์โหลด",
+    "download": "ดาวน์โหลด (~180 MB)"
+  },
+  "firefox": {
+    "heading": "Firefox",
+    "ready": "พร้อมใช้",
+    "notDetected": "ไม่พบ",
+    "detectedDesc": "พร้อมใช้ พบที่ {{path}} โปรไฟล์ Firefox จะเปิด Firefox จริงพร้อมพร็อกซี UA ภาษา เขตเวลา และปิด WebRTC",
+    "notDetectedDesc": "ไม่พบ Firefox ในระบบ ดาวน์โหลดเวอร์ชันด้านล่าง ระบบจะติดตั้งลงในแอป และโปรไฟล์ Firefox จะเปิด Firefox จริงพร้อมพร็อกซี UA ภาษา เขตเวลา และปิด WebRTC",
+    "fetching": "กำลังดึงรายการรุ่นของ Firefox…",
+    "empty": "ไม่มีเวอร์ชัน Firefox ให้ใช้ (คุณออฟไลน์อยู่หรือไม่)"
+  },
+  "chromium": {
+    "heading": "Chromium (Chrome for Testing)",
+    "subtitle": "บิลด์จริง UA, Client-Hints, TLS และ worker ตรงกับเวอร์ชันอย่างแท้จริงทั้งหมด",
+    "fetching": "กำลังดึงรายการ Chrome for Testing…",
+    "empty": "ไม่มีเวอร์ชันให้ใช้ (คุณออฟไลน์อยู่หรือไม่)"
+  },
+  "row": {
+    "versionLabel": "{{brand}} {{major}}",
+    "ready": "พร้อมใช้",
+    "paused": "หยุดชั่วคราว",
+    "interrupted": "ถูกขัดจังหวะ",
+    "resume": "ทำต่อ",
+    "download": "ดาวน์โหลด",
+    "retry": "ลองอีกครั้ง",
+    "downloading": "กำลังดาวน์โหลด",
+    "installing": "กำลังติดตั้ง…",
+    "installingShort": "กำลังติดตั้ง",
+    "queued": "อยู่ในคิว…",
+    "pauseDownload": "หยุดดาวน์โหลดชั่วคราว",
+    "pausedPercent": "หยุดชั่วคราว · {{percent}}%",
+    "interruptedPercent": "ถูกขัดจังหวะ · {{percent}}%"
+  },
+  "errors": {
+    "catalogUnreachable": "เชื่อมต่อรายการเบราว์เซอร์ไม่ได้ โปรดตรวจสอบการเชื่อมต่ออินเทอร์เน็ต",
+    "downloadFailed": "ดาวน์โหลดล้มเหลว",
+    "pauseFailed": "หยุดชั่วคราวไม่สำเร็จ",
+    "resumeFailed": "ทำต่อไม่สำเร็จ"
+  },
+  "browsers": {
+    "showAll": "แสดงทั้งหมด {{n}} เวอร์ชัน",
+    "showLess": "แสดงน้อยลง"
+  }
+}

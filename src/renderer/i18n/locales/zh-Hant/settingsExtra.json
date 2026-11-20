@@ -1,0 +1,411 @@
+{
+  "actions": {
+    "refresh": "重新整理"
+  },
+  "groups": {
+    "general": "一般",
+    "browser": "瀏覽器",
+    "runtime": "執行階段",
+    "security": "安全和團隊",
+    "account": "帳號和資料"
+  },
+  "nav": {
+    "billing": "帳單",
+    "monetization": "方案和用量",
+    "migration": "匯入和遷移",
+    "workspaceSync": "工作區同步",
+    "branding": "品牌",
+    "dbEncryption": "資料庫加密",
+    "workspaceBackup": "工作區備份",
+    "developerApi": "開發者 API",
+    "phones": "手機"
+  },
+  "fingerprint": {
+    "title": "指紋和身分",
+    "description": "啟動時套用於每個設定檔，除非設定檔自行覆蓋。"
+  },
+  "behaviour": {
+    "title": "瀏覽器行為",
+    "description": "已啟動瀏覽器的日常行為方式。"
+  },
+  "ui": {
+    "searchPlaceholder": "搜尋設定",
+    "jumpTo": "跳轉到部分",
+    "noResultsTitle": "沒有與「{{term}}」匹配的設定",
+    "noResultsDesc": "請嘗試更短的詞，例如「代理」「攝影機」或「登入」。",
+    "experimental": "實驗性",
+    "savedIdle": "所有更改已儲存",
+    "saving": "正在儲存更改…",
+    "saveError": "無法儲存更改"
+  },
+  "localRuntime": {
+    "title": "本機執行階段",
+    "description": "路徑在 Electron 主處理程序中解析。",
+    "loading": "正在載入系統資訊...",
+    "sqliteDb": "SQLite 資料庫",
+    "profileRoot": "設定檔根目錄",
+    "databaseUrl": "資料庫 URL",
+    "configured": "已設定",
+    "notConfigured": "未設定"
+  },
+  "sessions": {
+    "title": "執行中的工作階段",
+    "description": "目前已啟動並佔用資源的工作階段。",
+    "loading": "正在載入工作階段...",
+    "emptyTitle": "沒有執行中的工作階段",
+    "emptyDescription": "啟動一個設定檔即可在這裡看到。",
+    "running": "執行中",
+    "created": "建立於 {{date}}",
+    "close": "關閉"
+  },
+  "scheduler": {
+    "title": "代理健康檢查排程",
+    "description": "在背景定期重新檢測每個已儲存的代理，並儲存其健康狀態。",
+    "enabled": "已啟用",
+    "disabled": "已停用",
+    "runSweepEvery": "檢測間隔",
+    "every15min": "15 分鐘",
+    "every30min": "30 分鐘",
+    "every1hour": "1 小時",
+    "every2hours": "2 小時",
+    "serviceRunning": "服務執行中",
+    "idle": "空閒",
+    "noteLabel": "注意：",
+    "noteBody": "此背景任務在 Electron 主處理程序中執行，因此即使應用程式最小化或你在頁面間切換，檢測也會持續進行。健康結果會直接以狀態標記的形式顯示在代理池中。"
+  },
+  "toggleRow": {
+    "appliedAtLaunch": "啟動時套用"
+  },
+  "globalPreferences": {
+    "heading": "全域偏好設定",
+    "loading": "正在載入全域設定…",
+    "saving": "正在儲存…"
+  },
+  "security": {
+    "title": "帳號安全",
+    "description": "登入保護和驗證策略。",
+    "remoteLogin": {
+      "title": "異地登入提醒",
+      "desc": "當你的帳號從常用的 3 個 IP 之外的新 IP 位址登入時，會傳送提醒郵件。"
+    },
+    "failedLogin": {
+      "title": "登入失敗提醒",
+      "desc": "如果登入失敗超過 3 次，會向擁有者的電子郵件傳送提醒郵件。"
+    },
+    "ipAllowlist": {
+      "title": "登入 IP 允許清單",
+      "desc": "設定後，成員登入將受 IP 限制（不影響擁有者）。"
+    },
+    "twoStep": {
+      "title": "兩步驟驗證",
+      "desc": "敏感操作需要透過驗證器應用程式、郵件或簡訊進行驗證。",
+      "methodLabel": "方式",
+      "methodApp": "驗證器應用程式",
+      "methodEmail": "郵件",
+      "methodSms": "簡訊",
+      "levelLabel": "驗證級別",
+      "levelLow": "低：新裝置或距上次雙重驗證超過 90 天",
+      "levelMedium": "中（推薦）：新裝置或超過 30 天",
+      "levelHigh": "高：每次登入都需要雙重驗證"
+    }
+  },
+  "multiDevice": {
+    "title": "多裝置模式",
+    "description": "控制多個成員是否可以同時存取同一個設定檔。",
+    "modeOff": "關閉：每個設定檔只允許一位成員",
+    "modeFull": "全部：所有設定檔都支援同時存取",
+    "modeSpecified": "指定：僅限所選設定檔",
+    "hintBefore": "啟用後，多個成員可以同時存取同一個設定檔。在",
+    "hintSpecified": "指定",
+    "hintAfter": "模式下，請在「設定檔」頁面選擇符合條件的設定檔。"
+  },
+  "website": {
+    "title": "網站管理",
+    "description": "URL 存取規則和資源載入。",
+    "blockAccess": {
+      "title": "阻擋存取",
+      "desc": "使用阻擋清單和允許清單管理 URL。",
+      "blocklist": "阻擋清單",
+      "allowlist": "允許清單"
+    },
+    "fbStatic": {
+      "title": "FB 靜態資源",
+      "desc": "啟用後，Facebook 靜態資源將使用區域網路載入。"
+    },
+    "localNetwork": {
+      "title": "區域網路存取",
+      "desc": "啟用後，可以在區域網路上存取特定 URL。"
+    }
+  },
+  "platform": {
+    "title": "平台",
+    "description": "自訂設定檔清單的顯示方式。",
+    "customIcon": {
+      "title": "自訂圖示",
+      "desc": "在清單中為設定檔顯示自訂圖示。"
+    },
+    "displayCustomNo": {
+      "title": "顯示自訂編號",
+      "desc": "顯示完整的自訂序列號（例如「123456」）。"
+    },
+    "displayLast4": {
+      "title": "顯示自訂編號後 4 位",
+      "desc": "僅顯示序列號的最後 4 位。"
+    }
+  },
+  "ipSetting": {
+    "title": "IP 設定",
+    "description": "代理自動設定優先順序和 IP 檢測工具。",
+    "priorityPrefix": "查詢優先順序：",
+    "priorityChain": "上次使用的 IP > ASN > 城市 > 地區 > 國家/地區",
+    "prioritySuffix": "未勾選的選項會被跳過。",
+    "lastUsedIp": "上次使用的 IP",
+    "asn": "ASN",
+    "asnDesc": "僅適用於 Bright 自動模式。",
+    "city": "城市",
+    "region": "地區",
+    "country": "國家/地區",
+    "ipCheckerLabel": "IP 檢測工具"
+  },
+  "dataSync": {
+    "title": "資料同步",
+    "description": "選擇要在裝置間同步的資料。",
+    "cookie": "Cookie",
+    "passwords": "已儲存的密碼",
+    "bookmarks": "書籤",
+    "localStorage": "本機儲存",
+    "indexedDb": "IndexedDB",
+    "extensionData": "擴充功能資料",
+    "history": "歷史記錄"
+  },
+  "browser": {
+    "title": "瀏覽器設定",
+    "description": "已啟動瀏覽器的行為。標有「啟動時套用」的專案會在下次啟動設定檔時生效。",
+    "geoMatch": {
+      "title": "地理位置自動匹配（時區 · 語言區域 · WebRTC）",
+      "desc": "啟動時根據代理的位置推導每個設定檔的時區、語言和 WebRTC 出口 IP。關閉後僅使用每個設定檔的手動設定值。啟動時套用。"
+    },
+    "realtimeTimezone": {
+      "title": "動態 IP 變化時即時匹配時區",
+      "desc": "動態 IP 變化時，匹配相應的時區和位置。"
+    },
+    "chromeSignin": {
+      "title": "允許登入 Chrome",
+      "desc": "關閉時，你可以登入 Gmail 等 Google 網站，而無需登入 Chrome 本身。"
+    },
+    "offerTranslate": {
+      "title": "提供網頁翻譯",
+      "desc": "對於不是你所用語言的網頁，提供翻譯。"
+    },
+    "disableDevtools": {
+      "title": "停用瀏覽器開發者工具",
+      "desc": "在基於 Chrome 的設定檔中，任何開發者工具視窗或面板（F12、Ctrl+Shift+I、檢查）一開啟就會被關閉。適用於更改後啟動的設定檔。不影響這台電腦上你自己的 Chrome。"
+    },
+    "minimizeCdpFootprint": {
+      "title": "最小化 CDP 痕跡（實驗性，減少驗證碼）",
+      "shortTitle": "最小化 CDP 痕跡",
+      "desc": "去除持久的 CDP Runtime.enable，這是 Cloudflare/Turnstile 偵測到的首要自動化訊號。開啟時的代價：人物設定自動填入、起始頁檢測連結和同步工作階段映象將停止工作（它們需要 CDP 繫結）。預設關閉；可開啟後進行 A/B 測試，看是否能減少驗證碼，然後重新啟動設定檔。"
+    },
+    "blockThirdPartyCookies": {
+      "title": "阻擋第三方 Cookie",
+      "desc": "關閉（推薦）：設定檔會像普通 Chrome 視窗一樣保留併傳送第三方 Cookie，reCAPTCHA、hCaptcha 和 Cloudflare 會藉此信任訪客，因此驗證碼更容易通過。開啟：基於 Chrome 的設定檔會阻擋它們。適用於更改後啟動的設定檔。"
+    },
+    "checkBeforeLaunch": {
+      "title": "開啟前檢查設定檔",
+      "desc": "從「設定檔」頁面開啟設定檔之前，列出明顯的不一致之處（系統、顯示卡、螢幕、語言、時區、WebRTC、失效的代理），並提供先行修復。"
+    },
+    "switchProxyOnBlock": {
+      "title": "網站攔截設定檔時切換代理",
+      "desc": "當網站讓基於 Chrome 的設定檔停留在攔截或驗證碼頁面時，透過代理的輪換連結取得新 IP，或將設定檔切換到更好的備用代理，然後重新開啟頁面。每個設定檔每小時最多兩次，並且在自動化或 Local API 使用它時絕不執行。每次攔截都會連同失敗的代理一起記錄。",
+      "toast": {
+        "blocked": "{{site}} 攔截了 {{profile}}（{{kind}}）。",
+        "rotated": "已為 {{proxy}} 取得新 IP 並重新載入頁面。",
+        "switched": "已切換到 {{proxy}} 並重新開啟頁面。",
+        "notReopened": "已切換到 {{proxy}}，但設定檔未能重新開啟。",
+        "none": {
+          "disabled": "「設定」中已關閉代理切換，因此未做任何更改。",
+          "noProxy": "此設定檔未使用已儲存的代理，因此未做任何更改。",
+          "busy": "自動化或 Local API 正在使用此設定檔，因此未做任何更改。",
+          "limit": "此設定檔在過去一小時內已切換 {{limit}} 次，因此未做任何更改。",
+          "proxyPool": "此設定檔使用輪換代理池，因此未做任何更改。",
+          "noSpare": "沒有表現更好的備用代理，因此未做任何更改。",
+          "noPermission": "你的角色無法更改此設定檔的代理，因此未做任何更改。",
+          "signedOut": "目前沒有人登入，因此未做任何更改。",
+          "inProgress": "此設定檔的切換已在進行中。",
+          "failed": "切換失敗，因此未做任何更改。"
+        },
+        "kind": {
+          "googleSorry": "Google 異常流量頁面",
+          "rateLimit": "請求過多",
+          "cloudflare": "Cloudflare 驗證",
+          "datadome": "DataDome 攔截",
+          "accessDenied": "拒絕存取頁面",
+          "perimeterx": "PerimeterX 攔截",
+          "unknown": "攔截頁面"
+        }
+      }
+    },
+    "lockExtensions": {
+      "title": "禁止安裝/移除擴充功能",
+      "desc": "在基於 Chrome 的設定檔中，擴充功能頁面和 Chrome 線上應用程式商店一開啟就會被關閉，因此無法新增、移除或關閉擴充功能。你從 SoftGlaze 的「擴充功能」頁面安裝的擴充功能仍會載入。適用於更改後啟動的設定檔。"
+    },
+    "virtualCamera": {
+      "title": "虛擬攝影機",
+      "desc": "將本機影片模擬為即時攝影機畫面。僅適用於 Chrome 140 及以上版本。"
+    },
+    "mobileSimulation": {
+      "title": "行動裝置模擬最佳化",
+      "desc": "使介面更接近真實行動裝置的體驗。僅適用於 Chrome 143 及以上版本。"
+    },
+    "secureAccess": {
+      "title": "安全存取（HTTPS）",
+      "desc": "儘可能使用 HTTPS，並在載入非 HTTPS 網站前發出警告。"
+    },
+    "disableVideos": {
+      "title": "停用影片載入",
+      "desc": "阻擋媒體下載以節省代理流量。"
+    },
+    "disableImages": {
+      "title": "停用圖片載入",
+      "desc": "阻擋圖片載入以節省流量。注意：圖片載入會被完全停用；下方的 KB 閾值會被儲存，供將來按請求過濾時使用。",
+      "skipUnder": "跳過小於以下大小的圖片",
+      "kb": "KB"
+    },
+    "antidetectEngine": {
+      "title": "原生指紋引擎（fingerprint-chromium）",
+      "desc": "在 fingerprint-chromium 上啟動 Chrome 設定檔。這是一個修改了原始碼的 Chromium，會在二進位層面套用每個設定檔的指紋設定（canvas、WebGL、音訊、UA、平台、時區），隱藏 navigator.webdriver 和 HeadlessChrome UA，並原生阻擋 WebRTC 真實 IP 洩露，不存在可被網站察覺的 JS 注入時序問題。需要 fingerprint-chromium 二進位檔案；如果不存在，則改用標準 Chrome。此引擎去除了頁面到應用程式橋接過去所依賴的 CDP 繫結，因此 SoftGlaze 改為透過無繫結通道傳遞這些呼叫：資料保險庫自動填入、巨集錄製器、起始頁連結和工作階段映象都能在其上正常工作。預設關閉；開啟後請重新啟動設定檔。"
+    }
+  },
+  "performance": {
+    "title": "效能",
+    "description": "用於同時啟動大量設定檔的控制項，適用於批次啟動和執行工作階段上限。",
+    "parallelLimit": {
+      "title": "並行啟動上限",
+      "desc": "批次啟動時同時啟動的設定檔數量。數值越高速度越快，但佔用記憶體越多。推薦 3-8。"
+    },
+    "maxRunning": {
+      "title": "最多執行的設定檔",
+      "desc": "同時執行的設定檔的硬性上限（記憶體安全）。設為 0 表示不限制；超過上限的啟動會被阻擋，並顯示明確提示。"
+    }
+  },
+  "reliability": {
+    "title": "可靠性",
+    "description": "還原上次的工作階段、還原當機的設定檔，並在大量設定檔同時執行時防止記憶體耗盡。",
+    "restoreSession": {
+      "title": "啟動時還原上次的工作階段",
+      "desc": "SoftGlaze 重新開啟時，提示重新啟動上次關閉或當機時正在執行的設定檔。"
+    },
+    "autoRestart": {
+      "title": "自動重啟當機的設定檔",
+      "desc": "如果設定檔的瀏覽器自行當機，會自動重新啟動。每個設定檔都有次數上限，避免反覆當機的設定檔陷入迴圈。",
+      "maxRetries": "每個設定檔的最大重試次數"
+    },
+    "memoryGuard": {
+      "title": "記憶體保護",
+      "desc": "當系統記憶體不足時，自動關閉最早執行的設定檔，直到記憶體恢復。預設關閉：除非啟用，否則絕不會關閉設定檔。",
+      "triggerBelow": "可用記憶體低於以下值時觸發",
+      "stopWhenReaches": "可用記憶體達到以下值時停止"
+    }
+  },
+  "smartAutofill": {
+    "title": "智慧自動填入",
+    "description": "身分資料保險庫小工具，可在已啟動的設定檔中檢測登錄檔單，並使用你儲存的人物設定進行填充。",
+    "enable": {
+      "title": "啟用智慧自動填入",
+      "desc": "將自動填入小工具注入已啟動的設定檔。在 Chromium 上使用頁內橋接；關閉後將完全跳過注入。"
+    },
+    "firefox": {
+      "title": "Firefox 自動填入",
+      "desc": "同時將自動填入 WebExtension 安裝到 Firefox 設定檔中（Firefox 沒有頁內橋接）。在 Firefox Developer Edition/Nightly 上以未簽章方式載入；正式版 Firefox 需要安裝程式附帶的 Mozilla 簽章版本。"
+    },
+    "members": {
+      "title": "團隊成員可在自動填入中使用資料保險庫",
+      "desc": "關閉（預設）：已啟動設定檔中的自動填入按鈕僅在擁有者登入時提供資料保險庫中的身分。開啟：管理員、經理和操作員也可以使用這些身分，但無法開啟資料保險庫頁面。只有擁有者可以更改此項。"
+    }
+  },
+  "audit": {
+    "title": "審計記錄",
+    "description": "團隊活動和安全事件（成員變更、登入、權限編輯）在啟動時被清理前的保留時長。",
+    "retentionTitle": "保留期限",
+    "retentionDesc": "SoftGlaze 啟動時會刪除早於此期限的活動。設為 0 則永久保留全部歷史。",
+    "days": "天"
+  },
+  "updates": {
+    "title": "更新",
+    "description": "檢查並安裝應用程式更新。更新在安裝前會驗證簽章。",
+    "checkDefault": "檢查是否有更新版本的 SoftGlaze Browser。",
+    "notEnabled": "此版本未啟用自動更新。",
+    "checking": "正在檢查更新…",
+    "available": "有可用更新 {{version}}，正在背景下載…",
+    "downloading": "正在下載 {{version}}… {{percent}}%",
+    "ready": "更新 {{version}} 已準備好安裝。",
+    "errorWithReason": "無法檢查更新：{{reason}}",
+    "errorNoReason": "無法檢查更新。",
+    "upToDate": "你使用的已是最新版本。",
+    "installRestart": "安裝並重啟",
+    "checkForUpdates": "檢查更新"
+  },
+  "onStartup": {
+    "title": "啟動時",
+    "description": "啟動設定檔時執行的操作。",
+    "startPageLabel": "起始頁",
+    "modeDetection": "顯示代理/指紋檢測頁面",
+    "modeLast": "繼續瀏覽上次開啟的頁面",
+    "modeBlank": "不啟動代理檢測頁面（空白頁）",
+    "onlyWithProxy": {
+      "title": "僅在代理可用時開啟",
+      "desc": "如果找不到代理，瀏覽器將不會開啟。（否則基於 IP 的指紋項將無法匹配。）"
+    },
+    "onlyWhenExtensionLoaded": {
+      "title": "僅在擴充功能資料載入後開啟",
+      "desc": "只有在擴充功能資料成功載入後才開啟瀏覽器。"
+    },
+    "blockIfCountryChanged": {
+      "title": "國家/地區變化時阻擋開啟",
+      "desc": "如果國家/地區與上次開啟時不同，則不開啟設定檔。"
+    }
+  },
+  "captcha": {
+    "title": "驗證碼自動識別",
+    "description": "在瀏覽過程中使用付費的第三方識別服務，自動完成 reCAPTCHA v2 和 hCaptcha。這與指紋無關：乾淨的指紋可以減少驗證碼出現的頻率，但要識別驗證碼，需要使用按次計費的付費服務（由供應商計費，而非 SoftGlaze）。",
+    "enable": {
+      "title": "啟用驗證碼自動識別",
+      "desc": "開啟後，已啟動的設定檔會檢測受支援的驗證碼，並自動提交給你的識別服務。"
+    },
+    "providerLabel": "識別供應商",
+    "apiKeyLabel": "API 金鑰",
+    "apiKeyPlaceholderAnticaptcha": "Anti-Captcha clientKey",
+    "apiKeyPlaceholder2captcha": "2captcha API 金鑰",
+    "billedAnticaptcha": "本機儲存在你的設定資料庫中。Anti-Captcha 會按識別次數向你收費。",
+    "billed2captcha": "本機儲存在你的設定資料庫中。2captcha 會按識別次數向你收費。",
+    "solveRecaptchaV2": "識別 reCAPTCHA v2",
+    "solveHcaptcha": "識別 hCaptcha"
+  },
+  "email": {
+    "title": "郵件（驗證碼）",
+    "configured": "已設定",
+    "offlineMode": "離線模式",
+    "description": "用於在註冊時傳送一次性驗證碼的 SMTP。留空則以離線模式執行，驗證碼將在應用程式內顯示，而不是透過郵件傳送。",
+    "smtpHost": "SMTP 主機",
+    "port": "連接埠",
+    "encryption": "加密",
+    "username": "使用者名稱",
+    "password": "密碼",
+    "passwordSavedHint": "（已儲存，留空則保持不變）",
+    "fromName": "發件人名稱",
+    "saved": "郵件設定已儲存。",
+    "saveFailed": "無法儲存郵件設定。",
+    "noSmtpYet": "尚未設定 SMTP，請先儲存設定。",
+    "testSent": "測試郵件已傳送至 {{to}}。",
+    "testFailed": "測試失敗，請檢查設定。",
+    "saveButton": "儲存郵件設定",
+    "test": "測試"
+  },
+  "errors": {
+    "loadSettings": "無法載入設定。",
+    "closeSession": "無法關閉工作階段。",
+    "updateScheduler": "無法更新排程。",
+    "loadGlobal": "無法載入全域設定。",
+    "saveSetting": "無法儲存設定。"
+  }
+}

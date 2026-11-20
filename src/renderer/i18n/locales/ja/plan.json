@@ -1,0 +1,97 @@
+{
+  "upgrade": {
+    "title": {
+      "profiles": "無料プランのプロファイル上限（{{limit}}件）に達しました",
+      "running": "無料プランで同時に起動できるプロファイルは{{limit}}件です",
+      "openable": "このプロファイルは無料プランで開ける{{limit}}件に含まれていません",
+      "seats": "チームメンバーはProの機能です",
+      "ai": "本日のAIアクション{{limit}}回を使い切りました",
+      "sync": "クラウド同期はProの機能です",
+      "phone": "スマートフォンからのプロファイル起動はProの機能です",
+      "generic": "この機能はProに含まれています"
+    },
+    "body": {
+      "profiles": "{{used}}件のプロファイルはそのまま保持されます。Proにアップグレードするとプロファイル数が無制限になります。または1件削除して空きを作ってください。",
+      "running": "別のプロファイルを起動するには開いているプロファイルを閉じるか、Proにアップグレードして3件を同時に起動してください。",
+      "openable": "すべてのプロファイルは保持されます。無料プランでは開ける{{limit}}件を選択します。Proではすべて開けます。",
+      "seats": "無料プランは1人用です。Proにはチームメンバー3人、Enterpriseには25人が含まれます。",
+      "ai": "無料プランではAIアクションを1日{{limit}}回まで使えます。明日リセットされます。ProではAIアクションが無制限です。",
+      "sync": "Proでは、コンピューターとスマートフォンの間でプロファイルが同期されます。",
+      "phone": "無料プランでは、スマートフォンとWebアプリでプロファイルの表示とAIリクエストの承認ができます。Proではプロファイルの起動と停止もできます。",
+      "generic": "この機能を使うにはProにアップグレードしてください。"
+    },
+    "price": "Proは月額{{price}}です。",
+    "priceFallback": "Proは月額US$5からです。",
+    "upgradeButton": "Proにアップグレード",
+    "chooseProfiles": "プロファイルを選択",
+    "notNow": "後で"
+  },
+  "welcome": {
+    "title": "Proトライアルが終了しました。現在は無料プランです。",
+    "keepTitle": "引き続き使えるもの",
+    "keep": "すべてのプロファイル（{{limit}}件を起動可能）、プロキシとフィンガープリント、スマートフォンアプリとWebアプリ。",
+    "proTitle": "Proで追加されるもの",
+    "pro": "無制限のプロファイル、3件の同時起動、チームシート、クラウド同期、無制限のAIアクションが月額{{price}}で使えます。",
+    "upgrade": "Proにアップグレード",
+    "stay": "無料プランを続ける"
+  },
+  "counter": {
+    "freeBadge": "無料プラン",
+    "profiles": "プロファイル {{used}} / {{limit}}",
+    "running": "起動中 {{used}} / {{limit}}",
+    "ai": "本日のAIアクション {{used}} / {{limit}}",
+    "upgrade": "アップグレード"
+  },
+  "choose": {
+    "title": "起動できるプロファイルを選択",
+    "body": "無料プランでは、{{total}}件のプロファイルのうち{{limit}}件を起動できます。すべてのプロファイルは保持されます。Proにアップグレードするとすべて起動できます。",
+    "selected": "{{limit}}件中{{count}}件を選択",
+    "search": "プロファイルを検索",
+    "save": "保存",
+    "cancel": "キャンセル",
+    "saved": "保存しました。無料プランでこれらのプロファイルを起動できます。"
+  },
+  "billing": {
+    "currentFree": "無料プラン",
+    "currentFreeBody": "ずっと無料で、カードは不要です。プロファイルやチーム機能を増やし、AIアクションを無制限にするには、いつでもアップグレードできます。",
+    "currentBadge": "現在のプラン",
+    "compareTitle": "プランを比較",
+    "colFeature": "機能",
+    "colFree": "無料",
+    "colPro": "Pro",
+    "colEnterprise": "Enterprise",
+    "rows": {
+      "profiles": "保存できるプロファイル",
+      "running": "同時に起動できるプロファイル",
+      "seats": "シート（チームメンバー）",
+      "pcs": "アカウントあたりのPC数",
+      "fingerprints": "独自のプロキシ、すべてのフィンガープリント設定",
+      "ai": "AIとMCPによる自動化",
+      "phone": "スマートフォンアプリとWebアプリ",
+      "sync": "PC間のクラウド同期",
+      "support": "サポート"
+    },
+    "values": {
+      "unlimited": "無制限",
+      "unlimitedAudit": "無制限 + 監査ログのエクスポート",
+      "yes": "あり",
+      "no": "なし",
+      "aiPerDay": "1日{{count}}回",
+      "viewApprove": "表示 + AIリクエストの承認",
+      "openStop": "+ プロファイルの起動と停止",
+      "teamApprovals": "+ チームでの承認",
+      "helpCentre": "ヘルプセンター",
+      "email": "メール",
+      "priorityEmail": "優先メール"
+    }
+  },
+  "deals": {
+    "title": "おすすめのプロキシ特典",
+    "disclosure": "パートナーの特典です。SoftGlazeが手数料を受け取る場合があります。",
+    "code": "コード {{code}}",
+    "copyCode": "コードをコピー",
+    "copied": "コピーしました",
+    "open": "特典を受け取る",
+    "hidden": "ProとEnterpriseではパートナーの特典は表示されません。"
+  }
+}

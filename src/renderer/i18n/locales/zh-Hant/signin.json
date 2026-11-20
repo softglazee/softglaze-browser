@@ -1,0 +1,111 @@
+{
+  "choose": {
+    "title": "建立免費帳號",
+    "subtitle": "使用已有帳號，無需新密碼。",
+    "google": "使用 Google 繼續",
+    "microsoft": "使用 Microsoft 繼續",
+    "facebook": "使用 Facebook 繼續",
+    "linkedin": "使用 LinkedIn 繼續",
+    "allowEmail": "允許存取電子郵件並重試 Facebook",
+    "github": "使用 GitHub 繼續",
+    "email": "使用電子郵件繼續",
+    "moreOptions": "使用密碼設定",
+    "moreOptionsHint": "想用名稱和密碼？",
+    "privacy": "我們只會取得你的姓名和已驗證的電子郵件地址。",
+    "haveAccount": "這台電腦上已有工作區？",
+    "logIn": "使用密碼登入",
+    "signInTitle": "登入 SoftGlaze",
+    "signInSubtitle": "請使用註冊時的帳號。如果你的方案在另一台電腦上，可以將其轉移到這台電腦。",
+    "entryLabel": "新使用者或舊使用者",
+    "entryNew": "新帳號",
+    "entryReturning": "我已有帳號"
+  },
+  "unlock": {
+    "title": "歡迎回來",
+    "titleNamed": "歡迎回來，{{name}}",
+    "subtitle": "請使用此工作區所屬的帳號登入。",
+    "account": "工作區帳號：{{email}}",
+    "passwordInstead": "使用密碼登入",
+    "haveInvite": "我有邀請碼",
+    "teamSignIn": "團隊成員登入"
+  },
+  "link": {
+    "title": "登入你的 SoftGlaze 帳號",
+    "subtitle": "在這裡和其他電腦上使用一鍵登入。你的工作區保持不變。"
+  },
+  "email": {
+    "title": "使用電子郵件繼續",
+    "subtitle": "我們會向你的電子郵件傳送 6 位驗證碼，無需密碼。",
+    "label": "電子郵件地址",
+    "placeholder": "you@company.com",
+    "send": "傳送驗證碼",
+    "codeTitle": "請查收郵件",
+    "codeBody": "請輸入我們傳送到 {{email}} 的 6 位驗證碼。",
+    "codeLabel": "6 位驗證碼",
+    "verify": "繼續",
+    "resend": "重新傳送驗證碼",
+    "resendIn": "{{count}} 秒後可重新傳送",
+    "checkSpam": "郵件可能需要一分鐘才能送達。如果沒有收到，請檢查垃圾郵件資料夾。",
+    "devCode": "此版本未設定郵件伺服器，驗證碼如下：{{code}}",
+    "change": "使用其他電子郵件"
+  },
+  "waiting": {
+    "title": "在瀏覽器中完成登入",
+    "body": "我們已在你的瀏覽器中開啟 {{provider}}。請在那裡登入，然後返回這裡。",
+    "status": "正在等待 {{provider}}...",
+    "reopen": "重新開啟頁面",
+    "anotherWay": "沒有跳轉回來？試試其他方式",
+    "cancel": "取消"
+  },
+  "back": "返回",
+  "useCase": {
+    "title": "你打算用 SoftGlaze 做什麼？",
+    "subtitle": "可選。這有助於我們為你改進 SoftGlaze。",
+    "continue": "繼續",
+    "skip": "跳過"
+  },
+  "move": {
+    "title": "你的訂閱",
+    "moved": "完成。你的訂閱現在可在這台電腦上使用。"
+  },
+  "account": {
+    "title": "登入方式",
+    "subtitle": "你登入 SoftGlaze 帳號的方式。在新電腦上登入時，授權也會轉移到那台電腦。",
+    "signedInAs": "已登入為 {{email}}",
+    "google": "Google",
+    "microsoft": "Microsoft",
+    "facebook": "Facebook",
+    "linkedin": "LinkedIn",
+    "github": "GitHub",
+    "githubLogin": "GitHub（@{{login}}）",
+    "email": "電子郵件驗證碼",
+    "lastUsed": "上次使用：{{date}}",
+    "linkedOn": "關聯於 {{date}}",
+    "signOut": "登出",
+    "signOutConfirm": "在這台電腦上結束 SoftGlaze 帳號？之後隨時可以用同一帳號重新登入。",
+    "signingOut": "正在登出...",
+    "offline": "離線：顯示的是這台電腦儲存的資訊。",
+    "notSignedIn": "登入 SoftGlaze 帳號，即可在這裡和其他電腦上使用一鍵登入。",
+    "signInWorkspace": "此工作區透過你的登入開啟。如果你還想在沒有網路時登入，請在上方新增密碼。",
+    "linked": "已登入。你的登入方式如下。",
+    "loading": "正在載入登入方式...",
+    "notAvailable": "一鍵登入需要 SoftGlaze 授權伺服器，而此版本不使用該伺服器。"
+  },
+  "errors": {
+    "SIGNIN_OFFLINE": "請連線網際網路後再登入。",
+    "SIGNIN_EXPIRED": "此登入已過期或已被使用，請重試。",
+    "SIGNIN_ACCOUNT_MISMATCH": "此工作區屬於另一個 SoftGlaze 帳號。請使用建立它時所用的帳號登入。",
+    "SIGNIN_EMAIL_MISMATCH": "請使用此工作區的電子郵件地址。",
+    "SIGNIN_EMAIL_NOT_VERIFIED": "您登入所用的帳號沒有已驗證的電子郵件地址。請在該帳號中完成驗證（GitHub 上：Settings > Emails），或使用電子郵件繼續。",
+    "SIGNIN_EMAIL_MISSING": "您的 Facebook 帳號沒有分享電子郵件。請使用 Google 或電子郵件登入，或允許存取電子郵件。",
+    "SIGNIN_DISPOSABLE_EMAIL": "請使用長期有效的電子郵件地址。",
+    "SIGNIN_UNAVAILABLE": "此登入方式暫不可用。請使用電子郵件繼續，或使用「更多選項」。",
+    "SIGNIN_FAILED": "登入未完成，請稍後重試。",
+    "SIGNIN_TIMEOUT": "登入耗時過長，請重試。",
+    "SIGNIN_NOT_ALLOWED": "此工作區不支援這種登入方式。",
+    "SIGNIN_KEY_LOST": "無法在這台電腦上透過您的登入開啟此工作區。請使用密碼登入。",
+    "SIGNIN_SESSION_ENDED": "您的登入已結束，請重新登入。",
+    "SIGNIN_BAD_INPUT": "請輸入有效的電子郵件地址。",
+    "MOVE_FAILED": "目前無法轉移授權，請稍後重試。"
+  }
+}

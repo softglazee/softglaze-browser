@@ -1,0 +1,109 @@
+{
+  "palette": {
+    "dialogLabel": "Paleta poleceń",
+    "searchPlaceholder": "Szukaj stron, profili, proxy, członków…",
+    "searchAriaLabel": "Szukaj stron, profili, proxy i członków",
+    "resultsLabel": "Wyniki",
+    "esc": "Esc",
+    "noMatches": "Brak wyników.",
+    "nav": {
+      "dashboard": "Pulpit",
+      "ai": "SoftGlaze AI",
+      "profiles": "Profile",
+      "groups": "Grupy",
+      "proxies": "Pula proxy",
+      "freeProxies": "Darmowe proxy",
+      "proxyProviders": "Dostawcy proxy",
+      "browsers": "Przeglądarki",
+      "extensions": "Rozszerzenia",
+      "batchImport": "Import masowy",
+      "trash": "Kosz",
+      "automation": "Automatyzacja",
+      "members": "Członkowie",
+      "account": "Konto",
+      "settings": "Ustawienia"
+    },
+    "hint": {
+      "page": "Strona",
+      "profile": "Profil",
+      "proxy": "Proxy",
+      "member": "Członek",
+      "action": "Akcja"
+    },
+    "fallback": {
+      "profile": "Profil #{{id}}",
+      "proxy": "Proxy #{{id}}",
+      "member": "Członek #{{id}}"
+    },
+    "action": {
+      "stopAi": "Zatrzymaj całe AI"
+    }
+  },
+  "wizard": {
+    "skipTitle": "Pomiń konfigurację",
+    "back": "Wstecz",
+    "skip": "Pomiń",
+    "saveAndContinue": "Zapisz i dalej",
+    "saveAndFinish": "Zapisz i zakończ",
+    "msg": {
+      "smtpSaved": "Zapisano SMTP.",
+      "proxySaved": "Zapisano proxy."
+    },
+    "err": {
+      "smtpSaveFailed": "Nie udało się zapisać ustawień SMTP.",
+      "proxySaveFailed": "Nie udało się zapisać proxy.",
+      "profileCreateFailed": "Nie udało się utworzyć profilu."
+    },
+    "welcome": {
+      "title": "Witamy w SoftGlaze",
+      "subtitle": "Szybka konfiguracja w 3 krokach prowadzi do pierwszego profilu. Każdy krok możesz pominąć.",
+      "subtitleShort_one": "Jeden szybki krok. Możesz go pominąć.",
+      "subtitleShort_few": "Szybka konfiguracja w {{count}} krokach. Każdy krok możesz pominąć.",
+      "subtitleShort_many": "Szybka konfiguracja w {{count}} krokach. Każdy krok możesz pominąć.",
+      "subtitleShort_other": "Szybka konfiguracja w {{count}} krokach. Każdy krok możesz pominąć.",
+      "unavailable": "Wyszarzone kroki są pomijane: Twoje konto nie może ich wykonać.",
+      "getStarted": "Zaczynamy",
+      "stepEmail": "E-mail (SMTP), opcjonalnie, dla kodów OTP",
+      "stepProxy": "Pierwsze proxy (opcjonalnie)",
+      "stepProfile": "Pierwszy profil przeglądarki"
+    },
+    "smtp": {
+      "title": "E-mail (SMTP)",
+      "subtitle": "Opcjonalnie. Pozwala aplikacji wysyłać kody weryfikacyjne. Możesz to ustawić później w Ustawieniach.",
+      "host": "Host SMTP",
+      "hostPlaceholder": "smtp.example.com",
+      "port": "Port",
+      "portPlaceholder": "587",
+      "username": "Nazwa użytkownika",
+      "usernamePlaceholder": "you@example.com",
+      "password": "Hasło",
+      "passwordPlaceholder": "••••••••"
+    },
+    "proxy": {
+      "title": "Dodaj pierwsze proxy",
+      "subtitle": "Opcjonalnie. Daj każdej tożsamości własną sieć. Więcej dodasz w Puli proxy.",
+      "type": "Typ",
+      "host": "Host",
+      "hostPlaceholder": "1.2.3.4",
+      "port": "Port",
+      "portPlaceholder": "8080",
+      "user": "Użytkownik",
+      "userPlaceholder": "opcjonalnie",
+      "password": "Hasło",
+      "passwordPlaceholder": "opcjonalnie"
+    },
+    "profile": {
+      "title": "Utwórz pierwszy profil",
+      "subtitle": "Wygenerujemy dla Ciebie unikalny, spójny odcisk przeglądarki.",
+      "createAndFinish": "Utwórz i zakończ",
+      "name": "Nazwa profilu",
+      "namePlaceholder": "Mój pierwszy profil",
+      "defaultName": "Mój pierwszy profil",
+      "deviceType": "Typ urządzenia",
+      "desktop": "Komputer",
+      "mobile": "Telefon (Android)",
+      "mobileNote": "Android jest emulowany na silniku desktopowym: spójne UA, dotyk, ekran i GPU, ale to nie jest prawdziwe urządzenie.",
+      "proxyAttached": "Nowe proxy zostanie przypisane do tego profilu."
+    }
+  }
+}

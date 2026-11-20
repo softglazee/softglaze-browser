@@ -1,0 +1,80 @@
+{
+  "header": {
+    "eyebrow": "自動化",
+    "title": "批次建立設定檔",
+    "description": "透過試算表或按序產生，快速部署多個瀏覽器環境。",
+    "exportProfiles": "匯出設定檔"
+  },
+  "exportNotice_one": "已將 {{count}} 個設定檔匯出到 {{path}}",
+  "exportNotice_other": "已將 {{count}} 個設定檔匯出到 {{path}}",
+  "tabs": {
+    "importFromFile": "從檔案匯入",
+    "quickGenerate": "快速產生"
+  },
+  "step1": {
+    "title": "下載範本",
+    "description": "為確保順利解析，請使用我們的標準 Excel 或 CSV 範本。填寫設定檔名稱、代理和指紋規則。",
+    "downloadButton": "下載 .CSV 範本"
+  },
+  "step2": {
+    "title": "上傳並預覽",
+    "description": "選擇填寫好的試算表。我們會在本機解析，並在儲存前檢查格式錯誤。",
+    "selectButton": "選擇檔案"
+  },
+  "step3": {
+    "title": "預覽並提交資料"
+  },
+  "awaiting": {
+    "title": "等待資料",
+    "description": "選擇一個檔案，在這裡預覽結構化的設定檔。"
+  },
+  "preview": {
+    "file": "檔案：",
+    "validRows": "有效列：",
+    "errors": "錯誤："
+  },
+  "processing": {
+    "importing": "正在匯入… {{index}}/{{total}}",
+    "backendLog": "背景處理記錄",
+    "connecting": "正在連線匯入引擎…"
+  },
+  "table": {
+    "row": "列",
+    "title": "標題",
+    "group": "群組",
+    "proxyMethod": "代理方式",
+    "dataDir": "資料目錄",
+    "auto": "自動"
+  },
+  "autoBind": {
+    "label": "按國家/地區自動繫結代理",
+    "descPrefix": "- 對於沒有自帶代理的列，分配一個已儲存的代理，其健康檢查得出的國家/地區需與該列的",
+    "descSuffix": "欄一致（在符合項之間輪流分配）。",
+    "sourceLabel": "繫結來源",
+    "sourcePaid": "你的代理",
+    "sourceFree": "免費代理（僅可用的）",
+    "freeWarn": "免費代理由陌生人運營：切勿使用這些設定檔登入帳號或付款。"
+  },
+  "commitButton_one": "提交 {{count}} 個設定檔",
+  "commitButton_other": "提交 {{count}} 個設定檔",
+  "success": {
+    "title": "匯入成功",
+    "importedPrefix": "已成功匯入",
+    "importedMiddle": "個設定檔，並對應了",
+    "importedSuffix": "個新代理",
+    "autoBoundPrefix": "· 按國家/地區自動繫結了",
+    "autoBoundSuffix": "個",
+    "importAnother": "繼續匯入"
+  },
+  "quick": {
+    "engineTitle": "按序產生引擎",
+    "description": "無需試算表即可立即建立多個設定檔：獨立的指紋、按序編號的名稱、目標群組（可直接新增），並從指定群組或供應商分配代理。使用與「設定檔」頁面完全相同的引擎。",
+    "openButton": "開啟快速產生"
+  },
+  "errors": {
+    "parse": "無法解析該檔案。請確認它是有效的試算表。",
+    "commit": "無法將設定檔提交到資料庫。",
+    "importFailed": "匯入失敗。",
+    "export": "無法匯出設定檔。"
+  }
+}

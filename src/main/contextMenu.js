@@ -2,13 +2,13 @@
 // Right-click menu: Electron has none by default. Actions use Chromium's edit roles, and editFlags
 // decides what is enabled, so password fields still refuse Copy and Cut.
 
-const LABELS = Object.freeze({
-  en: { undo: 'Undo', redo: 'Redo', cut: 'Cut', copy: 'Copy', paste: 'Paste', selectAll: 'Select all', copyLink: 'Copy link' },
-  es: { undo: 'Deshacer', redo: 'Rehacer', cut: 'Cortar', copy: 'Copiar', paste: 'Pegar', selectAll: 'Seleccionar todo', copyLink: 'Copiar enlace' }
-});
+// Labels come from locales/<lang>/main.json (contextMenu.*) in the app language.
+const i18nMain = require('./i18nMain');
+
+const KEYS = ['undo', 'redo', 'cut', 'copy', 'paste', 'selectAll', 'copyLink'];
 
 function labelsFor(locale) {
-  return String(locale || '').toLowerCase().startsWith('es') ? LABELS.es : LABELS.en;
+  return Object.fromEntries(KEYS.map((k) => [k, i18nMain.t(`contextMenu.${k}`, null, locale || 'en')]));
 }
 
 // Pure, so the rules can be tested without Electron. `copyText` handles the link item.
@@ -41,11 +41,11 @@ function buildContextTemplate(params = {}, locale = 'en', copyText = () => {}) {
 }
 
 function attachContextMenu(webContents) {
-  const { app, BrowserWindow, Menu, clipboard } = require('electron');
+  const { BrowserWindow, Menu, clipboard } = require('electron');
   webContents.on('context-menu', (_event, params) => {
     const window = BrowserWindow.fromWebContents(webContents);
     if (!window) return;
-    const template = buildContextTemplate(params, app.getLocale(), (text) => clipboard.writeText(text));
+    const template = buildContextTemplate(params, i18nMain.getLanguage(), (text) => clipboard.writeText(text));
     Menu.buildFromTemplate(template).popup({
       window,
       // Hand the keyboard back to the page once the native menu closes.

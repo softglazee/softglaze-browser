@@ -1,0 +1,116 @@
+{
+  "title": "Ponsel",
+  "description": "Gunakan aplikasi ponsel SoftGlaze dengan komputer ini: lihat profil, buka dan hentikan profil, dan jawab permintaan AI dari ponsel Anda. Semua yang lewat antara ponsel dan komputer ini terenkripsi end-to-end.",
+  "enable": "Aktifkan pendamping ponsel",
+  "loading": "Memuat",
+  "offOwner": "Aktifkan untuk memasangkan ponsel. Komputer ini lalu menjaga koneksi aman ke relay SoftGlaze, yang hanya meneruskan pesan terenkripsi.",
+  "offOther": "Pemilik belum mengaktifkan pendamping ponsel.",
+  "copy": "Salin",
+  "cancel": "Batal",
+  "relay": {
+    "connected": "Terhubung ke relay",
+    "connecting": "Menghubungkan ke relay",
+    "authFailed": "Relay menolak komputer ini. Periksa alamat relay di Lanjutan."
+  },
+  "pair": {
+    "title": "Pasangkan ponsel",
+    "help": "Pasang SoftGlaze di ponsel Anda, lalu pindai kode dari layar ini.",
+    "start": "Pasangkan ponsel",
+    "qrAlt": "Kode pemasangan untuk aplikasi ponsel SoftGlaze",
+    "scanTitle": "Pindai kode ini dengan aplikasi ponsel SoftGlaze",
+    "step1": "Buka SoftGlaze di ponsel Anda.",
+    "step2": "Buka Pengaturan, Pasangkan dengan PC, lalu pindai kode ini.",
+    "step3": "Pastikan kedua layar menampilkan enam digit yang sama.",
+    "expiresIn": "Kode berlaku sekali dan berakhir dalam {{time}}.",
+    "textTitle": "Tidak bisa memindai? Salin kode sebagai teks",
+    "attemptFailed": "Sebuah ponsel mencoba kode yang salah atau rusak. Kode masih berlaku."
+  },
+  "confirm": {
+    "title": "{{name}} ingin dipasangkan",
+    "help": "Lanjutkan hanya jika ponsel Anda menampilkan enam digit ini persis.",
+    "helpBrowser": "Lanjutkan hanya jika browser menampilkan enam digit ini persis. Browser bisa melihat profil dan menjawab permintaan AI; centang Buka dan hentikan profil hanya jika Anda menginginkannya juga.",
+    "codeLabel": "Kode {{code}}",
+    "name": "Nama ponsel",
+    "member": "Bertindak sebagai",
+    "scopes": "Yang boleh dilakukan ponsel ini",
+    "match": "Kode cocok, pasangkan",
+    "noMatch": "Kode tidak cocok"
+  },
+  "scopes": {
+    "view": {
+      "label": "Lihat profil dan status",
+      "help": "Selalu aktif. Hanya profil yang bisa dilihat anggota."
+    },
+    "control_profiles": {
+      "label": "Buka dan hentikan profil",
+      "help": "Aturan yang sama seperti di komputer ini."
+    },
+    "approve_ai": {
+      "label": "Jawab permintaan AI",
+      "help": "Izinkan atau tolak aksi aplikasi AI, untuk token yang boleh dijawab anggota ini."
+    },
+    "approve_team": {
+      "label": "Jawab permintaan tim",
+      "help": "Setujui permintaan akses dari anggota tim."
+    },
+    "totp": {
+      "label": "Tampilkan kode 2FA",
+      "help": "Kode verifikasi dua langkah yang tersimpan di profil."
+    },
+    "phone_profiles_linked": {
+      "label": "Sinkronkan profil",
+      "help": "Profil yang Anda pilih di bawah juga terbuka di ponsel ini."
+    }
+  },
+  "roles": {
+    "OWNER": "Pemilik",
+    "ADMIN": "Admin",
+    "MANAGER": "Manajer",
+    "OPERATOR": "Operator"
+  },
+  "devices": {
+    "title": "Ponsel dan browser",
+    "kindPhone": "Ponsel",
+    "kindBrowser": "Browser",
+    "empty": "Belum ada ponsel.",
+    "online": "Online",
+    "offline": "Offline",
+    "lastSeen": "Terakhir aktif {{when}}",
+    "actsAs": "bertindak sebagai {{name}}",
+    "edit": "Edit {{name}}",
+    "remove": "Hapus {{name}}",
+    "removeConfirm": "Hapus {{name}}? Perangkat itu langsung berhenti bekerja dengan komputer ini dan harus dipasangkan lagi.",
+    "rename": "Ganti nama",
+    "saveScopes": "Simpan izin"
+  },
+  "sync": {
+    "title": "Sinkronisasi profil",
+    "help": "Profil yang dipilih juga terbuka di aplikasi ponsel. Pengaturan, halaman awal, dan cookie ikut dengan profil; satu profil terbuka di satu perangkat dalam satu waktu.",
+    "noPhone": "Belum ada ponsel yang boleh sinkron. Beri ponsel izin Sinkronkan profil di atas.",
+    "now": "Sinkronkan sekarang",
+    "search": "Cari profil",
+    "toggle": "Sinkronkan {{name}} dengan ponsel",
+    "proxyPassword": "Kata sandi proxy",
+    "offConfirm": "Berhenti menyinkronkan {{name}}? Ponsel tetap menyimpan salinannya.",
+    "removeAll": "Hapus semua data tersinkron dari relay",
+    "removeAllConfirm": "Hapus semua profil tersinkron dari relay? Profil di komputer ini dan di ponsel tetap seperti semula.",
+    "lastOk": "Sinkron terakhir {{when}}",
+    "lastError": "Sinkron terakhir gagal ({{code}}). Akan dicoba lagi setiap menit.",
+    "limits": "Penyimpanan situs, ekstensi, kata sandi tersimpan, dan unduhan tidak disinkronkan. Kata sandi proxy hanya disinkronkan jika Anda mengizinkannya."
+  },
+  "advanced": {
+    "title": "Lanjutan",
+    "pcName": "Nama komputer ini di ponsel",
+    "relay": "Alamat relay",
+    "relayFromEnv": "Diatur oleh SG_RELAY_URL untuk pengujian.",
+    "save": "Simpan",
+    "reset": "Reset kunci ponsel",
+    "resetConfirm": "Reset kunci ponsel komputer ini? Semua ponsel yang terpasang dihapus dan harus dipasangkan lagi.",
+    "protocol": "Protokol {{version}}"
+  },
+  "errors": {
+    "load": "Tidak bisa memuat pengaturan ponsel.",
+    "generic": "Tidak berhasil. Coba lagi.",
+    "unavailable": "Ponsel tidak tersedia di build ini."
+  }
+}

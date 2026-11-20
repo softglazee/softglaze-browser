@@ -1,0 +1,50 @@
+{
+  "header": {
+    "eyebrow": "การจัดระเบียบ",
+    "title": "กลุ่มและแท็ก",
+    "description": "จัดโปรไฟล์เป็นกลุ่มและติดแท็กเพื่อกรองได้อย่างรวดเร็ว"
+  },
+  "filters": {
+    "allProfiles": "โปรไฟล์ทั้งหมด",
+    "ungrouped": "ไม่มีกลุ่ม",
+    "group": "กลุ่ม"
+  },
+  "sidebar": {
+    "directories": "ไดเรกทอรี",
+    "createGroup": "สร้างกลุ่มใหม่",
+    "renameGroup": "เปลี่ยนชื่อกลุ่ม {{name}}",
+    "deleteGroup": "ลบกลุ่ม {{name}}",
+    "groupNamePlaceholder": "ชื่อกลุ่ม..."
+  },
+  "table": {
+    "searchPlaceholder": "ค้นหาโปรไฟล์...",
+    "loading": "กำลังโหลดกลุ่ม...",
+    "colProfileName": "ชื่อโปรไฟล์",
+    "colGroupAssignment": "กลุ่มที่กำหนด",
+    "colTags": "แท็ก"
+  },
+  "tagFilter": {
+    "label": "ตัวกรอง",
+    "clear": "ล้าง"
+  },
+  "bulk": {
+    "selected_other": "เลือกแล้ว {{count}} รายการ",
+    "moveTo": "ย้ายไปที่:",
+    "chooseGroup": "เลือกกลุ่ม…",
+    "clear": "ล้าง"
+  },
+  "empty": {
+    "title": "ไม่พบโปรไฟล์",
+    "noMatch": "ไม่มีโปรไฟล์ที่ตรงกับตัวกรองของคุณ",
+    "groupEmpty": "กลุ่มนี้ว่างเปล่า ย้ายโปรไฟล์มาที่นี่ได้จากเมนูดรอปดาวน์ \"กลุ่ม\""
+  },
+  "tags": {
+    "add": "เพิ่มแท็ก",
+    "remove": "นำแท็กออก",
+    "inputPlaceholder": "แท็ก + Enter"
+  },
+  "deleteConfirm": "ลบกลุ่ม \"{{name}}\" หรือไม่ โปรไฟล์ในกลุ่มจะกลายเป็น \"ไม่มีกลุ่ม\" (ตัวโปรไฟล์จะไม่ถูกลบ)",
+  "errors": {
+    "loadFailed": "โหลดกลุ่มไม่สำเร็จ"
+  }
+}

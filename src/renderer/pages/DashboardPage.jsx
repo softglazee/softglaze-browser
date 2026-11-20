@@ -12,6 +12,7 @@ import { softglazeApi } from '@/lib/softglazeApi.js';
 import { usePermissions } from '@/lib/usePermissions.js';
 import { normalStart, showRatingCard } from '@/lib/storeRating.mjs';
 import { Sparkline, Bars, Donut, Legend, HBars, Meter } from '@/components/dashboard/DashCharts.jsx';
+import { fmtDate, fmtTime, fmtShortTime, intlLocale } from '@/lib/intl.mjs';
 
 // Brand chart palette - themes in light + dark via index.css tokens.
 const CHART = ['var(--chart-1)', 'var(--chart-2)', 'var(--chart-3)', 'var(--chart-4)', 'var(--chart-5)'];
@@ -150,23 +151,23 @@ function WelcomeBanner() {
     return () => clearInterval(id);
   }, []);
 
-  const locale = i18n.language || undefined;
+  const locale = intlLocale(i18n.language);
   let timeStr = '';
   let dateStr = '';
   try {
     timeStr = new Intl.DateTimeFormat(locale, { hour: '2-digit', minute: '2-digit', second: '2-digit' }).format(now);
     dateStr = new Intl.DateTimeFormat(locale, { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' }).format(now);
   } catch (e) {
-    timeStr = now.toLocaleTimeString();
-    dateStr = now.toLocaleDateString();
+    timeStr = fmtTime(now);
+    dateStr = fmtDate(now);
   }
   const greeting = t(greetingKey(now.getHours()));
   const motivation = t('dashboard.motivation', { returnObjects: true });
   const quote = (Array.isArray(motivation) && (motivation[quoteIdx.current] || motivation[0])) || '';
 
   return (
-    <section className="relative overflow-hidden rounded-2xl border border-border bg-card p-6 pl-7 sm:p-7 sm:pl-8 animate-fade-up">
-      <span className="absolute inset-y-0 left-0 w-1 rounded-r" style={{ background: 'var(--primary)' }} aria-hidden="true" />
+    <section className="relative overflow-hidden rounded-2xl border border-border bg-card p-6 ps-7 sm:p-7 sm:ps-8 animate-fade-up">
+      <span className="absolute inset-y-0 inset-s-0 w-1 rounded-e" style={{ background: 'var(--primary)' }} aria-hidden="true" />
       <div className="flex flex-col justify-between gap-5 lg:flex-row lg:items-center">
         <div className="min-w-0">
           <div className="mb-2 flex items-center gap-2">
@@ -178,7 +179,7 @@ function WelcomeBanner() {
           </h1>
           <p className="mt-2 max-w-xl text-[13px] italic text-muted-foreground sm:text-sm">“{quote}”</p>
         </div>
-        <div className="shrink-0 rounded-xl border border-border bg-secondary/50 px-4 py-3 text-right">
+        <div className="shrink-0 rounded-xl border border-border bg-secondary/50 px-4 py-3 text-end">
           <div className="font-mono text-2xl font-bold tabular-nums tracking-tight text-foreground sm:text-3xl">{timeStr}</div>
           <div className="mt-1 flex items-center justify-end gap-1.5 text-[12px] text-muted-foreground">
             <CalendarDays className="h-3.5 w-3.5" aria-hidden="true" /> {dateStr}
@@ -284,7 +285,7 @@ function UpdateBanner() {
         )}
       </div>
       {showNotes && releaseNotes && (
-        <pre className="ml-12 mt-2 max-h-40 overflow-auto whitespace-pre-wrap rounded-lg border border-border bg-secondary/40 p-2.5 text-[11px] leading-relaxed text-muted-foreground">{releaseNotes}</pre>
+        <pre className="ms-12 mt-2 max-h-40 overflow-auto whitespace-pre-wrap rounded-lg border border-border bg-secondary/40 p-2.5 text-[11px] leading-relaxed text-muted-foreground">{releaseNotes}</pre>
       )}
     </div>
   );
@@ -434,7 +435,7 @@ export default function DashboardPage() {
       setSysInfo(info);
 
       // Rolling timeline sampled over the app's runtime.
-      const label = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+      const label = fmtShortTime(new Date());
       const point = { x: label, sessions: (Array.isArray(realSessions) ? realSessions.length : 0), proxies: Array.isArray(arr) ? arr.length : 0 };
       setHistory((prev) => {
         let next = prev;
@@ -499,7 +500,7 @@ export default function DashboardPage() {
     );
   }
 
-  const { days, labels: dayLabels } = last7Days(i18n.language);
+  const { days, labels: dayLabels } = last7Days(intlLocale(i18n.language));
 
   // Proxy pool health = latest check result per proxy (ok / fail / never checked).
   const health = proxies.reduce((a, p) => {
@@ -727,7 +728,7 @@ export default function DashboardPage() {
             <thead>
               <tr className="border-b border-border">
                 {['thProfile', 'thProxyIp', 'thUptime', 'thHealth', 'thAction'].map((k) => (
-                  <th key={k} scope="col" className="px-5 py-3 text-left text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">{t(`dashboard.${k}`)}</th>
+                  <th key={k} scope="col" className="px-5 py-3 text-start text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">{t(`dashboard.${k}`)}</th>
                 ))}
               </tr>
             </thead>

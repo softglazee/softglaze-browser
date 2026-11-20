@@ -1,0 +1,410 @@
+{
+  "header": {
+    "eyebrow": "Softglaze Pro 機能",
+    "title": "自動化",
+    "description": "ノーコードのマクロ、Cookie の自動ウォームアップ、すべてのバックグラウンドタスクの記録。"
+  },
+  "tabs": {
+    "macros": "マイマクロ",
+    "parallel": "並列実行",
+    "warmer": "Cookie ウォーマー",
+    "history": "タスク履歴"
+  },
+  "clickLabels": {
+    "none": "閲覧のみ",
+    "random": "ランダムクリック",
+    "links": "リンクを巡回"
+  },
+  "stepTypes": {
+    "goto": "URL に移動",
+    "click": "クリック",
+    "type": "テキストを入力",
+    "keypress": "キーを押す",
+    "scroll": "スクロール",
+    "wait": "待機",
+    "move": "マウスを移動",
+    "hover": "ホバー",
+    "select": "ドロップダウンの選択肢を選ぶ",
+    "waitFor": "要素を待機",
+    "submit": "フォームを送信",
+    "check": "チェック / チェック解除",
+    "clear": "フィールドをクリア"
+  },
+  "stepFields": {
+    "goto": {
+      "url": "URL",
+      "urlPlaceholder": "https://example.com"
+    },
+    "click": {
+      "selector": "CSS セレクター",
+      "selectorPlaceholder": "#submit, .btn"
+    },
+    "type": {
+      "selector": "セレクター",
+      "selectorPlaceholder": "input[name=\"email\"]",
+      "value": "入力するテキスト"
+    },
+    "keypress": {
+      "key": "キー",
+      "keyPlaceholder": "Enter"
+    },
+    "scroll": {
+      "steps": "スクロール量",
+      "stepsPlaceholder": "4"
+    },
+    "wait": {
+      "ms": "ミリ秒",
+      "msPlaceholder": "1000"
+    },
+    "move": {
+      "selector": "セレクター (または X/Y を使用)",
+      "selectorPlaceholder": ".target",
+      "x": "X",
+      "y": "Y"
+    },
+    "hover": {
+      "selector": "セレクター",
+      "selectorPlaceholder": ".menu",
+      "ms": "滞在 (ms)",
+      "msPlaceholder": "800"
+    },
+    "select": {
+      "selector": "セレクター",
+      "selectorPlaceholder": "select[name=\"focus\"]",
+      "value": "選択肢 (値、ラベル、またはインデックス)",
+      "valuePlaceholder": "配管工事",
+      "by": "一致の基準"
+    },
+    "waitFor": {
+      "selector": "セレクター",
+      "selectorPlaceholder": ".dashboard",
+      "state": "状態",
+      "timeout": "タイムアウト (ms)",
+      "timeoutPlaceholder": "30000"
+    },
+    "submit": {
+      "selector": "フォームまたはフィールドのセレクター",
+      "selectorPlaceholder": "form#signup"
+    },
+    "check": {
+      "selector": "セレクター",
+      "selectorPlaceholder": "input[name=\"terms\"]",
+      "state": "状態"
+    },
+    "clear": {
+      "selector": "セレクター",
+      "selectorPlaceholder": "input[name=\"email\"]"
+    }
+  },
+  "stepSummary": {
+    "noUrl": "(URL なし)",
+    "noSelector": "(セレクターなし)",
+    "selectorFallback": "(セレクター)",
+    "target": "(ターゲット)"
+  },
+  "macros": {
+    "intro": "再利用できるノーコードのワークフローを記録または作成し、プロファイル内で実行します (移動、クリック、入力、待機)。手動でもスケジュールでも実行できます。",
+    "profileSelectTitle": "実行 / 記録の対象プロファイル",
+    "noProfiles": "プロファイルがありません",
+    "profileFallback": "プロファイル {{id}}",
+    "stopAndSave": "停止して保存",
+    "record": "記録",
+    "schedule": "スケジュール",
+    "createMacro": "マクロを作成",
+    "stepsBadge_other": "{{count}} ステップ",
+    "updated": "更新: {{date}}",
+    "run": "実行",
+    "edit": "編集",
+    "editSteps": "ステップを編集",
+    "delete": "削除",
+    "runTitleNoSteps": "このマクロにはまだステップがありません。先に編集してください",
+    "runTitleReady": "選択したプロファイルで実行",
+    "emptyTitle": "マクロはまだありません",
+    "emptyHint": "ワークフローを記録するか、新しく作成して始めましょう。",
+    "errors": {
+      "loadMacros": "マクロを読み込めませんでした。",
+      "deleteMacro": "マクロを削除できませんでした。",
+      "chooseProfile": "先に対象のプロファイルを選択してください。",
+      "noSteps": "このマクロにはまだステップがありません。先に編集してください。",
+      "chooseProfileRecord": "記録する対象のプロファイルを選択してください。",
+      "recordingFailed": "記録操作に失敗しました。"
+    },
+    "recordingStarted": "記録中… 起動したブラウザで操作し、終わったら「停止」を押して保存します。",
+    "savedNotice": "「{{name}}」を {{count}} ステップで保存しました。",
+    "stoppedNotice": "記録を停止しました。{{count}} ステップを取得しました (未保存)。",
+    "deleteConfirm": "マクロ「{{name}}」とそのすべてのステップを削除しますか? この操作は元に戻せません。"
+  },
+  "saveRecording": {
+    "ariaLabel": "記録したマクロを保存",
+    "title": "記録したマクロを保存",
+    "subtitle": "名前を付けて取得したステップを保存するか、破棄します。ブラウザは開いたままです。",
+    "placeholder": "記録したマクロ",
+    "discard": "破棄",
+    "cancel": "キャンセル",
+    "save": "保存"
+  },
+  "scheduleModal": {
+    "ariaLabel": "マクロのスケジュール",
+    "title": "マクロのスケジュール",
+    "subtitle": "タイマーでマクロを自動実行 · Softglaze Pro",
+    "enable": "スケジュール実行を有効にする",
+    "macroLabel": "マクロ",
+    "selectMacro": "マクロを選択…",
+    "everyMinutes": "間隔 (分)",
+    "targetProfiles": "対象プロファイル",
+    "noProfiles": "利用できるプロファイルがありません。",
+    "profileFallback": "プロファイル {{id}}",
+    "cancel": "キャンセル",
+    "save": "スケジュールを保存",
+    "errors": {
+      "save": "スケジュールを保存できませんでした。"
+    }
+  },
+  "editorModal": {
+    "ariaEdit": "マクロを編集",
+    "ariaCreate": "マクロを作成",
+    "titleEdit": "マクロを編集",
+    "titleCreate": "マクロを作成",
+    "subtitle": "ノーコードでフローを作成します。ハンドルをドラッグして並べ替えます。",
+    "nameLabel": "マクロ名",
+    "namePlaceholder": "例: 毎日のログイン",
+    "descriptionLabel": "説明",
+    "descriptionPlaceholder": "何をするマクロですか?",
+    "stepsLabel": "ステップ ({{count}})",
+    "addStep": "ステップを追加",
+    "noSteps": "ステップはまだありません。種類を選んで追加してください。",
+    "dragToReorder": "ドラッグして並べ替え",
+    "removeStep": "ステップを削除",
+    "cancel": "キャンセル",
+    "save": "マクロを保存",
+    "errors": {
+      "name": "マクロに名前を付けてください。",
+      "save": "マクロを保存できませんでした。"
+    },
+    "optional": "任意",
+    "optionalHint": "このステップが失敗した場合、実行を失敗にせず、ログに記録して続行します。"
+  },
+  "runModal": {
+    "ariaLabel": "マクロの実行: {{name}}",
+    "runningOn": "{{profile}} で実行中",
+    "starting": "開始しています…",
+    "logStarted": "「{{name}}」を開始 · {{profile}} で {{total}} ステップ",
+    "logStepRunning": "▶ {{label}}: {{summary}}",
+    "logStepError": "✕ {{label}}：{{error}}",
+    "logStepFailed": "失敗",
+    "logStopped": "停止しました。",
+    "logFinished": "完了：{{ran}}/{{total}} ステップ。",
+    "stopped": "停止しました。",
+    "finished": "完了しました。",
+    "summaryCompleted": "{{ran}}/{{total}} ステップが完了しました。",
+    "summaryRan": "{{ran}}/{{total}} ステップを実行しました。",
+    "paused": "一時停止中",
+    "running": "実行中…",
+    "resume": "再開",
+    "pause": "一時停止",
+    "stop": "停止",
+    "close": "閉じる",
+    "errors": {
+      "run": "マクロを実行できませんでした。"
+    },
+    "logStepSkipped": "{{label}} をスキップしました (任意)：{{error}}"
+  },
+  "parallel": {
+    "states": {
+      "queued": "待機中",
+      "launching": "起動中",
+      "running": "実行中",
+      "passed": "成功",
+      "failed": "失敗"
+    },
+    "title": "並列マクロランナー",
+    "subtitle": "1つのマクロを多数のプロファイルで同時に実行し、状況をリアルタイムで表示します。",
+    "macroLabel": "マクロ",
+    "noMacros": "マクロはまだありません",
+    "macroOption": "{{name}} · {{count}} ステップ",
+    "concurrency": "同時実行数",
+    "concurrencyCap": "ご利用のプランでは最大 {{max}} 件のプロファイルを同時に実行できます。",
+    "concurrencyCapUpgrade": "ご利用のプランでは最大 {{max}} 件のプロファイルを同時に実行できます。Enterprise では最大 {{enterpriseMax}} 件です。",
+    "dataBound_other": "{{fileName}} · {{count}} 行",
+    "dataHint": "任意: スプレッドシートを紐付け (行 → プロファイル、順番どおり)",
+    "clearDataBinding": "データの紐付けを解除",
+    "bindData": "データを紐付け",
+    "columnsPrefix": "列: {{columns}}。マクロのステップで",
+    "columnsSuffix": "を使用します。",
+    "profilesLabel": "プロファイル ({{count}} 件選択中)",
+    "selectAll": "すべて選択",
+    "clear": "クリア",
+    "searchPlaceholder": "検索",
+    "noProfiles": "プロファイルが見つかりません。",
+    "rowMismatch": "データ {{rows}} 行に対してプロファイル {{profiles}} 件です。余った分は変数なしで実行されます。",
+    "running": "実行中…",
+    "runOn_other": "{{count}} 件のプロファイルで実行",
+    "runStatus": "実行状況",
+    "summaryPassed": "成功",
+    "summaryFailed": "失敗",
+    "summaryTotal": "合計 {{total}}",
+    "watchHint": "プロファイルとマクロを選んで実行を開始すると、進行状況をリアルタイムで確認できます。",
+    "steps": "{{ran}}/{{total}} ステップ",
+    "profileFallback": "プロファイル {{id}}",
+    "runConsole": "実行コンソール",
+    "live": "ライブ",
+    "consoleIdle": "[ idle ] まだ実行していません。進行状況はここに表示されます (Cookie や認証情報が含まれることはありません)。",
+    "logRunFinished": "実行完了：{{passed}}/{{total}} 件成功",
+    "logRunFinishedError": "実行完了：{{passed}}/{{total}} 件成功 ({{error}})",
+    "errors": {
+      "readSpreadsheet": "スプレッドシートを読み込めませんでした。",
+      "chooseMacro": "実行するマクロを選択してください。",
+      "selectProfile": "プロファイルを1つ以上選択してください。",
+      "startRun": "並列実行を開始できませんでした。"
+    }
+  },
+  "warmer": {
+    "title": "Cookie ウォーマー",
+    "subtitle": "実際のサイトを閲覧して、自然な Cookie と履歴を蓄積します。",
+    "sitesLabel": "訪問するサイト ({{count}})",
+    "addSuggested": "おすすめのサイトを追加…",
+    "add": "追加",
+    "customPlaceholder": "または任意の URL を貼り付け (例: example.com)",
+    "bulkAdd": "一括追加",
+    "importFile": ".txt/.csv をインポート",
+    "clearAll": "すべてクリア",
+    "bulkPlaceholder": "1行に1つの URL を貼り付けます。例:\nexample.com\nhttps://news.site\nshop.site, 45, links",
+    "addList": "リストを追加",
+    "bulkHint": "1行に1つの URL。任意の CSV 列: url, seconds, behaviour (none/random/links)。",
+    "addSecondsTitle": "追加するリンクの既定の秒数",
+    "addBehaviorTitle": "追加するリンクの既定の動作",
+    "saveList": "リストを保存",
+    "saveListPrompt": "このリンクリストに名前を付けてください (後で再利用できます):",
+    "loadListTitle": "この保存済みリストを読み込む",
+    "deleteListTitle": "この保存済みリストを削除",
+    "selectRows": "行を選択",
+    "nSelected": "{{count}} 件選択中",
+    "bulkSetSeconds": "選択した行の秒数を設定",
+    "bulkSetBehavior": "選択した行の動作を設定",
+    "setBehavior": "動作を設定…",
+    "deleteSelected": "削除",
+    "noSites": "サイトはまだありません。上から追加してください。",
+    "secondsTitle": "このサイトに滞在する秒数",
+    "secondsUnit": "秒",
+    "behaviourTitle": "このサイトで行う操作",
+    "remove": "削除",
+    "loopUntilStopped": "停止するまで繰り返す",
+    "keepOpen": "終了後もセッションを開いたままにする",
+    "hidden": "非表示で実行 (ウィンドウなし)",
+    "hiddenTitle": "ヘッドレスでウォームアップします。ブラウザのウィンドウは開きません。Cookie とキャッシュは各プロファイルに保存されます。",
+    "cookieNote": "Cookie とキャッシュは各プロファイルに自動で保存されます。コンソールには、ディスクに保存された Cookie の数とキャッシュの量が表示されます。次回の通常起動時に再利用されます。",
+    "startWarmup": "ウォームアップを開始",
+    "warming": "ウォームアップ中…",
+    "stop": "停止",
+    "forceStop": "強制停止",
+    "profilesLabel": "プロファイル ({{count}} 件選択中)",
+    "searchPlaceholder": "検索",
+    "selectAll": "すべて",
+    "selectNone": "なし",
+    "invert": "反転",
+    "addGroup": "グループを追加…",
+    "addTag": "タグを追加…",
+    "pasteIdsPlaceholder": "プロファイルの ID または名前を貼り付け (カンマ / スペース区切り)",
+    "selectPaste": "選択",
+    "noProfiles": "プロファイルが見つかりません。",
+    "profileFallback": "プロファイル {{id}}",
+    "warmupConsole": "ウォームアップコンソール",
+    "live": "ライブ",
+    "progressTitle": "ウォームアップの進行状況",
+    "modeQueue": "キュー · 1件ずつ",
+    "modeBulk": "一括 · {{n}} 件ずつ",
+    "consoleIdle": "[ idle ] プロファイルを選択して時間を設定し、ウォームアップを開始すると進行状況が表示されます。",
+    "errors": {
+      "selectProfile": "ウォームアップするプロファイルを1つ以上選択してください。",
+      "addSite": "訪問するサイトを1つ以上追加してください。",
+      "startWarmup": "ウォームアップを開始できませんでした。",
+      "stopWarmup": "ウォームアップを停止できませんでした。",
+      "importFile": "そのファイルを読み込めませんでした。"
+    },
+    "queueTitle": "プロファイルを1件ずつウォームアップします (厳密なキュー)。ブラウザを起動し、完了して閉じてから次へ進みます。選択したブラウザをすべて同時に開くと RAM/CPU を使い切り、アプリがクラッシュするおそれがあるため、それを防ぎます。",
+    "queueMode": "1件ずつ実行 (キュー)",
+    "parallelTitle": "同時にウォームアップするプロファイル数。多いほど速くなりますが、RAM/CPU の負荷が高くなります。",
+    "parallelLabel": "同時実行数:"
+  },
+  "counter": {
+    "total": "合計",
+    "running": "実行中",
+    "done": "完了",
+    "queued": "待機中"
+  },
+  "console": {
+    "copy": "コピー",
+    "copied": "コピーしました",
+    "export": "エクスポート",
+    "clear": "クリア"
+  },
+  "history": {
+    "emptyTitle": "まだ実行されたタスクはありません",
+    "emptyHint": "ウォーマー、マクロ、並列実行の記録がここに表示されます。",
+    "columns": {
+      "task": "タスク",
+      "profiles": "プロファイル",
+      "detail": "詳細",
+      "status": "状態",
+      "when": "日時"
+    },
+    "emptyDetail": "-",
+    "parallelRun": "並列実行",
+    "macroRun": "マクロ実行",
+    "cookieWarmup": "Cookie ウォームアップ",
+    "minutes": "{{count}} 分",
+    "sites_other": "{{count}} サイト"
+  },
+  "stepFieldOptions": {
+    "auto": "自動",
+    "value": "値",
+    "label": "ラベル",
+    "index": "インデックス",
+    "visible": "表示",
+    "hidden": "非表示",
+    "checked": "チェックあり",
+    "unchecked": "チェックなし"
+  },
+  "autopilot": {
+    "title": "ウォームアップのオートパイロット",
+    "subtitle": "毎日いくつかのサイトでプロファイルをウォームアップし、実際の閲覧履歴を蓄積します。",
+    "toggle": "ウォームアップのオートパイロットをオン / オフ",
+    "target": "プロファイル",
+    "targetAll": "すべてのプロファイル",
+    "targetGroup": "1つのグループ",
+    "group": "グループ",
+    "runsPerDay": "1日の実行回数",
+    "runsPerDayTitle": "各プロファイルを1日に何回ウォームアップするか",
+    "sitesPerRun": "1回あたりのサイト数",
+    "sitesPerRunTitle": "おすすめリストからランダムに選んだサイトを、各20〜45秒閲覧します",
+    "activeHours": "稼働時間帯",
+    "startHour": "開始時刻",
+    "endHour": "終了時刻",
+    "hoursTo": "〜",
+    "atATime": "同時実行数",
+    "atATimeTitle": "同時にウォームアップするプロファイル数。多いほど速くなりますが、メモリを多く使います。",
+    "hidden": "非表示で実行 (ウィンドウなし)",
+    "hint": "最後のウォームアップから「24時間 ÷ 1日の実行回数」以上たったプロファイルがウォームアップされます。開いている、ロック中、または使用中のプロファイルはスキップされます。",
+    "ownedByOther": "別のメンバーがオンにしました。変更できるのは、そのメンバーまたはその上位のメンバーだけです。",
+    "status": {
+      "off": "オフ",
+      "nextSoon": "次回の実行は1分以内",
+      "nextAt": "次回の実行: {{time}}",
+      "nothingDue": "ウォームアップするプロファイルはありません",
+      "warmedToday": "本日 {{total}} 件中 {{done}} 件をウォームアップ済み",
+      "warmingNow": "{{n}} 件をウォームアップ中",
+      "lastError": "最後のエラー ({{time}}): {{error}}"
+    },
+    "errors": {
+      "load": "オートパイロットの設定を読み込めませんでした。",
+      "save": "オートパイロットの設定を保存できませんでした。",
+      "noGroups": "グループがまだありません。先にプロファイルページで作成してください。",
+      "owner-missing": "オートパイロットをオンにしたメンバーは存在しません。ワークスペースのオーナーが一度オフにしてからオンにすると、引き継ぐことができます。",
+      "owner-inactive": "オートパイロットをオンにしたメンバーは、一時停止中またはブロックされています。",
+      "owner-no-permission": "オートパイロットをオンにしたメンバーには、自動化を実行する権限がなくなっている可能性があります。",
+      "warm-failed": "{{profile}}: {{error}}",
+      "warmFailedHidden": "表示権限のないプロファイルのウォームアップに失敗しました。",
+      "tick-failed": "{{error}}"
+    }
+  }
+}

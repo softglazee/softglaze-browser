@@ -1,0 +1,62 @@
+{
+  "header": {
+    "eyebrow": "你的帳號",
+    "title": "帳號設定",
+    "description": "管理你的頭像、姓名、電子郵件和密碼。"
+  },
+  "notice": {
+    "superAdmin": "這是超級管理員/原始碼擁有者工作階段，這裡沒有可編輯的成員記錄。"
+  },
+  "fields": {
+    "fullName": "姓名",
+    "fullNamePlaceholder": "你的姓名",
+    "email": "電子郵件",
+    "newPassword": "新密碼",
+    "newPasswordPlaceholder": "留空則保持不變",
+    "confirmPassword": "確認新密碼",
+    "confirmPasswordPlaceholder": "再次輸入新密碼",
+    "verificationRequired": "需要驗證"
+  },
+  "avatar": {
+    "alt": "頭像",
+    "changeTitle": "更換頭像",
+    "newSelected": "已選擇新頭像，儲存後生效。",
+    "notImage": "請選擇圖片檔案。",
+    "tooLarge": "該圖片超過 2 MB，請選擇更小的圖片。",
+    "readFailed": "無法讀取該圖片。"
+  },
+  "verification": {
+    "banner": "更改電子郵件或密碼需要輸入傳送到目前電子郵件的 6 位驗證碼"
+  },
+  "actions": {
+    "save": "儲存更改",
+    "saving": "正在儲存…",
+    "verifyAndSave": "驗證並儲存",
+    "discard": "放棄"
+  },
+  "validation": {
+    "nameEmpty": "姓名不能為空。",
+    "emailInvalid": "請輸入有效的電子郵件地址。",
+    "passwordTooShort": "新密碼至少需要 8 個字元。",
+    "passwordMismatch": "兩次輸入的密碼不一致。"
+  },
+  "messages": {
+    "profileUpdated": "個人資料已更新。",
+    "accountUpdated": "帳號已成功更新。"
+  },
+  "errors": {
+    "loadFailed": "無法載入你的帳號。",
+    "saveFailed": "無法儲存你的更改。"
+  },
+  "verify": {
+    "title": "確認是你本人",
+    "codeSentTo": "驗證碼已傳送至 {{email}}",
+    "codeLabel": "6 位驗證碼",
+    "devMode": "開發模式：未設定郵件服務。你的驗證碼是",
+    "apply": "驗證並套用",
+    "resend": "重新傳送",
+    "enterCode": "請輸入 6 位驗證碼。",
+    "failed": "驗證失敗。",
+    "resendFailed": "無法重新傳送驗證碼。"
+  }
+}

@@ -7,11 +7,20 @@
 //   Pro               3                         3                          no
 //   Enterprise       25                        10                          yes
 //   Trial             3          by tier (the trial runs as Enterprise, so 10 and yes)
+//   Free              1                         1                          no
+//
+// Free (1.0.27) also caps saved profiles, profiles running at once and AI actions a day, and leaves out
+// cloud sync and phone control: freePlan.js. Pro and Enterprise have none of those caps (null = unlimited).
 //
 // The owner counts as one member. Limits follow the licence's type and tier, not its state: a lapsed
 // licence keeps its limits through the grace days, and after that the existing licence ban locks the
 // workspace (profile launches are refused in main) exactly as before. A missing or unknown licence
 // type gets Pro limits, which keeps the old 3-seat default.
+
+const { FREE_LIMITS, normalizeFreeLimits } = require('./freePlan');
+
+// profiles / aiActionsPerDay null = unlimited; runningCap null = no cap on profiles open at once.
+const PAID_EXTRAS = Object.freeze({ profiles: null, aiActionsPerDay: null, runningCap: null, sync: true, phoneControl: true, partnerDeals: false });
 
 const TIER_LIMITS = Object.freeze({
   pro: Object.freeze({ seats: 3, maxParallel: 3, auditExport: false }),
@@ -36,17 +45,26 @@ function normalizeTier(tier) {
 function limitsForLicense(license) {
   const lic = (license && typeof license === 'object') ? license : {};
   // Only main sets isExempt (certified Super Admin on a base build), so a type string cannot claim it.
-  if (lic.isExempt === true) return { tier: 'enterprise', ...TIER_LIMITS.enterprise, exempt: true };
+  if (lic.isExempt === true) return { tier: 'enterprise', ...TIER_LIMITS.enterprise, ...PAID_EXTRAS, exempt: true };
   const type = String(lic.type || '').toLowerCase();
+  if (type === 'free') {
+    // The server's Free limits when it sent them (freeLimits on the view), else the built-in ones.
+    const f = normalizeFreeLimits(lic.freeLimits || null);
+    return {
+      tier: 'free', seats: f.seats, maxParallel: f.maxParallel, auditExport: false,
+      profiles: f.profiles, aiActionsPerDay: f.aiActionsPerDay, runningCap: f.maxParallel,
+      sync: f.sync, phoneControl: f.phoneControl, partnerDeals: f.partnerDeals, exempt: false
+    };
+  }
   if (type === 'trial') {
     const tier = normalizeTier(lic.tier);
-    return { tier, ...TIER_LIMITS[tier], seats: TRIAL_SEATS, exempt: false };
+    return { tier, ...TIER_LIMITS[tier], ...PAID_EXTRAS, seats: TRIAL_SEATS, exempt: false };
   }
   if (type === 'paid') {
     const tier = normalizeTier(lic.tier);
-    return { tier, ...TIER_LIMITS[tier], exempt: false };
+    return { tier, ...TIER_LIMITS[tier], ...PAID_EXTRAS, exempt: false };
   }
-  return { tier: 'pro', ...TIER_LIMITS.pro, exempt: false };
+  return { tier: 'pro', ...TIER_LIMITS.pro, ...PAID_EXTRAS, exempt: false };
 }
 
 // Concurrency for one parallel run: the requested number (3 when missing), at least 1, at most the
@@ -59,6 +77,8 @@ function clampConcurrency(requested, limits) {
 
 module.exports = {
   TIER_LIMITS,
+  FREE_LIMITS,
+  PAID_EXTRAS,
   TRIAL_SEATS,
   MAX_PARALLEL,
   DEFAULT_PARALLEL,

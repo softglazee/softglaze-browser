@@ -1,0 +1,54 @@
+{
+  "header": {
+    "eyebrow": "工作区",
+    "title": "回收站和恢复",
+    "description": "恢复已删除的配置文件，或将其从存储中永久清除。"
+  },
+  "actions": {
+    "emptyTrash": "清空回收站",
+    "restore": "恢复",
+    "deleteForever": "永久删除",
+    "clear": "清除",
+    "restoreTitle": "恢复配置文件",
+    "purgeTitle": "永久删除"
+  },
+  "errors": {
+    "loadFailed": "无法加载回收站。"
+  },
+  "warning": {
+    "title": "永久删除",
+    "body": "恢复会将配置文件原样放回列表。永久删除会移除配置文件，并从这台电脑上清除其所有浏览器数据（Cookie、缓存、登录信息）。"
+  },
+  "toolbar": {
+    "searchPlaceholder": "搜索已删除的配置文件..."
+  },
+  "bulk": {
+    "selected": "已选择 {{count}} 个"
+  },
+  "table": {
+    "profileName": "配置文件名称",
+    "proxy": "代理",
+    "deletedDate": "删除日期",
+    "actions": "操作",
+    "directProxy": "直连",
+    "defaultBrowser": "Chrome"
+  },
+  "empty": {
+    "title": "回收站为空",
+    "noMatch": "没有符合搜索条件的已删除配置文件。",
+    "none": "没有已删除的配置文件，一切整洁！"
+  },
+  "confirm": {
+    "purgeWithData": "永久删除“{{title}}”？此操作无法撤销，其本地浏览器数据将被清除。",
+    "bulkPurgeWithData_one": "永久删除 {{count}} 个配置文件？此操作无法撤销，本地浏览器数据将被清除。",
+    "bulkPurgeWithData_other": "永久删除 {{count}} 个配置文件？此操作无法撤销，本地浏览器数据将被清除。",
+    "emptyTrashWithData_one": "永久删除回收站中的全部 {{count}} 个配置文件？此操作无法撤销，本地浏览器数据将被清除。",
+    "emptyTrashWithData_other": "永久删除回收站中的全部 {{count}} 个配置文件？此操作无法撤销，本地浏览器数据将被清除。"
+  },
+  "pager": {
+    "showing": "显示第 {{from}}-{{to}} 项，共 {{total}} 项",
+    "prev": "上一页",
+    "next": "下一页"
+  },
+  "bulkSkipped": "未更改：{{count}} 个配置文件。{{reason}}"
+}

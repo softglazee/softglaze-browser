@@ -41,7 +41,7 @@ test('only web links get a Copy link item, and it copies that link', () => {
 
 test('labels follow the language', () => {
   assert.equal(item(buildContextTemplate({ editFlags: {} }, 'es-ES'), 'paste').label, 'Pegar');
-  assert.equal(item(buildContextTemplate({ editFlags: {} }, 'de'), 'paste').label, 'Paste');
+  assert.equal(item(buildContextTemplate({ editFlags: {} }, 'xx'), 'paste').label, 'Paste', 'unknown language -> English');
 });
 
 test('the main window uses the menu', () => {

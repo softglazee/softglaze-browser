@@ -1,0 +1,53 @@
+{
+  "header": {
+    "eyebrow": "Dépôt Enterprise",
+    "title": "Extensions",
+    "summary_one": "{{count}} extension installée · {{enabled}} active(s) pour les profils qui chargent des extensions",
+    "summary_other": "{{count}} extensions installées · {{enabled}} actives pour les profils qui chargent des extensions",
+    "summary_many": "{{count}} extensions installées · {{enabled}} actives pour les profils qui chargent des extensions"
+  },
+  "stats": {
+    "total": "Extensions au total",
+    "injected": "Activées",
+    "disabled": "Désactivées"
+  },
+  "caveat": {
+    "before": "Les extensions ne sont pas ajoutées à chaque profil. Elles se chargent uniquement dans les profils Chromium où l'option « Charger les extensions SoftGlaze (utilise Chrome for Testing) » est cochée dans l'onglet « Avancé » de l'éditeur de profil (désactivée par défaut). Ces profils les montent au lancement avec l'option de Chromium",
+    "middle": ", donc un changement s'applique au",
+    "nextLaunch": "prochain lancement",
+    "after": "d'un tel profil. Le Chrome classique ignore cette option, donc ces profils s'ouvrent sur un build Chrome for Testing : téléchargez-en un d'abord sur la page « Navigateurs », sinon le profil s'ouvre sans les extensions. Les profils Firefox ne les chargent pas."
+  },
+  "importer": {
+    "title": "Importer dans l'équipe",
+    "description": "Collez une URL du Chrome Web Store ou son ID de 32 caractères : SoftGlaze télécharge et décompresse le vrai paquet.",
+    "inputPlaceholder": "https://chromewebstore.google.com/detail/…  ou  cjpalhdlnbpafiamejdnhcphjbkeiagm",
+    "submit": "Importer dans l'équipe"
+  },
+  "installPhase": {
+    "downloading": "Téléchargement du paquet…",
+    "extracting": "Extraction de l'archive…",
+    "registering": "Enregistrement…"
+  },
+  "permissionNotice": "Seuls les Admins et rôles supérieurs peuvent gérer les extensions de l'équipe. Vous pouvez consulter le dépôt.",
+  "searchPlaceholder": "Rechercher par nom ou ID…",
+  "empty": {
+    "loadErrorTitle": "Impossible de charger les extensions",
+    "noExtTitle": "Aucune extension pour l'instant",
+    "noMatchTitle": "Aucune extension ne correspond à votre recherche",
+    "noExtDesc": "Importez ci-dessus une extension du Chrome Web Store pour l'ajouter au dépôt de votre équipe. Elle se charge dans les profils où « Charger les extensions SoftGlaze » est coché dans l'onglet « Avancé ».",
+    "noMatchDesc": "Essayez un autre nom ou un autre ID."
+  },
+  "card": {
+    "unpacked": "Extension décompressée",
+    "removeTitle": "Retirer de l'équipe",
+    "injected": "Activée",
+    "disabled": "Désactivée"
+  },
+  "confirmRemove": "Retirer « {{name}} » du dépôt de l'équipe ? Ses fichiers locaux seront supprimés.",
+  "errors": {
+    "couldNotLoad": "Impossible de charger les extensions.",
+    "installFailed": "L'installation a échoué.",
+    "couldNotUpdate": "Impossible de mettre à jour l'extension.",
+    "couldNotRemove": "Impossible de retirer l'extension."
+  }
+}

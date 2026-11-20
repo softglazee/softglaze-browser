@@ -14,6 +14,13 @@ app.set('trust proxy', (addr, i) => i < trustHops());
 
 app.get('/health', (req, res) => res.json({ ok: true, service: 'softglaze-licensing', time: new Date().toISOString() }));
 
+// Microsoft publisher domain verification (docs/MICROSOFT-SIGNIN.md): only while MICROSOFT_CLIENT_ID is set.
+app.get('/.well-known/microsoft-identity-association.json', (req, res) => {
+  const id = require('./auth/providers/microsoft').clientId();
+  if (!id) return res.status(404).json({ error: 'Not found.' });
+  res.set('Cache-Control', 'no-store').json({ associatedApplications: [{ applicationId: id }] });
+});
+
 // Raw-body webhooks first (signature verification) — providers may burst, so not
 // rate-limited here; authenticity is enforced by per-tenant signature checks.
 app.use('/v1/webhooks', require('./routes/webhooks'));
@@ -33,15 +40,23 @@ app.use('/v1/license', publicLimiter, require('./routes/license'));
 app.use('/v1/redeem', publicLimiter, require('./routes/redeem'));
 // Asked on every app start, so it has the general limit, not the code-sending one below.
 app.use('/v1/account/status', publicLimiter, require('./routes/accountStatus'));
+// The signed-in account for the web and phone apps (Bearer token; its own limiter and CORS). Only its own
+// paths are handled; everything else under /v1/account goes on to the routes below.
+app.use('/v1/account', require('./routes/accountApi'));
 app.use('/v1/account', verifyLimiter, require('./routes/account'));
 app.use('/v1/trial', verifyLimiter, require('./routes/trial'));
 app.use('/v1/plans', publicLimiter, require('./routes/plansPublic'));
+// The Free plan's partner offers (app 1.0.27+): public list and click counter.
+app.use('/v1/partner-deals', publicLimiter, require('./routes/partnerDeals'));
 app.use('/v1/store', publicLimiter, require('./routes/store'));
 app.use('/v1/email', publicLimiter, require('./routes/emailPublic'));
 app.use('/v1/tenant', require('./routes/tenantAdmin'));
 // One-click sign-in (app 1.0.26): the browser pages and the app's calls, per client IP per minute.
 const authLimiter = rateLimit({ windowMs: 60000, max: Number(process.env.AUTH_RATE_PER_MIN) || 30 });
 app.use('/auth', authLimiter, require('./routes/auth'));
+// The phone app's sign-in and entitlement, and the web app's sign-in (same per-IP limit as /auth).
+app.use('/v1/mobile', authLimiter, require('./routes/mobileAuth'));
+app.use('/v1/web/auth', authLimiter, require('./routes/webAuth'));
 
 app.use((req, res) => res.status(404).json({ error: 'Not found.' }));
 // eslint-disable-next-line no-unused-vars

@@ -1,0 +1,410 @@
+{
+  "header": {
+    "eyebrow": "ฟีเจอร์ Softglaze Pro",
+    "title": "ระบบอัตโนมัติ",
+    "description": "มาโครแบบไม่ต้องเขียนโค้ด การวอร์มคุกกี้อัตโนมัติ และบันทึกงานเบื้องหลังทุกรายการ"
+  },
+  "tabs": {
+    "macros": "มาโครของฉัน",
+    "parallel": "รันแบบขนาน",
+    "warmer": "วอร์มคุกกี้",
+    "history": "ประวัติงาน"
+  },
+  "clickLabels": {
+    "none": "เรียกดูอย่างเดียว",
+    "random": "คลิกแบบสุ่ม",
+    "links": "เรียกดูลิงก์"
+  },
+  "stepTypes": {
+    "goto": "ไปที่ URL",
+    "click": "คลิก",
+    "type": "พิมพ์ข้อความ",
+    "keypress": "กดปุ่ม",
+    "scroll": "เลื่อน",
+    "wait": "รอ",
+    "move": "เลื่อนเมาส์",
+    "hover": "วางเมาส์เหนือ",
+    "select": "เลือกตัวเลือกในดรอปดาวน์",
+    "waitFor": "รอองค์ประกอบ",
+    "submit": "ส่งฟอร์ม",
+    "check": "ติ๊ก / ยกเลิกติ๊ก",
+    "clear": "ล้างช่อง"
+  },
+  "stepFields": {
+    "goto": {
+      "url": "URL",
+      "urlPlaceholder": "https://example.com"
+    },
+    "click": {
+      "selector": "ตัวเลือก CSS",
+      "selectorPlaceholder": "#submit, .btn"
+    },
+    "type": {
+      "selector": "ตัวเลือก",
+      "selectorPlaceholder": "input[name=\"email\"]",
+      "value": "ข้อความที่จะพิมพ์"
+    },
+    "keypress": {
+      "key": "ปุ่ม",
+      "keyPlaceholder": "Enter"
+    },
+    "scroll": {
+      "steps": "ระยะการเลื่อน",
+      "stepsPlaceholder": "4"
+    },
+    "wait": {
+      "ms": "มิลลิวินาที",
+      "msPlaceholder": "1000"
+    },
+    "move": {
+      "selector": "ตัวเลือก (หรือใช้ X/Y)",
+      "selectorPlaceholder": ".target",
+      "x": "X",
+      "y": "Y"
+    },
+    "hover": {
+      "selector": "ตัวเลือก",
+      "selectorPlaceholder": ".menu",
+      "ms": "ระยะค้าง ms",
+      "msPlaceholder": "800"
+    },
+    "select": {
+      "selector": "ตัวเลือก",
+      "selectorPlaceholder": "select[name=\"focus\"]",
+      "value": "ตัวเลือก (ค่า ป้ายชื่อ หรือลำดับ)",
+      "valuePlaceholder": "งานประปา",
+      "by": "จับคู่ตาม"
+    },
+    "waitFor": {
+      "selector": "ตัวเลือก",
+      "selectorPlaceholder": ".dashboard",
+      "state": "สถานะ",
+      "timeout": "หมดเวลา ms",
+      "timeoutPlaceholder": "30000"
+    },
+    "submit": {
+      "selector": "ตัวเลือกฟอร์มหรือช่อง",
+      "selectorPlaceholder": "form#signup"
+    },
+    "check": {
+      "selector": "ตัวเลือก",
+      "selectorPlaceholder": "input[name=\"terms\"]",
+      "state": "สถานะ"
+    },
+    "clear": {
+      "selector": "ตัวเลือก",
+      "selectorPlaceholder": "input[name=\"email\"]"
+    }
+  },
+  "stepSummary": {
+    "noUrl": "(ไม่มี URL)",
+    "noSelector": "(ไม่มีตัวเลือก)",
+    "selectorFallback": "(ตัวเลือก)",
+    "target": "(เป้าหมาย)"
+  },
+  "macros": {
+    "intro": "บันทึกหรือสร้างเวิร์กโฟลว์แบบไม่ต้องเขียนโค้ดที่ใช้ซ้ำได้ แล้วรันภายในโปรไฟล์ (นำทาง คลิก พิมพ์ รอ) ด้วยตนเองหรือตามกำหนดเวลา",
+    "profileSelectTitle": "โปรไฟล์ที่ใช้รัน / บันทึก",
+    "noProfiles": "ไม่มีโปรไฟล์",
+    "profileFallback": "โปรไฟล์ {{id}}",
+    "stopAndSave": "หยุดและบันทึก",
+    "record": "บันทึก",
+    "schedule": "กำหนดเวลา",
+    "createMacro": "สร้างมาโคร",
+    "stepsBadge_other": "{{count}} ขั้นตอน",
+    "updated": "อัปเดตเมื่อ {{date}}",
+    "run": "รัน",
+    "edit": "แก้ไข",
+    "editSteps": "แก้ไขขั้นตอน",
+    "delete": "ลบ",
+    "runTitleNoSteps": "มาโครนี้ยังไม่มีขั้นตอน โปรดแก้ไขก่อน",
+    "runTitleReady": "รันบนโปรไฟล์ที่เลือก",
+    "emptyTitle": "ยังไม่มีมาโคร",
+    "emptyHint": "บันทึกเวิร์กโฟลว์หรือสร้างใหม่เพื่อเริ่มต้น",
+    "errors": {
+      "loadMacros": "โหลดมาโครไม่ได้",
+      "deleteMacro": "ลบมาโครไม่ได้",
+      "chooseProfile": "เลือกโปรไฟล์เป้าหมายก่อน",
+      "noSteps": "มาโครนี้ยังไม่มีขั้นตอน โปรดแก้ไขก่อน",
+      "chooseProfileRecord": "เลือกโปรไฟล์เป้าหมายที่จะบันทึก",
+      "recordingFailed": "การบันทึกล้มเหลว"
+    },
+    "recordingStarted": "กำลังบันทึก… โต้ตอบกับเบราว์เซอร์ที่เปิดอยู่ แล้วกดหยุดเพื่อบันทึก",
+    "savedNotice": "บันทึก \"{{name}}\" พร้อม {{count}} ขั้นตอนแล้ว",
+    "stoppedNotice": "หยุดบันทึกแล้ว ได้ {{count}} ขั้นตอน (ยังไม่ได้บันทึก)",
+    "deleteConfirm": "ลบมาโคร \"{{name}}\" และขั้นตอนทั้งหมดหรือไม่ การดำเนินการนี้ย้อนกลับไม่ได้"
+  },
+  "saveRecording": {
+    "ariaLabel": "บันทึกมาโครที่อัดไว้",
+    "title": "บันทึกมาโครที่อัดไว้",
+    "subtitle": "ตั้งชื่อเพื่อเก็บขั้นตอนที่บันทึกได้ หรือทิ้งไป เบราว์เซอร์จะยังเปิดอยู่",
+    "placeholder": "มาโครที่อัดไว้",
+    "discard": "ทิ้ง",
+    "cancel": "ยกเลิก",
+    "save": "บันทึก"
+  },
+  "scheduleModal": {
+    "ariaLabel": "กำหนดเวลามาโคร",
+    "title": "กำหนดเวลามาโคร",
+    "subtitle": "รันมาโครอัตโนมัติตามตัวจับเวลา · Softglaze Pro",
+    "enable": "เปิดการรันตามกำหนดเวลา",
+    "macroLabel": "มาโคร",
+    "selectMacro": "เลือกมาโคร…",
+    "everyMinutes": "ทุก (นาที)",
+    "targetProfiles": "โปรไฟล์เป้าหมาย",
+    "noProfiles": "ไม่มีโปรไฟล์",
+    "profileFallback": "โปรไฟล์ {{id}}",
+    "cancel": "ยกเลิก",
+    "save": "บันทึกกำหนดเวลา",
+    "errors": {
+      "save": "บันทึกกำหนดเวลาไม่ได้"
+    }
+  },
+  "editorModal": {
+    "ariaEdit": "แก้ไขมาโคร",
+    "ariaCreate": "สร้างมาโคร",
+    "titleEdit": "แก้ไขมาโคร",
+    "titleCreate": "สร้างมาโคร",
+    "subtitle": "สร้างโฟลว์แบบไม่ต้องเขียนโค้ด ลากที่จับเพื่อเรียงลำดับใหม่",
+    "nameLabel": "ชื่อมาโคร",
+    "namePlaceholder": "เช่น ล็อกอินประจำวัน",
+    "descriptionLabel": "คำอธิบาย",
+    "descriptionPlaceholder": "มาโครนี้ทำอะไร",
+    "stepsLabel": "ขั้นตอน ({{count}})",
+    "addStep": "เพิ่มขั้นตอน",
+    "noSteps": "ยังไม่มีขั้นตอน เลือกประเภทแล้วเพิ่ม",
+    "dragToReorder": "ลากเพื่อเรียงลำดับใหม่",
+    "removeStep": "นำขั้นตอนออก",
+    "cancel": "ยกเลิก",
+    "save": "บันทึกมาโคร",
+    "errors": {
+      "name": "ตั้งชื่อให้มาโคร",
+      "save": "บันทึกมาโครไม่ได้"
+    },
+    "optional": "ไม่บังคับ",
+    "optionalHint": "หากขั้นตอนนี้ล้มเหลว ให้บันทึกไว้แล้วทำต่อแทนที่จะทำให้การรันล้มเหลว"
+  },
+  "runModal": {
+    "ariaLabel": "การรันมาโคร: {{name}}",
+    "runningOn": "กำลังรันบน {{profile}}",
+    "starting": "กำลังเริ่ม…",
+    "logStarted": "เริ่ม \"{{name}}\" · {{total}} ขั้นตอนบน {{profile}}",
+    "logStepRunning": "▶ {{label}}: {{summary}}",
+    "logStepError": "✕ {{label}}: {{error}}",
+    "logStepFailed": "ล้มเหลว",
+    "logStopped": "หยุดแล้ว",
+    "logFinished": "เสร็จสิ้น: {{ran}}/{{total}} ขั้นตอน",
+    "stopped": "หยุดแล้ว",
+    "finished": "เสร็จสิ้น",
+    "summaryCompleted": "เสร็จสมบูรณ์ {{ran}}/{{total}} ขั้นตอน",
+    "summaryRan": "รันแล้ว {{ran}}/{{total}} ขั้นตอน",
+    "paused": "หยุดชั่วคราว",
+    "running": "กำลังรัน…",
+    "resume": "ทำต่อ",
+    "pause": "หยุดชั่วคราว",
+    "stop": "หยุด",
+    "close": "ปิด",
+    "errors": {
+      "run": "รันมาโครไม่ได้"
+    },
+    "logStepSkipped": "ข้าม {{label}} (ไม่บังคับ): {{error}}"
+  },
+  "parallel": {
+    "states": {
+      "queued": "อยู่ในคิว",
+      "launching": "กำลังเปิด",
+      "running": "กำลังรัน",
+      "passed": "ผ่าน",
+      "failed": "ล้มเหลว"
+    },
+    "title": "รันมาโครแบบขนาน",
+    "subtitle": "รันมาโครเดียวในหลายโปรไฟล์พร้อมกัน พร้อมสถานะแบบสด",
+    "macroLabel": "มาโคร",
+    "noMacros": "ยังไม่มีมาโคร",
+    "macroOption": "{{name}} · {{count}} ขั้นตอน",
+    "concurrency": "จำนวนที่รันพร้อมกัน",
+    "concurrencyCap": "แพ็กเกจของคุณรันได้สูงสุด {{max}} โปรไฟล์พร้อมกัน",
+    "concurrencyCapUpgrade": "แพ็กเกจของคุณรันได้สูงสุด {{max}} โปรไฟล์พร้อมกัน Enterprise รันได้สูงสุด {{enterpriseMax}}",
+    "dataBound_other": "{{fileName}} · {{count}} แถว",
+    "dataHint": "ไม่บังคับ: ผูกสเปรดชีต (แถว → โปรไฟล์ ตามลำดับ)",
+    "clearDataBinding": "ล้างการผูกข้อมูล",
+    "bindData": "ผูกข้อมูล",
+    "columnsPrefix": "คอลัมน์: {{columns}} ใช้",
+    "columnsSuffix": "ในขั้นตอนของมาโคร",
+    "profilesLabel": "โปรไฟล์ (เลือกแล้ว {{count}})",
+    "selectAll": "เลือกทั้งหมด",
+    "clear": "ล้าง",
+    "searchPlaceholder": "ค้นหา",
+    "noProfiles": "ไม่พบโปรไฟล์",
+    "rowMismatch": "ข้อมูล {{rows}} แถว กับ {{profiles}} โปรไฟล์ ส่วนที่เกินจะรันโดยไม่มีตัวแปร",
+    "running": "กำลังรัน…",
+    "runOn_other": "รันบน {{count}} โปรไฟล์",
+    "runStatus": "สถานะการรัน",
+    "summaryPassed": "ผ่าน",
+    "summaryFailed": "ล้มเหลว",
+    "summaryTotal": "ทั้งหมด {{total}}",
+    "watchHint": "เลือกโปรไฟล์และมาโคร แล้วเริ่มรันเพื่อดูความคืบหน้าแบบสด",
+    "steps": "{{ran}}/{{total}} ขั้นตอน",
+    "profileFallback": "โปรไฟล์ {{id}}",
+    "runConsole": "คอนโซลการรัน",
+    "live": "สด",
+    "consoleIdle": "[ idle ] ยังไม่มีการรัน ความคืบหน้าจะแสดงที่นี่ (ไม่มีคุกกี้หรือข้อมูลรับรองรวมอยู่ด้วย)",
+    "logRunFinished": "รันเสร็จสิ้น: ผ่าน {{passed}}/{{total}}",
+    "logRunFinishedError": "รันเสร็จสิ้น: ผ่าน {{passed}}/{{total}} ({{error}})",
+    "errors": {
+      "readSpreadsheet": "อ่านสเปรดชีตไม่ได้",
+      "chooseMacro": "เลือกมาโครที่จะรัน",
+      "selectProfile": "เลือกโปรไฟล์อย่างน้อยหนึ่งรายการ",
+      "startRun": "เริ่มการรันแบบขนานไม่ได้"
+    }
+  },
+  "warmer": {
+    "title": "วอร์มคุกกี้",
+    "subtitle": "สร้างคุกกี้และประวัติแบบเป็นธรรมชาติด้วยการเรียกดูเว็บไซต์จริง",
+    "sitesLabel": "เว็บไซต์ที่จะเข้าชม ({{count}})",
+    "addSuggested": "เพิ่มเว็บไซต์แนะนำ…",
+    "add": "เพิ่ม",
+    "customPlaceholder": "หรือวาง URL ที่กำหนดเอง (เช่น example.com)",
+    "bulkAdd": "เพิ่มเป็นชุด",
+    "importFile": "นำเข้า .txt/.csv",
+    "clearAll": "ล้างทั้งหมด",
+    "bulkPlaceholder": "วาง URL บรรทัดละหนึ่งรายการ เช่น\nexample.com\nhttps://news.site\nshop.site, 45, links",
+    "addList": "เพิ่มรายการ",
+    "bulkHint": "URL บรรทัดละหนึ่งรายการ คอลัมน์ CSV ที่ไม่บังคับ: url, seconds, behaviour (none/random/links)",
+    "addSecondsTitle": "จำนวนวินาทีเริ่มต้นของลิงก์ที่คุณเพิ่ม",
+    "addBehaviorTitle": "พฤติกรรมเริ่มต้นของลิงก์ที่คุณเพิ่ม",
+    "saveList": "บันทึกรายการ",
+    "saveListPrompt": "ตั้งชื่อรายการลิงก์นี้ (เพื่อใช้ซ้ำภายหลัง):",
+    "loadListTitle": "โหลดรายการที่บันทึกไว้นี้",
+    "deleteListTitle": "ลบรายการที่บันทึกไว้นี้",
+    "selectRows": "เลือกแถว",
+    "nSelected": "เลือกแล้ว {{count}} รายการ",
+    "bulkSetSeconds": "ตั้งจำนวนวินาทีให้แถวที่เลือก",
+    "bulkSetBehavior": "ตั้งพฤติกรรมให้แถวที่เลือก",
+    "setBehavior": "ตั้งพฤติกรรม…",
+    "deleteSelected": "ลบ",
+    "noSites": "ยังไม่มีเว็บไซต์ เพิ่มได้ด้านบน",
+    "secondsTitle": "จำนวนวินาทีที่ใช้ในเว็บไซต์นี้",
+    "secondsUnit": "วิ",
+    "behaviourTitle": "สิ่งที่จะทำในเว็บไซต์นี้",
+    "remove": "นำออก",
+    "loopUntilStopped": "วนซ้ำจนกว่าจะหยุด",
+    "keepOpen": "เปิดเซสชันค้างไว้หลังจบ",
+    "hidden": "รันแบบซ่อน (ไม่มีหน้าต่าง)",
+    "hiddenTitle": "วอร์มแบบ headless โดยไม่เปิดหน้าต่างเบราว์เซอร์ คุกกี้และแคชยังคงบันทึกลงในแต่ละโปรไฟล์",
+    "cookieNote": "คุกกี้และแคชจะถูกบันทึกลงในแต่ละโปรไฟล์โดยอัตโนมัติ คอนโซลจะรายงานจำนวนคุกกี้และขนาดแคชที่บันทึกลงดิสก์ การเปิดตามปกติครั้งต่อไปจะใช้ข้อมูลเหล่านี้",
+    "startWarmup": "เริ่มวอร์ม",
+    "warming": "กำลังวอร์ม…",
+    "stop": "หยุด",
+    "forceStop": "บังคับหยุด",
+    "profilesLabel": "โปรไฟล์ (เลือกแล้ว {{count}})",
+    "searchPlaceholder": "ค้นหา",
+    "selectAll": "ทั้งหมด",
+    "selectNone": "ไม่เลือก",
+    "invert": "กลับการเลือก",
+    "addGroup": "เพิ่มกลุ่ม…",
+    "addTag": "เพิ่มแท็ก…",
+    "pasteIdsPlaceholder": "วาง ID หรือชื่อโปรไฟล์ (คั่นด้วยจุลภาคหรือเว้นวรรค)",
+    "selectPaste": "เลือก",
+    "noProfiles": "ไม่พบโปรไฟล์",
+    "profileFallback": "โปรไฟล์ {{id}}",
+    "warmupConsole": "คอนโซลการวอร์ม",
+    "live": "สด",
+    "progressTitle": "ความคืบหน้าการวอร์ม",
+    "modeQueue": "คิว · ครั้งละหนึ่ง",
+    "modeBulk": "เป็นชุด · ครั้งละ {{n}}",
+    "consoleIdle": "[ idle ] เลือกโปรไฟล์ ตั้งระยะเวลา แล้วเริ่มวอร์มเพื่อดูความคืบหน้าแบบสด",
+    "errors": {
+      "selectProfile": "เลือกโปรไฟล์ที่จะวอร์มอย่างน้อยหนึ่งรายการ",
+      "addSite": "เพิ่มเว็บไซต์ที่จะเข้าชมอย่างน้อยหนึ่งรายการ",
+      "startWarmup": "เริ่มการวอร์มไม่ได้",
+      "stopWarmup": "หยุดการวอร์มไม่ได้",
+      "importFile": "อ่านไฟล์นั้นไม่ได้"
+    },
+    "queueTitle": "วอร์มครั้งละหนึ่งโปรไฟล์ (คิวแบบเข้มงวด): เปิดเบราว์เซอร์ รอให้เสร็จและปิด แล้วจึงเปิดรายการถัดไป ช่วยไม่ให้เปิดเบราว์เซอร์ที่เลือกทั้งหมดพร้อมกัน ซึ่งอาจทำให้ RAM/CPU หมดและแอปขัดข้อง",
+    "queueMode": "รันครั้งละหนึ่ง (คิว)",
+    "parallelTitle": "จำนวนโปรไฟล์ที่วอร์มพร้อมกัน ยิ่งมากยิ่งเร็ว แต่ใช้ RAM/CPU มากขึ้น",
+    "parallelLabel": "ครั้งละ:"
+  },
+  "counter": {
+    "total": "ทั้งหมด",
+    "running": "กำลังรัน",
+    "done": "เสร็จแล้ว",
+    "queued": "อยู่ในคิว"
+  },
+  "console": {
+    "copy": "คัดลอก",
+    "copied": "คัดลอกแล้ว",
+    "export": "ส่งออก",
+    "clear": "ล้าง"
+  },
+  "history": {
+    "emptyTitle": "ยังไม่มีงานที่รัน",
+    "emptyHint": "การวอร์ม มาโคร และการรันแบบขนานจะแสดงที่นี่",
+    "columns": {
+      "task": "งาน",
+      "profiles": "โปรไฟล์",
+      "detail": "รายละเอียด",
+      "status": "สถานะ",
+      "when": "เวลา"
+    },
+    "emptyDetail": "-",
+    "parallelRun": "รันแบบขนาน",
+    "macroRun": "รันมาโคร",
+    "cookieWarmup": "วอร์มคุกกี้",
+    "minutes": "{{count}} นาที",
+    "sites_other": "{{count}} เว็บไซต์"
+  },
+  "stepFieldOptions": {
+    "auto": "อัตโนมัติ",
+    "value": "ค่า",
+    "label": "ป้ายชื่อ",
+    "index": "ลำดับ",
+    "visible": "มองเห็น",
+    "hidden": "ซ่อนอยู่",
+    "checked": "ติ๊กแล้ว",
+    "unchecked": "ไม่ได้ติ๊ก"
+  },
+  "autopilot": {
+    "title": "ออโต้ไพลอตการวอร์ม",
+    "subtitle": "วอร์มโปรไฟล์ด้วยเว็บไซต์จำนวนหนึ่งทุกวัน เพื่อให้มีประวัติการท่องเว็บจริง",
+    "toggle": "เปิดหรือปิดออโต้ไพลอตการวอร์ม",
+    "target": "โปรไฟล์",
+    "targetAll": "ทุกโปรไฟล์",
+    "targetGroup": "หนึ่งกลุ่ม",
+    "group": "กลุ่ม",
+    "runsPerDay": "จำนวนรอบต่อวัน",
+    "runsPerDayTitle": "จำนวนครั้งต่อวันที่แต่ละโปรไฟล์จะถูกวอร์ม",
+    "sitesPerRun": "เว็บไซต์ต่อรอบ",
+    "sitesPerRunTitle": "เว็บไซต์แบบสุ่มจากรายการแนะนำ ครั้งละ 20 ถึง 45 วินาที",
+    "activeHours": "ช่วงเวลาทำงาน",
+    "startHour": "ชั่วโมงเริ่ม",
+    "endHour": "ชั่วโมงสิ้นสุด",
+    "hoursTo": "ถึง",
+    "atATime": "ครั้งละ",
+    "atATimeTitle": "จำนวนโปรไฟล์ที่วอร์มพร้อมกัน ยิ่งมากยิ่งเร็ว แต่ใช้หน่วยความจำมากขึ้น",
+    "hidden": "รันแบบซ่อน (ไม่มีหน้าต่าง)",
+    "hint": "โปรไฟล์จะถูกวอร์มเมื่อการวอร์มครั้งล่าสุดนานกว่า 24 ชั่วโมงหารด้วยจำนวนรอบต่อวัน โปรไฟล์ที่เปิดอยู่ ถูกล็อก หรือไม่ว่างจะถูกข้าม",
+    "ownedByOther": "สมาชิกคนอื่นเป็นผู้เปิดฟีเจอร์นี้ เฉพาะผู้นั้นหรือผู้ที่มีบทบาทสูงกว่าเท่านั้นที่เปลี่ยนแปลงได้",
+    "status": {
+      "off": "ปิด",
+      "nextSoon": "รอบถัดไปภายในหนึ่งนาที",
+      "nextAt": "รอบถัดไป {{time}}",
+      "nothingDue": "ไม่มีโปรไฟล์ที่ต้องวอร์ม",
+      "warmedToday": "วอร์มแล้ว {{done}} จาก {{total}} วันนี้",
+      "warmingNow": "กำลังวอร์ม {{n}}",
+      "lastError": "ข้อผิดพลาดล่าสุด {{time}}: {{error}}"
+    },
+    "errors": {
+      "load": "โหลดการตั้งค่าออโต้ไพลอตไม่ได้",
+      "save": "บันทึกการตั้งค่าออโต้ไพลอตไม่ได้",
+      "noGroups": "ยังไม่มีกลุ่ม สร้างกลุ่มในหน้าโปรไฟล์ก่อน",
+      "owner-missing": "สมาชิกที่เปิดออโต้ไพลอตไม่มีอยู่แล้ว เจ้าของพื้นที่ทำงานสามารถปิดแล้วเปิดใหม่เพื่อรับช่วงต่อได้",
+      "owner-inactive": "สมาชิกที่เปิดออโต้ไพลอตถูกพักการใช้งานหรือถูกบล็อก",
+      "owner-no-permission": "สมาชิกที่เปิดออโต้ไพลอตอาจไม่มีสิทธิ์รันระบบอัตโนมัติแล้ว",
+      "warm-failed": "{{profile}}: {{error}}",
+      "warmFailedHidden": "โปรไฟล์ที่คุณมองไม่เห็นวอร์มไม่สำเร็จ",
+      "tick-failed": "{{error}}"
+    }
+  }
+}

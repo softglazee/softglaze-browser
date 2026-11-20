@@ -1,0 +1,342 @@
+{
+  "common": {
+    "cancel": "Hủy",
+    "save": "Lưu",
+    "edit": "Sửa",
+    "delete": "Xóa"
+  },
+  "header": {
+    "title": "Thanh toán và gói",
+    "description": "Quản lý gói đăng ký, so sánh các gói và nâng cấp, tất cả ở một nơi."
+  },
+  "status": {
+    "loading": "Đang tải…",
+    "sourceOwner": "Chủ mã nguồn",
+    "active": "Đang hoạt động",
+    "activeRenews": "Đang hoạt động · gia hạn {{date}}",
+    "trial": "Dùng thử",
+    "trialDaysLeft": "Dùng thử · còn {{days}} ngày",
+    "graceDaysLeft": "Ân hạn · còn {{days}} ngày",
+    "subscriptionEnded": "Gói đăng ký đã kết thúc",
+    "free": "Gói Miễn phí"
+  },
+  "backend": {
+    "licensedVerified": "Đã cấp phép và xác minh",
+    "renews": "gia hạn {{date}}",
+    "noLicense": "Cấp phép đang hoạt động. Bản cài này chưa có giấy phép trả phí.",
+    "trialVerified": "Dùng thử miễn phí, đã xác minh",
+    "trialEnds": "kết thúc {{date}}"
+  },
+  "current": {
+    "title": "Gói hiện tại",
+    "sourceOwnerAllFeatures": "Chủ mã nguồn · mọi tính năng",
+    "paid": "trả phí",
+    "freeTrial": "dùng thử miễn phí",
+    "freeForever": "Gói Miễn phí · miễn phí mãi mãi"
+  },
+  "grace": {
+    "message_one": "{{kind}} của bạn đã kết thúc, còn {{count}} ngày ân hạn. Hãy gia hạn bên dưới để không mất quyền truy cập.",
+    "message_other": "{{kind}} của bạn đã kết thúc, còn {{count}} ngày ân hạn. Hãy gia hạn bên dưới để không mất quyền truy cập.",
+    "kindTrial": "Bản dùng thử miễn phí",
+    "kindSubscription": "Gói đăng ký"
+  },
+  "banned": {
+    "message": "Gói đăng ký của bạn đã kết thúc và việc mở hồ sơ đang bị khóa. Hãy đăng ký hoặc nhập mã mua hàng để khôi phục quyền truy cập."
+  },
+  "trialRemaining": {
+    "message_one": "Dùng thử miễn phí: còn {{count}} ngày.",
+    "message_other": "Dùng thử miễn phí: còn {{count}} ngày."
+  },
+  "seats": {
+    "label": "Chỗ cho nhóm",
+    "usage": "Đã dùng {{used}} / {{total}}",
+    "upgradeToAddMore": "· nâng cấp để thêm"
+  },
+  "exempt": {
+    "note": "Bạn là chủ mã nguồn nên không chịu hệ thống gói đăng ký. Mọi tính năng đều có sẵn."
+  },
+  "checkout": {
+    "waiting": "Đang chờ thanh toán…",
+    "waitingForPlan": "Đang chờ thanh toán · {{plan}}…",
+    "opened": "Một trang thanh toán đã mở trong trình duyệt. Sau khi thanh toán, trang này tự cập nhật.",
+    "reopen": "Mở lại trang thanh toán"
+  },
+  "plans": {
+    "chooseHeading": "Chọn một gói",
+    "bestValue": "Đáng giá nhất",
+    "current": "Hiện tại",
+    "footerNote": "Thanh toán được xử lý bằng các phương thức quản trị viên đã bật. Sau khi bạn thanh toán trong trình duyệt, trang này tự kích hoạt gói của bạn."
+  },
+  "period": {
+    "label": "Chu kỳ thanh toán",
+    "monthly": "Hằng tháng",
+    "yearly": "Hằng năm",
+    "billedYearly": "Thanh toán theo năm, khoảng {{perMonth}} mỗi tháng",
+    "monthsFree_one": "Miễn phí {{count}} tháng, bạn tiết kiệm {{saving}}",
+    "monthsFree_other": "Miễn phí {{count}} tháng, bạn tiết kiệm {{saving}}",
+    "monthsFreeShort_one": "Miễn phí {{count}} tháng",
+    "monthsFreeShort_other": "Miễn phí {{count}} tháng",
+    "save": "Bạn tiết kiệm {{saving}} mỗi năm"
+  },
+  "cta": {
+    "included": "Đã bao gồm",
+    "onPaidPlan": "Đang dùng gói trả phí",
+    "trialActiveDaysLeft": "Đang dùng thử · còn {{days}} ngày",
+    "startFreeTrial": "Bắt đầu dùng thử miễn phí",
+    "trialUsed": "Đã dùng bản dùng thử",
+    "currentPlan": "Gói hiện tại",
+    "upgradeEnterprise": "Nâng cấp lên Enterprise",
+    "downgradePro": "Hạ xuống Pro",
+    "choosePlan": "Chọn {{name}}"
+  },
+  "trial": {
+    "started": "Bản dùng thử miễn phí đã kích hoạt với toàn quyền truy cập. Chúc bạn trải nghiệm vui!",
+    "startedWithDays": "Bản dùng thử miễn phí đã kích hoạt: {{days}} ngày toàn quyền truy cập. Chúc bạn trải nghiệm vui!",
+    "errors": {
+      "failed": "Không bắt đầu được dùng thử."
+    }
+  },
+  "redeem": {
+    "label": "Có mã mua hàng?",
+    "apply": "Áp dụng",
+    "success": "Đã áp dụng mã mua hàng. Cảm ơn bạn!",
+    "errors": {
+      "empty": "Nhập mã mua hàng của bạn.",
+      "failed": "Không áp dụng được mã này."
+    }
+  },
+  "pay": {
+    "received": "Đã nhận thanh toán. Gói của bạn đã được kích hoạt!",
+    "errors": {
+      "noMethods": "Mua trong ứng dụng đang tạm dừng trong khi chúng tôi thêm nhà cung cấp thanh toán mới. Hãy gửi email đến support@softglaze.com để mua theo hóa đơn, rồi nhập mã mua hàng bên dưới.",
+      "checkoutFailed": "Không bắt đầu được thanh toán.",
+      "submitFailed": "Không gửi được thanh toán của bạn."
+    }
+  },
+  "payModal": {
+    "title": "Thanh toán cho {{name}}",
+    "manualSubmitted": "Đã gửi thanh toán. Quản trị viên sẽ xem xét và kích hoạt gói của bạn trong thời gian ngắn.",
+    "manualBadge": "Thủ công",
+    "continueTo": "Tiếp tục đến {{method}}",
+    "openPayLink": "Mở liên kết thanh toán",
+    "referencePlaceholder": "Mã tham chiếu thanh toán / mã giao dịch",
+    "notePlaceholder": "Ghi chú (không bắt buộc)",
+    "submitForApproval": "Tôi đã thanh toán, gửi để phê duyệt",
+    "manualActivationNote": "Gói của bạn được kích hoạt khi quản trị viên xác nhận thanh toán."
+  },
+  "admin": {
+    "configureMethods": "Cấu hình phương thức thanh toán trong Cài đặt"
+  },
+  "invoices": {
+    "title": "Hóa đơn",
+    "subtitleAdmin": "Mọi khoản thanh toán của các chủ sở hữu, gồm tự động ghi nhận + thủ công.",
+    "subtitleUser": "Biên lai thanh toán của bạn.",
+    "add": "Thêm",
+    "empty": "Chưa có hóa đơn nào.",
+    "manualSuffix": "thủ công",
+    "confirmDelete": "Xóa hóa đơn này?",
+    "cols": {
+      "date": "Ngày",
+      "owner": "Chủ sở hữu",
+      "amount": "Số tiền",
+      "method": "Phương thức",
+      "status": "Trạng thái",
+      "reference": "Mã tham chiếu"
+    },
+    "errors": {
+      "loadFailed": "Không tải được hóa đơn.",
+      "deleteFailed": "Không xóa được."
+    }
+  },
+  "invoiceForm": {
+    "addTitle": "Thêm hóa đơn",
+    "editTitle": "Sửa hóa đơn",
+    "ownerMemberId": "ID thành viên chủ sở hữu",
+    "optionalPlaceholder": "(không bắt buộc)",
+    "amount": "Số tiền",
+    "currency": "Tiền tệ",
+    "method": "Phương thức",
+    "status": "Trạng thái",
+    "tier": "Cấp",
+    "months": "Số tháng",
+    "reference": "Mã tham chiếu",
+    "referencePlaceholder": "giao dịch / mã",
+    "note": "Ghi chú",
+    "errors": {
+      "invalidAmount": "Hãy nhập số tiền hợp lệ.",
+      "saveFailed": "Không lưu được hóa đơn."
+    }
+  },
+  "planManager": {
+    "title": "Gói và gói dịch vụ",
+    "subtitle": "Đặt giá, sửa chi tiết và tạo gói mới. Thay đổi áp dụng ngay cho trang thanh toán.",
+    "newPackage": "Gói mới",
+    "activeBadge": "Đang hoạt động",
+    "hiddenBadge": "Đã ẩn",
+    "termMeta": "Kỳ hạn {{months}} tháng · {{tier}}",
+    "hide": "Ẩn",
+    "show": "Hiện",
+    "hideTitle": "Ẩn khỏi trang thanh toán",
+    "showTitle": "Hiện trên trang thanh toán",
+    "deleteTitle": "Xóa gói",
+    "confirmDelete": "Xóa gói “{{name}}”? Người mua sẽ không còn thấy gói này.",
+    "errors": {
+      "loadFailed": "Không tải được các gói.",
+      "updateFailed": "Không cập nhật được gói.",
+      "deleteFailed": "Không xóa được gói."
+    }
+  },
+  "planForm": {
+    "newTitle": "Gói mới",
+    "editTitle": "Sửa {{name}}",
+    "editTitleAria": "Sửa gói",
+    "packageName": "Tên gói",
+    "planType": "Loại gói",
+    "typePaid": "Trả phí",
+    "typeTrial": "Dùng thử miễn phí",
+    "trialLength": "Thời gian dùng thử (ngày)",
+    "price": "Giá",
+    "currency": "Tiền tệ",
+    "shownAs": "Hiển thị là",
+    "trialShownValue": "{{days}} ngày · miễn phí",
+    "billedPer": "Tính phí theo",
+    "term": "Kỳ hạn (số tháng được cấp)",
+    "featureTier": "Cấp tính năng",
+    "bestValue": "Đáng giá nhất",
+    "active": "Đang hoạt động",
+    "tagline": "Khẩu hiệu",
+    "taglinePlaceholder": "Mọi thứ một người vận hành cần.",
+    "features": "Tính năng (mỗi dòng một tính năng)",
+    "featuresPlaceholder": "Hồ sơ trình duyệt không giới hạn\nBộ máy dấu vân tay đầy đủ\nKho proxy và xoay vòng",
+    "savePackage": "Lưu gói",
+    "errors": {
+      "nameRequired": "Hãy đặt tên cho gói.",
+      "invalidPrice": "Hãy nhập giá hợp lệ.",
+      "saveFailed": "Không lưu được gói."
+    }
+  },
+  "subscribers": {
+    "title": "Người đăng ký",
+    "subtitle": "Mọi tài khoản, thời điểm tham gia, gói và ngày hết hạn. Tổng cộng {{count}}.",
+    "assignPlan": "Gán gói",
+    "empty": "Chưa có tài khoản chủ sở hữu nào.",
+    "trialSuffix": "dùng thử",
+    "daysLeftShort": "{{days}} ngày",
+    "assign": "Gán",
+    "assignTitle": "Gán / cấp một gói",
+    "state": {
+      "ended": "Đã kết thúc",
+      "grace": "Ân hạn",
+      "active": "Đang hoạt động",
+      "trial": "Dùng thử"
+    },
+    "cols": {
+      "account": "Tài khoản",
+      "joined": "Tham gia",
+      "plan": "Gói",
+      "state": "Trạng thái",
+      "expires": "Hết hạn",
+      "team": "Nhóm"
+    },
+    "errors": {
+      "loadFailed": "Không tải được người đăng ký."
+    }
+  },
+  "assignForm": {
+    "title": "Gán một gói",
+    "account": "Tài khoản",
+    "plan": "Gói",
+    "months": "Số tháng",
+    "monthsWithDefault": "Số tháng (mặc định {{default}})",
+    "recordAsPaid": "Ghi nhận là bán có trả phí",
+    "noteOptional": "Ghi chú (không bắt buộc)",
+    "notePlaceholder": "Lý do cấp gói này",
+    "grantNote": "Cấp kỳ hạn ngay và gỡ mọi khóa gói đăng ký.",
+    "grantNotePaid": "Một hóa đơn đã thanh toán sẽ được ghi lại.",
+    "grantNoteFree": "Ghi nhận là cấp miễn phí $0.",
+    "fallbackAccount": "tài khoản",
+    "fallbackPlan": "gói",
+    "success_one": "Đã gán {{plan}} cho {{name}} trong {{count}} tháng.",
+    "success_other": "Đã gán {{plan}} cho {{name}} trong {{count}} tháng.",
+    "errors": {
+      "chooseAccount": "Hãy chọn một tài khoản.",
+      "choosePlan": "Hãy chọn một gói.",
+      "assignFailed": "Không gán được gói."
+    }
+  },
+  "planText": {
+    "trialTagline": "Dùng thử miễn phí mọi tính năng: toàn quyền truy cập, không cần thẻ.",
+    "trialFullAccess": "Truy cập mọi tính năng",
+    "trialTools": "Mọi công cụ dấu vân tay, proxy và kiểm tra rò rỉ",
+    "trialMacros": "Macro, làm nóng cookie và hồ sơ di động",
+    "trialBackupSeats": "Sao lưu mã hóa và chỗ cho nhóm",
+    "trialNoCard": "Không cần thẻ tín dụng",
+    "trialUpgrade": "Nâng cấp lên gói trả phí bất cứ lúc nào",
+    "proTagline": "Mọi thứ một người vận hành cần để chạy hồ sơ ở quy mô lớn.",
+    "proProfiles": "Hồ sơ trình duyệt cục bộ không giới hạn",
+    "proFingerprint": "Bộ máy dấu vân tay đầy đủ + kiểm tra rò rỉ",
+    "proProxies": "Kho proxy, chính sách xoay vòng và tự khớp vị trí",
+    "proMacros": "Ghi macro, lên lịch và chạy theo dữ liệu",
+    "proCookieWarmer": "Làm nóng cookie",
+    "proMobile": "Hồ sơ thiết bị di động / Android",
+    "proBackup": "Sao lưu và khôi phục không gian làm việc có mã hóa",
+    "proDbEncryption": "Mã hóa toàn bộ cơ sở dữ liệu khi lưu",
+    "proPalette": "Bảng lệnh + hướng dẫn bắt đầu",
+    "proSeats": "Tối đa 3 thành viên nhóm",
+    "proParallel": "Chạy song song tối đa 3 hồ sơ cùng lúc, có bảng theo dõi trực tiếp",
+    "entTagline": "Cho các nhóm: tối đa 25 thành viên, 10 hồ sơ cùng lúc và xuất nhật ký kiểm tra.",
+    "entEverythingInPro": "Mọi thứ trong Pro, cộng thêm:",
+    "entSeats": "Tối đa 25 thành viên nhóm",
+    "entParallel": "Chạy song song tối đa 10 hồ sơ cùng lúc, có bảng theo dõi trực tiếp",
+    "entAuditExport": "Xuất nhật ký kiểm tra (CSV / JSON)",
+    "entSupport": "Hỗ trợ email ưu tiên"
+  },
+  "serverErrors": {
+    "SIGNUP_INVALID_EMAIL": "Hãy nhập địa chỉ email hợp lệ.",
+    "SIGNUP_DISPOSABLE_EMAIL": "Vui lòng dùng địa chỉ email cố định.",
+    "SIGNUP_NO_MX": "Chúng tôi không tìm thấy máy chủ thư cho địa chỉ này.",
+    "SIGNUP_BAD_CODE": "Mã không đúng hoặc đã hết hạn. Hãy kiểm tra email hoặc yêu cầu mã mới.",
+    "SIGNUP_OFFLINE": "Hãy kết nối internet để tạo tài khoản.",
+    "SIGNUP_FAILED": "Hiện chưa kiểm tra được email này. Hãy thử lại sau vài phút.",
+    "RATE_LIMITED": "Quá nhiều lần thử, hãy thử lại sau vài phút.",
+    "TRIAL_USED": "Máy tính hoặc email này đã dùng bản dùng thử miễn phí. Hãy chọn một gói hoặc nhập mã mua hàng.",
+    "TRIAL_OFFLINE": "Hãy kết nối internet để bắt đầu dùng thử miễn phí.",
+    "TRIAL_VERIFY_EMAIL": "Hãy xác nhận địa chỉ email để bắt đầu dùng thử miễn phí. Chúng tôi đã gửi cho bạn mã 6 chữ số.",
+    "TRIAL_NO_EMAIL": "Hãy thêm địa chỉ email cho tài khoản chủ sở hữu trước, rồi bắt đầu dùng thử miễn phí.",
+    "TRIAL_FAILED": "Hiện chưa bắt đầu được dùng thử miễn phí. Hãy thử lại sau vài phút.",
+    "SERVER_UNAVAILABLE": "Máy chủ cấp phép của chúng tôi hiện không phản hồi. Hãy thử lại sau vài phút.",
+    "MACHINE_MISMATCH": "Giấy phép này đã đăng ký cho một máy tính khác. Hãy chuyển nó sang PC này hoặc nhờ quản trị viên đặt lại.",
+    "SIGNUP_INVALID_PHONE": "Hãy nhập số điện thoại có dấu + và mã quốc gia, hoặc để trống.",
+    "SIGNUP_USE_CASE": "Hãy chọn mục đích bạn dùng SoftGlaze.",
+    "SIGNUP_USE_CASE_OTHER": "Cho chúng tôi biết trong vài từ bạn sẽ dùng SoftGlaze để làm gì.",
+    "CONFIRM_OFFLINE": "Hãy kết nối internet để xác nhận email."
+  },
+  "store": {
+    "cardTitle": "Gói đăng ký Microsoft Store",
+    "processedBy": "Ở phiên bản này, Microsoft là đơn vị xử lý thanh toán: bạn trả bằng tài khoản Microsoft và Microsoft tính phí gói đăng ký mỗi tháng, hoặc mỗi năm với gói năm.",
+    "upgradeNote": "Chuyển từ Pro lên Enterprise sẽ tạo gói đăng ký thứ hai. Hãy hủy Pro trong tài khoản Microsoft để gói đó ngừng gia hạn.",
+    "periodNote": "Chuyển giữa thanh toán hằng tháng và hằng năm cũng tạo gói đăng ký thứ hai. Hãy hủy gói cũ trong tài khoản Microsoft để gói đó ngừng gia hạn.",
+    "downgradeNote": "Để chuyển từ Enterprise xuống Pro, hãy hủy Enterprise trong tài khoản Microsoft và mua Pro khi gói đó kết thúc.",
+    "buyWith": "Mua qua Microsoft Store",
+    "buyWithPrice": "Mua qua Microsoft Store · {{price}}",
+    "priceFrom": "Giá từ Microsoft Store, theo đơn vị tiền tệ của bạn",
+    "restore": "Khôi phục giao dịch mua trên Microsoft Store",
+    "moveHere": "Chuyển sang máy tính này",
+    "manage": "Quản lý hoặc hủy trong tài khoản Microsoft",
+    "result": {
+      "active": "Cảm ơn bạn. Gói {{plan}} của bạn đã kích hoạt.",
+      "cancelled": "Đã hủy giao dịch mua. Bạn không bị tính phí.",
+      "pending": "Microsoft đã nhận giao dịch mua của bạn. Chúng tôi đang xác nhận, có thể mất một phút.",
+      "pendingLong": "Giao dịch mua của bạn chưa được xác nhận. Hãy bấm Khôi phục giao dịch mua trên Microsoft Store sau vài phút, hoặc gửi email đến support@softglaze.com.",
+      "pendingOffline": "Giao dịch mua đã được lưu trên máy tính này. Gói sẽ được kích hoạt ngay khi ứng dụng kết nối được máy chủ của chúng tôi.",
+      "pendingReview": "Chúng tôi đã nhận giao dịch mua và đang kiểm tra. Gói của bạn sẽ được kích hoạt ngay khi được phê duyệt.",
+      "none": "Không tìm thấy gói đăng ký Microsoft Store nào đang hoạt động cho ứng dụng này trong tài khoản Microsoft này.",
+      "inUse": "Gói đăng ký này đang được dùng trên một máy tính khác. Bạn có thể chuyển nó sang máy này.",
+      "moveLimit": "Gói đăng ký này đã được chuyển sang máy khác hai lần trong 30 ngày qua. Hãy gửi email đến support@softglaze.com để được hỗ trợ.",
+      "unavailable": "Hiện chưa mua được qua Microsoft Store. Vui lòng thử lại sau.",
+      "productMissing": "Gói này chưa có trên Microsoft Store.",
+      "network": "Không kết nối được Microsoft Store. Hãy kiểm tra kết nối internet và thử lại.",
+      "error": "Không hoàn tất được giao dịch mua: {{message}}"
+    }
+  }
+}

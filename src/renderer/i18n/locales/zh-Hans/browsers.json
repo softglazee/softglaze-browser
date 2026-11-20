@@ -1,0 +1,70 @@
+{
+  "header": {
+    "eyebrow": "引擎",
+    "title": "浏览器",
+    "subtitle": "按需下载真实的 Chrome 和 Firefox 版本，自动安装，随时可启动。",
+    "refresh": "刷新"
+  },
+  "stats": {
+    "chromeInstalled": "已安装的 Chrome",
+    "chromeAvailable": "可用的 Chrome",
+    "firefoxInstalled": "已安装的 Firefox",
+    "firefoxAvailable": "可用的 Firefox"
+  },
+  "counts": {
+    "installedAvailable": "· 已安装 {{installed}} 个 · 可用 {{available}} 个"
+  },
+  "engine": {
+    "heading": "指纹引擎",
+    "installed": "已安装",
+    "notInstalled": "未安装",
+    "description": "fingerprint-chromium 在引擎层面原生设置 canvas、WebGL、UA、平台和时区，隐藏 webdriver，并阻止 WebRTC 泄露。请在“设置 → 浏览器”中开启。",
+    "progressInstalling": "正在安装",
+    "progressVerifying": "正在验证",
+    "installing": "正在安装",
+    "verifying": "正在验证",
+    "downloading": "正在下载",
+    "download": "下载（约 180 MB）"
+  },
+  "firefox": {
+    "heading": "Firefox",
+    "ready": "就绪",
+    "notDetected": "未检测到",
+    "detectedDesc": "就绪。已在 {{path}} 检测到。Firefox 配置文件会启动真实的 Firefox，并应用代理、UA、语言区域、时区，同时关闭 WebRTC。",
+    "notDetectedDesc": "未检测到系统中的 Firefox。请在下方下载一个版本：它会安装到应用中，Firefox 配置文件将启动真实的 Firefox，并应用代理、UA、语言区域、时区，同时关闭 WebRTC。",
+    "fetching": "正在获取 Firefox 版本目录…",
+    "empty": "没有可用的 Firefox 版本（是否处于离线状态？）。"
+  },
+  "chromium": {
+    "heading": "Chromium（Chrome for Testing）",
+    "subtitle": "真实版本：UA、Client Hints、TLS 和 Worker 都与该版本真正一致。",
+    "fetching": "正在获取 Chrome for Testing 版本目录…",
+    "empty": "没有可用的版本（是否处于离线状态？）。"
+  },
+  "row": {
+    "versionLabel": "{{brand}} {{major}}",
+    "ready": "就绪",
+    "paused": "已暂停",
+    "interrupted": "已中断",
+    "resume": "继续",
+    "download": "下载",
+    "retry": "重试",
+    "downloading": "正在下载",
+    "installing": "正在安装…",
+    "installingShort": "正在安装",
+    "queued": "排队中…",
+    "pauseDownload": "暂停下载",
+    "pausedPercent": "已暂停 · {{percent}}%",
+    "interruptedPercent": "已中断 · {{percent}}%"
+  },
+  "errors": {
+    "catalogUnreachable": "无法访问浏览器版本目录。请检查网络连接。",
+    "downloadFailed": "下载失败。",
+    "pauseFailed": "暂停失败。",
+    "resumeFailed": "继续下载失败。"
+  },
+  "browsers": {
+    "showAll": "显示全部 {{n}} 个版本",
+    "showLess": "收起"
+  }
+}

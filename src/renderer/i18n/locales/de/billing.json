@@ -1,0 +1,342 @@
+{
+  "common": {
+    "cancel": "Abbrechen",
+    "save": "Speichern",
+    "edit": "Bearbeiten",
+    "delete": "Löschen"
+  },
+  "header": {
+    "title": "Abrechnung & Tarife",
+    "description": "Verwalten Sie Ihr Abonnement, vergleichen Sie Tarife und upgraden Sie, alles an einem Ort."
+  },
+  "status": {
+    "loading": "Lädt…",
+    "sourceOwner": "Quellcode-Inhaber",
+    "active": "Aktiv",
+    "activeRenews": "Aktiv · verlängert sich am {{date}}",
+    "trial": "Testphase",
+    "trialDaysLeft": "Test · noch {{days}} T.",
+    "graceDaysLeft": "Kulanz · noch {{days}} T.",
+    "subscriptionEnded": "Abonnement beendet",
+    "free": "Free-Tarif"
+  },
+  "backend": {
+    "licensedVerified": "Lizenziert & bestätigt",
+    "renews": "verlängert sich am {{date}}",
+    "noLicense": "Lizenzierung aktiv, aber noch keine bezahlte Lizenz für diese Installation.",
+    "trialVerified": "Kostenlose Testphase, bestätigt",
+    "trialEnds": "endet am {{date}}"
+  },
+  "current": {
+    "title": "Aktueller Tarif",
+    "sourceOwnerAllFeatures": "Quellcode-Inhaber · alle Funktionen",
+    "paid": "bezahlt",
+    "freeTrial": "kostenlose Testphase",
+    "freeForever": "Free-Tarif · für immer kostenlos"
+  },
+  "grace": {
+    "message_one": "{{kind}} beendet. Noch {{count}} Tag Kulanz. Verlängern Sie unten, um den Zugriff nicht zu verlieren.",
+    "message_other": "{{kind}} beendet. Noch {{count}} Tage Kulanz. Verlängern Sie unten, um den Zugriff nicht zu verlieren.",
+    "kindTrial": "Kostenlose Testphase",
+    "kindSubscription": "Abonnement"
+  },
+  "banned": {
+    "message": "Ihr Abonnement ist beendet, und das Starten von Profilen ist gesperrt. Abonnieren Sie oder geben Sie einen Kaufcode ein, um den Zugriff wiederherzustellen."
+  },
+  "trialRemaining": {
+    "message_one": "Kostenlose Testphase: noch {{count}} Tag.",
+    "message_other": "Kostenlose Testphase: noch {{count}} Tage."
+  },
+  "seats": {
+    "label": "Teamplätze",
+    "usage": "{{used}} / {{total}} belegt",
+    "upgradeToAddMore": "· für mehr upgraden"
+  },
+  "exempt": {
+    "note": "Sie sind der Quellcode-Inhaber und vom Abo-System ausgenommen. Alle Funktionen sind enthalten."
+  },
+  "checkout": {
+    "waiting": "Warte auf Ihre Zahlung…",
+    "waitingForPlan": "Warte auf Ihre Zahlung · {{plan}}…",
+    "opened": "In Ihrem Browser hat sich eine Zahlungsseite geöffnet. Nach der Zahlung aktualisiert sich dies automatisch.",
+    "reopen": "Zahlungsseite erneut öffnen"
+  },
+  "plans": {
+    "chooseHeading": "Tarif wählen",
+    "bestValue": "Bester Wert",
+    "current": "Aktuell",
+    "footerNote": "Zahlungen laufen über die Methoden, die Ihr Administrator aktiviert hat. Nach der Zahlung im Browser aktiviert diese Seite Ihren Tarif automatisch."
+  },
+  "period": {
+    "label": "Abrechnungszeitraum",
+    "monthly": "Monatlich",
+    "yearly": "Jährlich",
+    "billedYearly": "Jährliche Abrechnung, etwa {{perMonth}} pro Monat",
+    "monthsFree_one": "{{count}} Monat gratis, Sie sparen {{saving}}",
+    "monthsFree_other": "{{count}} Monate gratis, Sie sparen {{saving}}",
+    "monthsFreeShort_one": "{{count}} Monat gratis",
+    "monthsFreeShort_other": "{{count}} Monate gratis",
+    "save": "Sie sparen {{saving}} pro Jahr"
+  },
+  "cta": {
+    "included": "Inklusive",
+    "onPaidPlan": "Bezahlter Tarif aktiv",
+    "trialActiveDaysLeft": "Testphase aktiv · noch {{days}} T.",
+    "startFreeTrial": "Kostenlose Testphase starten",
+    "trialUsed": "Testphase genutzt",
+    "currentPlan": "Aktueller Tarif",
+    "upgradeEnterprise": "Auf Enterprise upgraden",
+    "downgradePro": "Zu Pro wechseln",
+    "choosePlan": "{{name}} wählen"
+  },
+  "trial": {
+    "started": "Ihre kostenlose Testphase mit vollem Zugriff ist aktiv. Viel Spaß!",
+    "startedWithDays": "Ihre kostenlose Testphase ist aktiv: {{days}} Tage voller Zugriff. Viel Spaß!",
+    "errors": {
+      "failed": "Die Testphase konnte nicht gestartet werden."
+    }
+  },
+  "redeem": {
+    "label": "Haben Sie einen Kaufcode?",
+    "apply": "Anwenden",
+    "success": "Kaufcode angewendet. Vielen Dank!",
+    "errors": {
+      "empty": "Geben Sie Ihren Kaufcode ein.",
+      "failed": "Dieser Code konnte nicht angewendet werden."
+    }
+  },
+  "pay": {
+    "received": "Zahlung erhalten. Ihr Tarif ist jetzt aktiv!",
+    "errors": {
+      "noMethods": "Der Kauf in der App ist pausiert, während wir einen neuen Zahlungsanbieter hinzufügen. Schreiben Sie an support@softglaze.com, um per Rechnung zu kaufen, und geben Sie dann unten Ihren Kaufcode ein.",
+      "checkoutFailed": "Der Bezahlvorgang konnte nicht gestartet werden.",
+      "submitFailed": "Ihre Zahlung konnte nicht eingereicht werden."
+    }
+  },
+  "payModal": {
+    "title": "{{name}} bezahlen",
+    "manualSubmitted": "Zahlung eingereicht. Ein Administrator prüft sie und aktiviert Ihren Tarif in Kürze.",
+    "manualBadge": "Manuell",
+    "continueTo": "Weiter zu {{method}}",
+    "openPayLink": "Zahlungslink öffnen",
+    "referencePlaceholder": "Zahlungsreferenz / Transaktions-ID",
+    "notePlaceholder": "Notiz (optional)",
+    "submitForApproval": "Ich habe bezahlt, zur Freigabe einreichen",
+    "manualActivationNote": "Ihr Tarif wird aktiviert, sobald ein Administrator die Zahlung bestätigt."
+  },
+  "admin": {
+    "configureMethods": "Zahlungsmethoden in den Einstellungen einrichten"
+  },
+  "invoices": {
+    "title": "Rechnungen",
+    "subtitleAdmin": "Alle Zahlungen aller Inhaber, automatisch erfasst + manuell.",
+    "subtitleUser": "Ihre Zahlungsbelege.",
+    "add": "Hinzufügen",
+    "empty": "Noch keine Rechnungen.",
+    "manualSuffix": "manuell",
+    "confirmDelete": "Diese Rechnung löschen?",
+    "cols": {
+      "date": "Datum",
+      "owner": "Inhaber",
+      "amount": "Betrag",
+      "method": "Methode",
+      "status": "Status",
+      "reference": "Referenz"
+    },
+    "errors": {
+      "loadFailed": "Rechnungen konnten nicht geladen werden.",
+      "deleteFailed": "Löschen fehlgeschlagen."
+    }
+  },
+  "invoiceForm": {
+    "addTitle": "Rechnung hinzufügen",
+    "editTitle": "Rechnung bearbeiten",
+    "ownerMemberId": "Mitglieds-ID des Inhabers",
+    "optionalPlaceholder": "(optional)",
+    "amount": "Betrag",
+    "currency": "Währung",
+    "method": "Methode",
+    "status": "Status",
+    "tier": "Stufe",
+    "months": "Monate",
+    "reference": "Referenz",
+    "referencePlaceholder": "Transaktion / Code",
+    "note": "Notiz",
+    "errors": {
+      "invalidAmount": "Geben Sie einen gültigen Betrag ein.",
+      "saveFailed": "Rechnung konnte nicht gespeichert werden."
+    }
+  },
+  "planManager": {
+    "title": "Tarife & Pakete",
+    "subtitle": "Legen Sie Preise fest, bearbeiten Sie Details und erstellen Sie neue Pakete. Änderungen gelten sofort an der Kasse.",
+    "newPackage": "Neues Paket",
+    "activeBadge": "Aktiv",
+    "hiddenBadge": "Verborgen",
+    "termMeta": "{{months}} Mon. Laufzeit · {{tier}}",
+    "hide": "Verbergen",
+    "show": "Anzeigen",
+    "hideTitle": "An der Kasse verbergen",
+    "showTitle": "An der Kasse anzeigen",
+    "deleteTitle": "Tarif löschen",
+    "confirmDelete": "Tarif „{{name}}“ löschen? Käufer sehen ihn dann nicht mehr.",
+    "errors": {
+      "loadFailed": "Tarife konnten nicht geladen werden.",
+      "updateFailed": "Tarif konnte nicht aktualisiert werden.",
+      "deleteFailed": "Tarif konnte nicht gelöscht werden."
+    }
+  },
+  "planForm": {
+    "newTitle": "Neues Paket",
+    "editTitle": "{{name}} bearbeiten",
+    "editTitleAria": "Paket bearbeiten",
+    "packageName": "Paketname",
+    "planType": "Tariftyp",
+    "typePaid": "Bezahlt",
+    "typeTrial": "Kostenlose Testphase",
+    "trialLength": "Testdauer (Tage)",
+    "price": "Preis",
+    "currency": "Währung",
+    "shownAs": "Angezeigt als",
+    "trialShownValue": "{{days}} Tage · kostenlos",
+    "billedPer": "Abgerechnet pro",
+    "term": "Laufzeit (gewährte Monate)",
+    "featureTier": "Funktionsstufe",
+    "bestValue": "Bester Wert",
+    "active": "Aktiv",
+    "tagline": "Slogan",
+    "taglinePlaceholder": "Alles, was eine Einzelperson braucht.",
+    "features": "Funktionen (eine pro Zeile)",
+    "featuresPlaceholder": "Unbegrenzte Browserprofile\nVolle Fingerprint-Engine\nProxy-Pool & Rotation",
+    "savePackage": "Paket speichern",
+    "errors": {
+      "nameRequired": "Geben Sie dem Paket einen Namen.",
+      "invalidPrice": "Geben Sie einen gültigen Preis ein.",
+      "saveFailed": "Tarif konnte nicht gespeichert werden."
+    }
+  },
+  "subscribers": {
+    "title": "Abonnenten",
+    "subtitle": "Jedes Konto, sein Beitrittsdatum, sein Tarif und Ablauf. {{count}} gesamt.",
+    "assignPlan": "Tarif zuweisen",
+    "empty": "Noch keine Inhaberkonten.",
+    "trialSuffix": "Test",
+    "daysLeftShort": "{{days}} T.",
+    "assign": "Zuweisen",
+    "assignTitle": "Tarif zuweisen / gewähren",
+    "state": {
+      "ended": "Beendet",
+      "grace": "Kulanz",
+      "active": "Aktiv",
+      "trial": "Testphase"
+    },
+    "cols": {
+      "account": "Konto",
+      "joined": "Beigetreten",
+      "plan": "Tarif",
+      "state": "Status",
+      "expires": "Läuft ab",
+      "team": "Team"
+    },
+    "errors": {
+      "loadFailed": "Abonnenten konnten nicht geladen werden."
+    }
+  },
+  "assignForm": {
+    "title": "Tarif zuweisen",
+    "account": "Konto",
+    "plan": "Tarif",
+    "months": "Monate",
+    "monthsWithDefault": "Monate (Standard {{default}})",
+    "recordAsPaid": "Als bezahlten Verkauf erfassen",
+    "noteOptional": "Notiz (optional)",
+    "notePlaceholder": "Warum dies gewährt wurde",
+    "grantNote": "Gewährt die Laufzeit sofort und hebt jede Abo-Sperre auf.",
+    "grantNotePaid": "Eine bezahlte Rechnung wird erfasst.",
+    "grantNoteFree": "Als Gewährung über $0 erfasst.",
+    "fallbackAccount": "Konto",
+    "fallbackPlan": "Tarif",
+    "success_one": "{{plan}} an {{name}} zugewiesen: {{count}} Monat.",
+    "success_other": "{{plan}} an {{name}} zugewiesen: {{count}} Monate.",
+    "errors": {
+      "chooseAccount": "Wählen Sie ein Konto.",
+      "choosePlan": "Wählen Sie einen Tarif.",
+      "assignFailed": "Tarif konnte nicht zugewiesen werden."
+    }
+  },
+  "planText": {
+    "trialTagline": "Testen Sie jede Funktion kostenlos: voller Zugriff, keine Karte nötig.",
+    "trialFullAccess": "Voller Zugriff auf jede Funktion",
+    "trialTools": "Alle Fingerprint-, Proxy- & Leak-Werkzeuge",
+    "trialMacros": "Makros, Cookie-Aufwärmer & Mobilprofile",
+    "trialBackupSeats": "Verschlüsseltes Backup & Teamplätze",
+    "trialNoCard": "Keine Kreditkarte nötig",
+    "trialUpgrade": "Jederzeit auf einen bezahlten Tarif upgraden",
+    "proTagline": "Alles, was eine Einzelperson braucht, um Profile im großen Maßstab zu betreiben.",
+    "proProfiles": "Unbegrenzte lokale Browserprofile",
+    "proFingerprint": "Volle Fingerprint-Engine + Leak-Checks",
+    "proProxies": "Proxy-Pool, Rotationsregeln & automatischer Geo-Abgleich",
+    "proMacros": "Makro-Rekorder, Zeitplaner & datengesteuerte Läufe",
+    "proCookieWarmer": "Cookie-Aufwärmer",
+    "proMobile": "Mobile / Android-Geräteprofile",
+    "proBackup": "Verschlüsseltes Backup & Wiederherstellung des Arbeitsbereichs",
+    "proDbEncryption": "Volle Datenbankverschlüsselung im Ruhezustand",
+    "proPalette": "Befehlspalette + Einführung",
+    "proSeats": "Bis zu 3 Teammitglieder",
+    "proParallel": "Paralleler Runner, bis zu 3 Profile gleichzeitig, mit Live-Konsole",
+    "entTagline": "Für Teams: bis zu 25 Mitglieder, 10 Profile gleichzeitig und Export des Audit-Protokolls.",
+    "entEverythingInPro": "Alles aus Pro, dazu:",
+    "entSeats": "Bis zu 25 Teammitglieder",
+    "entParallel": "Paralleler Runner, bis zu 10 Profile gleichzeitig, mit Live-Konsole",
+    "entAuditExport": "Export des Audit-Protokolls (CSV / JSON)",
+    "entSupport": "Bevorzugter E-Mail-Support"
+  },
+  "serverErrors": {
+    "SIGNUP_INVALID_EMAIL": "Geben Sie eine gültige E-Mail-Adresse ein.",
+    "SIGNUP_DISPOSABLE_EMAIL": "Bitte verwenden Sie eine dauerhafte E-Mail-Adresse.",
+    "SIGNUP_NO_MX": "Für diese Adresse wurde kein Mailserver gefunden.",
+    "SIGNUP_BAD_CODE": "Dieser Code stimmt nicht oder ist abgelaufen. Prüfen Sie die E-Mail oder fordern Sie einen neuen Code an.",
+    "SIGNUP_OFFLINE": "Verbinden Sie sich mit dem Internet, um Ihr Konto zu erstellen.",
+    "SIGNUP_FAILED": "Diese E-Mail konnte gerade nicht geprüft werden. Versuchen Sie es in ein paar Minuten erneut.",
+    "RATE_LIMITED": "Zu viele Versuche, versuchen Sie es in ein paar Minuten erneut.",
+    "TRIAL_USED": "Auf diesem Computer oder mit dieser E-Mail wurde schon eine kostenlose Testphase genutzt. Wählen Sie einen Tarif oder geben Sie einen Kaufcode ein.",
+    "TRIAL_OFFLINE": "Verbinden Sie sich mit dem Internet, um die kostenlose Testphase zu starten.",
+    "TRIAL_VERIFY_EMAIL": "Bestätigen Sie Ihre E-Mail-Adresse, um die kostenlose Testphase zu starten. Wir haben Ihnen einen 6-stelligen Code gesendet.",
+    "TRIAL_NO_EMAIL": "Fügen Sie dem Inhaberkonto zuerst eine E-Mail-Adresse hinzu und starten Sie dann die kostenlose Testphase.",
+    "TRIAL_FAILED": "Die kostenlose Testphase konnte gerade nicht gestartet werden. Versuchen Sie es in ein paar Minuten erneut.",
+    "SERVER_UNAVAILABLE": "Unser Lizenzserver antwortet gerade nicht. Versuchen Sie es in ein paar Minuten erneut.",
+    "MACHINE_MISMATCH": "Diese Lizenz ist auf einen anderen Computer registriert. Verschieben Sie sie auf diesen PC oder bitten Sie Ihren Administrator, sie zurückzusetzen.",
+    "SIGNUP_INVALID_PHONE": "Geben Sie die Telefonnummer mit + und Ländervorwahl ein oder lassen Sie das Feld leer.",
+    "SIGNUP_USE_CASE": "Wählen Sie, wofür Sie SoftGlaze nutzen werden.",
+    "SIGNUP_USE_CASE_OTHER": "Sagen Sie uns in wenigen Worten, wofür Sie SoftGlaze nutzen werden.",
+    "CONFIRM_OFFLINE": "Verbinden Sie sich mit dem Internet, um Ihre E-Mail zu bestätigen."
+  },
+  "store": {
+    "cardTitle": "Microsoft-Store-Abonnement",
+    "processedBy": "In dieser Version wickelt Microsoft die Zahlung ab: Sie zahlen mit Ihrem Microsoft-Konto, und Microsoft rechnet das Abonnement monatlich ab, bei einem Jahrestarif jährlich.",
+    "upgradeNote": "Der Wechsel von Pro zu Enterprise startet ein zweites Abonnement. Kündigen Sie Pro in Ihrem Microsoft-Konto, damit es sich nicht verlängert.",
+    "periodNote": "Auch der Wechsel zwischen monatlicher und jährlicher Abrechnung startet ein zweites Abonnement. Kündigen Sie das alte in Ihrem Microsoft-Konto, damit es sich nicht verlängert.",
+    "downgradeNote": "Um von Enterprise zu Pro zu wechseln, kündigen Sie Enterprise in Ihrem Microsoft-Konto und kaufen Sie Pro, wenn es endet.",
+    "buyWith": "Im Microsoft Store kaufen",
+    "buyWithPrice": "Im Microsoft Store kaufen · {{price}}",
+    "priceFrom": "Preis aus dem Microsoft Store, in Ihrer Währung",
+    "restore": "Microsoft-Store-Käufe wiederherstellen",
+    "moveHere": "Auf diesen Computer verschieben",
+    "manage": "In Ihrem Microsoft-Konto verwalten oder kündigen",
+    "result": {
+      "active": "Vielen Dank. Ihr Tarif {{plan}} ist aktiv.",
+      "cancelled": "Kauf abgebrochen. Es wurde nichts berechnet.",
+      "pending": "Microsoft hat Ihren Kauf erhalten. Wir bestätigen ihn, das kann eine Minute dauern.",
+      "pendingLong": "Ihr Kauf ist noch nicht bestätigt. Klicken Sie in ein paar Minuten auf „Microsoft-Store-Käufe wiederherstellen“ oder schreiben Sie an support@softglaze.com.",
+      "pendingOffline": "Ihr Kauf ist auf diesem Computer gespeichert. Er wird aktiviert, sobald die App unseren Server erreicht.",
+      "pendingReview": "Wir haben Ihren Kauf erhalten und prüfen ihn. Ihr Tarif wird aktiviert, sobald er freigegeben ist.",
+      "none": "In diesem Microsoft-Konto wurde kein aktives Microsoft-Store-Abonnement für diese App gefunden.",
+      "inUse": "Dieses Abonnement wird auf einem anderen Computer genutzt. Sie können es auf diesen verschieben.",
+      "moveLimit": "Dieses Abonnement wurde in den letzten 30 Tagen schon zweimal auf einen anderen Computer verschoben. Schreiben Sie an support@softglaze.com, um Hilfe zu erhalten.",
+      "unavailable": "Microsoft-Store-Käufe sind gerade nicht verfügbar. Bitte versuchen Sie es später erneut.",
+      "productMissing": "Dieser Tarif ist noch nicht im Microsoft Store verfügbar.",
+      "network": "Der Microsoft Store war nicht erreichbar. Prüfen Sie Ihre Internetverbindung und versuchen Sie es erneut.",
+      "error": "Der Kauf konnte nicht abgeschlossen werden: {{message}}"
+    }
+  }
+}

@@ -1,0 +1,411 @@
+{
+  "actions": {
+    "refresh": "Làm mới"
+  },
+  "groups": {
+    "general": "Chung",
+    "browser": "Trình duyệt",
+    "runtime": "Vận hành",
+    "security": "Bảo mật và nhóm",
+    "account": "Tài khoản và dữ liệu"
+  },
+  "nav": {
+    "billing": "Thanh toán",
+    "monetization": "Gói và mức dùng",
+    "migration": "Nhập và chuyển dữ liệu",
+    "workspaceSync": "Đồng bộ không gian làm việc",
+    "branding": "Thương hiệu",
+    "dbEncryption": "Mã hóa cơ sở dữ liệu",
+    "workspaceBackup": "Sao lưu không gian làm việc",
+    "developerApi": "API cho nhà phát triển",
+    "phones": "Điện thoại"
+  },
+  "fingerprint": {
+    "title": "Dấu vân tay và nhận dạng",
+    "description": "Áp dụng cho mọi hồ sơ khi khởi chạy, trừ khi hồ sơ ghi đè."
+  },
+  "behaviour": {
+    "title": "Hành vi trình duyệt",
+    "description": "Cách trình duyệt đã mở hoạt động hằng ngày."
+  },
+  "ui": {
+    "searchPlaceholder": "Tìm cài đặt",
+    "jumpTo": "Đi tới mục",
+    "noResultsTitle": "Không có cài đặt nào khớp “{{term}}”",
+    "noResultsDesc": "Hãy thử từ ngắn hơn, ví dụ proxy, camera hoặc đăng nhập.",
+    "experimental": "Thử nghiệm",
+    "savedIdle": "Đã lưu mọi thay đổi",
+    "saving": "Đang lưu thay đổi…",
+    "saveError": "Không lưu được thay đổi"
+  },
+  "localRuntime": {
+    "title": "Môi trường chạy cục bộ",
+    "description": "Đường dẫn được xác định trong tiến trình chính của Electron.",
+    "loading": "Đang tải thông tin hệ thống...",
+    "sqliteDb": "CSDL SQLite",
+    "profileRoot": "Thư mục gốc hồ sơ",
+    "databaseUrl": "URL cơ sở dữ liệu",
+    "configured": "Đã cấu hình",
+    "notConfigured": "Chưa cấu hình"
+  },
+  "sessions": {
+    "title": "Phiên đang chạy",
+    "description": "Các phiên đang mở và đang dùng tài nguyên.",
+    "loading": "Đang tải phiên...",
+    "emptyTitle": "Không có phiên nào đang chạy",
+    "emptyDescription": "Mở một hồ sơ để thấy nó ở đây.",
+    "running": "Đang chạy",
+    "created": "Tạo lúc {{date}}",
+    "close": "Đóng"
+  },
+  "scheduler": {
+    "title": "Lịch kiểm tra tình trạng proxy",
+    "description": "Định kỳ kiểm tra lại mọi proxy đã lưu ở chế độ nền và lưu tình trạng của chúng.",
+    "enabled": "Đã bật",
+    "disabled": "Đã tắt",
+    "runSweepEvery": "Kiểm tra toàn bộ mỗi",
+    "every15min": "15 phút",
+    "every30min": "30 phút",
+    "every1hour": "1 giờ",
+    "every2hours": "2 giờ",
+    "serviceRunning": "Dịch vụ đang chạy",
+    "idle": "Nhàn rỗi",
+    "noteLabel": "Lưu ý:",
+    "noteBody": "Tác vụ nền này chạy trong tiến trình chính của Electron, nên việc kiểm tra vẫn tiếp tục ngay cả khi ứng dụng thu nhỏ hoặc bạn chuyển giữa các trang. Kết quả tình trạng hiện trực tiếp dưới dạng huy hiệu trạng thái trong Kho proxy."
+  },
+  "toggleRow": {
+    "appliedAtLaunch": "Áp dụng khi khởi chạy"
+  },
+  "globalPreferences": {
+    "heading": "Tùy chọn chung",
+    "loading": "Đang tải cài đặt chung…",
+    "saving": "Đang lưu…"
+  },
+  "security": {
+    "title": "Bảo mật tài khoản",
+    "description": "Bảo vệ đăng nhập và chính sách xác minh.",
+    "remoteLogin": {
+      "title": "Nhắc nhở đăng nhập từ xa",
+      "desc": "Gửi email nhắc nhở khi tài khoản của bạn đăng nhập từ một địa chỉ IP mới thay vì 3 IP thường dùng."
+    },
+    "failedLogin": {
+      "title": "Cảnh báo đăng nhập thất bại",
+      "desc": "Nếu đăng nhập thất bại quá 3 lần, một email nhắc nhở sẽ được gửi đến email của Chủ sở hữu."
+    },
+    "ipAllowlist": {
+      "title": "Danh sách IP được phép đăng nhập",
+      "desc": "Khi đã đặt, thành viên chỉ đăng nhập được từ các IP này (Chủ sở hữu không bị ảnh hưởng)."
+    },
+    "twoStep": {
+      "title": "Xác minh hai bước",
+      "desc": "Thao tác nhạy cảm cần xác minh qua ứng dụng xác thực, email hoặc SMS.",
+      "methodLabel": "Phương thức",
+      "methodApp": "Ứng dụng xác thực",
+      "methodEmail": "Email",
+      "methodSms": "SMS",
+      "levelLabel": "Mức xác thực",
+      "levelLow": "Thấp: thiết bị mới hoặc đã hơn 90 ngày từ lần 2FA gần nhất",
+      "levelMedium": "Trung bình (khuyên dùng): thiết bị mới hoặc hơn 30 ngày",
+      "levelHigh": "Cao: cần 2FA mỗi lần đăng nhập"
+    }
+  },
+  "multiDevice": {
+    "title": "Chế độ nhiều thiết bị",
+    "description": "Cho phép hay không việc nhiều thành viên truy cập cùng một hồ sơ cùng lúc.",
+    "modeOff": "Tắt: mỗi hồ sơ một thành viên",
+    "modeFull": "Toàn bộ: mọi hồ sơ cho phép truy cập đồng thời",
+    "modeSpecified": "Chỉ định: chỉ các hồ sơ đã chọn",
+    "hintBefore": "Khi bật, nhiều thành viên có thể truy cập cùng một hồ sơ cùng lúc. Ở chế độ ",
+    "hintSpecified": "Chỉ định",
+    "hintAfter": ", hãy chọn các hồ sơ được phép ở trang Hồ sơ."
+  },
+  "website": {
+    "title": "Quản lý trang web",
+    "description": "Quy tắc truy cập URL và tải tài nguyên.",
+    "blockAccess": {
+      "title": "Chặn truy cập",
+      "desc": "Dùng danh sách chặn và danh sách cho phép để quản lý URL.",
+      "blocklist": "Danh sách chặn",
+      "allowlist": "Danh sách cho phép"
+    },
+    "fbStatic": {
+      "title": "Tài nguyên tĩnh FB",
+      "desc": "Khi bật, tài nguyên tĩnh của Facebook được tải qua mạng cục bộ."
+    },
+    "localNetwork": {
+      "title": "Truy cập mạng cục bộ",
+      "desc": "Khi bật, có thể truy cập một số URL cụ thể trên mạng cục bộ."
+    }
+  },
+  "platform": {
+    "title": "Nền tảng",
+    "description": "Tùy chỉnh cách hiển thị danh sách hồ sơ.",
+    "customIcon": {
+      "title": "Biểu tượng tùy chỉnh",
+      "desc": "Hiện biểu tượng tùy chỉnh cho hồ sơ trong danh sách."
+    },
+    "displayCustomNo": {
+      "title": "Hiện số tùy chỉnh",
+      "desc": "Hiện đầy đủ số thứ tự tùy chỉnh (ví dụ \"123456\")."
+    },
+    "displayLast4": {
+      "title": "Hiện 4 chữ số cuối của số tùy chỉnh",
+      "desc": "Chỉ hiện 4 chữ số cuối của số thứ tự."
+    }
+  },
+  "ipSetting": {
+    "title": "Cài đặt IP",
+    "description": "Thứ tự ưu tiên khi tự cấu hình proxy và trình kiểm tra IP.",
+    "priorityPrefix": "Thứ tự tìm kiếm:",
+    "priorityChain": "IP dùng lần cuối > ASN > Thành phố > Vùng > Quốc gia/Khu vực",
+    "prioritySuffix": "Các tùy chọn không đánh dấu sẽ bị bỏ qua.",
+    "lastUsedIp": "IP dùng lần cuối",
+    "asn": "ASN",
+    "asnDesc": "Chỉ có với Bright auto.",
+    "city": "Thành phố",
+    "region": "Vùng",
+    "country": "Quốc gia/Khu vực",
+    "ipCheckerLabel": "Trình kiểm tra IP"
+  },
+  "dataSync": {
+    "title": "Đồng bộ dữ liệu",
+    "description": "Chọn dữ liệu cần đồng bộ giữa các thiết bị.",
+    "cookie": "Cookie",
+    "passwords": "Mật khẩu đã lưu",
+    "bookmarks": "Dấu trang",
+    "localStorage": "Local storage",
+    "indexedDb": "IndexedDB",
+    "extensionData": "Dữ liệu tiện ích",
+    "history": "Lịch sử"
+  },
+  "browser": {
+    "title": "Cài đặt trình duyệt",
+    "description": "Hành vi của trình duyệt đã mở. Mục có nhãn “Áp dụng khi khởi chạy” có hiệu lực ở lần mở hồ sơ tiếp theo.",
+    "geoMatch": {
+      "title": "Tự khớp vị trí (múi giờ · ngôn ngữ · WebRTC)",
+      "desc": "Lấy múi giờ, ngôn ngữ và IP đầu ra WebRTC của từng hồ sơ theo vị trí proxy khi khởi chạy. Tắt để chỉ dùng giá trị thủ công của từng hồ sơ. Áp dụng khi khởi chạy."
+    },
+    "realtimeTimezone": {
+      "title": "Khớp múi giờ theo thời gian thực khi IP động thay đổi",
+      "desc": "Khớp múi giờ và vị trí tương ứng khi IP động thay đổi."
+    },
+    "chromeSignin": {
+      "title": "Cho phép đăng nhập Chrome",
+      "desc": "Khi tắt, bạn vẫn đăng nhập được các trang của Google như Gmail mà không cần đăng nhập vào chính Chrome."
+    },
+    "offerTranslate": {
+      "title": "Đề xuất dịch trang",
+      "desc": "Đề xuất dịch các trang không thuộc ngôn ngữ bạn đọc."
+    },
+    "disableDevtools": {
+      "title": "Tắt Công cụ dành cho nhà phát triển",
+      "desc": "Trong hồ sơ dựa trên Chrome, mọi cửa sổ hoặc bảng Công cụ dành cho nhà phát triển (F12, Ctrl+Shift+I, Kiểm tra) sẽ đóng ngay khi mở. Áp dụng cho hồ sơ khởi chạy sau khi bạn thay đổi. Chrome của chính bạn trên máy tính này không bị ảnh hưởng."
+    },
+    "minimizeCdpFootprint": {
+      "title": "Giảm dấu vết CDP (thử nghiệm, ít CAPTCHA hơn)",
+      "shortTitle": "Giảm dấu vết CDP",
+      "desc": "Bỏ CDP Runtime.enable thường trực, tín hiệu tự động hóa hàng đầu mà Cloudflare/Turnstile phát hiện. ĐÁNH ĐỔI khi BẬT: tự điền persona, liên kết kiểm tra ở trang khởi động và phản chiếu phiên đồng bộ sẽ ngừng hoạt động (chúng cần CDP binding). Mặc định tắt; hãy bật để thử A/B xem có giảm CAPTCHA không, rồi mở lại hồ sơ."
+    },
+    "blockThirdPartyCookies": {
+      "title": "Chặn cookie bên thứ ba",
+      "desc": "Tắt (khuyên dùng): hồ sơ giữ và gửi cookie bên thứ ba như cửa sổ Chrome bình thường, thứ mà reCAPTCHA, hCaptcha và Cloudflare dùng để tin tưởng người truy cập, nên CAPTCHA dễ hơn. Bật: hồ sơ dựa trên Chrome sẽ chặn chúng. Áp dụng cho hồ sơ khởi chạy sau khi bạn thay đổi."
+    },
+    "checkBeforeLaunch": {
+      "title": "Kiểm tra hồ sơ trước khi mở",
+      "desc": "Trước khi một hồ sơ mở từ trang Hồ sơ, liệt kê các điểm không khớp rõ ràng (hệ thống, card đồ họa, màn hình, ngôn ngữ, múi giờ, WebRTC, proxy hỏng) và đề xuất sửa trước."
+    },
+    "switchProxyOnBlock": {
+      "title": "Đổi proxy khi trang web chặn hồ sơ",
+      "desc": "Khi một trang web giữ hồ sơ dựa trên Chrome ở trang chặn hoặc CAPTCHA, lấy IP mới từ liên kết xoay vòng của proxy, hoặc chuyển hồ sơ sang proxy dự phòng tốt hơn, rồi mở lại trang. Tối đa hai lần mỗi giờ cho mỗi hồ sơ, và không bao giờ khi tự động hóa hoặc Local API đang dùng hồ sơ. Mọi lần bị chặn đều được ghi lại cùng proxy gặp lỗi.",
+      "toast": {
+        "blocked": "{{site}} đã chặn {{profile}} ({{kind}}).",
+        "rotated": "Đã lấy IP mới cho {{proxy}} và tải lại trang.",
+        "switched": "Đã đổi sang {{proxy}} và mở lại trang.",
+        "notReopened": "Đã đổi sang {{proxy}}, nhưng hồ sơ không mở lại được.",
+        "none": {
+          "disabled": "Tính năng đổi proxy đang tắt trong Cài đặt, nên không có gì thay đổi.",
+          "noProxy": "Hồ sơ chạy không có proxy đã lưu, nên không có gì thay đổi.",
+          "busy": "Tự động hóa hoặc Local API đang dùng hồ sơ này, nên không có gì thay đổi.",
+          "limit": "Hồ sơ này đã đổi {{limit}} lần trong giờ qua, nên không có gì thay đổi.",
+          "proxyPool": "Hồ sơ dùng kho xoay vòng, nên không có gì thay đổi.",
+          "noSpare": "Không có proxy dự phòng nào tốt hơn, nên không có gì thay đổi.",
+          "noPermission": "Vai trò của bạn không đổi được proxy của hồ sơ này, nên không có gì thay đổi.",
+          "signedOut": "Không ai đang đăng nhập, nên không có gì thay đổi.",
+          "inProgress": "Đang có một lần đổi cho hồ sơ này.",
+          "failed": "Đổi thất bại, nên không có gì thay đổi."
+        },
+        "kind": {
+          "googleSorry": "Trang lưu lượng bất thường của Google",
+          "rateLimit": "quá nhiều yêu cầu",
+          "cloudflare": "Thử thách Cloudflare",
+          "datadome": "DataDome chặn",
+          "accessDenied": "Trang Access Denied",
+          "perimeterx": "PerimeterX chặn",
+          "unknown": "trang chặn"
+        }
+      }
+    },
+    "lockExtensions": {
+      "title": "Không cho cài/gỡ tiện ích",
+      "desc": "Trong hồ sơ dựa trên Chrome, trang Tiện ích và Chrome Web Store sẽ đóng ngay khi mở, nên không thể thêm, gỡ hay tắt tiện ích. Tiện ích bạn cài từ trang Tiện ích trong SoftGlaze vẫn được tải. Áp dụng cho hồ sơ khởi chạy sau khi bạn thay đổi."
+    },
+    "virtualCamera": {
+      "title": "Camera ảo",
+      "desc": "Phát video cục bộ như hình ảnh camera trực tiếp. Chỉ dùng được với Chrome phiên bản 140 trở lên."
+    },
+    "mobileSimulation": {
+      "title": "Tối ưu mô phỏng di động",
+      "desc": "Làm giao diện gần với trải nghiệm thiết bị di động thật hơn. Chỉ dùng được với Chrome phiên bản 143 trở lên."
+    },
+    "secureAccess": {
+      "title": "Truy cập an toàn (HTTPS)",
+      "desc": "Dùng HTTPS khi có thể và cảnh báo trước khi tải trang không dùng HTTPS."
+    },
+    "disableVideos": {
+      "title": "Không tải video",
+      "desc": "Chặn tải nội dung đa phương tiện để tiết kiệm lưu lượng proxy."
+    },
+    "disableImages": {
+      "title": "Không tải hình ảnh",
+      "desc": "Chặn tải hình ảnh để tiết kiệm lưu lượng. Lưu ý: việc tải hình ảnh bị tắt hoàn toàn; ngưỡng KB bên dưới được lưu để lọc theo từng yêu cầu sau này.",
+      "skipUnder": "Bỏ qua ảnh dưới",
+      "kb": "KB"
+    },
+    "antidetectEngine": {
+      "title": "Bộ máy dấu vân tay gốc (fingerprint-chromium)",
+      "desc": "Khởi chạy hồ sơ Chrome trên fingerprint-chromium, một bản Chromium được sửa mã nguồn, áp dụng cài đặt dấu vân tay của từng hồ sơ (canvas, WebGL, âm thanh, UA, nền tảng, múi giờ) ở cấp tệp chạy, ẩn navigator.webdriver + UA HeadlessChrome, và chặn rò rỉ IP thật qua WebRTC ngay trong trình duyệt, không có độ trễ chèn JS để trang web nhận ra. Cần tệp chạy fingerprint-chromium; nếu không có sẽ dùng Chrome thông thường. Bộ máy này bỏ CDP binding mà cầu nối trang-ứng dụng từng dùng, nên SoftGlaze chuyển các lệnh đó qua một kênh không cần binding: tự điền Kho dữ liệu, ghi macro, liên kết trang khởi động và phản chiếu phiên đều hoạt động trên đó. Mặc định tắt; hãy bật và mở lại hồ sơ."
+    }
+  },
+  "performance": {
+    "title": "Hiệu năng",
+    "description": "Điều khiển việc mở nhiều hồ sơ cùng lúc. Áp dụng cho mở hàng loạt và giới hạn phiên đang chạy.",
+    "parallelLimit": {
+      "title": "Giới hạn mở song song",
+      "desc": "Số hồ sơ được mở cùng lúc khi mở hàng loạt. Cao hơn thì nhanh hơn nhưng tốn RAM hơn. Khuyên dùng 3-8."
+    },
+    "maxRunning": {
+      "title": "Số hồ sơ chạy tối đa",
+      "desc": "Giới hạn cứng số hồ sơ chạy cùng lúc (để an toàn bộ nhớ). Để 0 nếu không giới hạn; các lần mở vượt giới hạn sẽ bị chặn kèm thông báo rõ ràng."
+    }
+  },
+  "reliability": {
+    "title": "Độ ổn định",
+    "description": "Khôi phục phiên trước, phục hồi hồ sơ bị sập và tránh cạn bộ nhớ khi nhiều hồ sơ chạy cùng lúc.",
+    "restoreSession": {
+      "title": "Khôi phục phiên trước khi khởi động",
+      "desc": "Khi SoftGlaze mở lại, đề xuất mở lại các hồ sơ đang chạy lúc ứng dụng đóng hoặc bị sập lần trước."
+    },
+    "autoRestart": {
+      "title": "Tự khởi động lại hồ sơ bị sập",
+      "desc": "Nếu trình duyệt của một hồ sơ tự bị sập, tự động mở lại. Có giới hạn cho từng hồ sơ để hồ sơ sập liên tục không bị lặp mãi.",
+      "maxRetries": "Số lần thử lại tối đa mỗi hồ sơ"
+    },
+    "memoryGuard": {
+      "title": "Bảo vệ bộ nhớ",
+      "desc": "Khi bộ nhớ hệ thống sắp hết, tự động đóng các hồ sơ đang chạy lâu nhất cho đến khi bộ nhớ hồi phục. Mặc định tắt, nên sẽ không bao giờ đóng hồ sơ nếu chưa bật.",
+      "triggerBelow": "Kích hoạt khi RAM trống dưới",
+      "stopWhenReaches": "dừng khi RAM trống đạt"
+    }
+  },
+  "smartAutofill": {
+    "title": "Tự điền thông minh",
+    "description": "Tiện ích Kho dữ liệu danh tính, phát hiện biểu mẫu đăng ký trong hồ sơ đang chạy và điền bằng persona bạn đã lưu.",
+    "enable": {
+      "title": "Bật Tự điền thông minh",
+      "desc": "Thêm tiện ích tự điền vào hồ sơ khi khởi chạy. Trên Chromium, tính năng này dùng cầu nối trong trang; tắt đi sẽ bỏ qua hoàn toàn việc thêm."
+    },
+    "firefox": {
+      "title": "Tự điền cho Firefox",
+      "desc": "Cài thêm WebExtension tự điền vào hồ sơ Firefox (Firefox không có cầu nối trong trang). Tải dạng chưa ký trên Firefox Developer Edition / Nightly; Firefox bản phát hành cần bản đã được Mozilla ký đi kèm trình cài đặt."
+    },
+    "members": {
+      "title": "Thành viên nhóm được dùng Kho dữ liệu khi tự điền",
+      "desc": "Tắt (mặc định): nút tự điền trong hồ sơ đang chạy chỉ gợi ý danh tính của Kho dữ liệu khi Chủ sở hữu đang đăng nhập. Bật: Quản trị, Quản lý và Nhân viên cũng nhận được, nhưng không mở được trang Kho dữ liệu. Chỉ Chủ sở hữu mới đổi được mục này."
+    }
+  },
+  "audit": {
+    "title": "Nhật ký kiểm tra",
+    "description": "Thời gian lưu hoạt động nhóm và sự kiện bảo mật (thay đổi thành viên, đăng nhập, sửa quyền) trước khi bị dọn khi khởi động.",
+    "retentionTitle": "Thời gian lưu giữ",
+    "retentionDesc": "Hoạt động cũ hơn mức này sẽ bị xóa khi SoftGlaze khởi động. Đặt 0 để giữ toàn bộ lịch sử mãi mãi.",
+    "days": "ngày"
+  },
+  "updates": {
+    "title": "Cập nhật",
+    "description": "Kiểm tra và cài đặt bản cập nhật ứng dụng. Bản cập nhật được xác minh chữ ký trước khi cài.",
+    "checkDefault": "Kiểm tra xem có phiên bản SoftGlaze Browser mới hơn không.",
+    "notEnabled": "Bản dựng này chưa bật cập nhật tự động.",
+    "checking": "Đang kiểm tra cập nhật…",
+    "available": "Có bản cập nhật {{version}}, đang tải ở chế độ nền…",
+    "downloading": "Đang tải {{version}}… {{percent}}%",
+    "ready": "Bản cập nhật {{version}} đã sẵn sàng để cài.",
+    "errorWithReason": "Không kiểm tra được cập nhật: {{reason}}",
+    "errorNoReason": "Không kiểm tra được cập nhật.",
+    "upToDate": "Bạn đang dùng phiên bản mới nhất.",
+    "installRestart": "Cài và khởi động lại",
+    "checkForUpdates": "Kiểm tra cập nhật"
+  },
+  "onStartup": {
+    "title": "Khi khởi động",
+    "description": "Điều gì xảy ra khi một hồ sơ được khởi chạy.",
+    "startPageLabel": "Trang khởi động",
+    "modeDetection": "Hiện trang kiểm tra proxy/dấu vân tay",
+    "modeLast": "Tiếp tục duyệt trang mở gần nhất",
+    "modeBlank": "Không mở trang kiểm tra proxy (trang trống)",
+    "onlyWithProxy": {
+      "title": "Chỉ mở khi có proxy khả dụng",
+      "desc": "Nếu không tìm thấy proxy, trình duyệt sẽ không mở. (Nếu không, các mục dấu vân tay dựa trên IP sẽ không khớp.)"
+    },
+    "onlyWhenExtensionLoaded": {
+      "title": "Chỉ mở khi đã tải dữ liệu tiện ích",
+      "desc": "Chỉ mở trình duyệt khi dữ liệu tiện ích đã tải thành công."
+    },
+    "blockIfCountryChanged": {
+      "title": "Chặn nếu quốc gia/khu vực thay đổi",
+      "desc": "Không mở hồ sơ nếu quốc gia/khu vực khác với lần mở trước."
+    }
+  },
+  "captcha": {
+    "title": "Tự động giải Captcha",
+    "description": "Tự động giải reCAPTCHA v2 và hCaptcha khi duyệt web bằng dịch vụ giải bên thứ ba có trả phí. Việc này tách biệt với dấu vân tay: dấu vân tay sạch giúp captcha ít xuất hiện hơn, nhưng để giải chúng cần một dịch vụ trả phí, tính tiền theo từng lần giải bởi nhà cung cấp (không phải SoftGlaze).",
+    "enable": {
+      "title": "Bật tự động giải captcha",
+      "desc": "Khi bật, hồ sơ đang chạy sẽ phát hiện captcha được hỗ trợ và tự động gửi đến dịch vụ giải của bạn."
+    },
+    "providerLabel": "Nhà cung cấp dịch vụ giải",
+    "apiKeyLabel": "Khóa API",
+    "apiKeyPlaceholderAnticaptcha": "clientKey của Anti-Captcha",
+    "apiKeyPlaceholder2captcha": "Khóa API 2captcha",
+    "billedAnticaptcha": "Được lưu cục bộ trong CSDL cài đặt. Anti-Captcha tính phí bạn theo từng lần giải.",
+    "billed2captcha": "Được lưu cục bộ trong CSDL cài đặt. 2captcha tính phí bạn theo từng lần giải.",
+    "solveRecaptchaV2": "Giải reCAPTCHA v2",
+    "solveHcaptcha": "Giải hCaptcha"
+  },
+  "email": {
+    "title": "Email (mã xác minh)",
+    "configured": "Đã cấu hình",
+    "offlineMode": "Chế độ ngoại tuyến",
+    "description": "SMTP để gửi mã OTP khi đăng ký. Để trống để chạy ngoại tuyến; khi đó mã sẽ hiện trong ứng dụng thay vì gửi qua email.",
+    "smtpHost": "Máy chủ SMTP",
+    "port": "Cổng",
+    "encryption": "Mã hóa",
+    "username": "Tên người dùng",
+    "password": "Mật khẩu",
+    "passwordSavedHint": "(đã lưu; để trống để giữ)",
+    "fromName": "Tên người gửi",
+    "saved": "Đã lưu cài đặt email.",
+    "saveFailed": "Không lưu được cài đặt email.",
+    "noSmtpYet": "Chưa cấu hình SMTP. Hãy lưu cài đặt trước.",
+    "testSent": "Đã gửi email thử đến {{to}}.",
+    "testFailed": "Thử thất bại. Hãy kiểm tra cài đặt.",
+    "saveButton": "Lưu cài đặt email",
+    "test": "Thử"
+  },
+  "errors": {
+    "loadSettings": "Không tải được cài đặt.",
+    "closeSession": "Không đóng được phiên.",
+    "updateScheduler": "Không cập nhật được lịch kiểm tra.",
+    "loadGlobal": "Không tải được cài đặt chung.",
+    "saveSetting": "Không lưu được cài đặt."
+  }
+}

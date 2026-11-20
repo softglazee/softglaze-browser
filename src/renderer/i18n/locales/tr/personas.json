@@ -1,0 +1,146 @@
+{
+  "header": {
+    "eyebrow": "Kimlikler",
+    "title": "Veri Kasası",
+    "description": "Smart Autofill motoru için yeniden kullanılabilir kimlik kasası. Elle ekleyin veya tablo dosyası içe aktarın; her kimlik daha önce kullanıldığı siteleri hatırlar.",
+    "refresh": "Yenile",
+    "import": "Excel/CSV içe aktar",
+    "addManually": "Elle ekle"
+  },
+  "stats": {
+    "totalIdentities": "Toplam kimlik",
+    "neverUsed": "Hiç kullanılmamış",
+    "usedAtLeastOnce": "En az bir kez kullanılmış",
+    "totalUses": "Toplam kullanım",
+    "filtering": "filtreleniyor"
+  },
+  "toolbar": {
+    "searchPlaceholder": "Ad, e-posta, kullanıcı adı veya etikete göre ara...",
+    "showing": "{{count}} {{kind}} gösteriliyor",
+    "kindNeverUsed": "hiç kullanılmamış",
+    "kindUsed": "kullanılmış",
+    "clear": "temizle"
+  },
+  "bulk": {
+    "selected": "{{count}} seçili",
+    "resetUsedStatus": "Kullanım durumunu sıfırla",
+    "deleteSelected": "Seçilenleri sil",
+    "clear": "Temizle",
+    "clearSelectionTitle": "Seçimi temizle"
+  },
+  "table": {
+    "loading": "Kimlikler yükleniyor...",
+    "selectAll": "Tüm kimlikleri seç",
+    "selectRow": "{{name}} seç",
+    "colName": "Ad",
+    "colEmail": "E-posta",
+    "colUsername": "Kullanıcı adı",
+    "colPassword": "Parola",
+    "colPhone": "Telefon",
+    "colAddress": "Adres",
+    "colLabel": "Etiket",
+    "colTimesUsed": "Kullanım sayısı",
+    "colCreated": "Oluşturulma",
+    "colActions": "İşlemler",
+    "sitesUsed_one": "{{count}} site",
+    "sitesUsed_other": "{{count}} site",
+    "never": "Hiç",
+    "editIdentity": "Kimliği düzenle",
+    "deleteIdentity": "Kimliği sil",
+    "hidePassword": "Gizle",
+    "revealPassword": "Göster",
+    "reuse": "♻ Yeniden kullan · {{count}}"
+  },
+  "empty": {
+    "title": "Veri kasanız boş",
+    "description": "Otomatik doldurma kasanızı oluşturmaya başlamak için elle bir kimlik ekleyin veya bir Excel/CSV dosyası içe aktarın.",
+    "filteredTitle": "Filtrenizle eşleşen kimlik yok",
+    "filteredDescription": "Farklı bir arama deneyin veya filtreyi temizleyin."
+  },
+  "groups": {
+    "identity": "Kimlik",
+    "account": "Hesap",
+    "address": "Adres",
+    "meta": "Meta"
+  },
+  "fields": {
+    "firstName": "Ad",
+    "lastName": "Soyad",
+    "email": "E-posta",
+    "username": "Kullanıcı adı",
+    "password": "Parola",
+    "phone": "Telefon",
+    "dateOfBirth": "Doğum tarihi",
+    "addressLine1": "Adres satırı 1",
+    "addressLine2": "Adres satırı 2",
+    "city": "Şehir",
+    "state": "İl / Eyalet",
+    "zipCode": "Posta kodu",
+    "country": "Ülke",
+    "company": "Şirket",
+    "companyAddress": "Şirket adresi",
+    "label": "Grup etiketi"
+  },
+  "form": {
+    "dialogTitleEdit": "Kimliği düzenle",
+    "dialogTitleAdd": "Kimlik ekle",
+    "titleEdit": "Kimliği Düzenle",
+    "titleAdd": "Kimlik Ekle",
+    "descEdit": "Bu personanın bilgilerini güncelleyin.",
+    "descAdd": "Veri kasanıza tek bir persona ekleyin. * ile işaretli alanlar zorunludur.",
+    "cancel": "İptal",
+    "saving": "Kaydediliyor...",
+    "saveChanges": "Değişiklikleri kaydet",
+    "addIdentity": "Kimlik ekle",
+    "showPassword": "Parolayı göster",
+    "hidePassword": "Parolayı gizle"
+  },
+  "import": {
+    "dialogTitle": "Kimlikleri içe aktar",
+    "title": "Excel / CSV'den içe aktar",
+    "descStep1": ".xlsx, .xls veya .csv dosyası seçin. İlk satır sütun başlıklarınız olmalıdır. İçe aktarma başına en fazla 1000 satır.",
+    "descStep2": "Sütunlarınızı kimlik alanlarıyla eşleyin. {{fileName}} içinde {{count}} satır bulundu.",
+    "yourFile": "dosyanız",
+    "chooseSpreadsheet": "Tablo dosyası seçin",
+    "colIdentityField": "Kimlik alanı",
+    "colYourColumn": "Sütununuz",
+    "skipOption": "(atla)",
+    "mappedCount_one": "{{count}} alan eşlendi. Adı/e-postası/kullanıcı adı olmayan satırlar atlanır.",
+    "mappedCount_other": "{{count}} alan eşlendi. Adı/e-postası/kullanıcı adı olmayan satırlar atlanır.",
+    "done": "Bitti",
+    "cancel": "İptal",
+    "back": "Geri",
+    "importing": "İçe aktarılıyor...",
+    "importRows_one": "{{count}} satırı içe aktar",
+    "importRows_other": "{{count}} satırı içe aktar",
+    "result": {
+      "complete": "İçe aktarma tamamlandı",
+      "addedPrefix": "Eklendi:",
+      "addedSuffix_one": "kimlik kasaya eklendi.",
+      "addedSuffix_other": "kimlik kasaya eklendi.",
+      "skipped_one": "{{count}} boş satır atlandı.",
+      "skipped_other": "{{count}} boş satır atlandı."
+    },
+    "errors": {
+      "noRows": "Bu dosyada okunabilir bir başlık satırı veya veri satırı yok.",
+      "readFile": "Bu dosya okunamadı.",
+      "nothingMapped": "İçe aktarılacak satır yok. Ad / Soyad / E-posta / Kullanıcı adı alanlarından en az birini eşleyin.",
+      "failed": "İçe aktarma başarısız oldu."
+    }
+  },
+  "confirm": {
+    "fallbackName": "persona",
+    "deleteOne": "\"{{name}}\" kimliği silinsin mi? Bu işlem geri alınamaz.",
+    "deleteSelected_one": "Seçili {{count}} kimlik silinsin mi? Bu işlem geri alınamaz.",
+    "deleteSelected_other": "Seçili {{count}} kimlik silinsin mi? Bu işlem geri alınamaz.",
+    "resetSelected_one": "Seçili {{count}} kimliğin \"kullanıldığı yerler\" geçmişi sıfırlansın mı? Her sitede yeniden kullanılabilir olur.",
+    "resetSelected_other": "Seçili {{count}} kimliğin \"kullanıldığı yerler\" geçmişi sıfırlansın mı? Her sitede yeniden kullanılabilir olurlar."
+  },
+  "errors": {
+    "load": "Veri kasası yüklenemedi.",
+    "save": "Bu kimlik kaydedilemedi.",
+    "deleteOne": "Kimlik silinemedi.",
+    "deleteSelected": "Seçili kimlikler silinemedi.",
+    "resetSelected": "Seçili kimlikler sıfırlanamadı."
+  }
+}

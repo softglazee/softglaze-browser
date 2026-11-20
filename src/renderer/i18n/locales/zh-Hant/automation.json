@@ -1,0 +1,414 @@
+{
+  "header": {
+    "eyebrow": "SoftGlaze Pro 功能",
+    "title": "自動化",
+    "description": "無代碼巨集、自動 Cookie 預熱，以及所有背景任務的記錄。"
+  },
+  "tabs": {
+    "macros": "我的巨集",
+    "parallel": "並行執行",
+    "warmer": "Cookie 預熱",
+    "history": "任務歷史"
+  },
+  "clickLabels": {
+    "none": "僅瀏覽",
+    "random": "隨機點選",
+    "links": "瀏覽連結"
+  },
+  "stepTypes": {
+    "goto": "開啟網址",
+    "click": "點選",
+    "type": "輸入文字",
+    "keypress": "按鍵",
+    "scroll": "滾動",
+    "wait": "等待",
+    "move": "移動滑鼠",
+    "hover": "懸停",
+    "select": "選擇下拉選項",
+    "waitFor": "等待元素",
+    "submit": "提交表單",
+    "check": "勾選/取消勾選",
+    "clear": "清空欄位"
+  },
+  "stepFields": {
+    "goto": {
+      "url": "URL",
+      "urlPlaceholder": "https://example.com"
+    },
+    "click": {
+      "selector": "CSS 選擇器",
+      "selectorPlaceholder": "#submit, .btn"
+    },
+    "type": {
+      "selector": "選擇器",
+      "selectorPlaceholder": "input[name=\"email\"]",
+      "value": "要輸入的文字"
+    },
+    "keypress": {
+      "key": "按鍵",
+      "keyPlaceholder": "Enter"
+    },
+    "scroll": {
+      "steps": "滾動量",
+      "stepsPlaceholder": "4"
+    },
+    "wait": {
+      "ms": "毫秒",
+      "msPlaceholder": "1000"
+    },
+    "move": {
+      "selector": "選擇器（或使用 X/Y）",
+      "selectorPlaceholder": ".target",
+      "x": "X",
+      "y": "Y"
+    },
+    "hover": {
+      "selector": "選擇器",
+      "selectorPlaceholder": ".menu",
+      "ms": "停留毫秒數",
+      "msPlaceholder": "800"
+    },
+    "select": {
+      "selector": "選擇器",
+      "selectorPlaceholder": "select[name=\"focus\"]",
+      "value": "選項（值、標籤或索引）",
+      "valuePlaceholder": "Plumbing",
+      "by": "匹配方式"
+    },
+    "waitFor": {
+      "selector": "選擇器",
+      "selectorPlaceholder": ".dashboard",
+      "state": "狀態",
+      "timeout": "超時毫秒數",
+      "timeoutPlaceholder": "30000"
+    },
+    "submit": {
+      "selector": "表單或欄位選擇器",
+      "selectorPlaceholder": "form#signup"
+    },
+    "check": {
+      "selector": "選擇器",
+      "selectorPlaceholder": "input[name=\"terms\"]",
+      "state": "狀態"
+    },
+    "clear": {
+      "selector": "選擇器",
+      "selectorPlaceholder": "input[name=\"email\"]"
+    }
+  },
+  "stepSummary": {
+    "noUrl": "（無網址）",
+    "noSelector": "（無選擇器）",
+    "selectorFallback": "（選擇器）",
+    "target": "（目標）"
+  },
+  "macros": {
+    "intro": "錄製或構建可複用的無代碼工作流程，然後在設定檔中執行（導航、點選、輸入、等待），可手動執行或按排程執行。",
+    "profileSelectTitle": "執行/錄製所作用的設定檔",
+    "noProfiles": "沒有設定檔",
+    "profileFallback": "設定檔 {{id}}",
+    "stopAndSave": "停止並儲存",
+    "record": "錄製",
+    "schedule": "排程",
+    "createMacro": "建立巨集",
+    "stepsBadge_one": "{{count}} 個步驟",
+    "stepsBadge_other": "{{count}} 個步驟",
+    "updated": "更新於 {{date}}",
+    "run": "執行",
+    "edit": "編輯",
+    "editSteps": "編輯步驟",
+    "delete": "刪除",
+    "runTitleNoSteps": "此巨集還沒有步驟，請先編輯",
+    "runTitleReady": "在所選設定檔上執行",
+    "emptyTitle": "還沒有巨集",
+    "emptyHint": "錄製一個工作流程或新增一個巨集即可開始。",
+    "errors": {
+      "loadMacros": "無法載入巨集。",
+      "deleteMacro": "無法刪除巨集。",
+      "chooseProfile": "請先選擇目標設定檔。",
+      "noSteps": "此巨集還沒有步驟，請先編輯。",
+      "chooseProfileRecord": "請選擇要在其中錄製的目標設定檔。",
+      "recordingFailed": "錄製操作失敗。"
+    },
+    "recordingStarted": "正在錄製… 請在已啟動的瀏覽器中操作，然後點選「停止」儲存。",
+    "savedNotice": "已儲存「{{name}}」，共 {{count}} 個步驟。",
+    "stoppedNotice": "錄製已停止：捕獲了 {{count}} 個步驟（未儲存）。",
+    "deleteConfirm": "刪除巨集「{{name}}」及其所有步驟？此操作無法復原。"
+  },
+  "saveRecording": {
+    "ariaLabel": "儲存錄製的巨集",
+    "title": "儲存錄製的巨集",
+    "subtitle": "為其命名以保留捕獲的步驟，或放棄這些步驟。瀏覽器會保持開啟。",
+    "placeholder": "錄製的巨集",
+    "discard": "放棄",
+    "cancel": "取消",
+    "save": "儲存"
+  },
+  "scheduleModal": {
+    "ariaLabel": "巨集排程",
+    "title": "巨集排程",
+    "subtitle": "按定時器自動執行巨集 · SoftGlaze Pro",
+    "enable": "啟用排程執行",
+    "macroLabel": "巨集",
+    "selectMacro": "選擇巨集…",
+    "everyMinutes": "間隔（分鐘）",
+    "targetProfiles": "目標設定檔",
+    "noProfiles": "沒有可用的設定檔。",
+    "profileFallback": "設定檔 {{id}}",
+    "cancel": "取消",
+    "save": "儲存排程",
+    "errors": {
+      "save": "無法儲存排程。"
+    }
+  },
+  "editorModal": {
+    "ariaEdit": "編輯巨集",
+    "ariaCreate": "建立巨集",
+    "titleEdit": "編輯巨集",
+    "titleCreate": "建立巨集",
+    "subtitle": "構建無代碼流程：拖動手柄即可調整順序。",
+    "nameLabel": "巨集名稱",
+    "namePlaceholder": "例如：每日登入",
+    "descriptionLabel": "描述",
+    "descriptionPlaceholder": "它的作用是什麼？",
+    "stepsLabel": "步驟（{{count}}）",
+    "addStep": "新增步驟",
+    "noSteps": "還沒有步驟，請選擇類型並新增一個。",
+    "dragToReorder": "拖動以調整順序",
+    "removeStep": "移除步驟",
+    "cancel": "取消",
+    "save": "儲存巨集",
+    "errors": {
+      "name": "請為巨集命名。",
+      "save": "無法儲存巨集。"
+    },
+    "optional": "可選",
+    "optionalHint": "如果此步驟失敗，記錄下來並繼續，而不是讓整個執行失敗。"
+  },
+  "runModal": {
+    "ariaLabel": "巨集執行：{{name}}",
+    "runningOn": "正在 {{profile}} 上執行",
+    "starting": "正在啟動…",
+    "logStarted": "已開始「{{name}}」 · 在 {{profile}} 上執行 {{total}} 個步驟",
+    "logStepRunning": "▶ {{label}}：{{summary}}",
+    "logStepError": "✕ {{label}}：{{error}}",
+    "logStepFailed": "失敗",
+    "logStopped": "已停止。",
+    "logFinished": "已完成：{{ran}}/{{total}} 個步驟。",
+    "stopped": "已停止。",
+    "finished": "已完成。",
+    "summaryCompleted": "已完成 {{ran}}/{{total}} 個步驟。",
+    "summaryRan": "已執行 {{ran}}/{{total}} 個步驟。",
+    "paused": "已暫停",
+    "running": "正在執行…",
+    "resume": "繼續",
+    "pause": "暫停",
+    "stop": "停止",
+    "close": "關閉",
+    "errors": {
+      "run": "無法執行巨集。"
+    },
+    "logStepSkipped": "已跳過 {{label}}（可選）- {{error}}"
+  },
+  "parallel": {
+    "states": {
+      "queued": "排隊中",
+      "launching": "正在啟動",
+      "running": "執行中",
+      "passed": "成功",
+      "failed": "失敗"
+    },
+    "title": "並行巨集執行器",
+    "subtitle": "在多個設定檔上同時執行同一個巨集，並即時顯示狀態。",
+    "macroLabel": "巨集",
+    "noMacros": "還沒有巨集",
+    "macroOption": "{{name}} · {{count}} 個步驟",
+    "concurrency": "並行數",
+    "concurrencyCap": "你的方案最多可同時執行 {{max}} 個設定檔。",
+    "concurrencyCapUpgrade": "你的方案最多可同時執行 {{max}} 個設定檔。Enterprise 最多可同時執行 {{enterpriseMax}} 個。",
+    "dataBound_one": "{{fileName}} · {{count}} 列",
+    "dataBound_other": "{{fileName}} · {{count}} 列",
+    "dataHint": "可選：繫結電子表格（按順序，一列對應一個設定檔）",
+    "clearDataBinding": "清除資料繫結",
+    "bindData": "繫結資料",
+    "columnsPrefix": "欄：{{columns}}。在巨集步驟中使用",
+    "columnsSuffix": "來引用。",
+    "profilesLabel": "設定檔（已選擇 {{count}} 個）",
+    "selectAll": "全選",
+    "clear": "清除",
+    "searchPlaceholder": "搜尋",
+    "noProfiles": "未找到設定檔。",
+    "rowMismatch": "{{rows}} 列資料對應 {{profiles}} 個設定檔：多出的設定檔將在沒有變數的情況下執行。",
+    "running": "正在執行…",
+    "runOn_one": "在 {{count}} 個設定檔上執行",
+    "runOn_other": "在 {{count}} 個設定檔上執行",
+    "runStatus": "執行狀態",
+    "summaryPassed": "成功",
+    "summaryFailed": "失敗",
+    "summaryTotal": "共 {{total}} 個",
+    "watchHint": "選擇設定檔和巨集，然後開始執行即可檢視即時進度。",
+    "steps": "{{ran}}/{{total}} 個步驟",
+    "profileFallback": "設定檔 {{id}}",
+    "runConsole": "執行控制台",
+    "live": "即時",
+    "consoleIdle": "[ 空閒 ] 尚未執行，進度將在這裡即時顯示（絕不包含 Cookie 或憑據）。",
+    "logRunFinished": "執行完成：{{passed}}/{{total}} 個成功",
+    "logRunFinishedError": "執行完成：{{passed}}/{{total}} 個成功（{{error}}）",
+    "errors": {
+      "readSpreadsheet": "無法讀取試算表。",
+      "chooseMacro": "請選擇要執行的巨集。",
+      "selectProfile": "請至少選擇一個設定檔。",
+      "startRun": "無法開始並行執行。"
+    }
+  },
+  "warmer": {
+    "title": "Cookie 預熱",
+    "subtitle": "透過瀏覽真實網站，自然積累 Cookie 和瀏覽歷史。",
+    "sitesLabel": "要造訪的網站（{{count}}）",
+    "addSuggested": "新增推薦網站…",
+    "add": "新增",
+    "customPlaceholder": "或貼上自訂網址（例如 example.com）",
+    "bulkAdd": "批次新增",
+    "importFile": "匯入 .txt/.csv",
+    "clearAll": "全部清除",
+    "bulkPlaceholder": "每行貼上一個網址，例如：\nexample.com\nhttps://news.site\nshop.site, 45, links",
+    "addList": "新增清單",
+    "bulkHint": "每行一個網址。可選的 CSV 欄：url、seconds、behaviour（none/random/links）。",
+    "addSecondsTitle": "新新增連結的預設秒數",
+    "addBehaviorTitle": "新新增連結的預設行為",
+    "saveList": "儲存清單",
+    "saveListPrompt": "為此連結清單命名（以便之後複用）：",
+    "loadListTitle": "載入此已儲存的清單",
+    "deleteListTitle": "刪除此已儲存的清單",
+    "selectRows": "選擇列",
+    "nSelected": "已選擇 {{count}} 個",
+    "bulkSetSeconds": "為所選列設定秒數",
+    "bulkSetBehavior": "為所選列設定行為",
+    "setBehavior": "設定行為…",
+    "deleteSelected": "刪除",
+    "noSites": "還沒有網站，請在上方新增。",
+    "secondsTitle": "在此網站上停留的秒數",
+    "secondsUnit": "秒",
+    "behaviourTitle": "在此網站上執行的操作",
+    "remove": "移除",
+    "loopUntilStopped": "迴圈直到停止",
+    "keepOpen": "完成後保持工作階段開啟",
+    "hidden": "隱藏執行（不顯示視窗）",
+    "hiddenTitle": "以無頭模式預熱：不會開啟瀏覽器視窗。Cookie 和快取仍會儲存到每個設定檔。",
+    "cookieNote": "Cookie 和快取會自動儲存到每個設定檔，控制台會報告寫入磁碟的 Cookie 數量和快取大小。之後正常啟動時會複用它們。",
+    "startWarmup": "開始預熱",
+    "warming": "正在預熱…",
+    "stop": "停止",
+    "forceStop": "強制停止",
+    "profilesLabel": "設定檔（已選擇 {{count}} 個）",
+    "searchPlaceholder": "搜尋",
+    "selectAll": "全部",
+    "selectNone": "無",
+    "invert": "反選",
+    "addGroup": "新增群組…",
+    "addTag": "新增標籤…",
+    "pasteIdsPlaceholder": "貼上設定檔 ID 或名稱（用逗號或空格分隔）",
+    "selectPaste": "選擇",
+    "noProfiles": "未找到設定檔。",
+    "profileFallback": "設定檔 {{id}}",
+    "warmupConsole": "預熱控制台",
+    "live": "即時",
+    "progressTitle": "預熱進度",
+    "modeQueue": "佇列 · 一次一個",
+    "modeBulk": "批次 · 一次 {{n}} 個",
+    "consoleIdle": "[ 空閒 ] 選擇設定檔、設定時長，然後開始預熱即可檢視即時進度。",
+    "errors": {
+      "selectProfile": "請至少選擇一個要預熱的設定檔。",
+      "addSite": "請至少新增一個要造訪的網站。",
+      "startWarmup": "無法開始預熱。",
+      "stopWarmup": "無法停止預熱。",
+      "importFile": "無法讀取該檔案。"
+    },
+    "queueTitle": "一次預熱一個設定檔（嚴格佇列）：啟動瀏覽器，等它完成並關閉後再啟動下一個。可避免一次開啟所有選中的瀏覽器，導致記憶體/CPU 耗盡並使應用程式當機。",
+    "queueMode": "一次執行一個（佇列）",
+    "parallelTitle": "同時預熱的設定檔數量。數量越多速度越快，但記憶體/CPU 佔用也越高。",
+    "parallelLabel": "每次："
+  },
+  "counter": {
+    "total": "總計",
+    "running": "執行中",
+    "done": "已完成",
+    "queued": "排隊中"
+  },
+  "console": {
+    "copy": "複製",
+    "copied": "已複製",
+    "export": "匯出",
+    "clear": "清除"
+  },
+  "history": {
+    "emptyTitle": "還沒有執行過任務",
+    "emptyHint": "預熱、巨集和並行執行都會顯示在這裡。",
+    "columns": {
+      "task": "任務",
+      "profiles": "設定檔",
+      "detail": "詳情",
+      "status": "狀態",
+      "when": "時間"
+    },
+    "emptyDetail": "-",
+    "parallelRun": "並行執行",
+    "macroRun": "巨集執行",
+    "cookieWarmup": "Cookie 預熱",
+    "minutes": "{{count}} 分鐘",
+    "sites_one": "{{count}} 個網站",
+    "sites_other": "{{count}} 個網站"
+  },
+  "stepFieldOptions": {
+    "auto": "自動",
+    "value": "值",
+    "label": "標籤",
+    "index": "索引",
+    "visible": "可見",
+    "hidden": "隱藏",
+    "checked": "已勾選",
+    "unchecked": "未勾選"
+  },
+  "autopilot": {
+    "title": "自動預熱",
+    "subtitle": "每天用幾個網站預熱設定檔，讓它們積累真實的瀏覽歷史。",
+    "toggle": "開啟或關閉自動預熱",
+    "target": "設定檔",
+    "targetAll": "所有設定檔",
+    "targetGroup": "單個群組",
+    "group": "群組",
+    "runsPerDay": "每天執行次數",
+    "runsPerDayTitle": "每個設定檔每天預熱的次數",
+    "sitesPerRun": "每次執行的網站數",
+    "sitesPerRunTitle": "從推薦清單中隨機選擇網站，每個停留 20 到 45 秒",
+    "activeHours": "執行時段",
+    "startHour": "開始時間",
+    "endHour": "結束時間",
+    "hoursTo": "至",
+    "atATime": "每次",
+    "atATimeTitle": "同時預熱的設定檔數量。數量越多速度越快，但佔用記憶體越多。",
+    "hidden": "隱藏執行（不顯示視窗）",
+    "hint": "當設定檔上次預熱的時間早於 24 小時除以每天執行次數時，就會對其進行預熱。已開啟、已鎖定或忙碌的設定檔會被跳過。",
+    "ownedByOther": "此功能由另一位成員開啟。只有該成員或其上級可以更改。",
+    "status": {
+      "off": "關閉",
+      "nextSoon": "一分鐘內進行下次執行",
+      "nextAt": "下次執行：{{time}}",
+      "nothingDue": "沒有需要預熱的設定檔",
+      "warmedToday": "今天已預熱 {{done}}/{{total}} 個",
+      "warmingNow": "{{n}} 個正在預熱",
+      "lastError": "上次錯誤，{{time}}：{{error}}"
+    },
+    "errors": {
+      "load": "無法載入自動預熱設定。",
+      "save": "無法儲存自動預熱設定。",
+      "noGroups": "還沒有群組。請先在「設定檔」頁面建立一個。",
+      "owner-missing": "開啟自動預熱的成員已不存在。工作區擁有者可以將其關閉後重新開啟以接管。",
+      "owner-inactive": "開啟自動預熱的成員已被暫停或阻擋。",
+      "owner-no-permission": "開啟自動預熱的成員可能已無權執行自動化。",
+      "warm-failed": "{{profile}}：{{error}}",
+      "warmFailedHidden": "一個你看不到的設定檔預熱失敗。",
+      "tick-failed": "{{error}}"
+    }
+  }
+}

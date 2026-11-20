@@ -1,0 +1,51 @@
+{
+  "header": {
+    "eyebrow": "تنظیم",
+    "title": "گروپس اور ٹیگز",
+    "description": "پروفائلز کو گروپس میں رکھیں اور جلد فلٹر کرنے کے لیے ان پر ٹیگ لگائیں۔"
+  },
+  "filters": {
+    "allProfiles": "تمام پروفائلز",
+    "ungrouped": "بغیر گروپ",
+    "group": "گروپ"
+  },
+  "sidebar": {
+    "directories": "ڈائریکٹریز",
+    "createGroup": "نیا گروپ بنائیں",
+    "renameGroup": "گروپ {{name}} کا نام تبدیل کریں",
+    "deleteGroup": "گروپ {{name}} ڈیلیٹ کریں",
+    "groupNamePlaceholder": "گروپ کا نام..."
+  },
+  "table": {
+    "searchPlaceholder": "پروفائلز تلاش کریں...",
+    "loading": "گروپس لوڈ ہو رہے ہیں...",
+    "colProfileName": "پروفائل کا نام",
+    "colGroupAssignment": "گروپ",
+    "colTags": "ٹیگز"
+  },
+  "tagFilter": {
+    "label": "فلٹرز",
+    "clear": "صاف کریں"
+  },
+  "bulk": {
+    "selected_one": "{{count}} منتخب",
+    "selected_other": "{{count}} منتخب",
+    "moveTo": "یہاں منتقل کریں:",
+    "chooseGroup": "گروپ منتخب کریں…",
+    "clear": "صاف کریں"
+  },
+  "empty": {
+    "title": "کوئی پروفائل نہیں ملی",
+    "noMatch": "آپ کے فلٹرز سے کوئی پروفائل نہیں ملتی۔",
+    "groupEmpty": "یہ گروپ خالی ہے۔ گروپ ڈراپ ڈاؤن سے پروفائلز یہاں منتقل کریں۔"
+  },
+  "tags": {
+    "add": "ٹیگ شامل کریں",
+    "remove": "ٹیگ ہٹائیں",
+    "inputPlaceholder": "ٹیگ + Enter"
+  },
+  "deleteConfirm": "گروپ \"{{name}}\" ڈیلیٹ کریں؟ اس کی پروفائلز بغیر گروپ ہو جائیں گی (پروفائلز خود ڈیلیٹ نہیں ہوں گی)۔",
+  "errors": {
+    "loadFailed": "گروپس لوڈ نہیں ہو سکے۔"
+  }
+}

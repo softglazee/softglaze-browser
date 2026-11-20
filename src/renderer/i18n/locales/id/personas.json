@@ -1,0 +1,139 @@
+{
+  "header": {
+    "eyebrow": "Identitas",
+    "title": "Brankas Data",
+    "description": "Brankas identitas yang bisa dipakai ulang untuk Smart Autofill. Tambahkan manual atau impor spreadsheet; setiap identitas mengingat situs tempat ia sudah dipakai.",
+    "refresh": "Muat ulang",
+    "import": "Impor Excel/CSV",
+    "addManually": "Tambah manual"
+  },
+  "stats": {
+    "totalIdentities": "Total identitas",
+    "neverUsed": "Belum pernah dipakai",
+    "usedAtLeastOnce": "Pernah dipakai",
+    "totalUses": "Total pemakaian",
+    "filtering": "menyaring"
+  },
+  "toolbar": {
+    "searchPlaceholder": "Cari nama, email, nama pengguna, atau label...",
+    "showing": "Menampilkan {{count}} {{kind}}",
+    "kindNeverUsed": "belum dipakai",
+    "kindUsed": "sudah dipakai",
+    "clear": "hapus"
+  },
+  "bulk": {
+    "selected": "{{count}} dipilih",
+    "resetUsedStatus": "Reset status pemakaian",
+    "deleteSelected": "Hapus yang dipilih",
+    "clear": "Bersihkan",
+    "clearSelectionTitle": "Hapus pilihan"
+  },
+  "table": {
+    "loading": "Memuat identitas...",
+    "selectAll": "Pilih semua identitas",
+    "selectRow": "Pilih {{name}}",
+    "colName": "Nama",
+    "colEmail": "Email",
+    "colUsername": "Nama pengguna",
+    "colPassword": "Kata sandi",
+    "colPhone": "Telepon",
+    "colAddress": "Alamat",
+    "colLabel": "Label",
+    "colTimesUsed": "Dipakai",
+    "colCreated": "Dibuat",
+    "colActions": "Aksi",
+    "sitesUsed_other": "{{count}} situs",
+    "never": "Belum pernah",
+    "editIdentity": "Edit identitas",
+    "deleteIdentity": "Hapus identitas",
+    "hidePassword": "Sembunyikan",
+    "revealPassword": "Tampilkan",
+    "reuse": "♻ Pakai ulang · {{count}}"
+  },
+  "empty": {
+    "title": "Brankas data Anda kosong",
+    "description": "Tambahkan identitas manual atau impor file Excel/CSV untuk mulai mengisi brankas autofill Anda.",
+    "filteredTitle": "Tidak ada identitas yang cocok dengan filter",
+    "filteredDescription": "Coba pencarian lain, atau hapus filter."
+  },
+  "groups": {
+    "identity": "Identitas",
+    "account": "Akun",
+    "address": "Alamat",
+    "meta": "Meta"
+  },
+  "fields": {
+    "firstName": "Nama depan",
+    "lastName": "Nama belakang",
+    "email": "Email",
+    "username": "Nama pengguna",
+    "password": "Kata sandi",
+    "phone": "Telepon",
+    "dateOfBirth": "Tanggal lahir",
+    "addressLine1": "Alamat baris 1",
+    "addressLine2": "Alamat baris 2",
+    "city": "Kota",
+    "state": "Provinsi / Negara bagian",
+    "zipCode": "Kode pos",
+    "country": "Negara",
+    "company": "Perusahaan",
+    "companyAddress": "Alamat perusahaan",
+    "label": "Label batch"
+  },
+  "form": {
+    "dialogTitleEdit": "Edit identitas",
+    "dialogTitleAdd": "Tambah identitas",
+    "titleEdit": "Edit identitas",
+    "titleAdd": "Tambah identitas",
+    "descEdit": "Perbarui detail persona ini.",
+    "descAdd": "Tambahkan satu persona ke brankas data Anda. Kolom bertanda * wajib diisi.",
+    "cancel": "Batal",
+    "saving": "Menyimpan...",
+    "saveChanges": "Simpan perubahan",
+    "addIdentity": "Tambah identitas",
+    "showPassword": "Tampilkan kata sandi",
+    "hidePassword": "Sembunyikan kata sandi"
+  },
+  "import": {
+    "dialogTitle": "Impor identitas",
+    "title": "Impor dari Excel / CSV",
+    "descStep1": "Pilih file .xlsx, .xls, atau .csv. Baris pertama harus berisi judul kolom. Maksimal 1000 baris per impor.",
+    "descStep2": "Cocokkan kolom Anda dengan kolom identitas. Terdeteksi {{count}} baris di {{fileName}}.",
+    "yourFile": "file Anda",
+    "chooseSpreadsheet": "Pilih spreadsheet",
+    "colIdentityField": "Kolom identitas",
+    "colYourColumn": "Kolom Anda",
+    "skipOption": "- lewati -",
+    "mappedCount_other": "{{count}} kolom dicocokkan. Baris tanpa nama/email/nama pengguna dilewati.",
+    "done": "Selesai",
+    "cancel": "Batal",
+    "back": "Kembali",
+    "importing": "Mengimpor...",
+    "importRows_other": "Impor {{count}} baris",
+    "result": {
+      "complete": "Impor selesai",
+      "addedPrefix": "Menambahkan",
+      "addedSuffix_other": "identitas ke brankas.",
+      "skipped_other": "{{count}} baris kosong dilewati."
+    },
+    "errors": {
+      "noRows": "File itu tidak punya baris judul atau baris data yang bisa dibaca.",
+      "readFile": "Tidak bisa membaca file itu.",
+      "nothingMapped": "Tidak ada baris untuk diimpor: cocokkan setidaknya salah satu dari Nama depan / Nama belakang / Email / Nama pengguna.",
+      "failed": "Impor gagal."
+    }
+  },
+  "confirm": {
+    "fallbackName": "persona",
+    "deleteOne": "Hapus identitas \"{{name}}\"? Ini tidak bisa dibatalkan.",
+    "deleteSelected_other": "Hapus {{count}} identitas terpilih? Ini tidak bisa dibatalkan.",
+    "resetSelected_other": "Reset riwayat \"dipakai di\" untuk {{count}} identitas terpilih? Identitas itu kembali tersedia di semua situs."
+  },
+  "errors": {
+    "load": "Tidak bisa memuat brankas data.",
+    "save": "Tidak bisa menyimpan identitas ini.",
+    "deleteOne": "Tidak bisa menghapus identitas.",
+    "deleteSelected": "Tidak bisa menghapus identitas terpilih.",
+    "resetSelected": "Tidak bisa mereset identitas terpilih."
+  }
+}

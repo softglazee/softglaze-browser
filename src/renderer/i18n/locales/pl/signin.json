@@ -1,0 +1,111 @@
+{
+  "choose": {
+    "title": "Utwórz darmowe konto",
+    "subtitle": "Użyj konta, które już masz. Bez nowego hasła.",
+    "google": "Kontynuuj przez Google",
+    "microsoft": "Kontynuuj przez Microsoft",
+    "facebook": "Kontynuuj przez Facebook",
+    "linkedin": "Kontynuuj przez LinkedIn",
+    "allowEmail": "Zezwól na dostęp do e-maila i spróbuj ponownie przez Facebook",
+    "github": "Kontynuuj przez GitHub",
+    "email": "Kontynuuj przez e-mail",
+    "moreOptions": "Skonfiguruj z hasłem",
+    "moreOptionsHint": "Wolisz nazwę i hasło?",
+    "privacy": "Otrzymujemy tylko Twoje imię i zweryfikowany adres e-mail.",
+    "haveAccount": "Masz już obszar roboczy na tym komputerze?",
+    "logIn": "Zaloguj się hasłem",
+    "signInTitle": "Zaloguj się do SoftGlaze",
+    "signInSubtitle": "Użyj konta, którym się rejestrowałeś. Jeśli Twój plan jest na innym komputerze, możesz go tu przenieść.",
+    "entryLabel": "Nowe lub istniejące konto",
+    "entryNew": "Nowe konto",
+    "entryReturning": "Mam konto"
+  },
+  "unlock": {
+    "title": "Witaj ponownie",
+    "titleNamed": "Witaj ponownie, {{name}}",
+    "subtitle": "Zaloguj się na konto, do którego należy ten obszar roboczy.",
+    "account": "Konto obszaru roboczego: {{email}}",
+    "passwordInstead": "Zaloguj się hasłem",
+    "haveInvite": "Mam kod zaproszenia",
+    "teamSignIn": "Logowanie członka zespołu"
+  },
+  "link": {
+    "title": "Zaloguj się na konto SoftGlaze",
+    "subtitle": "Używaj logowania jednym kliknięciem tutaj i na innych komputerach. Obszar roboczy pozostaje bez zmian."
+  },
+  "email": {
+    "title": "Kontynuuj przez e-mail",
+    "subtitle": "Wyślemy Ci e-mailem 6-cyfrowy kod. Hasło nie jest potrzebne.",
+    "label": "Adres e-mail",
+    "placeholder": "ty@firma.pl",
+    "send": "Wyślij kod",
+    "codeTitle": "Sprawdź pocztę",
+    "codeBody": "Wpisz 6-cyfrowy kod wysłany na {{email}}.",
+    "codeLabel": "6-cyfrowy kod",
+    "verify": "Kontynuuj",
+    "resend": "Wyślij nowy kod",
+    "resendIn": "Wyślij nowy kod za {{count}} s",
+    "checkSpam": "To może potrwać minutę. Jeśli go nie widzisz, sprawdź folder spam.",
+    "devCode": "W tej wersji nie skonfigurowano serwera poczty, więc oto kod: {{code}}",
+    "change": "Użyj innego e-maila"
+  },
+  "waiting": {
+    "title": "Dokończ w przeglądarce",
+    "body": "Otworzyliśmy {{provider}} w przeglądarce. Zaloguj się tam, a potem wróć tutaj.",
+    "status": "Oczekiwanie na {{provider}}...",
+    "reopen": "Otwórz stronę ponownie",
+    "anotherWay": "Nie wróciło? Spróbuj inaczej",
+    "cancel": "Anuluj"
+  },
+  "back": "Wstecz",
+  "useCase": {
+    "title": "Do czego użyjesz SoftGlaze?",
+    "subtitle": "Opcjonalnie. Pomaga nam ulepszać SoftGlaze dla Ciebie.",
+    "continue": "Kontynuuj",
+    "skip": "Pomiń"
+  },
+  "move": {
+    "title": "Twoja subskrypcja",
+    "moved": "Gotowe. Twoja subskrypcja działa teraz na tym komputerze."
+  },
+  "account": {
+    "title": "Metody logowania",
+    "subtitle": "Sposoby logowania na konto SoftGlaze. Zalogowanie się na nowym komputerze przenosi tam też licencję.",
+    "signedInAs": "Zalogowano jako {{email}}",
+    "google": "Google",
+    "microsoft": "Microsoft",
+    "facebook": "Facebook",
+    "linkedin": "LinkedIn",
+    "github": "GitHub",
+    "githubLogin": "GitHub (@{{login}})",
+    "email": "Kod e-mail",
+    "lastUsed": "Ostatnio użyto {{date}}",
+    "linkedOn": "Połączono {{date}}",
+    "signOut": "Wyloguj się",
+    "signOutConfirm": "Wylogować się z konta SoftGlaze na tym komputerze? Możesz w każdej chwili zalogować się ponownie na to samo konto.",
+    "signingOut": "Wylogowywanie...",
+    "offline": "Offline: pokazujemy dane zapisane na tym komputerze.",
+    "notSignedIn": "Zaloguj się na konto SoftGlaze, aby używać logowania jednym kliknięciem tutaj i na innych komputerach.",
+    "signInWorkspace": "Ten obszar roboczy otwiera się po zalogowaniu. Dodaj hasło powyżej, jeśli chcesz też logować się bez internetu.",
+    "linked": "Zalogowano. Twoje metody logowania są poniżej.",
+    "loading": "Wczytywanie metod logowania...",
+    "notAvailable": "Logowanie jednym kliknięciem wymaga serwera licencji SoftGlaze, którego ta wersja nie używa."
+  },
+  "errors": {
+    "SIGNIN_OFFLINE": "Połącz się z internetem, aby się zalogować.",
+    "SIGNIN_EXPIRED": "To logowanie wygasło lub zostało już użyte. Spróbuj ponownie.",
+    "SIGNIN_ACCOUNT_MISMATCH": "Ten obszar roboczy należy do innego konta SoftGlaze. Zaloguj się na konto, na którym go utworzono.",
+    "SIGNIN_EMAIL_MISMATCH": "Użyj adresu e-mail tego obszaru roboczego.",
+    "SIGNIN_EMAIL_NOT_VERIFIED": "Konto, na które się zalogowano, nie ma zweryfikowanego adresu e-mail. Zweryfikuj go tam (w GitHub: Settings > Emails) lub kontynuuj przez e-mail.",
+    "SIGNIN_EMAIL_MISSING": "Twoje konto Facebook nie udostępniło adresu e-mail. Użyj logowania przez Google lub e-mail albo zezwól na dostęp do e-maila.",
+    "SIGNIN_DISPOSABLE_EMAIL": "Użyj stałego adresu e-mail.",
+    "SIGNIN_UNAVAILABLE": "To logowanie nie jest jeszcze dostępne. Kontynuuj przez e-mail lub użyj opcji Więcej opcji.",
+    "SIGNIN_FAILED": "Logowanie nie zostało dokończone. Spróbuj ponownie za minutę.",
+    "SIGNIN_TIMEOUT": "Logowanie trwało zbyt długo. Spróbuj ponownie.",
+    "SIGNIN_NOT_ALLOWED": "To logowanie nie jest dostępne dla tego obszaru roboczego.",
+    "SIGNIN_KEY_LOST": "Nie udało się otworzyć tego obszaru roboczego po zalogowaniu na tym komputerze. Zaloguj się hasłem.",
+    "SIGNIN_SESSION_ENDED": "Sesja logowania wygasła. Zaloguj się ponownie.",
+    "SIGNIN_BAD_INPUT": "Wpisz poprawny adres e-mail.",
+    "MOVE_FAILED": "Nie udało się teraz przenieść licencji. Spróbuj ponownie za minutę."
+  }
+}

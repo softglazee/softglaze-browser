@@ -1,0 +1,51 @@
+{
+  "header": {
+    "eyebrow": "組織",
+    "title": "群組和標籤",
+    "description": "將設定檔整理到群組中，並新增標籤以便快速篩選。"
+  },
+  "filters": {
+    "allProfiles": "所有設定檔",
+    "ungrouped": "未群組",
+    "group": "群組"
+  },
+  "sidebar": {
+    "directories": "目錄",
+    "createGroup": "新增群組",
+    "renameGroup": "重新命名群組 {{name}}",
+    "deleteGroup": "刪除群組 {{name}}",
+    "groupNamePlaceholder": "群組名稱..."
+  },
+  "table": {
+    "searchPlaceholder": "搜尋設定檔...",
+    "loading": "正在載入群組...",
+    "colProfileName": "設定檔名稱",
+    "colGroupAssignment": "所屬群組",
+    "colTags": "標籤"
+  },
+  "tagFilter": {
+    "label": "篩選",
+    "clear": "清除"
+  },
+  "bulk": {
+    "selected_one": "已選擇 {{count}} 個",
+    "selected_other": "已選擇 {{count}} 個",
+    "moveTo": "行動到：",
+    "chooseGroup": "選擇群組…",
+    "clear": "清除"
+  },
+  "empty": {
+    "title": "未找到設定檔",
+    "noMatch": "沒有符合篩選條件的設定檔。",
+    "groupEmpty": "此群組為空。可透過「群組」下拉選單將設定檔移到這裡。"
+  },
+  "tags": {
+    "add": "新增標籤",
+    "remove": "移除標籤",
+    "inputPlaceholder": "標籤 + Enter"
+  },
+  "deleteConfirm": "刪除群組「{{name}}」？其中的設定檔將變為未群組（設定檔本身不會被刪除）。",
+  "errors": {
+    "loadFailed": "無法載入群組。"
+  }
+}

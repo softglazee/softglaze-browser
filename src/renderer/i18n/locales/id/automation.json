@@ -1,0 +1,410 @@
+{
+  "header": {
+    "eyebrow": "Fitur Softglaze Pro",
+    "title": "Otomatisasi",
+    "description": "Makro tanpa kode, pemanasan cookie otomatis, dan log setiap tugas latar belakang."
+  },
+  "tabs": {
+    "macros": "Makro saya",
+    "parallel": "Proses paralel",
+    "warmer": "Pemanas cookie",
+    "history": "Riwayat tugas"
+  },
+  "clickLabels": {
+    "none": "Hanya menjelajah",
+    "random": "Klik acak",
+    "links": "Jelajahi tautan"
+  },
+  "stepTypes": {
+    "goto": "Buka URL",
+    "click": "Klik",
+    "type": "Ketik teks",
+    "keypress": "Tekan tombol",
+    "scroll": "Gulir",
+    "wait": "Tunggu",
+    "move": "Gerakkan mouse",
+    "hover": "Arahkan kursor",
+    "select": "Pilih opsi dropdown",
+    "waitFor": "Tunggu elemen",
+    "submit": "Kirim formulir",
+    "check": "Centang / hapus centang",
+    "clear": "Kosongkan kolom"
+  },
+  "stepFields": {
+    "goto": {
+      "url": "URL",
+      "urlPlaceholder": "https://example.com"
+    },
+    "click": {
+      "selector": "Selektor CSS",
+      "selectorPlaceholder": "#submit, .btn"
+    },
+    "type": {
+      "selector": "Selektor",
+      "selectorPlaceholder": "input[name=\"email\"]",
+      "value": "Teks yang diketik"
+    },
+    "keypress": {
+      "key": "Tombol",
+      "keyPlaceholder": "Enter"
+    },
+    "scroll": {
+      "steps": "Jumlah gulir",
+      "stepsPlaceholder": "4"
+    },
+    "wait": {
+      "ms": "Milidetik",
+      "msPlaceholder": "1000"
+    },
+    "move": {
+      "selector": "Selektor (atau pakai X/Y)",
+      "selectorPlaceholder": ".target",
+      "x": "X",
+      "y": "Y"
+    },
+    "hover": {
+      "selector": "Selektor",
+      "selectorPlaceholder": ".menu",
+      "ms": "Lama diam (ms)",
+      "msPlaceholder": "800"
+    },
+    "select": {
+      "selector": "Selektor",
+      "selectorPlaceholder": "select[name=\"focus\"]",
+      "value": "Opsi (nilai, label, atau indeks)",
+      "valuePlaceholder": "Pipa ledeng",
+      "by": "Cocokkan menurut"
+    },
+    "waitFor": {
+      "selector": "Selektor",
+      "selectorPlaceholder": ".dashboard",
+      "state": "Status",
+      "timeout": "Batas waktu (ms)",
+      "timeoutPlaceholder": "30000"
+    },
+    "submit": {
+      "selector": "Selektor formulir atau kolom",
+      "selectorPlaceholder": "form#signup"
+    },
+    "check": {
+      "selector": "Selektor",
+      "selectorPlaceholder": "input[name=\"terms\"]",
+      "state": "Status"
+    },
+    "clear": {
+      "selector": "Selektor",
+      "selectorPlaceholder": "input[name=\"email\"]"
+    }
+  },
+  "stepSummary": {
+    "noUrl": "(tanpa URL)",
+    "noSelector": "(tanpa selektor)",
+    "selectorFallback": "(selektor)",
+    "target": "(target)"
+  },
+  "macros": {
+    "intro": "Rekam atau susun alur kerja tanpa kode yang bisa dipakai ulang, lalu jalankan di dalam profil (membuka halaman, klik, ketik, tunggu), secara manual atau terjadwal.",
+    "profileSelectTitle": "Profil tempat Jalankan / Rekam bekerja",
+    "noProfiles": "Tidak ada profil",
+    "profileFallback": "Profil {{id}}",
+    "stopAndSave": "Hentikan & simpan",
+    "record": "Rekam",
+    "schedule": "Jadwal",
+    "createMacro": "Buat makro",
+    "stepsBadge_other": "{{count}} langkah",
+    "updated": "Diperbarui {{date}}",
+    "run": "Jalankan",
+    "edit": "Edit",
+    "editSteps": "Edit langkah",
+    "delete": "Hapus",
+    "runTitleNoSteps": "Makro ini belum punya langkah: edit dulu",
+    "runTitleReady": "Jalankan di profil terpilih",
+    "emptyTitle": "Belum ada makro",
+    "emptyHint": "Rekam alur kerja atau buat satu untuk memulai.",
+    "errors": {
+      "loadMacros": "Tidak bisa memuat makro.",
+      "deleteMacro": "Tidak bisa menghapus makro.",
+      "chooseProfile": "Pilih profil tujuan dulu.",
+      "noSteps": "Makro ini belum punya langkah: edit dulu.",
+      "chooseProfileRecord": "Pilih profil tujuan untuk merekam.",
+      "recordingFailed": "Aksi perekaman gagal."
+    },
+    "recordingStarted": "Merekam… berinteraksilah dengan browser yang terbuka, lalu tekan Hentikan untuk menyimpan.",
+    "savedNotice": "\"{{name}}\" tersimpan dengan {{count}} langkah.",
+    "stoppedNotice": "Perekaman dihentikan: {{count}} langkah terekam (belum disimpan).",
+    "deleteConfirm": "Hapus makro \"{{name}}\" dan semua langkahnya? Ini tidak bisa dibatalkan."
+  },
+  "saveRecording": {
+    "ariaLabel": "Simpan makro rekaman",
+    "title": "Simpan makro rekaman",
+    "subtitle": "Beri nama untuk menyimpan langkah yang terekam, atau buang. Browser tetap terbuka.",
+    "placeholder": "Makro rekaman",
+    "discard": "Buang",
+    "cancel": "Batal",
+    "save": "Simpan"
+  },
+  "scheduleModal": {
+    "ariaLabel": "Jadwal makro",
+    "title": "Jadwal makro",
+    "subtitle": "Jalankan makro otomatis dengan timer · Softglaze Pro",
+    "enable": "Aktifkan proses terjadwal",
+    "macroLabel": "Makro",
+    "selectMacro": "Pilih makro…",
+    "everyMinutes": "Setiap (menit)",
+    "targetProfiles": "Profil tujuan",
+    "noProfiles": "Tidak ada profil tersedia.",
+    "profileFallback": "Profil {{id}}",
+    "cancel": "Batal",
+    "save": "Simpan jadwal",
+    "errors": {
+      "save": "Tidak bisa menyimpan jadwal."
+    }
+  },
+  "editorModal": {
+    "ariaEdit": "Edit makro",
+    "ariaCreate": "Buat makro",
+    "titleEdit": "Edit makro",
+    "titleCreate": "Buat makro",
+    "subtitle": "Susun alur tanpa kode: seret pegangan untuk mengubah urutan.",
+    "nameLabel": "Nama makro",
+    "namePlaceholder": "mis. Login harian",
+    "descriptionLabel": "Deskripsi",
+    "descriptionPlaceholder": "Apa fungsinya?",
+    "stepsLabel": "Langkah ({{count}})",
+    "addStep": "Tambah langkah",
+    "noSteps": "Belum ada langkah: pilih jenis lalu tambahkan.",
+    "dragToReorder": "Seret untuk mengubah urutan",
+    "removeStep": "Hapus langkah",
+    "cancel": "Batal",
+    "save": "Simpan makro",
+    "errors": {
+      "name": "Beri nama makro.",
+      "save": "Tidak bisa menyimpan makro."
+    },
+    "optional": "Opsional",
+    "optionalHint": "Jika langkah ini gagal, catat lalu lanjutkan, bukan menggagalkan proses."
+  },
+  "runModal": {
+    "ariaLabel": "Proses makro: {{name}}",
+    "runningOn": "Berjalan di {{profile}}",
+    "starting": "Memulai…",
+    "logStarted": "\"{{name}}\" dimulai · {{total}} langkah di {{profile}}",
+    "logStepRunning": "▶ {{label}}: {{summary}}",
+    "logStepError": "✕ {{label}}: {{error}}",
+    "logStepFailed": "gagal",
+    "logStopped": "Dihentikan.",
+    "logFinished": "Selesai: {{ran}}/{{total}} langkah.",
+    "stopped": "Dihentikan.",
+    "finished": "Selesai.",
+    "summaryCompleted": "{{ran}}/{{total}} langkah selesai.",
+    "summaryRan": "{{ran}}/{{total}} langkah dijalankan.",
+    "paused": "Dijeda",
+    "running": "Berjalan…",
+    "resume": "Lanjutkan",
+    "pause": "Jeda",
+    "stop": "Hentikan",
+    "close": "Tutup",
+    "errors": {
+      "run": "Tidak bisa menjalankan makro."
+    },
+    "logStepSkipped": "{{label}} dilewati (opsional): {{error}}"
+  },
+  "parallel": {
+    "states": {
+      "queued": "Antre",
+      "launching": "Membuka",
+      "running": "Berjalan",
+      "passed": "Lolos",
+      "failed": "Gagal"
+    },
+    "title": "Proses makro paralel",
+    "subtitle": "Jalankan satu makro di banyak profil sekaligus, dengan status langsung.",
+    "macroLabel": "Makro",
+    "noMacros": "Belum ada makro",
+    "macroOption": "{{name}} · {{count}} langkah",
+    "concurrency": "Bersamaan",
+    "concurrencyCap": "Paket Anda menjalankan hingga {{max}} profil sekaligus.",
+    "concurrencyCapUpgrade": "Paket Anda menjalankan hingga {{max}} profil sekaligus. Enterprise hingga {{enterpriseMax}}.",
+    "dataBound_other": "{{fileName}} · {{count}} baris",
+    "dataHint": "Opsional: hubungkan spreadsheet (baris → profil, berurutan)",
+    "clearDataBinding": "Lepas data",
+    "bindData": "Hubungkan data",
+    "columnsPrefix": "Kolom: {{columns}}. Gunakan",
+    "columnsSuffix": "di langkah makro.",
+    "profilesLabel": "Profil ({{count}} dipilih)",
+    "selectAll": "Pilih semua",
+    "clear": "Bersihkan",
+    "searchPlaceholder": "Cari",
+    "noProfiles": "Tidak ada profil.",
+    "rowMismatch": "{{rows}} baris data vs {{profiles}} profil: sisanya berjalan tanpa variabel.",
+    "running": "Berjalan…",
+    "runOn_other": "Jalankan di {{count}} profil",
+    "runStatus": "Status proses",
+    "summaryPassed": "lolos",
+    "summaryFailed": "gagal",
+    "summaryTotal": "total {{total}}",
+    "watchHint": "Pilih profil dan makro, lalu mulai proses untuk melihat kemajuan langsung.",
+    "steps": "{{ran}}/{{total}} langkah",
+    "profileFallback": "Profil {{id}}",
+    "runConsole": "Konsol proses",
+    "live": "langsung",
+    "consoleIdle": "[ diam ] Belum ada proses: kemajuan akan tampil di sini (cookie dan kredensial tidak pernah disertakan).",
+    "logRunFinished": "Proses selesai: {{passed}}/{{total}} lolos",
+    "logRunFinishedError": "Proses selesai: {{passed}}/{{total}} lolos ({{error}})",
+    "errors": {
+      "readSpreadsheet": "Tidak bisa membaca spreadsheet.",
+      "chooseMacro": "Pilih makro untuk dijalankan.",
+      "selectProfile": "Pilih setidaknya satu profil.",
+      "startRun": "Tidak bisa memulai proses paralel."
+    }
+  },
+  "warmer": {
+    "title": "Pemanas cookie",
+    "subtitle": "Membangun cookie & riwayat alami dengan menjelajahi situs sungguhan.",
+    "sitesLabel": "Situs yang dikunjungi ({{count}})",
+    "addSuggested": "Tambah situs saran…",
+    "add": "Tambah",
+    "customPlaceholder": "Atau tempel URL sendiri (mis. example.com)",
+    "bulkAdd": "Tambah massal",
+    "importFile": "Impor .txt/.csv",
+    "clearAll": "Hapus semua",
+    "bulkPlaceholder": "Tempel satu URL per baris, mis.\nexample.com\nhttps://news.site\nshop.site, 45, links",
+    "addList": "Tambah daftar",
+    "bulkHint": "Satu URL per baris. Kolom CSV opsional: url, detik, perilaku (none/random/links).",
+    "addSecondsTitle": "Detik bawaan untuk tautan yang Anda tambahkan",
+    "addBehaviorTitle": "Perilaku bawaan untuk tautan yang Anda tambahkan",
+    "saveList": "Simpan daftar",
+    "saveListPrompt": "Beri nama daftar tautan ini (untuk dipakai lagi nanti):",
+    "loadListTitle": "Muat daftar tersimpan ini",
+    "deleteListTitle": "Hapus daftar tersimpan ini",
+    "selectRows": "Pilih baris",
+    "nSelected": "{{count}} dipilih",
+    "bulkSetSeconds": "Atur detik untuk baris terpilih",
+    "bulkSetBehavior": "Atur perilaku untuk baris terpilih",
+    "setBehavior": "Atur perilaku…",
+    "deleteSelected": "Hapus",
+    "noSites": "Belum ada situs: tambahkan di atas.",
+    "secondsTitle": "Detik yang dihabiskan di situs ini",
+    "secondsUnit": "dtk",
+    "behaviourTitle": "Yang dilakukan di situs ini",
+    "remove": "Hapus",
+    "loopUntilStopped": "Ulangi sampai dihentikan",
+    "keepOpen": "Biarkan sesi tetap terbuka setelahnya",
+    "hidden": "Jalankan tersembunyi (tanpa jendela)",
+    "hiddenTitle": "Panaskan tanpa tampilan: tidak ada jendela browser yang terbuka. Cookie & cache tetap tersimpan ke setiap profil.",
+    "cookieNote": "Cookie & cache disimpan ke setiap profil secara otomatis: konsol melaporkan berapa cookie & seberapa besar cache yang tersimpan di disk. Pembukaan normal berikutnya memakainya lagi.",
+    "startWarmup": "Mulai pemanasan",
+    "warming": "Memanaskan…",
+    "stop": "Hentikan",
+    "forceStop": "Paksa berhenti",
+    "profilesLabel": "Profil ({{count}} dipilih)",
+    "searchPlaceholder": "Cari",
+    "selectAll": "Semua",
+    "selectNone": "Tidak ada",
+    "invert": "Balik",
+    "addGroup": "Tambah grup…",
+    "addTag": "Tambah tag…",
+    "pasteIdsPlaceholder": "Tempel ID atau nama profil (dipisah koma / spasi)",
+    "selectPaste": "Pilih",
+    "noProfiles": "Tidak ada profil.",
+    "profileFallback": "Profil {{id}}",
+    "warmupConsole": "Konsol pemanasan",
+    "live": "langsung",
+    "progressTitle": "Kemajuan pemanasan",
+    "modeQueue": "Antrean · satu per satu",
+    "modeBulk": "Massal · {{n}} sekaligus",
+    "consoleIdle": "[ diam ] Pilih profil, atur durasi, dan mulai pemanasan untuk melihat kemajuan langsung.",
+    "errors": {
+      "selectProfile": "Pilih setidaknya satu profil untuk dipanaskan.",
+      "addSite": "Tambahkan setidaknya satu situs untuk dikunjungi.",
+      "startWarmup": "Tidak bisa memulai pemanasan.",
+      "stopWarmup": "Tidak bisa menghentikan pemanasan.",
+      "importFile": "Tidak bisa membaca file itu."
+    },
+    "queueTitle": "Panaskan satu profil setiap kali (antrean ketat): buka browser, biarkan selesai dan tertutup, lalu yang berikutnya. Mencegah semua browser terpilih terbuka sekaligus, yang bisa menghabiskan RAM/CPU dan membuat aplikasi macet.",
+    "queueMode": "Jalankan satu per satu (antrean)",
+    "parallelTitle": "Berapa profil dipanaskan bersamaan. Lebih banyak = lebih cepat, tetapi lebih berat bagi RAM/CPU.",
+    "parallelLabel": "Sekaligus:"
+  },
+  "counter": {
+    "total": "total",
+    "running": "berjalan",
+    "done": "selesai",
+    "queued": "antre"
+  },
+  "console": {
+    "copy": "Salin",
+    "copied": "Disalin",
+    "export": "Ekspor",
+    "clear": "Bersihkan"
+  },
+  "history": {
+    "emptyTitle": "Belum ada tugas yang dijalankan",
+    "emptyHint": "Proses pemanas, makro, dan paralel akan muncul di sini.",
+    "columns": {
+      "task": "Tugas",
+      "profiles": "Profil",
+      "detail": "Detail",
+      "status": "Status",
+      "when": "Waktu"
+    },
+    "emptyDetail": "-",
+    "parallelRun": "Proses paralel",
+    "macroRun": "Proses makro",
+    "cookieWarmup": "Pemanasan cookie",
+    "minutes": "{{count}} mnt",
+    "sites_other": "{{count}} situs"
+  },
+  "stepFieldOptions": {
+    "auto": "Otomatis",
+    "value": "Nilai",
+    "label": "Label",
+    "index": "Indeks",
+    "visible": "Terlihat",
+    "hidden": "Tersembunyi",
+    "checked": "Dicentang",
+    "unchecked": "Tidak dicentang"
+  },
+  "autopilot": {
+    "title": "Autopilot pemanasan",
+    "subtitle": "Memanaskan profil dengan beberapa situs setiap hari, agar terbentuk riwayat jelajah yang nyata.",
+    "toggle": "Aktifkan atau matikan autopilot pemanasan",
+    "target": "Profil",
+    "targetAll": "Semua profil",
+    "targetGroup": "Satu grup",
+    "group": "Grup",
+    "runsPerDay": "Proses per hari",
+    "runsPerDayTitle": "Berapa kali sehari setiap profil dipanaskan",
+    "sitesPerRun": "Situs per proses",
+    "sitesPerRunTitle": "Situs acak dari daftar saran, 20 sampai 45 detik masing-masing",
+    "activeHours": "Jam aktif",
+    "startHour": "Jam mulai",
+    "endHour": "Jam selesai",
+    "hoursTo": "sampai",
+    "atATime": "Sekaligus",
+    "atATimeTitle": "Profil yang dipanaskan bersamaan. Lebih banyak lebih cepat, tetapi memakai lebih banyak memori.",
+    "hidden": "Jalankan tersembunyi (tanpa jendela)",
+    "hint": "Profil dipanaskan bila pemanasan terakhirnya lebih lama dari 24 jam dibagi jumlah proses per hari. Profil yang terbuka, terkunci, atau sibuk dilewati.",
+    "ownedByOther": "Anggota lain mengaktifkan ini. Hanya dia atau atasannya yang bisa mengubahnya.",
+    "status": {
+      "off": "Mati",
+      "nextSoon": "Proses berikutnya dalam satu menit",
+      "nextAt": "Proses berikutnya {{time}}",
+      "nothingDue": "Tidak ada profil untuk dipanaskan",
+      "warmedToday": "{{done}} dari {{total}} dipanaskan hari ini",
+      "warmingNow": "{{n}} sedang dipanaskan",
+      "lastError": "Kesalahan terakhir, {{time}}: {{error}}"
+    },
+    "errors": {
+      "load": "Tidak bisa memuat pengaturan autopilot.",
+      "save": "Tidak bisa menyimpan pengaturan autopilot.",
+      "noGroups": "Belum ada grup. Buat dulu di halaman Profil.",
+      "owner-missing": "Anggota yang mengaktifkan autopilot sudah tidak ada. Pemilik ruang kerja bisa mematikan dan mengaktifkannya lagi untuk mengambil alih.",
+      "owner-inactive": "Anggota yang mengaktifkan autopilot sedang ditangguhkan atau diblokir.",
+      "owner-no-permission": "Anggota yang mengaktifkan autopilot mungkin sudah tidak boleh menjalankan otomatisasi.",
+      "warm-failed": "{{profile}}: {{error}}",
+      "warmFailedHidden": "Sebuah profil yang tidak bisa Anda lihat gagal dipanaskan.",
+      "tick-failed": "{{error}}"
+    }
+  }
+}

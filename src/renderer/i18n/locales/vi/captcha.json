@@ -1,0 +1,191 @@
+{
+  "badgeTitle": "Rủi ro CAPTCHA {{score}}/100. Bấm để xem lý do và cách khắc phục.",
+  "title": "Điểm CAPTCHA",
+  "subtitle": "Khả năng các trang web yêu cầu hồ sơ này xác minh, và điều gì làm giảm khả năng đó",
+  "outOf100": "trên 100",
+  "level": {
+    "low": "Rủi ro thấp",
+    "some": "Rủi ro trung bình",
+    "high": "Rủi ro cao",
+    "veryHigh": "Rủi ro rất cao"
+  },
+  "levelShort": {
+    "low": "Thấp",
+    "some": "Trung bình",
+    "high": "Cao",
+    "veryHigh": "Rất cao"
+  },
+  "column": "Rủi ro CAPTCHA",
+  "issues_zero": "Không tìm thấy vấn đề",
+  "issues_one": "1 vấn đề",
+  "issues_other": "{{count}} vấn đề",
+  "fixable_one": "Sửa tất cả xử lý được 1",
+  "fixable_other": "Sửa tất cả xử lý được {{count}}",
+  "leakTest": "Kiểm tra rò rỉ",
+  "leakTestTitle": "Mở kiểm tra rò rỉ chi tiết, gồm cả kiểm tra trực tiếp hồ sơ đang chạy",
+  "loadFailed": "Không chấm điểm được hồ sơ này.",
+  "fixAll": "Sửa tất cả",
+  "fixAllTitle": "Áp dụng mọi cách sửa chỉ thay đổi cài đặt hoặc proxy của hồ sơ này",
+  "rescore": "Chấm điểm lại",
+  "done": "Xong",
+  "runningNote": "Hồ sơ này đang mở. Thay đổi sẽ áp dụng ở lần khởi chạy tới.",
+  "adviceOnly": "Hãy đổi mục này trong trình sửa hồ sơ; sửa ở đây sẽ thay đổi thiết bị mà các trang web đã biết.",
+  "status": {
+    "pass": "Ổn",
+    "warn": "Rủi ro",
+    "fail": "Rủi ro cao"
+  },
+  "fix": {
+    "assign-proxy": "Gán một proxy dự phòng",
+    "swap-proxy": "Đổi sang proxy dự phòng",
+    "check-proxy": "Kiểm tra proxy ngay",
+    "tz-auto": "Dùng múi giờ của proxy",
+    "lang-auto": "Dùng ngôn ngữ của proxy",
+    "geo-auto": "Dùng vị trí của proxy",
+    "webrtc-safe": "Đặt WebRTC thành Chuyển tiếp",
+    "allow-3p-cookies": "Cho phép cookie bên thứ ba",
+    "warm-up": "Làm nóng hồ sơ"
+  },
+  "result": {
+    "swapped": "Đang dùng {{name}}.",
+    "checked": "Đã kiểm tra proxy.",
+    "checkFailed": "Proxy không đạt: {{error}}",
+    "warming": "Đã bắt đầu làm nóng: hồ sơ sẽ mở và duyệt vài trang web phổ biến. Theo dõi ở trang Tự động hóa.",
+    "cookies": "Cookie bên thứ ba giờ được cho phép cho mọi hồ sơ.",
+    "applied": "Xong."
+  },
+  "label": {
+    "proxy": "Proxy",
+    "proxyHealth": "Tình trạng proxy",
+    "blocklist": "Danh sách chặn spam",
+    "freeProxy": "Proxy miễn phí",
+    "ipType": "Loại IP",
+    "sharedProxy": "Proxy dùng chung",
+    "timezone": "Múi giờ",
+    "language": "Ngôn ngữ",
+    "geolocation": "Vị trí",
+    "webrtc": "WebRTC",
+    "thirdPartyCookies": "Cookie bên thứ ba",
+    "history": "Lịch sử duyệt web",
+    "device": "Thiết bị",
+    "osMismatch": "Hệ điều hành"
+  },
+  "factor": {
+    "proxy": {
+      "pass": "Dùng {{name}}.",
+      "warn": "Không có proxy: hồ sơ này dùng kết nối của chính bạn, kết nối mà mọi hồ sơ không có proxy đều dùng chung."
+    },
+    "proxyHealth": {
+      "pass": "Đã qua lần kiểm tra gần nhất.",
+      "fail": "Không qua lần kiểm tra gần nhất, nên trang web sẽ hết thời gian chờ hoặc báo lỗi.",
+      "never": "Chưa từng kiểm tra, nên chưa rõ tình trạng và danh sách chặn.",
+      "stale": "Kiểm tra lần cuối {{days}} ngày trước."
+    },
+    "blocklist": {
+      "pass": "Không nằm trong danh sách chặn spam nào đã kiểm tra.",
+      "warn": "Chưa kiểm tra với danh sách chặn spam.",
+      "fail": "IP đầu ra nằm trong một danh sách chặn spam. Google và Cloudflare yêu cầu xác minh các IP này thường xuyên hơn nhiều."
+    },
+    "freeProxy": {
+      "fail": "Một proxy công cộng miễn phí. Hầu hết đã bị gắn cờ, nên bạn sẽ gặp CAPTCHA thường xuyên."
+    },
+    "ipType": {
+      "pass": "Mạng gia đình hoặc di động{{isp}}.",
+      "warn": "IP datacenter{{isp}}. Trang web yêu cầu xác minh IP của công ty hosting nhiều hơn hẳn IP gia đình."
+    },
+    "sharedProxy": {
+      "msg_one": "1 hồ sơ khác dùng proxy này, nên chúng dùng chung một IP và có thể bị liên kết với nhau.",
+      "msg_other": "{{count}} hồ sơ khác dùng proxy này, nên chúng dùng chung một IP và có thể bị liên kết với nhau."
+    },
+    "timezone": {
+      "pass": "Theo IP của proxy.",
+      "warn": "Đặt thủ công ({{zone}}), nên có thể không khớp với proxy.",
+      "fail": "Dùng múi giờ của máy tính này, không khớp với quốc gia của proxy."
+    },
+    "language": {
+      "pass": "Khớp với quốc gia của proxy.",
+      "warn": "Vùng ngôn ngữ {{region}} không khớp với quốc gia {{country}} của proxy.",
+      "unverified": "Đặt thủ công ({{lang}}); chưa biết quốc gia của proxy nên chưa so sánh được."
+    },
+    "geolocation": {
+      "pass": "Theo IP của proxy, hoặc bị chặn.",
+      "warn": "Đặt thủ công, nên có thể không khớp với proxy."
+    },
+    "webrtc": {
+      "pass": "Chế độ {{mode}} giữ kín IP thật của bạn.",
+      "realNoProxy": "Thật và không có proxy: trang web vốn đã thấy IP của máy tính này, nên WebRTC không lộ thêm gì.",
+      "firefoxOff": "WebRTC tắt trong hồ sơ Firefox, điều mà ít trình duyệt thật làm. Không có cài đặt nào thay đổi được điều này.",
+      "warn": "WebRTC bị tắt, điều mà ít trình duyệt thật làm.",
+      "fail": "Đặt là Thật, sẽ lộ IP thật của bạn phía sau proxy."
+    },
+    "thirdPartyCookies": {
+      "pass": "Được cho phép, như Chrome bình thường.",
+      "warn": "Bị chặn cho mọi hồ sơ trong Cài đặt. reCAPTCHA và hCaptcha cần chúng."
+    },
+    "history": {
+      "pass": "Có lịch sử duyệt web và cookie.",
+      "warn": "Gần như chưa có cookie hay lịch sử. Trang web tin tưởng hồ sơ đã được sử dụng hơn.",
+      "warmed_one": "Đã làm nóng {{count}} lần, nên có lịch sử duyệt web và cookie thật.",
+      "warmed_other": "Đã làm nóng {{count}} lần, nên có lịch sử duyệt web và cookie thật."
+    },
+    "device": {
+      "warn": "Card đồ họa (WebGL) có thể không phù hợp với thiết bị hoặc hệ thống này.",
+      "fail": "Card đồ họa (WebGL) không phù hợp với thiết bị hoặc hệ thống này."
+    },
+    "osMismatch": {
+      "warn": "Khai báo {{claimed}} nhưng chạy trên {{host}}; phông chữ và các chi tiết khác có thể cho thấy hệ thống thật."
+    }
+  },
+  "prelaunch": {
+    "title_one": "Kiểm tra hồ sơ này trước khi mở",
+    "title_other": "Kiểm tra {{count}} hồ sơ trước khi mở",
+    "subtitle": "Trang web có thể thấy những điểm không khớp này ngay khi hồ sơ mở.",
+    "issue": {
+      "uaOs": "User agent ghi {{ua}}, nhưng hồ sơ được đặt là {{os}}.",
+      "gpuOs": "Card đồ họa (WebGL) không phù hợp với {{os}}.",
+      "screen": {
+        "mobile": "Một điện thoại có màn hình {{width}}x{{height}}; màn hình điện thoại hẹp và dựng đứng.",
+        "desktop": "Một máy tính có màn hình {{width}}x{{height}}; màn hình máy tính tối thiểu 1024x600."
+      },
+      "language": "Vùng ngôn ngữ {{region}} không khớp với quốc gia {{country}} của proxy.",
+      "timezone": "Múi giờ lấy từ máy tính này, không phải từ proxy.",
+      "webrtc": "WebRTC đặt là Thật, sẽ lộ IP thật của bạn phía sau proxy.",
+      "proxyDead": "Proxy không qua lần kiểm tra gần nhất.",
+      "socks4Dns": "Dùng proxy SOCKS4 {{proxy}}. Chromium không gửi được truy vấn DNS qua SOCKS4, nên mọi trang web sẽ được tra cứu bên ngoài proxy (rò rỉ DNS), và hồ sơ sẽ không mở. Hãy mở bằng Firefox, hoặc gán proxy SOCKS5 hay HTTP."
+    },
+    "os": {
+      "windows": "Windows",
+      "mac": "macOS",
+      "linux": "Linux",
+      "android": "Android",
+      "ios": "iOS"
+    },
+    "editorOnly": "(đổi trong trình sửa hồ sơ)",
+    "blocking": "(hồ sơ này sẽ không mở cho đến khi bạn đổi trong trình sửa hồ sơ)",
+    "stopAsking": "Không kiểm tra trước khi khởi chạy nữa (bật lại trong Cài đặt)",
+    "cancel": "Hủy",
+    "launchAnyway": "Vẫn khởi chạy",
+    "fixAndLaunch": "Sửa và khởi chạy"
+  },
+  "bulk": {
+    "fix": "Sửa vấn đề CAPTCHA",
+    "fixTitle": "Áp dụng các cách sửa CAPTCHA an toàn cho hồ sơ đã chọn: múi giờ, ngôn ngữ, vị trí, WebRTC, và proxy dự phòng khi giúp giảm rủi ro",
+    "confirm_one": "Sửa vấn đề CAPTCHA trên hồ sơ này? Chỉ thay đổi cài đặt và proxy giúp giảm rủi ro.",
+    "confirm_other": "Sửa vấn đề CAPTCHA trên {{count}} hồ sơ? Chỉ thay đổi cài đặt và proxy giúp giảm rủi ro.",
+    "done": "Đã sửa {{changed}} / {{total}} hồ sơ; {{swapped}} hồ sơ chuyển sang proxy dự phòng.",
+    "noBetter": "{{count}} hồ sơ không tìm được proxy tốt hơn."
+  },
+  "filter": {
+    "any": "Mọi mức rủi ro CAPTCHA",
+    "low": "Rủi ro thấp",
+    "some": "Có rủi ro",
+    "high": "Rủi ro cao",
+    "veryHigh": "Rủi ro rất cao",
+    "fixable": "Có cách sửa một chạm"
+  },
+  "sort": {
+    "default": "Thứ tự mặc định",
+    "riskDesc": "Rủi ro cao trước",
+    "riskAsc": "An toàn trước"
+  }
+}

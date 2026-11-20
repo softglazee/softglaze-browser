@@ -7,7 +7,7 @@ import { rowDownload } from '@/lib/browserRows.mjs';
 function MiniStat({ icon: Icon, label, value, color }) {
   return (
     <div className="rounded-xl p-4 relative overflow-hidden group animate-fade-up" style={{ background: `color-mix(in srgb, ${color} 8%, var(--card))`, border: `1px solid color-mix(in srgb, ${color} 20%, transparent)` }}>
-      <div className="absolute -top-5 -right-5 w-16 h-16 rounded-full opacity-10 group-hover:opacity-20 transition-opacity" style={{ background: color, filter: 'blur(18px)' }} />
+      <div className="absolute -top-5 -inset-e-5 w-16 h-16 rounded-full opacity-10 group-hover:opacity-20 transition-opacity" style={{ background: color, filter: 'blur(18px)' }} />
       <div className="relative z-10 flex items-center gap-3">
         <div className="w-9 h-9 rounded-lg grid place-items-center shrink-0" style={{ background: `color-mix(in srgb, ${color} 16%, transparent)`, border: `1px solid color-mix(in srgb, ${color} 28%, transparent)` }}>
           <Icon className="w-[18px] h-[18px]" style={{ color }} />

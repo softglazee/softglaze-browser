@@ -1,14 +1,6 @@
 import React from 'react';
 import { useTranslation } from 'react-i18next';
 import Button from '@/components/ui/Button.jsx';
-import i18n from '@/i18n/index.js';
-import cmpUiEn from '@/i18n/locales/en/cmpUi.json';
-import cmpUiEs from '@/i18n/locales/es/cmpUi.json';
-
-// Registers the shared cmpUi namespace without touching the central i18n config; the guard keeps
-// it safe across hot reloads and other components that register it.
-if (!i18n.hasResourceBundle('en', 'cmpUi')) i18n.addResourceBundle('en', 'cmpUi', cmpUiEn);
-if (!i18n.hasResourceBundle('es', 'cmpUi')) i18n.addResourceBundle('es', 'cmpUi', cmpUiEs);
 
 // "Showing X-Y of Z", page-size selector (25 / 50 / 100 / All) and Prev/Next. pageSize and
 // onPageSizeChange use Infinity for All.

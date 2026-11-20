@@ -1,0 +1,97 @@
+{
+  "upgrade": {
+    "title": {
+      "profiles": "Anda sudah mencapai {{limit}} profil paket Free",
+      "running": "Free menjalankan {{limit}} profil sekaligus",
+      "openable": "Profil ini tidak termasuk {{limit}} profil Free Anda",
+      "seats": "Anggota tim adalah bagian dari Pro",
+      "ai": "{{limit}} aksi AI hari ini sudah habis",
+      "sync": "Sinkronisasi cloud adalah bagian dari Pro",
+      "phone": "Membuka profil dari ponsel adalah bagian dari Pro",
+      "generic": "Ini bagian dari Pro"
+    },
+    "body": {
+      "profiles": "{{used}} profil Anda aman. Tingkatkan ke Pro untuk profil tanpa batas, atau hapus satu untuk memberi ruang.",
+      "running": "Tutup profil yang terbuka untuk memulai yang lain, atau tingkatkan ke Pro untuk menjalankan 3 sekaligus.",
+      "openable": "Semua profil tetap disimpan. Di Free Anda memilih {{limit}} yang bisa dibuka; Pro membuka semuanya.",
+      "seats": "Paket Free untuk satu orang. Pro termasuk 3 anggota tim, Enterprise 25.",
+      "ai": "Free termasuk {{limit}} aksi AI per hari; direset besok. Pro punya aksi AI tanpa batas.",
+      "sync": "Pro menjaga profil Anda tetap sinkron antara komputer dan ponsel Anda.",
+      "phone": "Di Free, ponsel dan aplikasi web bisa melihat profil dan menyetujui permintaan AI. Pro juga bisa membuka dan menghentikannya.",
+      "generic": "Tingkatkan ke Pro untuk memakainya."
+    },
+    "price": "Pro {{price}} per bulan.",
+    "priceFallback": "Pro mulai dari US$5 per bulan.",
+    "upgradeButton": "Tingkatkan ke Pro",
+    "chooseProfiles": "Pilih profil",
+    "notNow": "Nanti saja"
+  },
+  "welcome": {
+    "title": "Uji coba Pro Anda sudah berakhir. Sekarang Anda memakai paket Free.",
+    "keepTitle": "Yang tetap Anda miliki",
+    "keep": "Semua profil Anda ({{limit}} bisa dibuka), proxy dan fingerprint Anda, aplikasi ponsel, dan aplikasi web.",
+    "proTitle": "Tambahan di Pro",
+    "pro": "Profil tanpa batas, 3 berjalan sekaligus, kursi tim, sinkronisasi cloud, dan aksi AI tanpa batas, seharga {{price}} per bulan.",
+    "upgrade": "Tingkatkan ke Pro",
+    "stay": "Lanjut dengan Free"
+  },
+  "counter": {
+    "freeBadge": "Paket Free",
+    "profiles": "{{used}} dari {{limit}} profil",
+    "running": "{{used}} dari {{limit}} berjalan",
+    "ai": "{{used}} dari {{limit}} aksi AI hari ini",
+    "upgrade": "Tingkatkan"
+  },
+  "choose": {
+    "title": "Pilih profil yang bisa dibuka",
+    "body": "Di paket Free, {{limit}} dari {{total}} profil Anda bisa dibuka. Semua profil tetap disimpan; tingkatkan ke Pro untuk membuka semuanya.",
+    "selected": "{{count}} dari {{limit}} dipilih",
+    "search": "Cari profil",
+    "save": "Simpan",
+    "cancel": "Batal",
+    "saved": "Tersimpan. Profil ini bisa dibuka di Free."
+  },
+  "billing": {
+    "currentFree": "Paket Free",
+    "currentFreeBody": "Gratis selamanya, tanpa kartu. Tingkatkan kapan saja untuk lebih banyak profil, tim, dan aksi AI tanpa batas.",
+    "currentBadge": "Paket saat ini",
+    "compareTitle": "Bandingkan paket",
+    "colFeature": "Fitur",
+    "colFree": "Free",
+    "colPro": "Pro",
+    "colEnterprise": "Enterprise",
+    "rows": {
+      "profiles": "Profil tersimpan",
+      "running": "Profil berjalan sekaligus",
+      "seats": "Kursi (anggota tim)",
+      "pcs": "PC per akun",
+      "fingerprints": "Proxy sendiri, semua pengaturan fingerprint",
+      "ai": "Otomatisasi AI dan MCP",
+      "phone": "Aplikasi ponsel dan web",
+      "sync": "Sinkronisasi cloud antar-PC",
+      "support": "Dukungan"
+    },
+    "values": {
+      "unlimited": "Tanpa batas",
+      "unlimitedAudit": "Tanpa batas + ekspor audit",
+      "yes": "Ya",
+      "no": "Tidak",
+      "aiPerDay": "{{count}} aksi per hari",
+      "viewApprove": "Lihat + setujui permintaan AI",
+      "openStop": "+ buka dan hentikan profil",
+      "teamApprovals": "+ persetujuan tim",
+      "helpCentre": "Pusat bantuan",
+      "email": "Email",
+      "priorityEmail": "Email prioritas"
+    }
+  },
+  "deals": {
+    "title": "Penawaran proxy pilihan",
+    "disclosure": "Penawaran mitra. SoftGlaze bisa mendapat komisi.",
+    "code": "Kode {{code}}",
+    "copyCode": "Salin kode",
+    "copied": "Disalin",
+    "open": "Ambil penawaran",
+    "hidden": "Pro dan Enterprise tidak pernah menampilkan penawaran mitra."
+  }
+}

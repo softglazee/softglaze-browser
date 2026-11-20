@@ -1,0 +1,111 @@
+{
+  "choose": {
+    "title": "Ücretsiz hesabınızı oluşturun",
+    "subtitle": "Zaten sahip olduğunuz bir hesabı kullanın. Yeni parola gerekmez.",
+    "google": "Google ile devam et",
+    "microsoft": "Microsoft ile devam et",
+    "facebook": "Facebook ile devam et",
+    "linkedin": "LinkedIn ile devam et",
+    "allowEmail": "E-posta erişimine izin verin ve Facebook'u tekrar deneyin",
+    "github": "GitHub ile devam et",
+    "email": "E-posta ile devam et",
+    "moreOptions": "Parolayla kur",
+    "moreOptionsHint": "Ad ve parola mı tercih edersiniz?",
+    "privacy": "Yalnızca adınızı ve doğrulanmış e-posta adresinizi alırız.",
+    "haveAccount": "Bu bilgisayarda zaten bir çalışma alanınız var mı?",
+    "logIn": "Parolasıyla giriş yap",
+    "signInTitle": "SoftGlaze'e giriş yapın",
+    "signInSubtitle": "Kaydolduğunuz hesabı kullanın. Planınız başka bir bilgisayardaysa buraya taşıyabilirsiniz.",
+    "entryLabel": "Yeni veya kayıtlı",
+    "entryNew": "Yeni hesap",
+    "entryReturning": "Hesabım var"
+  },
+  "unlock": {
+    "title": "Tekrar hoş geldiniz",
+    "titleNamed": "Tekrar hoş geldiniz, {{name}}",
+    "subtitle": "Bu çalışma alanının ait olduğu hesapla giriş yapın.",
+    "account": "Çalışma alanı hesabı: {{email}}",
+    "passwordInstead": "Parolanızla giriş yapın",
+    "haveInvite": "Davet kodum var",
+    "teamSignIn": "Ekip üyesi girişi"
+  },
+  "link": {
+    "title": "SoftGlaze hesabınıza giriş yapın",
+    "subtitle": "Burada ve diğer bilgisayarlarda tek tıkla girişi kullanın. Çalışma alanınız olduğu gibi kalır."
+  },
+  "email": {
+    "title": "E-posta ile devam et",
+    "subtitle": "Size 6 haneli bir kod e-postalayacağız. Parola gerekmez.",
+    "label": "E-posta adresi",
+    "placeholder": "siz@sirket.com",
+    "send": "Kod gönder",
+    "codeTitle": "E-postanızı kontrol edin",
+    "codeBody": "{{email}} adresine gönderdiğimiz 6 haneli kodu girin.",
+    "codeLabel": "6 haneli kod",
+    "verify": "Devam",
+    "resend": "Yeni kod gönder",
+    "resendIn": "{{count}} sn sonra yeni kod gönder",
+    "checkSpam": "Bir dakika sürebilir. Göremiyorsanız istenmeyen e-posta klasörünüzü kontrol edin.",
+    "devCode": "Bu sürümde e-posta sunucusu ayarlanmamış, kodunuz şu: {{code}}",
+    "change": "Başka bir e-posta kullan"
+  },
+  "waiting": {
+    "title": "Tarayıcınızda tamamlayın",
+    "body": "{{provider}} sayfasını tarayıcınızda açtık. Orada giriş yapın, sonra buraya dönün.",
+    "status": "{{provider}} bekleniyor...",
+    "reopen": "Sayfayı tekrar aç",
+    "anotherWay": "Geri dönmedi mi? Başka bir yol deneyin",
+    "cancel": "İptal"
+  },
+  "back": "Geri",
+  "useCase": {
+    "title": "SoftGlaze'i ne için kullanacaksınız?",
+    "subtitle": "İsteğe bağlı. SoftGlaze'i sizin için geliştirmemize yardımcı olur.",
+    "continue": "Devam",
+    "skip": "Atla"
+  },
+  "move": {
+    "title": "Aboneliğiniz",
+    "moved": "Tamam. Aboneliğiniz artık bu bilgisayarda çalışıyor."
+  },
+  "account": {
+    "title": "Giriş yöntemleri",
+    "subtitle": "SoftGlaze hesabınıza nasıl giriş yaptığınız. Yeni bir bilgisayarda giriş yapmak lisansınızı da oraya taşır.",
+    "signedInAs": "{{email}} olarak giriş yapıldı",
+    "google": "Google",
+    "microsoft": "Microsoft",
+    "facebook": "Facebook",
+    "linkedin": "LinkedIn",
+    "github": "GitHub",
+    "githubLogin": "GitHub (@{{login}})",
+    "email": "E-posta kodu",
+    "lastUsed": "Son kullanım {{date}}",
+    "linkedOn": "Bağlandı {{date}}",
+    "signOut": "Çıkış yap",
+    "signOutConfirm": "Bu bilgisayarda SoftGlaze hesabınızdan çıkış yapılsın mı? İstediğiniz zaman aynı hesapla tekrar giriş yapabilirsiniz.",
+    "signingOut": "Çıkış yapılıyor...",
+    "offline": "Çevrimdışı: bu bilgisayarın kaydettikleri gösteriliyor.",
+    "notSignedIn": "Burada ve diğer bilgisayarlarda tek tıkla girişi kullanmak için SoftGlaze hesabınıza giriş yapın.",
+    "signInWorkspace": "Bu çalışma alanı girişinizle açılır. İnternet olmadan da giriş yapmak istiyorsanız yukarıdan bir parola ekleyin.",
+    "linked": "Giriş yapıldı. Giriş yöntemleriniz aşağıda.",
+    "loading": "Giriş yöntemleri yükleniyor...",
+    "notAvailable": "Tek tıkla giriş, bu sürümün kullanmadığı SoftGlaze lisans sunucusunu gerektirir."
+  },
+  "errors": {
+    "SIGNIN_OFFLINE": "Giriş yapmak için internete bağlanın.",
+    "SIGNIN_EXPIRED": "Bu giriş süresi doldu veya zaten kullanıldı. Lütfen tekrar deneyin.",
+    "SIGNIN_ACCOUNT_MISMATCH": "Bu çalışma alanı farklı bir SoftGlaze hesabına ait. Oluşturduğunuz hesapla giriş yapın.",
+    "SIGNIN_EMAIL_MISMATCH": "Bu çalışma alanının e-posta adresini kullanın.",
+    "SIGNIN_EMAIL_NOT_VERIFIED": "Giriş yaptığınız hesabın doğrulanmış bir e-posta adresi yok. Orada doğrulayın (GitHub'da: Settings > Emails) veya e-posta ile devam edin.",
+    "SIGNIN_EMAIL_MISSING": "Facebook hesabınız e-posta paylaşmadı. Google veya e-posta ile giriş yapın ya da e-posta erişimine izin verin.",
+    "SIGNIN_DISPOSABLE_EMAIL": "Lütfen kalıcı bir e-posta adresi kullanın.",
+    "SIGNIN_UNAVAILABLE": "Bu giriş yöntemi henüz kullanılamıyor. E-posta ile devam edin veya Diğer seçenekler'i kullanın.",
+    "SIGNIN_FAILED": "Giriş tamamlanmadı. Bir dakika sonra tekrar deneyin.",
+    "SIGNIN_TIMEOUT": "Giriş çok uzun sürdü. Tekrar deneyin.",
+    "SIGNIN_NOT_ALLOWED": "Bu giriş yöntemi bu çalışma alanı için kullanılamıyor.",
+    "SIGNIN_KEY_LOST": "Bu çalışma alanı bu bilgisayarda girişinizle açılamadı. Parolanızla giriş yapın.",
+    "SIGNIN_SESSION_ENDED": "Oturumunuz sona erdi. Tekrar giriş yapın.",
+    "SIGNIN_BAD_INPUT": "Geçerli bir e-posta adresi girin.",
+    "MOVE_FAILED": "Lisans şu anda taşınamadı. Bir dakika sonra tekrar deneyin."
+  }
+}

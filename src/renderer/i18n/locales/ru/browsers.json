@@ -1,0 +1,70 @@
+{
+  "header": {
+    "eyebrow": "Движки",
+    "title": "Браузеры",
+    "subtitle": "Скачивайте настоящие сборки Chrome и Firefox по запросу: они устанавливаются автоматически и сразу готовы к запуску.",
+    "refresh": "Обновить"
+  },
+  "stats": {
+    "chromeInstalled": "Chrome установлено",
+    "chromeAvailable": "Chrome доступно",
+    "firefoxInstalled": "Firefox установлено",
+    "firefoxAvailable": "Firefox доступно"
+  },
+  "counts": {
+    "installedAvailable": "· установлено: {{installed}} · доступно: {{available}}"
+  },
+  "engine": {
+    "heading": "Движок отпечатков",
+    "installed": "Установлен",
+    "notInstalled": "Не установлен",
+    "description": "fingerprint-chromium задаёт canvas, WebGL, UA, платформу и часовой пояс на уровне движка, скрывает webdriver и блокирует утечку WebRTC. Включите его в Настройки → Браузер.",
+    "progressInstalling": "установка",
+    "progressVerifying": "проверка",
+    "installing": "Установка",
+    "verifying": "Проверка",
+    "downloading": "Загрузка",
+    "download": "Скачать (~180 МБ)"
+  },
+  "firefox": {
+    "heading": "Firefox",
+    "ready": "Готов",
+    "notDetected": "Не найден",
+    "detectedDesc": "Готов. Найден в {{path}}. Профили Firefox запускают настоящий Firefox с прокси, UA, языком, часовым поясом и выключенным WebRTC.",
+    "notDetectedDesc": "Системный Firefox не найден. Скачайте версию ниже: она установится в приложение, и профили Firefox будут запускать настоящий Firefox с прокси, UA, языком, часовым поясом и выключенным WebRTC.",
+    "fetching": "Загрузка каталога версий Firefox…",
+    "empty": "Нет доступных версий Firefox (нет подключения к сети?)."
+  },
+  "chromium": {
+    "heading": "Chromium (Chrome for Testing)",
+    "subtitle": "Настоящие сборки: UA, Client-Hints, TLS и воркеры действительно соответствуют версии.",
+    "fetching": "Загрузка каталога Chrome for Testing…",
+    "empty": "Нет доступных версий (нет подключения к сети?)."
+  },
+  "row": {
+    "versionLabel": "{{brand}} {{major}}",
+    "ready": "Готово",
+    "paused": "Пауза",
+    "interrupted": "Прервано",
+    "resume": "Продолжить",
+    "download": "Скачать",
+    "retry": "Повторить",
+    "downloading": "Загрузка",
+    "installing": "Установка…",
+    "installingShort": "Установка",
+    "queued": "В очереди…",
+    "pauseDownload": "Приостановить загрузку",
+    "pausedPercent": "Пауза · {{percent}}%",
+    "interruptedPercent": "Прервано · {{percent}}%"
+  },
+  "errors": {
+    "catalogUnreachable": "Не удалось подключиться к каталогу браузеров. Проверьте подключение к интернету.",
+    "downloadFailed": "Не удалось скачать.",
+    "pauseFailed": "Не удалось приостановить.",
+    "resumeFailed": "Не удалось продолжить."
+  },
+  "browsers": {
+    "showAll": "Показать все версии ({{n}})",
+    "showLess": "Свернуть"
+  }
+}

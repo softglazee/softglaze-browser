@@ -5,7 +5,7 @@ noted. Dates are ISO 8601 in UTC. **Money is always an integer in minor units (c
 
 Contents: [Conventions](#conventions) · [Auth](#authentication) · [Customers](#customers) ·
 [Trials and installs](#trials-and-installs) · [Licences](#licences) · [Payments](#payments) ·
-[Plans](#plans) · [Email](#email) · [Segments](#segments) · [Settings](#settings) ·
+[Plans](#plans) · [Free plan and partner deals](#free-plan) · [Email](#email) · [Segments](#segments) · [Settings](#settings) ·
 [Metrics](#metrics) (with the maths) · [Audit log](#audit-log) · [Diagnostics](#diagnostics) ·
 [App 1.0.23: sign-up required, lead fields, payment switches](#app-1023-sign-up-required-lead-fields-payment-switches) ·
 [Public endpoints (app and website)](#public-endpoints-app-and-website) · [Privacy and retention](#privacy-and-retention)
@@ -461,11 +461,12 @@ of Store purchases go through Microsoft. Errors: `409 not_active`.
 Plans are the single source of prices. The app and the website read [`GET /v1/plans/public`](#get-v1planspublic);
 their built-in prices are fallbacks only.
 
-**Plan fields**: `key` (1-40 of `a-z 0-9 - _`, fixed once created), `name`, `tier` (`pro` | `enterprise`),
+**Plan fields**: `key` (1-40 of `a-z 0-9 - _`, fixed once created), `name`, `tier` (`free` | `pro` | `enterprise`),
 `amount` (cents), `currency` (ISO 4217), `interval` (`month` | `year` | `once`), `months` (term per payment,
 1-120; 30 days a month, 365 days per 12 months), `recurring`, `active`, `highlight`, `sortOrder`, `description`, `features` (up to 30 strings),
-`limits` (`{ seats, maxParallel, auditExport }` or null for the tier defaults: Pro 3 / 3 / no,
-Enterprise 25 / 10 / yes).
+`limits` (any of `{ seats, maxParallel, auditExport, profiles, devices, aiActionsPerDay, sync, phoneControl, partnerDeals }`,
+or null for the tier defaults; see [Free plan](#free-plan) for the values and ranges).
+A plan of tier `free` must have `amount` 0 and cannot be `recurring`; the checkout never sells it.
 
 | Endpoint | Body / result |
 |---|---|
@@ -479,6 +480,108 @@ Enterprise 25 / 10 / yes).
 Every price or currency change (also through `POST /v1/tenant/plans` and the owner's scripts) is written
 to the price history; the whole change goes to the audit log. A change reaches `/v1/plans/public` at once.
 Changing a price never changes existing licences.
+
+---
+
+## Free plan
+
+Free forever plus a 7-day reverse trial: a new account gets 7 days of full features (the trial lease, as
+before), then moves to Free by itself. Nothing locks after a trial or after a paid term ends. Only a licence an
+admin revoked or a refund locks an install (plus the existing `403 machine_mismatch`).
+
+Migration `20261120120000_free_plan_partner_deals` seeds a plan `free` (tier `free`, amount 0, `sortOrder`
+-100) for every tenant; new tenants get it from the provisioning script. Edit its name, features or limits with
+`PATCH /v1/admin/plans/free`. The checkout (app and website) refuses a plan of tier `free` or amount 0 with
+`409 plan_not_purchasable`; a manual payment cannot grant a licence from the Free plan without a paid `grant.tier`.
+
+**Limits** (`plan.limits`, tier defaults in `src/plans/service.js`; `null` = unlimited):
+
+| key | range | free | pro | enterprise |
+|---|---|---|---|---|
+| `seats` | 1-10000 | 1 | 3 | 25 |
+| `maxParallel` | 1-100 | 1 | 3 | 10 |
+| `auditExport` | boolean | no | no | yes |
+| `profiles` | integer >= 0 or null | 25 | null | null |
+| `devices` | 1-1000 | 1 | 3 | 10 |
+| `aiActionsPerDay` | integer >= 0 or null | 25 | null | null |
+| `sync` | boolean | no | yes | yes |
+| `phoneControl` | boolean | no | yes | yes |
+| `partnerDeals` | boolean | yes | no | no |
+
+**Licence answers** (`POST /v1/license`):
+
+- active paid licence: the signed lease as before, plus `plan` (the licence's plan key, else its tier) and
+  `limits` (that plan's effective limits, else the tier's);
+- running trial: the trial lease as before, plus `plan: "trial"` and the limits of the trial tier (enterprise);
+- otherwise (trial ended, term ended, subscription cancelled at the end of its term, Store licence moved, never
+  a trial): `{ lease: null, status, trialEndsAt?, free: true, plan: "free", tier: "free", limits }` with the
+  limits of the tenant's Free plan (else the built-in ones). Free never gets a signed lease;
+- locked: when the install's most recent licence was revoked by an admin (`revokedAt`), refunded (a refund
+  leaves it `canceled`), or revoked or refunded by the Microsoft Store:
+  `{ lease: null, status, trialEndsAt?, free: false, lockReason: "revoked" | "refunded" }`.
+
+The app may send `usage: { aiActionsToday, profiles, running }` (integers 0 or more; anything else is
+ignored). On Free, `aiActionsToday` above `limits.aiActionsPerDay` adds `usageFlags: ["ai_over_limit"]` and
+records one customer event `free_limit_exceeded` (`{ installId, limit, allowed, reported, day }`) per install
+per UTC day. The phone and web account (`GET /v1/account/me`, `/v1/account/licence`) also report
+`plan` (`trial` | `pro` | `enterprise` | `free`); `tier` keeps its old values.
+
+**Win back email** (`free_plan_launch`, marketing, `en` + `es`, subject "Good news: SoftGlaze now has a free
+plan"). It is not an automation and no cron sends it. To send it once, by hand, to the people whose trial ended
+before the Free plan: preview first, then send, with [`POST /v1/admin/email/send`](#post-v1adminemailsend-custom-email):
+
+```json
+{ "mode": "preview", "category": "marketing", "templateKey": "free_plan_launch",
+  "audience": { "filters": { "status": "trial_expired" } } }
+```
+
+then the same body with `"mode": "test", "testTo": "you@softglaze.com"`, then `"mode": "send"`. Only customers
+with marketing consent who did not unsubscribe receive it; each customer gets their `lang` version.
+
+**Archiving**: `GET /v1/admin/metrics` counts Free users not seen for 12 months (`free.freeInactive12m`). This is
+a flag only: no job archives or deletes anything. Archiving them is a manual owner decision for later.
+
+### Partner deals (admin)
+
+The "Recommended proxy deals" card the app shows on Free only (`limits.partnerDeals`). No deal is seeded.
+`url` and `logoUrl` must be `https://`. Every change clears the public cache at once. Audit actions:
+`partner_deal.create`, `partner_deal.update`, `partner_deal.delete`. Same admin key and scope (`admin`) as
+every other admin endpoint.
+
+**Deal fields**: `title` (1-120, required), `vendor` (1-80, required), `url` (https, up to 500, required),
+`description` (up to 300 or null), `code` (discount code, up to 60 or null), `badge` (e.g. "20% off", up to 40
+or null), `logoUrl` (https or null), `active` (default true), `startsAt` / `endsAt` (ISO dates or null; the end
+must be after the start), `sortOrder` (integer, lower first). Read only: `id`, `clicks`, `lastClickAt`,
+`createdAt`, `updatedAt`.
+
+| Endpoint | Body / result |
+|---|---|
+| `GET /v1/admin/partner-deals` | `{ items: [deal], totalClicks }` by `sortOrder`, inactive and past deals included |
+| `GET /v1/admin/partner-deals/:id` | `{ deal }` |
+| `POST /v1/admin/partner-deals` | deal fields → `201 { deal }` |
+| `PATCH /v1/admin/partner-deals/:id` | any deal fields → `{ deal, changed }` |
+| `DELETE /v1/admin/partner-deals/:id` | `{ ok, deleted }` |
+
+Errors: `400 validation_failed` (`fields`), `404 not_found`.
+
+### GET /v1/partner-deals?tenantId=...
+
+No auth. CORS open, `Cache-Control: public, max-age=300`, cached 5 minutes in the server per tenant (admin
+changes clear it). Active deals inside their date window, by `sortOrder`, at most 6:
+
+```json
+{ "deals": [{ "id": "cm...", "title": "10 GB residential trial", "vendor": "Example Proxies", "description": null,
+  "url": "https://example.com/?ref=softglaze", "code": "SOFTGLAZE20", "badge": "20% off", "logoUrl": null }],
+  "disclosure": "Partner offer. SoftGlaze may earn a commission." }
+```
+
+Errors: `400 bad_request` (no tenantId), `404 unknown_tenant`.
+
+### POST /v1/partner-deals/:id/click
+
+No auth. Body `{ tenantId }` → `{ ok: true }`. Counts one click (`clicks + 1`, `lastClickAt`) of a live deal of
+that tenant; an unknown, inactive or out-of-date deal → `404 not_found`. Nothing about the person is stored.
+General public limit per IP plus 20 clicks per minute per IP (`DEAL_CLICK_RATE_PER_MIN`).
 
 ---
 
@@ -518,7 +621,8 @@ frames, forms, event handlers or `javascript:` links are refused.
 | `POST /v1/admin/email/templates/:key/preview` | `{ lang?, customerId?, subject?, html?, text? }` (unsaved edits can be previewed) → `{ subject, html, text, category }` |
 
 Built-in keys: `verify_code` (essential), `welcome`, `tips`, `trial_ending`, `trial_ended`,
-`locks_tomorrow` (lifecycle), `come_back` (marketing), each in `en` and `es`. The category of a built-in
+`locks_tomorrow` (lifecycle, retired: no automation sends it), `come_back` (marketing), `activation_code`
+(essential), `free_plan_launch` (marketing, sent by hand only, see [Free plan](#free-plan)), each in `en` and `es`. The category of a built-in
 template cannot change. A customer gets their `lang` version, else English.
 
 ### Automations
@@ -529,11 +633,12 @@ Queued by the cron (every 15 minutes), each at most once per trial:
 |---|---|---|---|
 | `welcome` | trial start + 0 h | lifecycle | |
 | `tips` | trial start + 48 h | lifecycle | |
-| `trial_ending` | trial end - 48 h (day 5) | lifecycle | paid |
-| `trial_ended` | trial end + 0 h (day 7) | lifecycle | paid |
-| `locks_tomorrow` | trial end + 48 h (the app locks after 3 grace days) | lifecycle | paid |
+| `trial_ending` | trial end - 48 h (day 5: "then you move to Free") | lifecycle | paid |
+| `trial_ended` | trial end + 0 h (day 7: "you are on the Free plan now") | lifecycle | paid |
 | `come_back` | trial start + 336 h (day 14) | marketing | paid, or no consent |
 
+Since the Free plan a trial ends on Free and nothing locks, so `locks_tomorrow` is no longer an automation (its
+`settings.automations.locks_tomorrow` key is still accepted, disabled, so older admin clients can save settings).
 An automation more than `email.catchUpHours` (48) late is not sent. A skipped one is logged with status `skipped` and the reason.
 
 - `GET /v1/admin/email/automations` → `{ items: [{ key, anchor: "trialStart"|"trialEnd", enabled, offsetHours, category, template, skipIfPaid }], catchUpHours }`
@@ -656,9 +761,18 @@ Params: `from`, `to` (`YYYY-MM`, default the last 12 months), `days` (1-366, def
   "churn": [{ "month": "2026-12", "payingStart": 5, "newPaying": 6, "reactivated": 0, "churned": 1, "cancelled": 1, "payingEnd": 9, "churnRate": 0.4 }],
   "revenue": [{ "month": "2026-12", "currency": "USD", "grossCents": 23300, "refundsCents": 2900, "netCents": 20400, "payments": 9 }],
   "monthly": [{ "month": "2026-12", "...": "see /monthly" }],
-  "topCountries": [{ "country": "PK", "customers": 40, "paying": 3 }]
+  "topCountries": [{ "country": "PK", "customers": 40, "paying": 3 }],
+  "free": { "freeUsers": 310, "activeFree7d": 95, "freeToPaid": 4, "freeToPaidWindowDays": 30, "dealClicks": 57, "freeInactive12m": 0 }
 }
 ```
+
+`free` (the Free plan, see [Free plan](#free-plan)): `freeUsers` = customers not deleted, with a verified email
+or an install, with no active licence (paid or complimentary) and no running trial; `activeFree7d` = those seen
+by the app in the last 7 days; `freeToPaid` = customers whose first trial had ended before they first paid
+(`paidSince`) and who first paid in the last `days` days (`freeToPaidWindowDays`); `dealClicks` = all partner
+deal clicks; `freeInactive12m` = Free users not seen for 12 months (by `lastSeenAt`, else when they were
+created): the archive candidates. It is a count only. Nothing is archived or deleted automatically: archiving
+these accounts is a manual owner decision for later.
 
 ### GET /v1/admin/metrics/monthly
 
@@ -935,6 +1049,17 @@ Also accepts `appVersion` and `channel` ([install channel](#install-channel)). A
 trial it returns the trial lease (same shape as `/v1/trial/start`). After a trial: `{ "lease": null, "status": "none", "trialEndsAt": "..." }`.
 Every lease payload now has `type` (`paid` or `trial`).
 
+Free plan (all additive; `lease: null` reads exactly as before in app 1.0.26):
+
+```json
+{ "lease": "...", "exp": 1765000000, "tier": "pro", "currentPeriodEnd": "...", "type": "paid", "plan": "pro", "limits": { "seats": 3, "...": "..." } }
+{ "lease": "...", "exp": 1765000000, "tier": "enterprise", "type": "trial", "trialEndsAt": "...", "currentPeriodEnd": "...", "plan": "trial", "limits": { "seats": 25, "...": "..." } }
+{ "lease": null, "status": "none", "trialEndsAt": "...", "free": true, "plan": "free", "tier": "free", "limits": { "profiles": 25, "...": "..." }, "usageFlags": ["ai_over_limit"] }
+{ "lease": null, "status": "canceled", "free": false, "lockReason": "revoked" }
+```
+
+See [Free plan](#free-plan) for when each answer is given and the optional `usage` body field.
+
 ### POST /v1/register (changed, compatible)
 
 Also accepts `appVersion` and `channel` ([install channel](#install-channel)). An install that registers with an owner `account` email is linked to a
@@ -943,7 +1068,12 @@ customer (`source: app`, unverified until verify/check).
 ### GET /v1/plans/public?tenantId=...
 
 No auth. CORS open (`Access-Control-Allow-Origin: *`), `Cache-Control: public, max-age=60`, cached 60 s in
-the server (an admin change clears it at once). Active plans, by `sortOrder` then price:
+the server (an admin change clears it at once). Active plans, by `sortOrder` then price.
+
+Without `include=free` (app 1.0.26 and older) the answer is unchanged: the Free plan is left out and `limits`
+has only `seats`, `maxParallel`, `auditExport`, so an old app never shows a US$0 plan as a card to buy. With
+`&include=free` (app 1.0.27+, the website) the Free plan comes first and `limits` has every key
+([Free plan](#free-plan)). The two variants are cached separately.
 
 ```json
 [{ "key": "pro", "name": "Pro", "tier": "pro", "amount": 500, "amountDecimal": "5.00", "currency": "USD",

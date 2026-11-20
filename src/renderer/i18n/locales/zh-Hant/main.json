@@ -1,0 +1,25 @@
+{
+  "contextMenu": {
+    "undo": "復原",
+    "redo": "重做",
+    "cut": "剪下",
+    "copy": "複製",
+    "paste": "貼上",
+    "selectAll": "全選",
+    "copyLink": "複製連結"
+  },
+  "dialogs": {
+    "exportArchiveTitle": "匯出加密的設定檔存檔",
+    "archiveFilter": "SoftGlaze 加密存檔",
+    "importProfilesTitle": "選擇要匯入的 SoftGlaze 設定檔試算表",
+    "spreadsheetFilter": "試算表檔案",
+    "exportProfilesTitle": "匯出 SoftGlaze 設定檔",
+    "excelFilter": "Excel 工作簿",
+    "importIdentitiesTitle": "選擇要匯入的身分試算表",
+    "backupTitle": "備份工作區",
+    "backupFilter": "SoftGlaze 工作區備份",
+    "restoreTitle": "還原工作區備份",
+    "exportActivityTitle": "匯出活動記錄",
+    "bindSpreadsheetTitle": "選擇要繫結到此並行執行的試算表"
+  }
+}

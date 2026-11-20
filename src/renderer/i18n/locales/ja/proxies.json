@@ -1,0 +1,504 @@
+{
+  "header": {
+    "eyebrow": "ネットワーク",
+    "title": "プロキシプール",
+    "description": "再利用できるHTTPプロキシやSOCKS5プロキシをローカルに保存したり、連携プロバイダーで購入したプールを直接同期したりできます。"
+  },
+  "rotation": {
+    "label": "ローテーション:",
+    "tooltip": "起動時にプロファイルのローテーションプールをどう適用するか",
+    "eachLaunch": "起動ごとに切り替え",
+    "sticky": "固定（同じプロキシ）",
+    "failover": "正常なものへフェイルオーバー",
+    "latencyOptimized": "最速（レイテンシ）",
+    "failoverMaxTooltip": "このミリ秒より遅いプロキシをスキップします（0 = 制限なし。該当がない場合はプール全体を使用）",
+    "maxMsPlaceholder": "最大ms",
+    "topNTooltip": "最速のN個のプロキシで順番に切り替え",
+    "topNPlaceholder": "上位N"
+  },
+  "actions": {
+    "testAll": "すべてテスト",
+    "testAllTooltip": "すべてのプロキシの状態を同時にテスト",
+    "testAllSummary": "{{ok}}/{{total}} 正常",
+    "checkAll": "すべてチェック",
+    "refresh": "更新",
+    "batchAdd": "一括追加",
+    "newProxy": "新規プロキシ",
+    "checkNew": "新規をチェック",
+    "checkNewTooltip": "新しく追加され、まだチェックしていないプロキシだけをチェックします。"
+  },
+  "free": {
+    "button": "無料プロキシ",
+    "buttonTooltip": "無料の公開プロキシを探してテストし、有料プロキシとは別の専用ページに保存します",
+    "title": "無料の公開プロキシ",
+    "description": "SoftGlazeは無料プロキシのプロジェクトが公開しているリストをダウンロードし、すべてのプロキシをテストして、動作するものだけをこのページに、有料プロキシとは分けて保存します。",
+    "warn": {
+      "strangers": "無料プロキシは素性のわからない人が運営しています。アカウントへのサインイン、パスワードの入力、支払いには使わないでください。プロキシの運営者は暗号化されていない通信を見ることができます。",
+      "quality": "速度が遅く、数時間で使えなくなることも多く、多くがブロックリストに載っているため、有料プロキシよりCAPTCHAが増えます。実際のアカウント作業にはプロキシプロバイダーを使ってください。",
+      "legal": "使用が認められている場所でのみ使ってください。クイック生成では、プロキシの取得元に「無料プロキシ」を選ばない限り、無料プロキシは選ばれません。"
+    },
+    "checks": "各プロキシはその場でテストされ、実際のIPをウェブサイトに渡してしまうHTTPプロキシは除外されます。",
+    "protocol": "プロトコル",
+    "country": "国（任意）",
+    "countryPlaceholder": "例: US",
+    "limit": "追加する数",
+    "start": "無料プロキシを探す",
+    "again": "さらに探す",
+    "cancel": "停止",
+    "close": "閉じる",
+    "done": "完了",
+    "progress": {
+      "fetching": "公開リストをダウンロード中…",
+      "checking": "{{total}}件中{{checked}}件をテスト済み · 良好 {{found}}件"
+    },
+    "result": {
+      "added": "要求した{{requested}}件のうち{{added}}件を追加しました。",
+      "checked": "候補{{total}}件中{{checked}}件をテスト済み",
+      "rejected": "動作しない {{dead}}件、IPが漏えい {{leak}}件、国が違う {{country}}件",
+      "planLimit": "プランのプロキシ上限に達したため、一部の良好なプロキシは追加されませんでした。"
+    },
+    "stopped": {
+      "limit": "停止: 指定した数に達しました。",
+      "time": "3分経過したため停止しました。さらに探すにはもう一度実行してください。",
+      "cancelled": "手動で停止しました。",
+      "exhausted": "リスト内のすべての候補をテストしました。"
+    },
+    "errors": {
+      "country": "USやDEのような2文字の国コードを使ってください。",
+      "failed": "検索を完了できませんでした。"
+    }
+  },
+  "freePage": {
+    "eyebrow": "プロキシ",
+    "title": "無料プロキシ",
+    "description": "無料の公開プロキシは、有料プロキシとは別にここで管理されます。プロキシプールやその件数、グループには表示されず、プロファイルで使われるのはあなたが選んだときだけです。",
+    "openPool": "プロキシプール",
+    "refresh": "更新",
+    "warnTitle": "無料プロキシを使う前にお読みください",
+    "searchTitle": "無料プロキシを探す",
+    "busy": "無料プロキシの検索はすでに実行中です。",
+    "stopIt": "停止する",
+    "listTitle": "保存済みの無料プロキシ",
+    "listCount": "{{total}}件中{{shown}}件",
+    "filters": {
+      "protocol": "プロトコル",
+      "protocolAll": "すべてのプロトコル",
+      "country": "国",
+      "countryAll": "すべての国",
+      "countryUnknown": "国が不明",
+      "status": "ステータス",
+      "statusAll": "すべてのステータス",
+      "reset": "フィルターをリセット"
+    },
+    "status": {
+      "working": "動作中",
+      "dead": "動作しない",
+      "unchecked": "未チェック",
+      "checking": "チェック中…"
+    },
+    "table": {
+      "address": "アドレス",
+      "protocol": "プロトコル",
+      "country": "国",
+      "speed": "速度",
+      "lastCheck": "最終チェック",
+      "status": "ステータス",
+      "usedBy": "使用中",
+      "actions": "操作",
+      "selectAll": "表示中をすべて選択",
+      "selectRow": "{{address}} を選択",
+      "loading": "無料プロキシを読み込み中…",
+      "never": "なし",
+      "notUsed": "プロファイルなし",
+      "usedByCount_other": "{{count}}個のプロファイル"
+    },
+    "actions": {
+      "check": "今すぐチェック",
+      "checkAria": "{{address}} を今すぐチェック",
+      "delete": "削除",
+      "deleteAria": "{{address}} を削除",
+      "checkAll": "表示中をすべてチェック",
+      "deleteDead": "動作しないものを削除",
+      "checkSelected": "選択項目をチェック",
+      "deleteSelected": "選択項目を削除",
+      "clear": "クリア",
+      "selected": "{{count}}件を選択中"
+    },
+    "confirm": {
+      "delete": "無料プロキシ {{address}} を削除しますか？",
+      "deleteUsed_other": "無料プロキシ {{address}} を削除しますか？使用中の{{count}}個のプロファイルはプロキシがなくなります。",
+      "deleteSelected_other": "選択した{{count}}件の無料プロキシを削除しますか？",
+      "deleteDead_other": "前回のチェックで失敗した{{count}}件の無料プロキシを削除しますか？"
+    },
+    "checkRun": {
+      "running": "{{total}}件中{{done}}件をチェック中 · 動作中 {{ok}}件、動作しない {{fail}}件",
+      "done": "{{total}}件をチェック済み · 動作中 {{ok}}件、動作しない {{fail}}件",
+      "stop": "停止"
+    },
+    "empty": {
+      "title": "無料プロキシはまだありません",
+      "description": "上の検索で無料の公開プロキシを探し、テストして保存できます。動作し、かつIPを隠せるものだけが保存されます。"
+    },
+    "noMatch": {
+      "title": "このフィルターに一致する無料プロキシはありません",
+      "description": "ほかのプロキシを表示するには、フィルターを変更またはリセットしてください。"
+    },
+    "errors": {
+      "load": "無料プロキシを読み込めませんでした。",
+      "delete": "無料プロキシを削除できませんでした。",
+      "check": "無料プロキシをチェックできませんでした。"
+    }
+  },
+  "tabs": {
+    "custom": "カスタムプロキシ",
+    "providers": "プロキシプロバイダー",
+    "integrated": "連携済み",
+    "history": "チェック履歴",
+    "groups": "グループと国"
+  },
+  "stats": {
+    "totalProxies": "プロキシの合計",
+    "totalTip": "プール全体を表示",
+    "splitSub": "検証済み {{verified}} · 未チェック {{unchecked}}",
+    "proxyTypes": "プロキシの種類",
+    "verified": "検証済み",
+    "verifiedTip": "表を検証済みのプロキシで絞り込み",
+    "pctOfPool": "プールの{{pct}}%",
+    "failed": "失敗",
+    "failedTip": "表を失敗したプロキシで絞り込み",
+    "uncheckedSub": "未チェック {{count}}件",
+    "nonVerified": "未検証",
+    "protocols": "HTTP / SOCKS",
+    "protocolsTip": "プール全体のプロトコル構成",
+    "protocolsSub": "{{http}} HTTP · {{socks}} SOCKS",
+    "countries": "国",
+    "countriesTip": "国別の内訳を開く",
+    "topCountry": "最多: {{country}} · {{count}}",
+    "countriesEmpty": "チェックを実行すると所在地を検出します",
+    "lastCheck": "最終チェック",
+    "lastCheckTip": "自動の状態チェックを開く",
+    "autoEvery": "{{n}}分ごとに自動チェック",
+    "autoOff": "自動チェック: オフ",
+    "justNow": "たった今",
+    "minAgo": "{{n}}分前",
+    "hrAgo": "{{n}}時間前",
+    "dayAgo": "{{n}}日前",
+    "filtering": "絞り込み中",
+    "noProxies": "プロキシなし",
+    "total": "合計"
+  },
+  "search": {
+    "placeholder": "プロキシ名、ホスト、ユーザー名で検索..."
+  },
+  "deleteFiltered": {
+    "tooltip": "現在のフィルターに一致するすべてのプロキシを削除",
+    "button": "削除: {{scope}}（{{count}}）",
+    "confirm_other": "{{scope}}のプロキシ{{count}}件をすべて削除しますか？この操作は元に戻せません。これらを使っているプロファイルはプロキシがなくなり、別のプロキシを割り当てるまで起動できません。",
+    "scope": {
+      "all": "すべて",
+      "filtered": "絞り込み結果",
+      "matching": "検索一致",
+      "verified": "検証済み",
+      "failed": "接続失敗"
+    }
+  },
+  "filters": {
+    "all": "すべて",
+    "ungrouped": "グループなし",
+    "byProvider": "プロバイダー別"
+  },
+  "groups": {
+    "chipTooltip": "クリックで絞り込み · プロキシをここにドラッグして追加",
+    "renameRecolor": "名前/色を変更",
+    "deleteGroup": "グループを削除",
+    "newGroup": "新規グループ",
+    "deleteConfirm": "グループ「{{name}}」を削除しますか？プロキシはプールに残り、グループなしになるだけです。"
+  },
+  "autoGroup": {
+    "granularityTooltip": "自動グループ化の単位",
+    "country": "国",
+    "state": "州",
+    "city": "市区町村",
+    "buttonTooltip": "各プロキシの検証済みの国/州/市区町村からグループを作成します。先に「すべてテスト」を実行して、プロキシの所在地を検出してください。",
+    "button": "自動グループ化",
+    "result_other": "+{{count}}グループ · {{assigned}}件を割り当て"
+  },
+  "sort": {
+    "tooltip": "レイテンシで並べ替え",
+    "default": "並び順: 既定",
+    "fastest": "速い順",
+    "slowest": "遅い順"
+  },
+  "geo": {
+    "toggleTooltip": "地域別の内訳を切り替え",
+    "button": "地域",
+    "byCountry": "国別のプロキシ",
+    "summary": "{{countries}}か国 · {{proxies}}件のプロキシ",
+    "unknown": "不明"
+  },
+  "scheduler": {
+    "tooltip": "スケジュールに沿ってすべてのプロキシを自動で再テスト",
+    "autoCheckEvery": "自動チェックの間隔",
+    "min": "分"
+  },
+  "selection": {
+    "count": "{{count}}件を選択中",
+    "checkSelected": "選択項目をチェック",
+    "moveToGroup": "グループへ移動",
+    "noGroupsYet": "グループはまだありません。先に作成してください。",
+    "removeFromGroup": "グループから外す",
+    "deleteSelected": "選択項目を削除",
+    "clear": "クリア",
+    "clearTooltip": "選択を解除",
+    "copyForExtension": "SoftGlaze Proxy用にコピー",
+    "copyForExtensionTooltip": "選択したプロキシを、SoftGlaze Proxyブラウザ拡張機能の一括インポート用にコピーします"
+  },
+  "copyForExtension": {
+    "title": "SoftGlaze Proxy用にコピー",
+    "description": "選択したプロキシを、SoftGlaze Proxyブラウザ拡張機能の一括インポート欄で読み込める行形式でコピーします。各行には種類（http、https、socks5、socks4）が含まれるため、SOCKS5プロキシがHTTPとして読み込まれることはありません。",
+    "loading": "選択したプロキシを集計中…",
+    "count": "コピーするプロキシ: {{count}}件",
+    "skipped": "除外: {{count}}件（拡張機能が読み込めない種類、アドレス、ポート）。",
+    "includeCredentials": "ユーザー名とパスワードを含める",
+    "credsNoRole": "あなたのロールではプロキシのユーザー名とパスワードを表示できません。オーナーまたは管理者に依頼してください。",
+    "credsNone": "選択したプロキシには、ユーザー名やパスワードがあるものはありません。",
+    "socks5Note": "ログイン情報付きのSOCKS5プロキシ: {{count}}件。ChromeとEdgeはSOCKS5プロキシにサインインできないため、これらのブラウザでは拡張機能がその行を受け付けません。Firefoxでは使用できます。",
+    "socks4Note": "ログイン情報付きのSOCKS4プロキシ: {{count}}件。SOCKS4にはパスワードがなく、拡張機能も受け付けないため、ログイン情報なしでコピーされます。",
+    "clipboardWarning": "このコンピューター上のほかのプログラムがクリップボードを読み取れます。このリストがまだ残っている場合、アプリは2分後にクリップボードを消去します。",
+    "copy": "コピー",
+    "copying": "コピー中…",
+    "cancel": "キャンセル",
+    "close": "閉じる",
+    "copied": "{{count}}件のプロキシをユーザー名とパスワードなしでコピーしました。拡張機能で「Proxies」を開き、「Bulk import」を選んで貼り付けてください。",
+    "copiedWithCredentials": "{{count}}件のプロキシをユーザー名とパスワード付きでコピーしました。拡張機能で「Proxies」を開き、「Bulk import」を選んで貼り付けてください。",
+    "getExtension": "SoftGlaze Proxy拡張機能を入手",
+    "loadError": "選択したプロキシを読み取れませんでした。",
+    "copyError": "プロキシをコピーできませんでした。"
+  },
+  "table": {
+    "loading": "プロキシを読み込み中...",
+    "emptyTitle": "プロキシが見つかりません",
+    "emptyDescription": "プロキシを手動で追加するか、プロキシ文字列をまとめて貼り付けてください。",
+    "selectAll": "すべてのプロキシを選択",
+    "selectRow": "{{name}} を選択",
+    "colName": "名前",
+    "colType": "種類",
+    "colEndpoint": "エンドポイント",
+    "colUsername": "ユーザー名",
+    "colGroup": "グループ",
+    "colProfiles": "プロファイル",
+    "colCreated": "作成日",
+    "colSpeed": "速度",
+    "colBlocklist": "ブロックリスト",
+    "colStatus": "ステータス",
+    "colActions": "操作",
+    "profileCount_other": "{{count}}個のプロファイル",
+    "defaultProxyName": "プロキシ"
+  },
+  "rowActions": {
+    "testProxy": "プロキシをテスト",
+    "healthHistory": "状態の履歴",
+    "editProxy": "プロキシを編集",
+    "deleteProxy": "プロキシを削除",
+    "copyEndpoint": "host:portをコピー",
+    "check": "チェック",
+    "rotateIp": "IPを切り替え",
+    "rotateIpTitle": "このプロキシで新しい出口IPを取得"
+  },
+  "status": {
+    "checking": "チェック中…",
+    "failed": "失敗",
+    "ok": "OK"
+  },
+  "checker": {
+    "running": "プロキシをチェック中…",
+    "done": "チェック完了",
+    "healthy": "正常 {{n}}件",
+    "failed": "失敗 {{n}}件",
+    "eta": "残り時間",
+    "stop": "停止",
+    "dismiss": "閉じる",
+    "idle": "開始待ち…",
+    "health": "状態",
+    "blacklisted": "掲載先のブロックリスト",
+    "blacklistShort": "ブロックリスト掲載",
+    "notBlacklisted": "チェックしたブロックリストには掲載されていません",
+    "clean": "問題なし",
+    "residential": "レジデンシャル範囲",
+    "residentialTip": "レジデンシャルのIP範囲（Spamhaus PBL）であり、スパムとしての掲載ではありません。レジデンシャルやモバイルのプロキシでは通常のことで、状態スコアは下がりません。",
+    "hideLog": "ログを隠す",
+    "showLog": "ログを表示",
+    "speed": {
+      "fast": "高速",
+      "good": "良好",
+      "ok": "普通",
+      "slow": "低速"
+    }
+  },
+  "blacklistFilter": {
+    "all": "すべて",
+    "clean": "問題なし",
+    "blacklisted": "掲載あり",
+    "cleanTip": "チェックしたどのブロックリストにも載っていないプロキシのみ表示",
+    "blacklistedTip": "DNSブロックリストで検出されたプロキシのみ表示"
+  },
+  "speedFilter": {
+    "all": "すべて",
+    "fast": "高速",
+    "slow": "低速",
+    "fastTip": "計測値が2秒以内のプロキシのみ表示",
+    "slowTip": "計測値が2秒より遅いプロキシのみ表示"
+  },
+  "bulkDelete": {
+    "confirm_other": "選択した{{count}}件のプロキシを削除しますか？これらを使っているプロファイルはプロキシがなくなり、別のプロキシを割り当てるまで起動できません。"
+  },
+  "delete": {
+    "confirm": "プロキシ「{{name}}」を削除しますか？",
+    "profilesNeedProxy": "削除したプロキシを使っていたプロファイル: {{count}}個。これらはプロキシがなくなったため、割り当てるまで起動できません（プロファイル編集画面、または「プロファイル」ページの「プロキシ」で割り当てられます）。",
+    "dismissNotice": "閉じる"
+  },
+  "history": {
+    "dialogTitle": "プロキシの状態の履歴",
+    "title": "状態の履歴",
+    "empty": "履歴はまだありません。状態チェックを実行する（または自動チェックを有効にする）と、レイテンシとステータスの推移がここに表示されます。",
+    "latencyOverTime": "レイテンシの推移（ms）",
+    "ok": "正常",
+    "fail": "失敗",
+    "checks_other": "{{count}}回のチェック",
+    "close": "閉じる"
+  },
+  "historyCards": {
+    "title": "最近のチェック履歴",
+    "openDetail": "すべての履歴を開く",
+    "regressed": "検証済みだったが後に失敗",
+    "regressedCount_other": "検証後に失敗 {{count}}件",
+    "empty": "チェックはまだありません。「プロキシ」ページで「すべてチェック」または「すべてテスト」を実行すると、結果がここに表示されます。"
+  },
+  "form": {
+    "dialogTitleEdit": "プロキシを編集",
+    "dialogTitleCreate": "プロキシを作成",
+    "titleEdit": "プロキシを編集",
+    "titleCreate": "プロキシを作成",
+    "descriptionEdit": "既存のプロキシを更新します。現在の値を保持するには、マスクされたパスワードを変更しないでください。",
+    "descriptionCreate": "構造化されたプロキシを1件、ローカルのSQLiteプールに追加します。",
+    "tipPrefix": "ヒント: プロキシの",
+    "tipSuffix": "を「ホスト」欄に貼り付けると、すべての欄が自動入力されます。",
+    "proxyName": "プロキシ名",
+    "proxyNamePlaceholder": "Residential US 01",
+    "type": "種類",
+    "host": "ホスト",
+    "port": "ポート",
+    "username": "ユーザー名",
+    "password": "パスワード",
+    "optional": "任意",
+    "cancel": "キャンセル",
+    "saving": "保存中...",
+    "saveChanges": "変更を保存",
+    "createProxy": "プロキシを作成",
+    "socks4Note": "SOCKS4はFirefoxプロファイルで使えます。ChromiumプロファイルはSOCKS4では開きません。ChromiumはDNSの名前解決をSOCKS4経由で送れないため、すべてのサイトがプロキシの外で名前解決されてしまいます。ChromiumプロファイルにはSOCKS5またはHTTPを使ってください。"
+  },
+  "batch": {
+    "dialogTitle": "プロキシを一括追加",
+    "title": "プロキシを一括追加",
+    "descriptionPrefix": "1行に1つのプロキシを貼り付けてください。対応形式:",
+    "defaultType": "既定の種類",
+    "providerLabel": "プロバイダー（任意）",
+    "providerNone": "なし",
+    "providerHint": "これらのプロキシに入手元のプロバイダーをタグ付けします。ここではそのプロバイダーの下にまとめて表示され、「プロキシプロバイダー」ページの件数に含まれます。",
+    "proxyLines": "プロキシの行",
+    "resultTitle": "一括追加の結果",
+    "total": "合計",
+    "created": "作成",
+    "skipped": "スキップ",
+    "errors": "エラー",
+    "lineError": "{{line}}行目: {{message}}",
+    "close": "閉じる",
+    "importing": "インポート中...",
+    "addProxies": "プロキシを追加"
+  },
+  "groupModal": {
+    "dialogTitleEdit": "グループを編集",
+    "dialogTitleNew": "新規グループ",
+    "titleEdit": "プロキシグループを編集",
+    "titleNew": "新規プロキシグループ",
+    "description": "プロキシを国や用途（例: アメリカ、イギリス、日本）でグループ化します。プロファイルを一括作成するときにグループを指定できます。",
+    "groupName": "グループ名",
+    "groupNamePlaceholder": "米国のプロキシ",
+    "color": "色",
+    "colorLabel": "色 {{color}}",
+    "cancel": "キャンセル",
+    "saveChanges": "変更を保存",
+    "createGroup": "グループを作成"
+  },
+  "errors": {
+    "deleteProxies": "プロキシを削除できませんでした。",
+    "loadProxies": "プロキシを読み込めませんでした。",
+    "copyClipboard": "クリップボードにコピーできませんでした。",
+    "deleteSelected": "選択したプロキシを削除できませんでした。",
+    "saveProxy": "プロキシを保存できませんでした。",
+    "batchAdd": "プロキシを一括追加できませんでした。",
+    "bulkTest": "一括テストに失敗しました。",
+    "savePolicy": "プロキシのポリシーを保存できませんでした。",
+    "saveSchedule": "スケジュールを保存できませんでした。",
+    "enterGroupName": "グループ名を入力してください。",
+    "saveGroup": "グループを保存できませんでした。",
+    "deleteGroup": "グループを削除できませんでした。",
+    "moveProxies": "プロキシを移動できませんでした。",
+    "autoGroup": "自動グループ化に失敗しました。先に「すべてテスト」を実行して、プロキシの国を検出してください。",
+    "deleteProxy": "プロキシを削除できませんでした。先に関連するプロファイルを削除するか、プロキシの割り当てを変更してください。",
+    "rotate": "IPを切り替えられませんでした。",
+    "rotateStatus": "ローテーションのリクエストがHTTP {{status}}を返しました。"
+  },
+  "groupsPage": {
+    "groupsTitle": "グループと国",
+    "openGroup": "これらのプロキシを表示",
+    "noGeo": "「プロキシ」ページで「すべてチェック」を実行すると、各プロキシの国を検出します。",
+    "noProviders": "プロバイダーのプロキシはまだありません。「プロキシプロバイダー」から取得してください。",
+    "scheduleTitle": "自動の状態チェック"
+  },
+  "filterBar": {
+    "statusTip": "チェックのステータス",
+    "statusAll": "すべてのステータス",
+    "blocklistAll": "すべてのブロックリスト",
+    "speedAll": "すべての速度",
+    "groupTip": "グループまたは国",
+    "groupAll": "すべてのグループ",
+    "providerAll": "すべてのプロバイダー",
+    "reset": "フィルターをリセット"
+  },
+  "providerAccount": {
+    "title": "アカウント",
+    "check": "アカウントを確認",
+    "checkedAt": "{{time}}に確認",
+    "notChecked": "まだ確認していません。「アカウントを確認」を押すと、このプロバイダーに保存したキーでプラン、有効期限、通信量、残高を読み取ります。",
+    "notSupported": "このプロバイダーのAPIはアカウントの詳細を提供していません。",
+    "openDashboard": "ダッシュボードを開く",
+    "status": "ステータス",
+    "statusActive": "有効",
+    "statusExpired": "期限切れ",
+    "statusSuspended": "停止中",
+    "statusUnknown": "不明",
+    "plan": "プラン",
+    "expires": "有効期限",
+    "daysLeft_other": "残り{{count}}日",
+    "endsToday": "本日終了",
+    "endedAgo_other": "{{count}}日前に終了",
+    "traffic": "通信量",
+    "trafficLeft": "残り{{left}}",
+    "trafficUsedOf": "{{total}}中{{used}}を使用",
+    "trafficUsed": "{{used}}を使用",
+    "trafficTotal": "プラン容量 {{total}}",
+    "balance": "残高",
+    "noDetails": "プロバイダーから応答はありましたが、プラン、有効期限、通信量、残高の情報はありませんでした。",
+    "error": "アカウントを確認できませんでした: {{message}}",
+    "note": {
+      "firstToExpire": "表示している有効期限は、プロキシまたはプランのうち最も早く終了するものです。",
+      "summedPlans": "数値は有効なすべてのプランの合計です。",
+      "noActivePlans": "このアカウントに有効なプランはありません。",
+      "noActiveProxies": "このアカウントに有効なプロキシはありません。",
+      "planSizeOnly": "APIはプランの容量のみを返し、残りの通信量は返しません。",
+      "firstPageOnly": "最初の1000件のプロキシから算出しています。",
+      "usedLast7Days": "直近7日間に使用した通信量です。APIは残量を返しません。"
+    }
+  }
+}

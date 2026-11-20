@@ -1,0 +1,191 @@
+{
+  "badgeTitle": "验证码风险 {{score}}/100。点击查看原因和修复方法。",
+  "title": "验证码评分",
+  "subtitle": "网站向此配置文件弹出验证的可能性，以及如何降低它",
+  "outOf100": "/ 100",
+  "level": {
+    "low": "低风险",
+    "some": "中风险",
+    "high": "高风险",
+    "veryHigh": "极高风险"
+  },
+  "levelShort": {
+    "low": "低",
+    "some": "中",
+    "high": "高",
+    "veryHigh": "极高"
+  },
+  "column": "验证码风险",
+  "issues_zero": "未发现问题",
+  "issues_one": "1 个问题",
+  "issues_other": "{{count}} 个问题",
+  "fixable_one": "“全部修复”可处理 1 个",
+  "fixable_other": "“全部修复”可处理 {{count}} 个",
+  "leakTest": "泄露测试",
+  "leakTestTitle": "打开详细的泄露检测，包括对运行中配置文件的实时测试",
+  "loadFailed": "无法为此配置文件评分。",
+  "fixAll": "全部修复",
+  "fixAllTitle": "应用所有仅更改此配置文件设置或代理的修复",
+  "rescore": "重新评分",
+  "done": "完成",
+  "runningNote": "此配置文件已打开。更改将在下次启动时生效。",
+  "adviceOnly": "请在配置文件编辑器中更改此项；在这里修复会改变网站已知的设备信息。",
+  "status": {
+    "pass": "正常",
+    "warn": "有风险",
+    "fail": "高风险"
+  },
+  "fix": {
+    "assign-proxy": "分配一个备用代理",
+    "swap-proxy": "切换到备用代理",
+    "check-proxy": "立即检测代理",
+    "tz-auto": "使用代理的时区",
+    "lang-auto": "使用代理的语言",
+    "geo-auto": "使用代理的位置",
+    "webrtc-safe": "将 WebRTC 设为“转发”",
+    "allow-3p-cookies": "允许第三方 Cookie",
+    "warm-up": "进行预热"
+  },
+  "result": {
+    "swapped": "现在使用 {{name}}。",
+    "checked": "代理已检测。",
+    "checkFailed": "代理未通过检测：{{error}}",
+    "warming": "预热已开始：配置文件会打开并浏览几个热门网站。可在“自动化”页面跟踪进度。",
+    "cookies": "现已对所有配置文件允许第三方 Cookie。",
+    "applied": "完成。"
+  },
+  "label": {
+    "proxy": "代理",
+    "proxyHealth": "代理健康状况",
+    "blocklist": "垃圾信息黑名单",
+    "freeProxy": "免费代理",
+    "ipType": "IP 类型",
+    "sharedProxy": "共享代理",
+    "timezone": "时区",
+    "language": "语言",
+    "geolocation": "位置",
+    "webrtc": "WebRTC",
+    "thirdPartyCookies": "第三方 Cookie",
+    "history": "浏览历史",
+    "device": "设备",
+    "osMismatch": "操作系统"
+  },
+  "factor": {
+    "proxy": {
+      "pass": "使用 {{name}}。",
+      "warn": "无代理：此配置文件使用你自己的网络连接，所有未设置代理的配置文件都共用这个连接。"
+    },
+    "proxyHealth": {
+      "pass": "已通过上次检测。",
+      "fail": "未通过上次检测，页面可能会超时或显示错误。",
+      "never": "从未检测，健康状况和黑名单状态未知。",
+      "stale": "上次检测于 {{days}} 天前。"
+    },
+    "blocklist": {
+      "pass": "不在任何已检查的垃圾信息黑名单上。",
+      "warn": "尚未对照垃圾信息黑名单进行检查。",
+      "fail": "出口 IP 在垃圾信息黑名单上。Google 和 Cloudflare 对已列入名单的 IP 弹出验证的频率要高得多。"
+    },
+    "freeProxy": {
+      "fail": "这是免费公共代理。大多数已被标记，预计会频繁出现验证码。"
+    },
+    "ipType": {
+      "pass": "家庭或移动网络{{isp}}。",
+      "warn": "数据中心 IP{{isp}}。网站对托管公司 IP 弹出验证的频率远高于家庭 IP。"
+    },
+    "sharedProxy": {
+      "msg_one": "另有 1 个配置文件使用此代理，它们共用一个 IP，可能被关联。",
+      "msg_other": "另有 {{count}} 个配置文件使用此代理，它们共用一个 IP，可能被关联。"
+    },
+    "timezone": {
+      "pass": "跟随代理的 IP。",
+      "warn": "手动设置（{{zone}}），可能与代理不一致。",
+      "fail": "使用这台电脑的时区，与代理所在国家/地区不一致。"
+    },
+    "language": {
+      "pass": "与代理所在国家/地区一致。",
+      "warn": "语言区域 {{region}} 与代理所在国家/地区 {{country}} 不一致。",
+      "unverified": "手动设置（{{lang}}）；代理所在国家/地区尚未知晓，因此无法比较。"
+    },
+    "geolocation": {
+      "pass": "跟随代理的 IP，或已禁止。",
+      "warn": "手动设置，可能与代理不一致。"
+    },
+    "webrtc": {
+      "pass": "{{mode}} 模式会隐藏你的真实 IP。",
+      "realNoProxy": "无代理时使用“真实”：网站本来就能看到这台电脑的 IP，因此 WebRTC 不会暴露新的信息。",
+      "firefoxOff": "Firefox 配置文件中的 WebRTC 已关闭，而很少有真实浏览器会这样做。任何设置都无法改变这一点。",
+      "warn": "WebRTC 已停用，而很少有真实浏览器会这样做。",
+      "fail": "设为“真实”，会暴露代理背后的真实 IP。"
+    },
+    "thirdPartyCookies": {
+      "pass": "已允许，与普通 Chrome 相同。",
+      "warn": "已在“设置”中对所有配置文件阻止。reCAPTCHA 和 hCaptcha 依赖于它们。"
+    },
+    "history": {
+      "pass": "已有浏览历史和 Cookie。",
+      "warn": "几乎还没有 Cookie 或浏览历史。网站更信任使用过的配置文件。",
+      "warmed_one": "已预热 {{count}} 次，因此拥有真实的浏览历史和 Cookie。",
+      "warmed_other": "已预热 {{count}} 次，因此拥有真实的浏览历史和 Cookie。"
+    },
+    "device": {
+      "warn": "显卡（WebGL）可能与此设备或系统不匹配。",
+      "fail": "显卡（WebGL）与此设备或系统不匹配。"
+    },
+    "osMismatch": {
+      "warn": "声明为 {{claimed}}，但实际运行在 {{host}} 上；字体和其他细节可能暴露真实系统。"
+    }
+  },
+  "prelaunch": {
+    "title_one": "打开前检查此配置文件",
+    "title_other": "打开前检查 {{count}} 个配置文件",
+    "subtitle": "配置文件一打开，网站就能发现这些不一致之处。",
+    "issue": {
+      "uaOs": "User Agent 显示为 {{ua}}，但配置文件设置为 {{os}}。",
+      "gpuOs": "显卡（WebGL）与 {{os}} 不匹配。",
+      "screen": {
+        "mobile": "手机的屏幕为 {{width}}x{{height}}；手机屏幕应为窄长的竖屏。",
+        "desktop": "电脑的屏幕为 {{width}}x{{height}}；电脑屏幕至少为 1024x600。"
+      },
+      "language": "语言区域 {{region}} 与代理所在国家/地区 {{country}} 不一致。",
+      "timezone": "时区来自这台电脑，而非代理。",
+      "webrtc": "WebRTC 设为“真实”，会暴露代理背后的真实 IP。",
+      "proxyDead": "代理未通过上次检测。",
+      "socks4Dns": "使用 SOCKS4 代理 {{proxy}}。Chromium 无法通过 SOCKS4 发送 DNS 查询，因此每个网站的域名都会在代理之外解析（DNS 泄露），配置文件将无法打开。请在 Firefox 中打开，或为其分配 SOCKS5 或 HTTP 代理。"
+    },
+    "os": {
+      "windows": "Windows",
+      "mac": "macOS",
+      "linux": "Linux",
+      "android": "Android",
+      "ios": "iOS"
+    },
+    "editorOnly": "（请在配置文件编辑器中更改）",
+    "blocking": "（在配置文件编辑器中更改之前，此配置文件将无法打开）",
+    "stopAsking": "启动前不再检查（可在“设置”中重新开启）",
+    "cancel": "取消",
+    "launchAnyway": "仍然启动",
+    "fixAndLaunch": "修复并启动"
+  },
+  "bulk": {
+    "fix": "修复验证码问题",
+    "fixTitle": "对所选配置文件应用安全的验证码修复：时区、语言、位置、WebRTC，以及在能降低风险时分配备用代理",
+    "confirm_one": "修复此配置文件的验证码问题？只会更改能降低风险的设置和代理。",
+    "confirm_other": "修复 {{count}} 个配置文件的验证码问题？只会更改能降低风险的设置和代理。",
+    "done": "已修复 {{total}} 个配置文件中的 {{changed}} 个；{{swapped}} 个已切换到备用代理。",
+    "noBetter": "{{count}} 个未能获得更好的代理。"
+  },
+  "filter": {
+    "any": "任意验证码风险",
+    "low": "低风险",
+    "some": "有一定风险",
+    "high": "高风险",
+    "veryHigh": "极高风险",
+    "fixable": "可一键修复"
+  },
+  "sort": {
+    "default": "默认顺序",
+    "riskDesc": "风险最高优先",
+    "riskAsc": "最安全优先"
+  }
+}

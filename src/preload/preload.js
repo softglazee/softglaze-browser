@@ -160,6 +160,14 @@ const CHANNELS = Object.freeze({
   LICENSE_EDIT: 'license:edit',
   LICENSE_TERMINATE: 'license:terminate',
   LICENSE_LIST_OWNERS: 'license:list-owners',
+  // Free forever plan (1.0.27)
+  LICENSE_CHOOSE_FREE: 'license:choose-free',
+  PLAN_USAGE: 'plan:usage',
+  PLAN_ACK_FREE_WELCOME: 'plan:ack-free-welcome',
+  PLAN_SET_OPENABLE: 'plan:set-openable',
+  PLAN_LIMIT_HIT: 'plan:limit-hit', // main -> renderer push
+  PARTNER_DEALS_LIST: 'partner-deals:list',
+  PARTNER_DEALS_OPEN: 'partner-deals:open',
   PAYMENT_CONFIG_GET: 'payment:config-get',
   PAYMENT_CONFIG_SET: 'payment:config-set',
   PAYMENT_CONFIG_VALIDATE: 'payment:config-validate',
@@ -328,11 +336,36 @@ const AI_CHANNELS = Object.freeze({
   DEVTOOLS_SESSION_ENDED: 'ai:devtools-session-ended'
 });
 
+// SoftGlaze phone companion (Settings > Phones). Like AI_CHANNELS, a separate map: main registers
+// these from src/main/mobile/ipc.js (MOBILE_CHANNELS there must match).
+const MOBILE_CHANNELS = Object.freeze({
+  STATUS: 'mobile:status',
+  SET_ENABLED: 'mobile:set-enabled',
+  SET_SETTINGS: 'mobile:set-settings',
+  PAIR_START: 'mobile:pair-start',
+  PAIR_CANCEL: 'mobile:pair-cancel',
+  PAIR_CONFIRM: 'mobile:pair-confirm',
+  PAIR_REJECT: 'mobile:pair-reject',
+  DEVICE_RENAME: 'mobile:device-rename',
+  DEVICE_UPDATE: 'mobile:device-update',
+  DEVICE_REVOKE: 'mobile:device-revoke',
+  RESET_KEYS: 'mobile:reset-keys',
+  SYNC_SET_PROFILE: 'mobile:sync-set-profile',
+  SYNC_SET_PROXY_PASSWORD: 'mobile:sync-set-proxy-password',
+  SYNC_NOW: 'mobile:sync-now',
+  SYNC_REMOVE_ALL: 'mobile:sync-remove-all',
+  MEMBERS: 'mobile:members',
+  CHANGED: 'mobile:changed'
+});
+
 const ALLOWED_CHANNELS = new Set([...Object.values(CHANNELS), ...Object.values(AI_CHANNELS)]);
+for (const channel of Object.values(MOBILE_CHANNELS)) ALLOWED_CHANNELS.add(channel);
 
 // One-way message, not an invoke(): main re-focuses the window after a native
 // alert()/confirm()/prompt() closes. Must match REFOCUS_CHANNEL in src/main/dialogFocus.js.
 const DIALOG_REFOCUS_CHANNEL = 'window:refocus-after-dialog';
+// Same value as i18nMain.LANGUAGE_CHANNEL (the preload is sandboxed, so no require of main code).
+const LANGUAGE_CHANNEL = 'i18n:language';
 
 async function invoke(channel, payload = undefined) {
   if (!ALLOWED_CHANNELS.has(channel)) throw new Error(`Blocked IPC channel: ${channel}`);
@@ -369,7 +402,9 @@ const api = Object.freeze({
   hostOs: { win32: 'Windows', darwin: 'macOS', linux: 'Linux' }[process.platform] || 'Windows',
 
   ui: Object.freeze({
-    refocusAfterDialog: () => ipcRenderer.send(DIALOG_REFOCUS_CHANNEL)
+    refocusAfterDialog: () => ipcRenderer.send(DIALOG_REFOCUS_CHANNEL),
+    // The app language, so native menus and file dialogs match it.
+    setLanguage: (code) => ipcRenderer.send(LANGUAGE_CHANNEL, String(code || ''))
   }),
 
   system: Object.freeze({
@@ -607,7 +642,22 @@ const api = Object.freeze({
     backendInfo: () => invoke(CHANNELS.LICENSE_BACKEND_INFO),
     edit: (payload) => invoke(CHANNELS.LICENSE_EDIT, payload),
     terminate: (payload) => invoke(CHANNELS.LICENSE_TERMINATE, payload),
-    listOwners: () => invoke(CHANNELS.LICENSE_LIST_OWNERS)
+    listOwners: () => invoke(CHANNELS.LICENSE_LIST_OWNERS),
+    chooseFree: () => invoke(CHANNELS.LICENSE_CHOOSE_FREE)
+  }),
+  // Free forever plan (1.0.27): counters, the day 8 screen, the "choose which profiles open" list, the upgrade
+  // prompt event and the partner deals card.
+  plan: Object.freeze({
+    usage: () => invoke(CHANNELS.PLAN_USAGE),
+    ackFreeWelcome: () => invoke(CHANNELS.PLAN_ACK_FREE_WELCOME),
+    setOpenable: (ids) => invoke(CHANNELS.PLAN_SET_OPENABLE, { ids }),
+    onLimit: (callback) => {
+      const listener = (_event, data) => { try { callback(data); } catch (e) { /* ignore */ } };
+      ipcRenderer.on(CHANNELS.PLAN_LIMIT_HIT, listener);
+      return () => ipcRenderer.removeListener(CHANNELS.PLAN_LIMIT_HIT, listener);
+    },
+    partnerDeals: () => invoke(CHANNELS.PARTNER_DEALS_LIST),
+    openPartnerDeal: (id) => invoke(CHANNELS.PARTNER_DEALS_OPEN, { id })
   }),
   payments: Object.freeze({
     getConfig: () => invoke(CHANNELS.PAYMENT_CONFIG_GET),
@@ -706,7 +756,7 @@ const api = Object.freeze({
     info: () => invoke(CHANNELS.SIGNIN_INFO),
     // Opens the system browser and resolves when the sign-in came back (or rejects: SIGNIN_CANCELLED, ...).
     // mode 'loopback' = "Try another way". -> { outcome: created | unlocked | linked, askUseCase, licence }
-    start: (provider, purpose, mode) => invoke(CHANNELS.SIGNIN_START, { provider, purpose, mode }),
+    start: (provider, purpose, mode, rerequest) => invoke(CHANNELS.SIGNIN_START, { provider, purpose, mode, rerequest: rerequest === true }),
     cancel: () => invoke(CHANNELS.SIGNIN_CANCEL),
     emailStart: (email, purpose, lang) => invoke(CHANNELS.SIGNIN_EMAIL_START, { email, purpose, lang }),
     emailVerify: (email, code, purpose) => invoke(CHANNELS.SIGNIN_EMAIL_VERIFY, { email, code, purpose }),
@@ -846,6 +896,48 @@ const api = Object.freeze({
         return () => ipcRenderer.removeListener(AI_CHANNELS.DEVTOOLS_SESSION_ENDED, listener);
       }
     })
+  }),
+  // Phones paired with this PC: pairing by QR, permissions, revoke, profile sync.
+  mobile: Object.freeze({
+    status: () => invoke(MOBILE_CHANNELS.STATUS),
+    setEnabled: (on) => invoke(MOBILE_CHANNELS.SET_ENABLED, { enabled: Boolean(on) }),
+    setSettings: (patch) => invoke(MOBILE_CHANNELS.SET_SETTINGS, patch && typeof patch === 'object' ? { pcName: patch.pcName, relayUrl: patch.relayUrl } : {}),
+    members: () => invoke(MOBILE_CHANNELS.MEMBERS),
+    pairing: Object.freeze({
+      // -> { pairingId, stage: 'open', qrText, qrImage, expiresAt }
+      start: () => invoke(MOBILE_CHANNELS.PAIR_START),
+      cancel: () => invoke(MOBILE_CHANNELS.PAIR_CANCEL),
+      reject: (pairingId) => invoke(MOBILE_CHANNELS.PAIR_REJECT, { pairingId: String(pairingId || '') }),
+      // input { pairingId, memberId, scopes[], name? }
+      confirm: (input) => {
+        const src = input && typeof input === 'object' ? input : {};
+        return invoke(MOBILE_CHANNELS.PAIR_CONFIRM, { pairingId: String(src.pairingId || ''), memberId: src.memberId == null ? null : src.memberId, scopes: Array.isArray(src.scopes) ? src.scopes.map(String) : ['view'], name: typeof src.name === 'string' ? src.name : undefined });
+      }
+    }),
+    devices: Object.freeze({
+      rename: (deviceId, name) => invoke(MOBILE_CHANNELS.DEVICE_RENAME, { deviceId: String(deviceId || ''), name: String(name || '') }),
+      // patch { scopes?, memberId? }
+      update: (deviceId, patch) => {
+        const src = patch && typeof patch === 'object' ? patch : {};
+        const out = { deviceId: String(deviceId || '') };
+        if (Array.isArray(src.scopes)) out.scopes = src.scopes.map(String);
+        if (src.memberId !== undefined) out.memberId = src.memberId;
+        return invoke(MOBILE_CHANNELS.DEVICE_UPDATE, out);
+      },
+      revoke: (deviceId) => invoke(MOBILE_CHANNELS.DEVICE_REVOKE, { deviceId: String(deviceId || '') })
+    }),
+    resetKeys: () => invoke(MOBILE_CHANNELS.RESET_KEYS),
+    sync: Object.freeze({
+      setProfile: (profileId, enabled, removeFromCloud = false) => invoke(MOBILE_CHANNELS.SYNC_SET_PROFILE, { profileId: Number(profileId), enabled: Boolean(enabled), removeFromCloud: Boolean(removeFromCloud) }),
+      setProxyPassword: (profileId, enabled) => invoke(MOBILE_CHANNELS.SYNC_SET_PROXY_PASSWORD, { profileId: Number(profileId), enabled: Boolean(enabled) }),
+      now: () => invoke(MOBILE_CHANNELS.SYNC_NOW),
+      removeAll: () => invoke(MOBILE_CHANNELS.SYNC_REMOVE_ALL)
+    }),
+    onChanged: (callback) => {
+      const listener = (_event, data) => { try { callback(data); } catch (e) { /* ignore */ } };
+      ipcRenderer.on(MOBILE_CHANNELS.CHANGED, listener);
+      return () => ipcRenderer.removeListener(MOBILE_CHANNELS.CHANGED, listener);
+    }
   }),
   updater: Object.freeze({
     getState: () => invoke(CHANNELS.UPDATER_GET_STATE),

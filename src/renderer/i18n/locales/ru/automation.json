@@ -1,0 +1,422 @@
+{
+  "header": {
+    "eyebrow": "Функции Softglaze Pro",
+    "title": "Автоматизация",
+    "description": "Макросы без кода, автоматический прогрев cookie и журнал всех фоновых задач."
+  },
+  "tabs": {
+    "macros": "Мои макросы",
+    "parallel": "Параллельный запуск",
+    "warmer": "Прогрев cookie",
+    "history": "История задач"
+  },
+  "clickLabels": {
+    "none": "Просто смотреть",
+    "random": "Случайные клики",
+    "links": "Ходить по ссылкам"
+  },
+  "stepTypes": {
+    "goto": "Перейти по URL",
+    "click": "Клик",
+    "type": "Ввести текст",
+    "keypress": "Нажать клавишу",
+    "scroll": "Прокрутка",
+    "wait": "Ожидание",
+    "move": "Двинуть мышь",
+    "hover": "Навести",
+    "select": "Выбрать в списке",
+    "waitFor": "Ждать элемент",
+    "submit": "Отправить форму",
+    "check": "Отметить / снять",
+    "clear": "Очистить поле"
+  },
+  "stepFields": {
+    "goto": {
+      "url": "URL",
+      "urlPlaceholder": "https://example.com"
+    },
+    "click": {
+      "selector": "CSS-селектор",
+      "selectorPlaceholder": "#submit, .btn"
+    },
+    "type": {
+      "selector": "Селектор",
+      "selectorPlaceholder": "input[name=\"email\"]",
+      "value": "Текст для ввода"
+    },
+    "keypress": {
+      "key": "Клавиша",
+      "keyPlaceholder": "Enter"
+    },
+    "scroll": {
+      "steps": "Шагов прокрутки",
+      "stepsPlaceholder": "4"
+    },
+    "wait": {
+      "ms": "Миллисекунды",
+      "msPlaceholder": "1000"
+    },
+    "move": {
+      "selector": "Селектор (или X/Y)",
+      "selectorPlaceholder": ".target",
+      "x": "X",
+      "y": "Y"
+    },
+    "hover": {
+      "selector": "Селектор",
+      "selectorPlaceholder": ".menu",
+      "ms": "Задержка, мс",
+      "msPlaceholder": "800"
+    },
+    "select": {
+      "selector": "Селектор",
+      "selectorPlaceholder": "select[name=\"focus\"]",
+      "value": "Вариант (значение, подпись или индекс)",
+      "valuePlaceholder": "Сантехника",
+      "by": "Искать по"
+    },
+    "waitFor": {
+      "selector": "Селектор",
+      "selectorPlaceholder": ".dashboard",
+      "state": "Состояние",
+      "timeout": "Тайм-аут, мс",
+      "timeoutPlaceholder": "30000"
+    },
+    "submit": {
+      "selector": "Селектор формы или поля",
+      "selectorPlaceholder": "form#signup"
+    },
+    "check": {
+      "selector": "Селектор",
+      "selectorPlaceholder": "input[name=\"terms\"]",
+      "state": "Состояние"
+    },
+    "clear": {
+      "selector": "Селектор",
+      "selectorPlaceholder": "input[name=\"email\"]"
+    }
+  },
+  "stepSummary": {
+    "noUrl": "(нет URL)",
+    "noSelector": "(нет селектора)",
+    "selectorFallback": "(селектор)",
+    "target": "(цель)"
+  },
+  "macros": {
+    "intro": "Записывайте или собирайте многоразовые сценарии без кода и запускайте их в профиле (переходы, клики, ввод, ожидание) вручную или по расписанию.",
+    "profileSelectTitle": "Профиль для запуска / записи",
+    "noProfiles": "Нет профилей",
+    "profileFallback": "Профиль {{id}}",
+    "stopAndSave": "Стоп и сохранить",
+    "record": "Запись",
+    "schedule": "Расписание",
+    "createMacro": "Создать макрос",
+    "stepsBadge_one": "{{count}} шаг",
+    "stepsBadge_few": "{{count}} шага",
+    "stepsBadge_many": "{{count}} шагов",
+    "stepsBadge_other": "{{count}} шага",
+    "updated": "Обновлён {{date}}",
+    "run": "Запустить",
+    "edit": "Изменить",
+    "editSteps": "Изменить шаги",
+    "delete": "Удалить",
+    "runTitleNoSteps": "В этом макросе пока нет шагов. Сначала измените его",
+    "runTitleReady": "Запустить в выбранном профиле",
+    "emptyTitle": "Макросов пока нет",
+    "emptyHint": "Запишите сценарий или создайте его, чтобы начать.",
+    "errors": {
+      "loadMacros": "Не удалось загрузить макросы.",
+      "deleteMacro": "Не удалось удалить макрос.",
+      "chooseProfile": "Сначала выберите целевой профиль.",
+      "noSteps": "В этом макросе пока нет шагов. Сначала измените его.",
+      "chooseProfileRecord": "Выберите профиль для записи.",
+      "recordingFailed": "Ошибка записи."
+    },
+    "recordingStarted": "Идёт запись… работайте в открытом браузере, затем нажмите «Стоп», чтобы сохранить.",
+    "savedNotice": "Макрос «{{name}}» сохранён, шагов: {{count}}.",
+    "stoppedNotice": "Запись остановлена. Записано шагов: {{count}} (не сохранено).",
+    "deleteConfirm": "Удалить макрос «{{name}}» и все его шаги? Это действие нельзя отменить."
+  },
+  "saveRecording": {
+    "ariaLabel": "Сохранить записанный макрос",
+    "title": "Сохранить записанный макрос",
+    "subtitle": "Дайте имя, чтобы сохранить записанные шаги, или отмените их. Браузер останется открытым.",
+    "placeholder": "Записанный макрос",
+    "discard": "Не сохранять",
+    "cancel": "Отмена",
+    "save": "Сохранить"
+  },
+  "scheduleModal": {
+    "ariaLabel": "Расписание макроса",
+    "title": "Расписание макроса",
+    "subtitle": "Автоматический запуск макроса по таймеру · Softglaze Pro",
+    "enable": "Включить запуск по расписанию",
+    "macroLabel": "Макрос",
+    "selectMacro": "Выберите макрос…",
+    "everyMinutes": "Каждые (минут)",
+    "targetProfiles": "Целевые профили",
+    "noProfiles": "Нет доступных профилей.",
+    "profileFallback": "Профиль {{id}}",
+    "cancel": "Отмена",
+    "save": "Сохранить",
+    "errors": {
+      "save": "Не удалось сохранить расписание."
+    }
+  },
+  "editorModal": {
+    "ariaEdit": "Изменить макрос",
+    "ariaCreate": "Создать макрос",
+    "titleEdit": "Изменить макрос",
+    "titleCreate": "Создать макрос",
+    "subtitle": "Соберите сценарий без кода. Перетаскивайте за ручку, чтобы менять порядок.",
+    "nameLabel": "Название макроса",
+    "namePlaceholder": "напр. Ежедневный вход",
+    "descriptionLabel": "Описание",
+    "descriptionPlaceholder": "Что он делает?",
+    "stepsLabel": "Шаги ({{count}})",
+    "addStep": "Добавить шаг",
+    "noSteps": "Шагов пока нет. Выберите тип и добавьте шаг.",
+    "dragToReorder": "Перетащите для сортировки",
+    "removeStep": "Удалить шаг",
+    "cancel": "Отмена",
+    "save": "Сохранить",
+    "errors": {
+      "name": "Дайте макросу название.",
+      "save": "Не удалось сохранить макрос."
+    },
+    "optional": "Необязательный",
+    "optionalHint": "Если шаг не выполнится, записать это в журнал и продолжить, а не прерывать запуск."
+  },
+  "runModal": {
+    "ariaLabel": "Запуск макроса: {{name}}",
+    "runningOn": "Выполняется в профиле {{profile}}",
+    "starting": "Запуск…",
+    "logStarted": "Запущен «{{name}}» · шагов: {{total}}, профиль {{profile}}",
+    "logStepRunning": "▶ {{label}}: {{summary}}",
+    "logStepError": "✕ {{label}}: {{error}}",
+    "logStepFailed": "ошибка",
+    "logStopped": "Остановлено.",
+    "logFinished": "Готово, шагов: {{ran}}/{{total}}.",
+    "stopped": "Остановлено.",
+    "finished": "Готово.",
+    "summaryCompleted": "Выполнено шагов: {{ran}}/{{total}}.",
+    "summaryRan": "Пройдено шагов: {{ran}}/{{total}}.",
+    "paused": "Пауза",
+    "running": "Выполняется…",
+    "resume": "Продолжить",
+    "pause": "Пауза",
+    "stop": "Стоп",
+    "close": "Закрыть",
+    "errors": {
+      "run": "Не удалось запустить макрос."
+    },
+    "logStepSkipped": "пропущен {{label}} (необязательный): {{error}}"
+  },
+  "parallel": {
+    "states": {
+      "queued": "В очереди",
+      "launching": "Запуск",
+      "running": "Работает",
+      "passed": "Успешно",
+      "failed": "Ошибка"
+    },
+    "title": "Параллельный запуск макросов",
+    "subtitle": "Запускайте один макрос сразу во многих профилях и следите за статусом в реальном времени.",
+    "macroLabel": "Макрос",
+    "noMacros": "Макросов пока нет",
+    "macroOption": "{{name}} · шагов: {{count}}",
+    "concurrency": "Параллельно",
+    "concurrencyCap": "Ваш тариф запускает до {{max}} профилей одновременно.",
+    "concurrencyCapUpgrade": "Ваш тариф запускает до {{max}} профилей одновременно. На Enterprise можно до {{enterpriseMax}}.",
+    "dataBound_one": "{{fileName}} · {{count}} строка",
+    "dataBound_few": "{{fileName}} · {{count}} строки",
+    "dataBound_many": "{{fileName}} · {{count}} строк",
+    "dataBound_other": "{{fileName}} · {{count}} строки",
+    "dataHint": "Необязательно: привяжите таблицу (строка → профиль, по порядку)",
+    "clearDataBinding": "Отвязать данные",
+    "bindData": "Привязать данные",
+    "columnsPrefix": "Столбцы: {{columns}}. Используйте",
+    "columnsSuffix": "в шагах макроса.",
+    "profilesLabel": "Профили (выбрано: {{count}})",
+    "selectAll": "Выбрать все",
+    "clear": "Очистить",
+    "searchPlaceholder": "Поиск",
+    "noProfiles": "Профили не найдены.",
+    "rowMismatch": "Строк данных: {{rows}}, профилей: {{profiles}}. Лишние запускаются без переменных.",
+    "running": "Выполняется…",
+    "runOn_one": "Запустить в {{count}} профиле",
+    "runOn_few": "Запустить в {{count}} профилях",
+    "runOn_many": "Запустить в {{count}} профилях",
+    "runOn_other": "Запустить в {{count}} профиля",
+    "runStatus": "Статус запуска",
+    "summaryPassed": "успешно",
+    "summaryFailed": "с ошибкой",
+    "summaryTotal": "всего {{total}}",
+    "watchHint": "Выберите профили и макрос, затем запустите, чтобы следить за ходом в реальном времени.",
+    "steps": "Шаги: {{ran}}/{{total}}",
+    "profileFallback": "Профиль {{id}}",
+    "runConsole": "Консоль запуска",
+    "live": "онлайн",
+    "consoleIdle": "[ ожидание ] Запусков пока нет. Ход выполнения появится здесь (cookie и учётные данные сюда никогда не попадают).",
+    "logRunFinished": "Запуск завершён, успешно: {{passed}}/{{total}}",
+    "logRunFinishedError": "Запуск завершён, успешно: {{passed}}/{{total}} ({{error}})",
+    "errors": {
+      "readSpreadsheet": "Не удалось прочитать таблицу.",
+      "chooseMacro": "Выберите макрос для запуска.",
+      "selectProfile": "Выберите хотя бы один профиль.",
+      "startRun": "Не удалось начать параллельный запуск."
+    }
+  },
+  "warmer": {
+    "title": "Прогрев cookie",
+    "subtitle": "Набирает естественные cookie и историю, посещая реальные сайты.",
+    "sitesLabel": "Сайты для посещения ({{count}})",
+    "addSuggested": "Добавить сайт из списка…",
+    "add": "Добавить",
+    "customPlaceholder": "Или вставьте свой URL (напр. example.com)",
+    "bulkAdd": "Списком",
+    "importFile": "Импорт .txt/.csv",
+    "clearAll": "Очистить всё",
+    "bulkPlaceholder": "Вставьте по одному URL в строке, напр.\nexample.com\nhttps://news.site\nshop.site, 45, links",
+    "addList": "Добавить список",
+    "bulkHint": "Один URL в строке. Необязательные столбцы CSV: url, seconds, behaviour (none/random/links).",
+    "addSecondsTitle": "Секунды по умолчанию для новых ссылок",
+    "addBehaviorTitle": "Поведение по умолчанию для новых ссылок",
+    "saveList": "Сохранить список",
+    "saveListPrompt": "Назовите этот список ссылок (чтобы использовать его позже):",
+    "loadListTitle": "Загрузить этот сохранённый список",
+    "deleteListTitle": "Удалить этот сохранённый список",
+    "selectRows": "Выбрать строки",
+    "nSelected": "Выбрано: {{count}}",
+    "bulkSetSeconds": "Задать секунды для выбранных строк",
+    "bulkSetBehavior": "Задать поведение для выбранных строк",
+    "setBehavior": "Поведение…",
+    "deleteSelected": "Удалить",
+    "noSites": "Сайтов пока нет. Добавьте сайт выше.",
+    "secondsTitle": "Сколько секунд провести на сайте",
+    "secondsUnit": "с",
+    "behaviourTitle": "Что делать на этом сайте",
+    "remove": "Удалить",
+    "loopUntilStopped": "Повторять до остановки",
+    "keepOpen": "Не закрывать сессии после",
+    "hidden": "Фоновый режим (без окон)",
+    "hiddenTitle": "Прогрев в headless-режиме: окна браузера не открываются. Cookie и кеш всё равно сохраняются в каждый профиль.",
+    "cookieNote": "Cookie и кеш автоматически сохраняются в каждый профиль, а консоль показывает, сколько cookie и кеша записано на диск. Следующий обычный запуск использует их.",
+    "startWarmup": "Начать прогрев",
+    "warming": "Прогрев…",
+    "stop": "Стоп",
+    "forceStop": "Принудительно",
+    "profilesLabel": "Профили (выбрано: {{count}})",
+    "searchPlaceholder": "Поиск",
+    "selectAll": "Все",
+    "selectNone": "Ни одного",
+    "invert": "Инверсия",
+    "addGroup": "Добавить группу…",
+    "addTag": "Добавить тег…",
+    "pasteIdsPlaceholder": "Вставьте ID или имена профилей (через запятую / пробел)",
+    "selectPaste": "Выбрать",
+    "noProfiles": "Профили не найдены.",
+    "profileFallback": "Профиль {{id}}",
+    "warmupConsole": "Консоль прогрева",
+    "live": "онлайн",
+    "progressTitle": "Ход прогрева",
+    "modeQueue": "Очередь · по одному",
+    "modeBulk": "Пакетом · по {{n}}",
+    "consoleIdle": "[ ожидание ] Выберите профили, задайте длительность и начните прогрев, чтобы видеть ход в реальном времени.",
+    "errors": {
+      "selectProfile": "Выберите хотя бы один профиль для прогрева.",
+      "addSite": "Добавьте хотя бы один сайт.",
+      "startWarmup": "Не удалось начать прогрев.",
+      "stopWarmup": "Не удалось остановить прогрев.",
+      "importFile": "Не удалось прочитать файл."
+    },
+    "queueTitle": "Прогревать по одному профилю (строгая очередь): открыть браузер, дождаться завершения и закрытия, затем следующий. Так не открываются сразу все выбранные браузеры, что может исчерпать RAM/CPU и привести к сбою приложения.",
+    "queueMode": "По одному (очередь)",
+    "parallelTitle": "Сколько профилей прогревать одновременно. Чем больше, тем быстрее, но тем выше нагрузка на RAM/CPU.",
+    "parallelLabel": "Одновременно:"
+  },
+  "counter": {
+    "total": "всего",
+    "running": "в работе",
+    "done": "готово",
+    "queued": "в очереди"
+  },
+  "console": {
+    "copy": "Копировать",
+    "copied": "Скопировано",
+    "export": "Экспорт",
+    "clear": "Очистить"
+  },
+  "history": {
+    "emptyTitle": "Задач ещё не было",
+    "emptyHint": "Здесь появятся прогревы, запуски макросов и параллельные запуски.",
+    "columns": {
+      "task": "Задача",
+      "profiles": "Профили",
+      "detail": "Детали",
+      "status": "Статус",
+      "when": "Когда"
+    },
+    "emptyDetail": "-",
+    "parallelRun": "Параллельный запуск",
+    "macroRun": "Запуск макроса",
+    "cookieWarmup": "Прогрев cookie",
+    "minutes": "{{count}} мин",
+    "sites_one": "{{count}} сайт",
+    "sites_few": "{{count}} сайта",
+    "sites_many": "{{count}} сайтов",
+    "sites_other": "{{count}} сайта"
+  },
+  "stepFieldOptions": {
+    "auto": "Авто",
+    "value": "Значение",
+    "label": "Подпись",
+    "index": "Индекс",
+    "visible": "Видим",
+    "hidden": "Скрыт",
+    "checked": "Отмечен",
+    "unchecked": "Не отмечен"
+  },
+  "autopilot": {
+    "title": "Автопилот прогрева",
+    "subtitle": "Каждый день прогревает профили на нескольких сайтах, чтобы у них появлялась настоящая история.",
+    "toggle": "Включить или выключить автопилот прогрева",
+    "target": "Профили",
+    "targetAll": "Все профили",
+    "targetGroup": "Одна группа",
+    "group": "Группа",
+    "runsPerDay": "Запусков в день",
+    "runsPerDayTitle": "Сколько раз в день прогревается каждый профиль",
+    "sitesPerRun": "Сайтов за запуск",
+    "sitesPerRunTitle": "Случайные сайты из списка рекомендуемых, от 20 до 45 секунд на каждый",
+    "activeHours": "Активные часы",
+    "startHour": "Час начала",
+    "endHour": "Час окончания",
+    "hoursTo": "до",
+    "atATime": "Одновременно",
+    "atATimeTitle": "Сколько профилей прогревается сразу. Чем больше, тем быстрее, но нужно больше памяти.",
+    "hidden": "Фоновый режим (без окон)",
+    "hint": "Профиль прогревается, если с прошлого прогрева прошло больше, чем 24 часа, делённые на число запусков в день. Открытые, заблокированные и занятые профили пропускаются.",
+    "ownedByOther": "Это включил другой участник. Изменить настройку может только он или кто-то выше по роли.",
+    "status": {
+      "off": "Выкл.",
+      "nextSoon": "Следующий запуск в течение минуты",
+      "nextAt": "Следующий запуск {{time}}",
+      "nothingDue": "Нет профилей для прогрева",
+      "warmedToday": "Сегодня прогрето {{done}} из {{total}}",
+      "warmingNow": "Прогревается сейчас: {{n}}",
+      "lastError": "Последняя ошибка, {{time}}: {{error}}"
+    },
+    "errors": {
+      "load": "Не удалось загрузить настройки автопилота.",
+      "save": "Не удалось сохранить настройки автопилота.",
+      "noGroups": "Групп пока нет. Сначала создайте группу на странице «Профили».",
+      "owner-missing": "Участника, который включил автопилот, больше нет. Владелец рабочего пространства может выключить и снова включить его, чтобы взять управление на себя.",
+      "owner-inactive": "Участник, который включил автопилот, приостановлен или заблокирован.",
+      "owner-no-permission": "Участник, который включил автопилот, больше не может запускать автоматизацию.",
+      "warm-failed": "{{profile}}: {{error}}",
+      "warmFailedHidden": "Не удалось прогреть профиль, который вам не виден.",
+      "tick-failed": "{{error}}"
+    }
+  }
+}

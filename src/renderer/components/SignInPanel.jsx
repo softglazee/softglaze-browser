@@ -1,24 +1,38 @@
 import { useEffect, useRef, useState } from 'react';
-import { ArrowLeft, ArrowRight, Loader2, Mail, ShieldCheck, ExternalLink, Check } from 'lucide-react';
+import { ArrowLeft, ArrowRight, Loader2, Mail, ExternalLink } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { softglazeApi } from '@/lib/softglazeApi.js';
 import { getStoredLang } from '@/lib/lang.js';
 import { USE_CASES, LEAD_LIMITS } from '@/lib/signupLead.mjs';
-import { signInErrorText, showGithub, sixDigits, canOfferMove, moveErrorKey } from '@/lib/signInFlow.mjs';
+import { signInErrorText, providerButtons, PROVIDER_NAMES, offerEmailRerequest, sixDigits, canOfferMove, moveErrorKey } from '@/lib/signInFlow.mjs';
 
-// One-click sign-in (1.0.26): "Continue with GitHub" (the system browser, then back to the app) and "Continue
-// with email" (a 6-digit code). Used by the Gate for a new workspace (purpose 'signup') and for a one-click
+// One-click sign-in (1.0.26): "Continue with Google", "Continue with Microsoft", "Continue with Facebook",
+// "Continue with LinkedIn" and "Continue with GitHub" (the system browser, then back to the app) and "Continue with email" (a 6-digit code). Used by the Gate for a new workspace (purpose 'signup') and for a one-click
 // workspace after Sign out ('unlock'), and by Settings > Account ('link'). Main does the work and keeps the
 // session token; this only draws the steps.
 
-const inputCls = 'w-full h-10 bg-background/60 border border-border rounded-lg px-3 text-[13px] text-foreground outline-none focus:border-primary focus:ring-2 focus:ring-primary/25 transition-all placeholder:text-muted-dark disabled:opacity-70';
-const labelCls = 'block text-[11px] font-medium text-muted mb-1.5';
-const bigBtn = 'w-full h-11 rounded-xl font-semibold text-[13.5px] flex items-center justify-center gap-2.5 transition-all duration-200 disabled:opacity-60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50';
+// 16 px text and 44 px height in inputs and buttons (readable, and easy to hit). Flat colours, no glow.
+const inputCls = 'w-full h-[44px] bg-input-background border border-border-strong rounded-lg px-3.5 text-[16px] text-foreground outline-none focus:border-primary focus:ring-2 focus:ring-primary/25 transition-colors placeholder:text-muted-dark disabled:opacity-70';
+const labelCls = 'block text-[13px] font-medium text-foreground mb-1.5';
+const bigBtn = 'w-full h-[44px] rounded-lg font-semibold text-[15px] flex items-center justify-center gap-2.5 transition-colors duration-150 disabled:opacity-60';
 // GitHub's own colours follow the theme: dark button on the light theme, light button on the dark one.
-const githubBtn = `${bigBtn} bg-foreground text-background hover:opacity-90 shadow-sm`;
-const emailBtn = `${bigBtn} border border-border bg-background/60 text-foreground hover:bg-secondary`;
-const primaryBtn = 'mt-5 w-full h-11 rounded-xl bg-gradient-to-b from-primary to-primary-hover text-white font-semibold text-[13px] flex items-center justify-center gap-2 disabled:opacity-60 shadow-glow transition-all duration-200';
-const linkBtn = 'text-[12px] text-muted-dark hover:text-primary transition-colors disabled:opacity-60';
+const githubBtn = `${bigBtn} bg-foreground text-background hover:opacity-90`;
+// Google's own light button (branding guidelines): white, a thin grey border, dark text and the four-colour G, in
+// both themes. The colours are the --google-btn-* tokens in index.css.
+const googleBtn = `${bigBtn} border border-[var(--google-btn-border)] bg-[var(--google-btn-bg)] text-[var(--google-btn-fg)] hover:bg-[var(--google-btn-hover)]`;
+// Microsoft's sign-in button: light variant (white, #8C8C8C border, #5E5E5E text) on the light theme, dark variant
+// (#2F2F2F, white text) on the dark theme. The colours are the --microsoft-btn-* tokens.
+const microsoftBtn = `${bigBtn} border border-[var(--microsoft-btn-border)] bg-[var(--microsoft-btn-bg)] text-[var(--microsoft-btn-fg)] hover:bg-[var(--microsoft-btn-hover)]`;
+// Meta's brand button: Facebook blue, the white "f" logo, white text. The colours are the --facebook-btn-* tokens.
+const facebookBtn = `${bigBtn} bg-[var(--facebook-btn-bg)] text-[var(--facebook-btn-fg)] hover:bg-[var(--facebook-btn-hover)]`;
+// LinkedIn's brand button: LinkedIn blue, the white "in" logo, white text. The colours are the --linkedin-btn-* tokens.
+const linkedinBtn = `${bigBtn} bg-[var(--linkedin-btn-bg)] text-[var(--linkedin-btn-fg)] hover:bg-[var(--linkedin-btn-hover)]`;
+const emailBtn = `${bigBtn} border border-border-strong bg-transparent text-foreground hover:bg-secondary`;
+const primaryBtn = 'mt-5 w-full h-[44px] rounded-lg bg-[var(--auth-cta)] hover:bg-[var(--auth-cta-hover)] text-primary-foreground font-semibold text-[15px] flex items-center justify-center gap-2 disabled:bg-secondary disabled:text-muted-foreground disabled:cursor-default transition-colors duration-150';
+const linkBtn = 'min-h-[44px] inline-flex items-center justify-center text-[14px] text-muted-foreground hover:text-foreground underline underline-offset-4 decoration-border-strong hover:decoration-primary transition-colors disabled:no-underline disabled:cursor-default disabled:hover:text-muted-foreground';
+const inlineLink = 'inline-flex items-center font-semibold text-foreground underline underline-offset-4 decoration-border-strong hover:decoration-primary';
+// Our text: the default size for every sentence on these screens.
+const bodyCls = 'text-[15px] text-muted-foreground leading-relaxed';
 
 export function GithubMark({ className = 'w-[18px] h-[18px]' }) {
   return (
@@ -28,9 +42,68 @@ export function GithubMark({ className = 'w-[18px] h-[18px]' }) {
   );
 }
 
+// The Google "G" exactly as Google ships it for sign-in buttons (do not recolour or redraw it).
+export function GoogleMark({ className = 'w-[18px] h-[18px]' }) {
+  return (
+    <svg viewBox="0 0 48 48" aria-hidden="true" className={className}>
+      <path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z" />
+      <path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z" />
+      <path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z" />
+      <path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.15 1.45-4.92 2.3-8.16 2.3-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z" />
+    </svg>
+  );
+}
+
+// The Microsoft logo: four squares, exactly Microsoft's colours (do not recolour or redraw it).
+export function MicrosoftMark({ className = 'w-[18px] h-[18px]' }) {
+  return (
+    <svg viewBox="0 0 21 21" aria-hidden="true" className={className}>
+      <rect x="1" y="1" width="9" height="9" fill="#F25022" />
+      <rect x="11" y="1" width="9" height="9" fill="#7FBA00" />
+      <rect x="1" y="11" width="9" height="9" fill="#00A4EF" />
+      <rect x="11" y="11" width="9" height="9" fill="#FFB900" />
+    </svg>
+  );
+}
+
+// The Facebook logo (Meta brand resources: the blue circle with the "f" knocked out, not redrawn or recoloured).
+// On the blue "Continue with Facebook" button Meta uses the white logo, the "f" showing the blue button through it.
+const FACEBOOK_LOGO = 'M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z';
+export function FacebookMark({ className = 'w-[18px] h-[18px]', onBlue = false }) {
+  return (
+    <svg viewBox="0 0 24 24" aria-hidden="true" className={className}>
+      {!onBlue && <circle cx="12" cy="12" r="11.5" fill="#ffffff" />}
+      <path fill={onBlue ? '#ffffff' : '#1877F2'} d={FACEBOOK_LOGO} />
+    </svg>
+  );
+}
+
+// The LinkedIn "in" logo (LinkedIn brand guidelines: the rounded square with "in" knocked out, not redrawn). On the
+// blue "Continue with LinkedIn" button it is white, the "in" showing the blue button through it.
+const LINKEDIN_LOGO = 'M20.447 20.452h-3.554v-5.569c0-1.328-.027-3.037-1.852-3.037-1.853 0-2.136 1.445-2.136 2.939v5.667H9.351V9h3.414v1.561h.046c.477-.9 1.637-1.85 3.37-1.85 3.601 0 4.267 2.37 4.267 5.455v6.286zM5.337 7.433c-1.144 0-2.063-.926-2.063-2.065 0-1.138.92-2.063 2.063-2.063 1.14 0 2.064.925 2.064 2.063 0 1.139-.925 2.065-2.064 2.065zm1.782 13.019H3.555V9h3.564v11.452zM22.225 0H1.771C.792 0 0 .774 0 1.729v20.542C0 23.227.792 24 1.771 24h20.451C23.2 24 24 23.227 24 22.271V1.729C24 .774 23.2 0 22.222 0h.003z';
+export function LinkedinMark({ className = 'w-[18px] h-[18px]', onBlue = false }) {
+  return (
+    <svg viewBox="0 0 24 24" aria-hidden="true" className={className}>
+      {!onBlue && <rect x="1" y="1" width="22" height="22" rx="2" fill="#ffffff" />}
+      <path fill={onBlue ? '#ffffff' : '#0A66C2'} d={LINKEDIN_LOGO} />
+    </svg>
+  );
+}
+
+export function ProviderMark({ provider, className }) {
+  if (provider === 'google') return <GoogleMark className={className} />;
+  if (provider === 'microsoft') return <MicrosoftMark className={className} />;
+  if (provider === 'facebook') return <FacebookMark className={className} />;
+  if (provider === 'linkedin') return <LinkedinMark className={className} />;
+  return <GithubMark className={className} />;
+}
+
 // purpose: 'signup' | 'unlock' | 'link'. info: signin.info() ({ tenant, providers, account }). lockedEmail: the
 // workspace's own address (unlock). onDone(result) after a successful sign-in. onMoreOptions: the old form.
-export default function SignInPanel({ purpose, info, lockedEmail = '', onDone, onMoreOptions, compact = false, heading = true }) {
+// entry / onEntry (Gate, purpose 'signup'): 'new' | 'returning'. Only the words change: one-click sign-in creates
+// the account or finds the existing one, so both doors call the same sign-in. onPasswordLogin: the password screen
+// for a workspace made with a password (shown on the 'returning' door).
+export default function SignInPanel({ purpose, info, lockedEmail = '', onDone, onMoreOptions, compact = false, heading = true, entry = 'new', onEntry = null, onPasswordLogin = null }) {
   const { t } = useTranslation('signin');
   const { t: tg } = useTranslation('gate');
   const [step, setStep] = useState('choose'); // choose | email | code | waiting
@@ -39,10 +112,12 @@ export default function SignInPanel({ purpose, info, lockedEmail = '', onDone, o
   const [devCode, setDevCode] = useState('');
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState('');
+  const [rerequest, setRerequest] = useState(false); // offer "Allow email access" (Facebook shared no email)
   const [resendIn, setResendIn] = useState(0);
-  const attempt = useRef(0); // only the newest GitHub attempt may change the screen
+  const [provider, setProvider] = useState('github'); // the provider of the browser sign-in in progress
+  const attempt = useRef(0); // only the newest provider attempt may change the screen
   const live = useRef(true);
-  const github = showGithub(info);
+  const buttons = providerButtons(info);
 
   useEffect(() => () => { live.current = false; }, []);
   useEffect(() => { if (lockedEmail) setEmail(lockedEmail); }, [lockedEmail]);
@@ -52,21 +127,22 @@ export default function SignInPanel({ purpose, info, lockedEmail = '', onDone, o
     return () => clearInterval(id);
   }, [resendIn]);
 
-  async function startGithub(mode) {
+  async function startProvider(which, mode, again = false) {
     const mine = ++attempt.current;
-    setErr(''); setStep('waiting');
+    setProvider(which);
+    setErr(''); setRerequest(false); setStep('waiting');
     try {
-      const r = await softglazeApi.signin.start('github', purpose, mode);
+      const r = await softglazeApi.signin.start(which, purpose, mode, again);
       if (!live.current || mine !== attempt.current) return;
       onDone(r);
     } catch (e) {
       if (!live.current || mine !== attempt.current) return;
       const text = signInErrorText(t, tg, e);
-      setErr(text || ''); setStep('choose');
+      setErr(text || ''); setRerequest(which === 'facebook' && offerEmailRerequest(e)); setStep('choose');
     }
   }
 
-  async function cancelGithub() {
+  async function cancelProvider() {
     attempt.current += 1;
     setStep('choose'); setErr('');
     try { await softglazeApi.signin.cancel(); } catch (_) { /* nothing pending */ }
@@ -101,20 +177,25 @@ export default function SignInPanel({ purpose, info, lockedEmail = '', onDone, o
     }
   }
 
-  const titleCls = compact ? 'font-display text-[16px] font-semibold tracking-tight' : 'font-display text-[20px] font-semibold tracking-tight';
-  const errBox = err ? <p role="alert" className="text-[12px] text-red-400 mt-3 leading-relaxed">{err}</p> : null;
+  const titleCls = compact ? 'font-display text-[18px] font-semibold tracking-tight' : 'font-display text-[28px] [@media(max-height:800px)]:text-[24px] leading-tight font-semibold tracking-tight';
+  const subCls = compact ? 'text-[14px] text-muted-foreground mt-1 leading-relaxed' : `${bodyCls} mt-2`;
+  const errBox = err ? <p role="alert" className="mt-4 rounded-lg border border-destructive/40 bg-destructive/10 px-3.5 py-2.5 text-[14px] leading-relaxed text-[var(--auth-error-fg)]">{err}</p> : null;
 
   if (step === 'waiting') {
+    const name = PROVIDER_NAMES[provider] || provider;
     return (
       <div aria-live="polite">
-        <div className="w-11 h-11 rounded-xl bg-primary/10 text-primary grid place-items-center mb-4"><GithubMark className="w-5 h-5" /></div>
         <h2 className={titleCls}>{t('waiting.title')}</h2>
-        <p className="text-[12.5px] text-muted mt-1 leading-relaxed">{t('waiting.body', { provider: 'GitHub' })}</p>
-        <div className="mt-5 flex items-center gap-2.5 text-[12.5px] text-muted"><Loader2 className="w-4 h-4 animate-spin text-primary shrink-0" /> <span className="min-w-0">{t('waiting.status', { provider: 'GitHub' })}</span></div>
-        <div className="mt-5 flex flex-col gap-2.5">
-          <button type="button" onClick={() => startGithub('auto')} className={emailBtn}><ExternalLink className="w-4 h-4" /> {t('waiting.reopen')}</button>
-          <button type="button" onClick={() => startGithub('loopback')} className={linkBtn}>{t('waiting.anotherWay')}</button>
-          <button type="button" onClick={cancelGithub} className={linkBtn}>{t('waiting.cancel')}</button>
+        <p className={subCls}>{t('waiting.body', { provider: name })}</p>
+        <div className="mt-6 flex items-center gap-3 rounded-lg border border-border-strong px-3.5 py-3 text-[14px] text-foreground">
+          <ProviderMark provider={provider} className="w-5 h-5 shrink-0" />
+          <span className="min-w-0 flex-1">{t('waiting.status', { provider: name })}</span>
+          <Loader2 className="w-4 h-4 animate-spin text-muted-foreground shrink-0" aria-hidden="true" />
+        </div>
+        <div className="mt-4 flex flex-col gap-1">
+          <button type="button" onClick={() => startProvider(provider, 'auto')} className={emailBtn}><ExternalLink className="w-4 h-4" aria-hidden="true" /> {t('waiting.reopen')}</button>
+          <button type="button" onClick={() => startProvider(provider, 'loopback')} className={linkBtn}>{t('waiting.anotherWay')}</button>
+          <button type="button" onClick={cancelProvider} className={linkBtn}>{t('waiting.cancel')}</button>
         </div>
       </div>
     );
@@ -123,37 +204,36 @@ export default function SignInPanel({ purpose, info, lockedEmail = '', onDone, o
   if (step === 'email' || step === 'code') {
     return (
       <div>
-        <button type="button" onClick={() => { setStep(step === 'code' && !lockedEmail ? 'email' : 'choose'); setErr(''); }} className="text-[12px] text-muted hover:text-foreground flex items-center gap-1.5 mb-5">
-          <ArrowLeft className="w-3.5 h-3.5" /> {step === 'code' && !lockedEmail ? t('email.change') : t('back')}
+        <button type="button" onClick={() => { setStep(step === 'code' && !lockedEmail ? 'email' : 'choose'); setErr(''); }} className="-ms-1 mb-4 min-h-[44px] px-1 inline-flex items-center gap-1.5 text-[14px] text-muted-foreground hover:text-foreground">
+          <ArrowLeft className="w-4 h-4" aria-hidden="true" /> {step === 'code' && !lockedEmail ? t('email.change') : t('back')}
         </button>
-        <div className="w-11 h-11 rounded-xl bg-primary/10 text-primary grid place-items-center mb-4"><Mail className="w-5 h-5" /></div>
         {step === 'email' ? (
           <form noValidate onSubmit={sendCode}>
             <h2 className={titleCls}>{t('email.title')}</h2>
-            <p className="text-[12.5px] text-muted mt-1 mb-5">{t('email.subtitle')}</p>
+            <p className={`${subCls} mb-6`}>{t('email.subtitle')}</p>
             <label htmlFor={`si-${purpose}-email`} className={labelCls}>{t('email.label')}</label>
             <input id={`si-${purpose}-email`} type="email" autoComplete="email" autoFocus={!lockedEmail} disabled={Boolean(lockedEmail)}
               className={inputCls} value={email} onChange={(e) => setEmail(e.target.value)} placeholder={t('email.placeholder')} />
             {errBox}
-            <button type="submit" disabled={busy || !email.trim()} className={primaryBtn}>
-              {busy ? <Loader2 className="w-4 h-4 animate-spin" /> : <>{t('email.send')} <ArrowRight className="w-4 h-4" /></>}
+            <button type="submit" disabled={busy || !email.trim()} aria-busy={busy} className={primaryBtn}>
+              {busy ? <Loader2 className="w-4 h-4 animate-spin" aria-hidden="true" /> : <>{t('email.send')} <ArrowRight className="w-4 h-4" aria-hidden="true" /></>}
             </button>
           </form>
         ) : (
           <form noValidate onSubmit={verify}>
             <h2 className={titleCls}>{t('email.codeTitle')}</h2>
-            <p className="text-[12.5px] text-muted mt-1 mb-5 break-words">{t('email.codeBody', { email: email.trim().toLowerCase() })}</p>
+            <p className={`${subCls} mb-6 break-words`}>{t('email.codeBody', { email: email.trim().toLowerCase() })}</p>
             <label htmlFor={`si-${purpose}-code`} className={labelCls}>{t('email.codeLabel')}</label>
             <input id={`si-${purpose}-code`} inputMode="numeric" autoComplete="one-time-code" autoFocus maxLength={6}
-              className={`${inputCls} h-12 text-center font-mono text-[20px] tracking-[0.5em]`}
+              className={`${inputCls} h-14 text-center font-mono text-[24px] tracking-[0.5em]`}
               value={code} onChange={(e) => { const v = sixDigits(e.target.value); setCode(v); if (v.length === 6) verify(null, v); }} />
-            {devCode && <p className="mt-3 px-3 py-2 rounded-lg bg-primary/10 border border-primary/30 text-[12px] text-primary">{t('email.devCode', { code: devCode })}</p>}
-            {!devCode && <p className="mt-3 text-[11.5px] text-muted-dark leading-relaxed">{t('email.checkSpam')}</p>}
+            {devCode && <p className="mt-3 px-3.5 py-2.5 rounded-lg bg-primary/10 border border-primary/30 text-[14px] text-foreground">{t('email.devCode', { code: devCode })}</p>}
+            {!devCode && <p className="mt-3 text-[14px] text-muted-foreground leading-relaxed">{t('email.checkSpam')}</p>}
             {errBox}
-            <button type="submit" disabled={busy || code.length !== 6} className={primaryBtn}>
-              {busy ? <Loader2 className="w-4 h-4 animate-spin" /> : <>{t('email.verify')} <Check className="w-4 h-4" /></>}
+            <button type="submit" disabled={busy || code.length !== 6} aria-busy={busy} className={primaryBtn}>
+              {busy ? <Loader2 className="w-4 h-4 animate-spin" aria-hidden="true" /> : <>{t('email.verify')} <ArrowRight className="w-4 h-4" aria-hidden="true" /></>}
             </button>
-            <button type="button" onClick={() => sendCode()} disabled={resendIn > 0 || busy} className={`mt-3 w-full ${linkBtn}`}>
+            <button type="button" onClick={() => sendCode()} disabled={resendIn > 0 || busy} className={`mt-2 w-full ${linkBtn}`}>
               {resendIn > 0 ? t('email.resendIn', { count: resendIn }) : t('email.resend')}
             </button>
           </form>
@@ -162,38 +242,80 @@ export default function SignInPanel({ purpose, info, lockedEmail = '', onDone, o
     );
   }
 
+  const returning = purpose === 'signup' && entry === 'returning';
   return (
     <div>
+      {purpose === 'signup' && onEntry && (
+        <div role="group" aria-label={t('choose.entryLabel')} className="mb-6 [@media(max-height:800px)]:mb-4 grid grid-cols-2 gap-1 rounded-lg border border-border-strong p-1">
+          {['new', 'returning'].map((k) => (
+            <button key={k} type="button" aria-pressed={entry === k} onClick={() => { if (entry !== k) { setErr(''); setRerequest(false); onEntry(k); } }}
+              className={`h-[44px] rounded-md text-[14px] font-semibold transition-colors ${entry === k ? 'bg-secondary text-foreground shadow-[inset_0_0_0_1px_var(--border-strong),inset_0_-2px_0_var(--primary)]' : 'text-muted-foreground hover:text-foreground'}`}>
+              {k === 'new' ? t('choose.entryNew') : t('choose.entryReturning')}
+            </button>
+          ))}
+        </div>
+      )}
       {heading && purpose === 'signup' && (
         <>
-          <h1 className={titleCls}>{t('choose.title')}</h1>
-          <p className="text-[12.5px] text-muted mt-1 mb-6">{t('choose.subtitle')}</p>
+          <h1 className={titleCls}>{returning ? t('choose.signInTitle') : t('choose.title')}</h1>
+          <p className={`${subCls} mb-6 [@media(max-height:800px)]:mb-4`}>{returning ? t('choose.signInSubtitle') : t('choose.subtitle')}</p>
         </>
       )}
-      <div className="flex flex-col gap-3">
-        {github && (
-          <button type="button" onClick={() => startGithub('auto')} className={githubBtn}>
+      <div className="flex flex-col gap-2.5 [@media(max-height:800px)]:gap-2">
+        {buttons.includes('google') && (
+          <button type="button" onClick={() => startProvider('google', 'auto')} className={googleBtn}>
+            <GoogleMark /> {t('choose.google')}
+          </button>
+        )}
+        {buttons.includes('microsoft') && (
+          <button type="button" onClick={() => startProvider('microsoft', 'auto')} className={microsoftBtn}>
+            <MicrosoftMark /> {t('choose.microsoft')}
+          </button>
+        )}
+        {buttons.includes('facebook') && (
+          <button type="button" onClick={() => startProvider('facebook', 'auto')} className={facebookBtn}>
+            <FacebookMark onBlue /> {t('choose.facebook')}
+          </button>
+        )}
+        {buttons.includes('linkedin') && (
+          <button type="button" onClick={() => startProvider('linkedin', 'auto')} className={linkedinBtn}>
+            <LinkedinMark onBlue /> {t('choose.linkedin')}
+          </button>
+        )}
+        {buttons.includes('github') && (
+          <button type="button" onClick={() => startProvider('github', 'auto')} className={githubBtn}>
             <GithubMark /> {t('choose.github')}
           </button>
         )}
         <button type="button" onClick={() => { setErr(''); setStep('email'); }} className={emailBtn}>
-          <Mail className="w-[18px] h-[18px]" /> {t('choose.email')}
+          <Mail className="w-[18px] h-[18px]" aria-hidden="true" /> {t('choose.email')}
         </button>
       </div>
-      {errBox}
-      {onMoreOptions && (
-        <>
-          <div className="flex items-center gap-3 my-5" aria-hidden="true">
-            <span className="h-px flex-1 bg-border" /><span className="text-[11px] uppercase tracking-wider text-muted-dark">{t('choose.or')}</span><span className="h-px flex-1 bg-border" />
-          </div>
-          <button type="button" onClick={onMoreOptions} className="w-full text-center group">
-            <span className="block text-[12.5px] font-semibold text-primary group-hover:text-primary-hover">{t('choose.moreOptions')}</span>
-            <span className="block text-[11px] text-muted-dark mt-0.5">{t('choose.moreOptionsHint')}</span>
-          </button>
-        </>
+      {(err || (rerequest && buttons.includes('facebook'))) && (
+        // Facebook shared no email: the way out (ask Facebook again) sits inside the message that explains it.
+        <div className="mt-4 rounded-lg border border-destructive/40 bg-destructive/10 px-3.5 py-2.5">
+          {err && <p role="alert" className="m-0 text-[14px] leading-relaxed text-[var(--auth-error-fg)]">{err}</p>}
+          {rerequest && buttons.includes('facebook') && (
+            <button type="button" onClick={() => startProvider('facebook', 'auto', true)} className={`${inlineLink} mt-1 min-h-[44px] inline-flex items-center gap-2 text-[14px]`}>
+              <FacebookMark className="w-[18px] h-[18px]" /> {t('choose.allowEmail')}
+            </button>
+          )}
+        </div>
+      )}
+      {!returning && onMoreOptions && (
+        <p className="mt-5 text-[14px] text-muted-foreground">
+          {t('choose.moreOptionsHint')}{' '}
+          <button type="button" onClick={onMoreOptions} className={`${inlineLink} min-h-[44px] align-middle`}>{t('choose.moreOptions')}</button>
+        </p>
+      )}
+      {returning && onPasswordLogin && (
+        <p className="mt-5 text-[14px] text-muted-foreground">
+          {t('choose.haveAccount')}{' '}
+          <button type="button" onClick={onPasswordLogin} className={`${inlineLink} min-h-[44px] align-middle`}>{t('choose.logIn')}</button>
+        </p>
       )}
       {!compact && purpose === 'signup' && (
-        <p className="text-[11px] text-muted-dark mt-5 flex items-center justify-center gap-1.5 text-center"><ShieldCheck className="w-3.5 h-3.5 shrink-0" /> {t('choose.privacy')}</p>
+        <p className="text-[13px] text-muted-foreground mt-1 leading-relaxed">{t('choose.privacy')}</p>
       )}
     </div>
   );
@@ -219,13 +341,13 @@ export function UseCaseStep({ onDone }) {
 
   return (
     <form noValidate onSubmit={save}>
-      <h1 className="font-display text-[20px] font-semibold tracking-tight">{t('useCase.title')}</h1>
-      <p className="text-[12.5px] text-muted mt-1 mb-5">{t('useCase.subtitle')}</p>
+      <h1 className="font-display text-[28px] leading-tight font-semibold tracking-tight">{t('useCase.title')}</h1>
+      <p className={`${bodyCls} mt-2 mb-5`}>{t('useCase.subtitle')}</p>
       <fieldset>
         <legend className="sr-only">{t('useCase.title')}</legend>
         <div className="grid gap-2">
           {USE_CASES.map((k) => (
-            <label key={k} className={`flex items-center gap-3 rounded-lg border px-3 py-2.5 cursor-pointer text-[12.5px] transition-colors ${useCase === k ? 'border-primary bg-primary/10 text-foreground' : 'border-border hover:bg-secondary text-foreground'}`}>
+            <label key={k} className={`flex items-center gap-3 rounded-lg border px-3 min-h-[44px] cursor-pointer text-[14px] transition-colors ${useCase === k ? 'border-primary bg-primary/10 text-foreground' : 'border-border hover:bg-secondary text-foreground'}`}>
               <input type="radio" name="usecase" value={k} checked={useCase === k} onChange={() => setUseCase(k)} className="accent-[var(--primary)]" />
               <span className="min-w-0">{tg(`lead.useCases.${k}`)}</span>
             </label>
@@ -238,11 +360,11 @@ export function UseCaseStep({ onDone }) {
           <input id="uc-other" maxLength={LEAD_LIMITS.useCaseOther} className={inputCls} value={other} onChange={(e) => setOther(e.target.value)} placeholder={tg('lead.useCaseOtherPlaceholder')} />
         </div>
       )}
-      {err && <p role="alert" className="text-[12px] text-red-400 mt-3">{err}</p>}
+      {err && <p role="alert" className="text-[14px] text-[var(--auth-error-fg)] mt-3">{err}</p>}
       <button type="submit" disabled={busy || !useCase} className={primaryBtn}>
         {busy ? <Loader2 className="w-4 h-4 animate-spin" /> : <>{t('useCase.continue')} <ArrowRight className="w-4 h-4" /></>}
       </button>
-      <button type="button" onClick={onDone} disabled={busy} className={`mt-3 w-full ${linkBtn}`}>{t('useCase.skip')}</button>
+      <button type="button" onClick={onDone} disabled={busy} className={`mt-2 w-full ${linkBtn}`}>{t('useCase.skip')}</button>
     </form>
   );
 }
@@ -279,7 +401,7 @@ export function MoveLicenceCard({ onMoved }) {
     <div className="mb-4 rounded-lg border border-primary/40 bg-primary/5 p-3.5">
       <span className="block text-[13px] font-semibold">{t('move.title')}</span>
       <p className="text-[11.5px] text-muted mt-0.5 leading-relaxed">{tb('store.result.inUse')}</p>
-      {err && <p role="alert" className="text-[12px] text-red-400 mt-2 leading-relaxed">{err}</p>}
+      {err && <p role="alert" className="text-[14px] text-[var(--auth-error-fg)] mt-2 leading-relaxed">{err}</p>}
       <button type="button" onClick={move} disabled={busy} className="mt-3 w-full h-10 rounded-lg bg-primary hover:bg-primary-hover text-white font-semibold text-[13px] flex items-center justify-center gap-2 disabled:opacity-60">
         {busy ? <Loader2 className="w-4 h-4 animate-spin" /> : tb('store.moveHere')}
       </button>

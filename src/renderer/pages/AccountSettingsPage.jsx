@@ -169,7 +169,7 @@ export default function AccountSettingsPage() {
               onClick={() => fileRef.current?.click()}
               disabled={!editable}
               title={t('avatar.changeTitle')}
-              className="absolute -bottom-1.5 -right-1.5 w-8 h-8 rounded-lg grid place-items-center bg-primary text-white shadow-lg shadow-primary/30 hover:bg-primary-hover disabled:opacity-50"
+              className="absolute -bottom-1.5 -inset-e-1.5 w-8 h-8 rounded-lg grid place-items-center bg-primary text-white shadow-lg shadow-primary/30 hover:bg-primary-hover disabled:opacity-50"
             >
               <Camera className="w-4 h-4" />
             </button>
@@ -219,9 +219,9 @@ export default function AccountSettingsPage() {
                 disabled={!editable}
                 placeholder={t('fields.newPasswordPlaceholder')}
                 autoComplete="new-password"
-                className="w-full h-10 bg-input-background border border-border rounded-lg px-3 pr-10 text-[13px] text-foreground outline-none focus:border-primary disabled:opacity-50"
+                className="w-full h-10 bg-input-background border border-border rounded-lg px-3 pe-10 text-[13px] text-foreground outline-none focus:border-primary disabled:opacity-50"
               />
-              <button type="button" tabIndex={-1} onClick={() => setShowPw((s) => !s)} className="absolute right-2.5 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground">
+              <button type="button" tabIndex={-1} onClick={() => setShowPw((s) => !s)} className="absolute inset-e-2.5 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground">
                 {showPw ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
               </button>
             </div>

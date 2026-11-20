@@ -49,7 +49,9 @@ const DEFAULTS = Object.freeze({
     tips: { enabled: true, offsetHours: 48 },
     trial_ending: { enabled: true, offsetHours: -48 },
     trial_ended: { enabled: true, offsetHours: 0 },
-    locks_tomorrow: { enabled: true, offsetHours: 48 },
+    // Retired with the Free plan (no automation sends it; src/email/automations.js). Kept so saved settings
+    // and admin clients that send the whole automations object still validate.
+    locks_tomorrow: { enabled: false, offsetHours: 48 },
     come_back: { enabled: true, offsetHours: 336 }
   }
 });

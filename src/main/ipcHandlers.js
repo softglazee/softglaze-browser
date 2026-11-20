@@ -19,6 +19,8 @@ const {
   importSessionCookies,
   exportStoredCookies,
   importStoredCookies,
+  replaceSessionCookies,
+  replaceStoredCookies,
   liveLeakTest,
   listAvailableBrowsers,
   resolveBrowserExecutable,
@@ -41,6 +43,7 @@ const {
   getAutomationPage,
   reapplyScreenMetrics
 } = require('./browserEngine');
+const i18nMain = require('./i18nMain');
 const blockDetect = require('./blockDetect');
 const dnsbl = require('./dnsbl');
 const browserDownloader = require('./browserDownloader');
@@ -48,7 +51,10 @@ const firefoxEngine = require('./firefoxEngine');
 const localApi = require('./localApi');
 const aiActor = require('./ai/actor');
 const ai = require('./ai');
-const { registerAiIpc, createWindowEmitter } = require('./ai/ipc');
+const { registerAiIpc, createWindowEmitter, canAnswerApproval } = require('./ai/ipc');
+const mobile = require('./mobile');
+const { registerMobileIpc } = require('./mobile/ipc');
+const { deviceKind: mobileDeviceKindOf } = require('./mobile/devices');
 const autofillBridge = require('./autofillBridge');
 const { siteKeyOf } = require('./siteKey');
 const updater = require('./updater');
@@ -78,6 +84,8 @@ const { relay } = require('./remoteRelay');
 const { runParallelMacro } = require('./parallelRunner');
 const teamPolicy = require('./teamPolicy');
 const tierPolicy = require('./tierPolicy');
+const freePlan = require('./freePlan');
+const partnerDeals = require('./partnerDeals');
 const { CloudSyncEngine, resolveWorkspaceSalt } = require('./cloudSync');
 const syncTransport = require('./syncTransport');
 const syncPolicy = require('./syncPolicy');
@@ -305,6 +313,14 @@ const CHANNELS = Object.freeze({
   LICENSE_EDIT: 'license:edit',
   LICENSE_TERMINATE: 'license:terminate',
   LICENSE_LIST_OWNERS: 'license:list-owners',
+  // Free forever plan (1.0.27)
+  LICENSE_CHOOSE_FREE: 'license:choose-free',
+  PLAN_USAGE: 'plan:usage',
+  PLAN_ACK_FREE_WELCOME: 'plan:ack-free-welcome',
+  PLAN_SET_OPENABLE: 'plan:set-openable',
+  PLAN_LIMIT_HIT: 'plan:limit-hit', // main -> renderer push
+  PARTNER_DEALS_LIST: 'partner-deals:list',
+  PARTNER_DEALS_OPEN: 'partner-deals:open',
   PAYMENT_CONFIG_GET: 'payment:config-get',
   PAYMENT_CONFIG_SET: 'payment:config-set',
   PAYMENT_CONFIG_VALIDATE: 'payment:config-validate',
@@ -524,6 +540,8 @@ function registerHandler(channel, handler) {
       return { ok: true, data };
     } catch (error) {
       console.error(`[IPC:${channel}]`, error);
+      // A plan limit (Free) opens the upgrade prompt with the price, wherever the action came from.
+      if (error && error.code === freePlan.PLAN_LIMIT_CODE && error.planLimit) emitPlanLimit(error.planLimit);
       return { ok: false, error: toIpcError(error) };
     }
   });
@@ -984,9 +1002,9 @@ async function exportProfileArchive(payload) {
   const safeName = (String(profile.title || 'profile').replace(/[^a-z0-9._-]+/gi, '_').slice(0, 60)) || 'profile';
 
   const save = await dialog.showSaveDialog({
-    title: 'Export encrypted profile archive',
+    title: i18nMain.t('dialogs.exportArchiveTitle'),
     defaultPath: `${safeName}.sgz`,
-    filters: [{ name: 'Softglaze encrypted archive', extensions: ['sgz'] }]
+    filters: [{ name: i18nMain.t('dialogs.archiveFilter'), extensions: ['sgz'] }]
   });
   if (save.canceled || !save.filePath) return { cancelled: true };
 
@@ -8605,6 +8623,8 @@ async function launchProfileNow(payload) {
 
   // A banned owner tree cannot launch; enforced in main, not just the renderer.
   await assertNotBanned();
+  // Free: one profile open at a time, and only the profiles chosen to open (freePlan.js).
+  await assertPlanCanLaunch(id);
 
   // Block a concurrent launch by a different member (lock-when-in-use).
   const launcher = await getActiveMember();
@@ -8622,6 +8642,11 @@ async function launchProfileNow(payload) {
     e.code = 'CONCURRENCY_LIMIT';
     throw e;
   }
+
+  // A profile that syncs with phones opens on one device at a time: take its lease first (refused
+  // with IN_USE while a phone has it open; `takeoverFromPhone` takes it over). Applies the newest
+  // cookie jar from the phone before the browser starts.
+  await mobile.beforeLaunch(id, { takeover: input.takeoverFromPhone === true });
 
   // Reserve before the heavy spawn so a parallel launch cannot slip through the check-to-acquire window.
   const reservation = reserveProfileLock(id, launcher);
@@ -8866,6 +8891,7 @@ async function markSessionCrashed(profileId) {
 function handleSessionEvent(evt) {
   if (!evt || !evt.type) return;
   const pid = (evt.profileId != null) ? Number(evt.profileId) : (Number.isFinite(Number(evt.sessionId)) ? Number(evt.sessionId) : null);
+  try { mobile.onSessionEvent(evt, pid); } catch (e) { /* phones must never break session handling */ }
   if (evt.type === 'launched') { markSessionLaunched(pid, evt.engine).catch(() => {}); return; }
   if (evt.type === 'blocked') { onSessionBlocked(evt).catch(() => {}); return; }
   // A script or AI app that drives a profile over its DevTools endpoint can close the browser
@@ -9154,9 +9180,9 @@ async function checkMemoryPressure() {
 
 async function previewProfilesViaDialog() {
   const selection = await dialog.showOpenDialog({
-    title: 'Select a Softglaze profile spreadsheet to import',
+    title: i18nMain.t('dialogs.importProfilesTitle'),
     properties: ['openFile'],
-    filters: [{ name: 'Spreadsheet files', extensions: ['xlsx', 'xls', 'csv'] }]
+    filters: [{ name: i18nMain.t('dialogs.spreadsheetFilter'), extensions: ['xlsx', 'xls', 'csv'] }]
   });
 
   if (selection.canceled || selection.filePaths.length === 0) return { cancelled: true };
@@ -9401,9 +9427,12 @@ async function commitProfileImport(payload, event) {
       emit({ phase: 'item', index: processed, total, title: item.title, ok: false, level: 'error', message: `[ERROR] Row ${item.row} failed: ${message}` });
       // The profile limit: no later row can be created either, so the import stops here. (At the proxy
       // limit only rows with a new custom proxy fail; the others still import.)
-      if (error && error.code === 'LIMIT_REACHED' && error.limitKind !== 'proxy') {
+      // The Free plan's 25 saved profiles stop it the same way (the import is capped at the plan limit).
+      const planCap = error && error.code === freePlan.PLAN_LIMIT_CODE && error.limitKind === 'profile';
+      if ((error && error.code === 'LIMIT_REACHED' && error.limitKind !== 'proxy') || planCap) {
         const left = total - processed;
-        result.stoppedAtLimit = { row: item.row, notImported: left + 1 };
+        result.stoppedAtLimit = { row: item.row, notImported: left + 1, ...(planCap ? { plan: 'free', limit: error.planLimit.limit } : {}) };
+        if (planCap) emitPlanLimit(error.planLimit); // the upgrade prompt, with the price
         if (left > 0) log('warn', `[WARN] Import stopped: the profile limit was reached, so ${left} more row${left === 1 ? ' was' : 's were'} not imported.`);
         break;
       }
@@ -9627,11 +9656,11 @@ async function exportProfilesToFile(payload) {
 
   const stamp = new Date().toISOString().slice(0, 10);
   const res = await dialog.showSaveDialog({
-    title: 'Export Softglaze profiles',
+    title: i18nMain.t('dialogs.exportProfilesTitle'),
     defaultPath: `softglaze-profiles-export-${stamp}.${format}`,
     filters: format === 'csv'
       ? [{ name: 'CSV', extensions: ['csv'] }]
-      : [{ name: 'Excel Workbook', extensions: ['xlsx'] }, { name: 'CSV', extensions: ['csv'] }]
+      : [{ name: i18nMain.t('dialogs.excelFilter'), extensions: ['xlsx'] }, { name: 'CSV', extensions: ['csv'] }]
   });
   if (res.canceled || !res.filePath) return { saved: false, cancelled: true };
 
@@ -10216,7 +10245,7 @@ const GLOBAL_SETTINGS_DEFAULTS = Object.freeze({
   // URLs are auto-linked; keep it one short line.
   branding: {
     footerEnabled: true,
-    footerText: '© {year} SoftGlaze - Built by the [SoftGlaze Team](https://softglaze.com) · Developed by [Azhar Ali](https://azhar.softglaze.com)'
+    footerText: '© {year} SoftGlaze · Built by the [SoftGlaze Team](https://softglaze.com) · Developed by [Azhar Ali](https://azhar.softglaze.com)'
   },
   // launchConcurrency caps parallel spawns in a bulk launch (Chromium is RAM-heavy).
   // maxConcurrentProfiles caps running sessions (null = unlimited); launches past it are reported.
@@ -11023,9 +11052,9 @@ async function updatePersona(payload) {
 // and rows for column mapping, capped at parseDataRows' 1000-row limit.
 async function previewPersonaFile() {
   const selection = await dialog.showOpenDialog({
-    title: 'Select a spreadsheet of identities to import',
+    title: i18nMain.t('dialogs.importIdentitiesTitle'),
     properties: ['openFile'],
-    filters: [{ name: 'Spreadsheet files', extensions: ['xlsx', 'xls', 'csv'] }]
+    filters: [{ name: i18nMain.t('dialogs.spreadsheetFilter'), extensions: ['xlsx', 'xls', 'csv'] }]
   });
   if (selection.canceled || selection.filePaths.length === 0) return { cancelled: true };
   const filePath = selection.filePaths[0];
@@ -11315,6 +11344,8 @@ function limitError(kind, max) {
 // Block a create when the active member is at their granted quota. No active
 // member (single-user mode) or SUPER_ADMIN => unrestricted. -1 => unlimited.
 async function assertWithinLimit(kind) {
+  // The plan's own cap comes first and covers single-user mode too (Free: 25 saved profiles).
+  if (kind === 'profiles') await assertPlanProfileCapacity(1);
   const m = await getActiveMember();
   if (!m || m.role === 'SUPER_ADMIN') return;
   const perms = permissions.effectivePermissions(m);
@@ -12378,6 +12409,7 @@ async function afterDbReady() {
   // Microsoft Store build: today counts as a day of use for the rating card (nothing elsewhere).
   getStoreRating().noteUse().catch(() => {});
   try { await ai.load(); } catch (e) { /* AI stays off */ }
+  mobile.start().catch(() => {}); // phone companion: off until turned on in Settings > Phones
   try { await localApi.startIfEnabled(); } catch (e) { /* off by default */ }
   // Licensing backend (when a tenant config is baked): refresh the signed lease on
   // startup + every 6h. Best-effort - offline keeps running on the cached lease.
@@ -12471,9 +12503,9 @@ async function workspaceBackup(payload) {
   } catch (e) { settings = []; }
   const stamp = new Date().toISOString().slice(0, 10);
   const save = await dialog.showSaveDialog({
-    title: 'Back up workspace',
+    title: i18nMain.t('dialogs.backupTitle'),
     defaultPath: `softglaze-workspace-${stamp}.sgzw`,
-    filters: [{ name: 'Softglaze Workspace Backup', extensions: ['sgzw'] }]
+    filters: [{ name: i18nMain.t('dialogs.backupFilter'), extensions: ['sgzw'] }]
   });
   if (save.canceled || !save.filePath) return { cancelled: true };
   const res = await profileArchive.exportWorkspaceArchive({ dbPath, settings, password, outPath: save.filePath });
@@ -12491,9 +12523,9 @@ async function workspaceRestore(payload) {
   const password = String(input.password || '');
   if (!password) throw new Error('Enter the password for this backup.');
   const selection = await dialog.showOpenDialog({
-    title: 'Restore workspace backup',
+    title: i18nMain.t('dialogs.restoreTitle'),
     properties: ['openFile'],
-    filters: [{ name: 'Softglaze Workspace Backup', extensions: ['sgzw'] }]
+    filters: [{ name: i18nMain.t('dialogs.backupFilter'), extensions: ['sgzw'] }]
   });
   if (selection.canceled || !selection.filePaths || !selection.filePaths.length) return { cancelled: true };
   const filePath = selection.filePaths[0];
@@ -13282,7 +13314,7 @@ async function signinInfo() { return oneClick().info(); }
 
 async function signinStart(payload) {
   const p = signinPayload(payload);
-  return oneClick().start({ provider: String(p.provider || ''), purpose: String(p.purpose || ''), mode: p.mode });
+  return oneClick().start({ provider: String(p.provider || ''), purpose: String(p.purpose || ''), mode: p.mode, rerequest: p.rerequest === true });
 }
 
 async function signinCancel() { return oneClick().cancel(); }
@@ -13432,6 +13464,7 @@ async function assertSeatAvailable(reactivateId) {
   const members = await db.member.findMany({ select: { id: true, status: true, parentMemberId: true } });
   const { ok, usage } = teamPolicy.canTakeSeat(members, ownerId, lic, { reactivateId });
   if (!ok) {
+    if (lic && lic.type === 'free') throw freePlan.planLimitError('seats', { limit: usage.total, used: usage.used });
     const e = new Error(seatLimitMessage(usage));
     e.code = 'SEAT_LIMIT';
     throw e;
@@ -13489,7 +13522,7 @@ async function exportTeamActivity(payload) {
 
   const stamp = new Date().toISOString().slice(0, 10);
   const save = await dialog.showSaveDialog({
-    title: 'Export activity log',
+    title: i18nMain.t('dialogs.exportActivityTitle'),
     defaultPath: `softglaze-activity-${stamp}.${isJson ? 'json' : 'csv'}`,
     filters: [isJson ? { name: 'JSON', extensions: ['json'] } : { name: 'CSV', extensions: ['csv'] }]
   });
@@ -13571,6 +13604,8 @@ async function unlockCloudSync(passphrase) {
 async function syncConfigure(payload) {
   await requireOwnerOrSuper('configure cloud sync');
   const input = requireObject(payload);
+  // Cloud sync is part of Pro; on Free it can only be switched off.
+  if (input.enabled !== false) await assertPlanAllows('sync');
   const prev = await readCloudSyncConfig();
 
   const baseUrl = input.baseUrl !== undefined ? String(input.baseUrl || '').trim().replace(/\/+$/, '') : prev.baseUrl;
@@ -13721,6 +13756,7 @@ async function createProfileFromRemote(remoteState) {
 
 async function syncRun(payload) {
   await requireOwnerOrSuper('run cloud sync');
+  await assertPlanAllows('sync');
   const c = await readCloudSyncConfig();
   if (!cloudSyncConfigured(c)) return { ok: false, skipped: true, reason: 'Cloud sync is not configured.' };
   if (!c.enabled) return { ok: false, skipped: true, reason: 'Cloud sync is disabled.' };
@@ -13980,8 +14016,11 @@ async function getBillingPlans() {
     daysLeftTrial: lic.daysLeftTrial ?? null,
     // Who may start the free trial from the Billing page: anyone not exempt and not
     // already on a paid plan (best-effort, local - see the Licenses panel note).
-    canStartTrial: !lic.isExempt && !lic.isPaid,
-    canManage: await isCertifiedSuperAdmin(me)
+    canStartTrial: !lic.isExempt && !lic.isPaid && !(lic.isFree && lic.trialUsed),
+    canManage: await isCertifiedSuperAdmin(me),
+    // Free forever (1.0.27): the Billing page shows Free as the current plan and a comparison table.
+    isFree: Boolean(lic.isFree),
+    freeLimits: tierPolicy.limitsForLicense({ type: 'free', freeLimits: ((await readFreePlanState()) || {}).limits || null })
   };
 }
 
@@ -14192,11 +14231,42 @@ async function licenseView(lic) {
     const d = tenantTrial.localDecision(lic, await tenantTrialCutover(), effectiveNow);
     if (d.kind === 'none') {
       const ownerStatus = await syncOwnerBanState(lic.ownerMemberId ?? null, false);
-      return tenantTrial.noPlanView({ trialUsed: d.trialUsed, adminBlocked: ownerStatus === 'banned', clockTamper: tampered, plan: PLAN });
+      if (ownerStatus === 'banned') return tenantTrial.noPlanView({ trialUsed: d.trialUsed, adminBlocked: true, clockTamper: tampered, plan: PLAN });
+      // Free forever (1.0.27): a workspace whose trial was used (or whose owner chose Free on the plan step)
+      // is on Free, unless the server says its licence was revoked or refunded.
+      const fs = await readFreePlanState();
+      const lock = freePlan.lockReasonOf(fs);
+      if (lock) return freePlan.lockedView({ lockReason: lock, clockTamper: tampered, plan: PLAN });
+      if (d.trialUsed || await readSetting('freeChosen', false)) {
+        return freePlan.freeView({ limits: fs && fs.limits, endedFrom: d.trialUsed ? 'trial' : null, clockTamper: tampered, plan: PLAN, trialUsed: d.trialUsed });
+      }
+      return tenantTrial.noPlanView({ trialUsed: d.trialUsed, adminBlocked: false, clockTamper: tampered, plan: PLAN });
     }
     lic = d.lic;
   }
   const st = licensePolicy.computeLicenseState({ type: lic.type, trialEndsAt: lic.trialEndsAt, now: effectiveNow, graceDays: GRACE_DAYS });
+  // Free forever (1.0.27): an ended trial goes to Free at once (no grace, no lock); an ended paid term keeps its
+  // grace days (renewal reminders) and then goes to Free. Only a licence the server reports as revoked or
+  // refunded stays locked; an admin block on the owner is handled below as before.
+  const trialEnded = String(lic.type || '').toLowerCase() === 'trial' && (st.isGrace || st.isBanned);
+  if ((trialEnded || st.isBanned) && lic.trialEndsAt != null) {
+    const fs = tenantConfig().enabled ? await readFreePlanState() : null;
+    const lock = freePlan.lockReasonOf(fs);
+    const ownerStatusFree = await syncOwnerBanState(lic.ownerMemberId ?? null, Boolean(lock));
+    if (!lock && ownerStatusFree !== 'banned') {
+      return freePlan.freeView({
+        limits: fs && fs.limits,
+        endedFrom: String(lic.type || '').toLowerCase() === 'paid' ? 'paid' : 'trial',
+        endedAt: st.endsAt,
+        clockTamper: tampered,
+        plan: PLAN,
+        trialUsed: true
+      });
+    }
+    if (lock && ownerStatusFree === 'banned') {
+      return { ...freePlan.lockedView({ lockReason: lock, clockTamper: tampered, plan: PLAN }), type: lic.type, purchaseCode: lic.purchaseCode || null };
+    }
+  }
   const ownerStatus = await syncOwnerBanState(lic.ownerMemberId ?? null, st.isBanned);
   const banned = st.isBanned || ownerStatus === 'banned';
   return {
@@ -14302,7 +14372,9 @@ async function refreshBackendLease() {
   try {
     const install = await ensureBackendInstall();
     if (!install) return null;
-    const res = await licenseClient.api.license({ installId: install.installId, installSecret: install.installSecret });
+    const res = await licenseClient.api.license({ installId: install.installId, installSecret: install.installSecret, usage: await planUsageReport() });
+    // What the server says about Free (1.0.27): its limits, and whether a revoked or refunded licence locks.
+    await writeSetting('freePlanState', freePlan.stateFromServer(res || {}, Date.now())).catch(() => {});
     if (!res || !res.lease) {
       // No active licence server-side. A still-valid trial lease is kept: it ends on its own, and this
       // endpoint may list only paid licences.
@@ -14370,7 +14442,14 @@ async function backendLicenseInfo() {
 // caps main enforces.
 function withPlanLimits(view) {
   const l = tierPolicy.limitsForLicense(view);
-  return { ...view, limits: { tier: l.tier, seats: l.seats, maxParallel: l.maxParallel, auditExport: l.auditExport } };
+  return {
+    ...view,
+    limits: {
+      tier: l.tier, seats: l.seats, maxParallel: l.maxParallel, auditExport: l.auditExport,
+      profiles: l.profiles, aiActionsPerDay: l.aiActionsPerDay, runningCap: l.runningCap,
+      sync: l.sync, phoneControl: l.phoneControl, partnerDeals: l.partnerDeals
+    }
+  };
 }
 
 async function getLicense() {
@@ -14419,10 +14498,192 @@ async function getLicense() {
 // ended one (the paid term belongs to the other computer).
 function withLicenseReason(view, reason) {
   const out = { ...view, reason: reason || null };
-  if (reason === 'machine_mismatch' && (out.isPaid || out.state === 'paid')) {
-    Object.assign(out, { state: 'banned', status: 'banned', isPaid: false, isBanned: true });
+  if (reason === 'machine_mismatch' && (out.isPaid || out.state === 'paid' || out.isFree)) {
+    // Free does not unlock a workspace whose data was copied from another computer either.
+    Object.assign(out, { state: 'banned', status: 'banned', isPaid: false, isFree: false, isBanned: true });
   }
   return out;
+}
+
+// ---- Free forever plan (1.0.27, freePlan.js) ----
+
+// The server's last word on Free for this install: { free, lockReason, limits, usageFlags, at } or null.
+async function readFreePlanState() {
+  const v = await readSetting('freePlanState', null);
+  return v && typeof v === 'object' ? v : null;
+}
+
+// Sent with each licence refresh, so the server can check the Free limits once a day.
+async function planUsageReport() {
+  try {
+    return {
+      aiActionsToday: freePlan.aiActionsUsed(await readSetting('aiActionsToday', null)),
+      profiles: await savedProfileCount(),
+      running: listAllSessions().length
+    };
+  } catch (_) { return undefined; }
+}
+
+// The limits of the effective licence (tierPolicy.limitsForLicense of license:get).
+async function currentPlanLimits() {
+  return tierPolicy.limitsForLicense(await getLicense());
+}
+
+// Saved profiles in the workspace (the trash does not count). Free caps the whole workspace.
+async function savedProfileCount() {
+  return getPrisma().profile.count({ where: { deletedAt: null } });
+}
+
+async function savedProfileIds() {
+  return (await getPrisma().profile.findMany({ where: { deletedAt: null }, select: { id: true }, orderBy: { id: 'asc' } })).map((r) => r.id);
+}
+
+// Refuses a new profile past the plan's saved-profile limit (Free: 25). want = profiles about to be made.
+async function assertPlanProfileCapacity(want = 1) {
+  const l = await currentPlanLimits();
+  if (l.profiles == null) return;
+  const used = await savedProfileCount();
+  if (!freePlan.profileCapacity({ limit: l.profiles, used, want }).allowed) {
+    const e = freePlan.planLimitError('profiles', { limit: l.profiles, used });
+    e.limitKind = 'profile'; // a batch import stops here, as at a member's own profile limit
+    throw e;
+  }
+}
+
+// Refuses a launch past Free's limits: one profile open at a time and, coming down from Pro with more profiles
+// than Free opens, only the profiles the owner chose. An already open profile is never refused.
+async function assertPlanCanLaunch(profileId) {
+  const l = await currentPlanLimits();
+  const pid = String(profileId);
+  const open = listAllSessions();
+  if (open.some((s) => String(s.sessionId) === pid)) return;
+  if (l.runningCap != null && open.length >= l.runningCap) {
+    throw freePlan.planLimitError('running', { limit: l.runningCap, used: open.length });
+  }
+  if (l.profiles != null) {
+    const ids = await savedProfileIds();
+    const r = freePlan.canOpenProfile({ profileId: Number(profileId), profileIds: ids, chosen: await readSetting('freeOpenableProfiles', []), limit: l.profiles });
+    if (!r.allowed) {
+      const e = freePlan.planLimitError('openable', { limit: l.profiles, used: ids.length });
+      e.planLimit.needsChoice = r.needsChoice;
+      throw e;
+    }
+  }
+}
+
+// Plan features Free leaves out: 'sync' (cloud sync, phone profile sync) and 'phoneControl' (open or stop a
+// profile from a phone or the web app).
+async function assertPlanAllows(feature) {
+  const l = await currentPlanLimits();
+  if (feature === 'sync' && l.sync === false) throw freePlan.planLimitError('sync');
+  if (feature === 'phoneControl' && l.phoneControl === false) throw freePlan.planLimitError('phone');
+}
+
+async function planAllows(feature) {
+  try { await assertPlanAllows(feature); return true; } catch (e) { if (e && e.code === freePlan.PLAN_LIMIT_CODE) return false; throw e; }
+}
+
+// One SoftGlaze AI / Developer API tool call. Counted on every plan (the server sees real use), refused on Free
+// once the day's actions are used. Serialised, so parallel calls cannot both read the same count.
+let aiQuotaChain = Promise.resolve();
+function takeAiActionQuota() {
+  const run = aiQuotaChain.then(async () => {
+    const l = await currentPlanLimits();
+    const r = freePlan.takeAiAction(await readSetting('aiActionsToday', null), { limit: l.aiActionsPerDay, nowMs: Date.now() });
+    if (!r.allowed) {
+      emitPlanLimit({ kind: 'ai', limit: r.limit, used: r.used });
+      return { ok: false, error: freePlan.planLimitError('ai', { limit: r.limit, used: r.used }).message };
+    }
+    await writeSetting('aiActionsToday', r.next);
+    return { ok: true };
+  });
+  aiQuotaChain = run.catch(() => {});
+  return run;
+}
+
+// Tells every window that a plan limit was hit, so the upgrade prompt opens with the price (AppShell).
+function emitPlanLimit(info) {
+  const data = { kind: info.kind, limit: info.limit ?? null, used: info.used ?? null, needsChoice: Boolean(info.needsChoice) };
+  try { for (const w of BrowserWindow.getAllWindows()) { try { w.webContents.send(CHANNELS.PLAN_LIMIT_HIT, data); } catch (e) { /* window gone */ } } } catch (e) { /* no windows (tests) */ }
+}
+
+// Counters for the renderer: "24 of 25 profiles", "1 of 1 running", "3 of 25 AI actions today".
+async function getPlanUsage() {
+  const view = await getLicense();
+  const l = tierPolicy.limitsForLicense(view);
+  const profiles = await savedProfileCount();
+  const ids = l.profiles != null && profiles > l.profiles ? await savedProfileIds() : null;
+  const chosen = ids ? freePlan.chosenOpenable(await readSetting('freeOpenableProfiles', []), ids, l.profiles) : null;
+  return {
+    plan: view.type === 'free' ? 'free' : (view.tier || 'pro'),
+    isFree: view.type === 'free',
+    limits: { profiles: l.profiles, runningCap: l.runningCap, seats: l.seats, aiActionsPerDay: l.aiActionsPerDay, sync: l.sync, phoneControl: l.phoneControl, partnerDeals: l.partnerDeals },
+    profiles: { used: profiles, limit: l.profiles },
+    running: { used: listAllSessions().length, limit: l.runningCap },
+    aiActions: { used: freePlan.aiActionsUsed(await readSetting('aiActionsToday', null)), limit: l.aiActionsPerDay },
+    openable: ids ? { needsChoice: chosen.length === 0, chosen, limit: l.profiles, total: ids.length } : null,
+    showFreeWelcome: freePlan.shouldShowFreeWelcome(view, await readSetting('freeWelcomeSeen', false))
+  };
+}
+
+// The plan step's "Continue on Free" (tenant builds): the workspace goes to Free without a trial.
+async function chooseFreePlan() {
+  const me = await getActiveMember();
+  if (me && me.role !== 'OWNER' && me.role !== 'SUPER_ADMIN') {
+    const err = new Error('Only the workspace Owner can choose the plan.'); err.code = 'FORBIDDEN'; throw err;
+  }
+  await writeSetting('freeChosen', true);
+  return getLicense();
+}
+
+async function ackFreeWelcome() {
+  await writeSetting('freeWelcomeSeen', new Date().toISOString());
+  return { ok: true };
+}
+
+// "Choose which profiles can open" on Free (more saved profiles than Free opens). ids: at most the Free limit.
+async function setFreeOpenableProfiles(payload) {
+  const me = await getActiveMember();
+  if (me && me.role !== 'OWNER' && me.role !== 'SUPER_ADMIN') {
+    const err = new Error('Only the workspace Owner can choose which profiles open on Free.'); err.code = 'FORBIDDEN'; throw err;
+  }
+  const input = requireObject(payload);
+  const l = await currentPlanLimits();
+  const wanted = Array.isArray(input.ids) ? input.ids : [];
+  if (l.profiles != null && wanted.length > l.profiles) throw new Error(`Choose at most ${l.profiles} profiles.`);
+  const chosen = freePlan.chosenOpenable(wanted, await savedProfileIds(), l.profiles);
+  await writeSetting('freeOpenableProfiles', chosen);
+  return { chosen };
+}
+
+// The partner deals card (Free only): GET /v1/partner-deals from our own server, cached for an hour. No
+// third-party code runs in the app; a deal opens in the system browser and the click is counted on our server.
+const PARTNER_DEALS_TTL_MS = 60 * 60 * 1000;
+let partnerDealsCache = null; // { at, deals }
+async function listPartnerDeals() {
+  const l = await currentPlanLimits();
+  if (!l.partnerDeals) return { deals: [], shown: false };
+  if (!tenantConfig().enabled) return { deals: [], shown: false };
+  if (!partnerDealsCache || Date.now() - partnerDealsCache.at > PARTNER_DEALS_TTL_MS) {
+    try {
+      const res = await licenseClient.api.partnerDeals();
+      partnerDealsCache = { at: Date.now(), deals: partnerDeals.normalizeDeals(res) };
+    } catch (_) {
+      partnerDealsCache = { at: Date.now() - PARTNER_DEALS_TTL_MS + 5 * 60 * 1000, deals: partnerDealsCache ? partnerDealsCache.deals : [] };
+    }
+  }
+  const deals = partnerDeals.pickDeals(partnerDealsCache.deals, { count: 3, seed: freePlan.dayKey() });
+  return { deals, shown: deals.length > 0, disclosure: partnerDeals.DISCLOSURE };
+}
+
+async function openPartnerDeal(payload) {
+  const input = requireObject(payload);
+  const id = String(input.id || '');
+  const deal = (partnerDealsCache ? partnerDealsCache.deals : []).find((d) => d.id === id);
+  if (!deal) throw new Error('This offer is no longer available.');
+  licenseClient.api.partnerDealClick(deal.id).catch(() => {});
+  await require('electron').shell.openExternal(deal.url);
+  return { opened: true };
 }
 
 // Main-side licence gate: refuse a profile launch when the owner tree is banned, never trusting
@@ -15831,9 +16092,9 @@ const dataRowsCache = new Map();
 
 async function pickDataFile() {
   const selection = await dialog.showOpenDialog({
-    title: 'Select a spreadsheet to bind to this parallel run',
+    title: i18nMain.t('dialogs.bindSpreadsheetTitle'),
     properties: ['openFile'],
-    filters: [{ name: 'Spreadsheet files', extensions: ['xlsx', 'xls', 'csv'] }]
+    filters: [{ name: i18nMain.t('dialogs.spreadsheetFilter'), extensions: ['xlsx', 'xls', 'csv'] }]
   });
   if (selection.canceled || selection.filePaths.length === 0) return { cancelled: true };
 
@@ -16684,6 +16945,201 @@ function buildAiHost() {
   };
 }
 
+// ---- SoftGlaze phone companion (src/main/mobile) ----
+// A phone acts as its member exactly like an AI token does (aiActor.run with via 'mobile'), so every
+// permission, ProfileAccess and plan check below is the app's own.
+function mobileProfileStatus(id, running) {
+  if (running.has(String(id))) return 'running';
+  if (profileLaunchesInFlight.has(Number(id))) return 'starting';
+  return 'stopped';
+}
+
+async function mobileFullMember(memberId) {
+  if (memberId == null) return null;
+  if (permissions.isSuperAdminId(memberId)) return { ...permissions.SUPER_ADMIN };
+  return getPrisma().member.findUnique({ where: { id: Number(memberId) } });
+}
+
+function buildMobileHost() {
+  let appVersion = '1.0.0';
+  try { appVersion = require('../../package.json').version || appVersion; } catch (e) { /* keep default */ }
+  const SIDE_PREFIX = 'mobileSync.side.';
+  const readSealed = async (key) => {
+    const row = await readSetting(key, null);
+    if (!row || typeof row.sealed !== 'string') return null;
+    const plain = secretStore.open(row.sealed);
+    try { return plain ? JSON.parse(plain) : null; } catch (e) { return null; }
+  };
+  const writeSealed = (key, value) => writeSetting(key, value == null ? null : { v: 1, sealed: secretStore.seal(JSON.stringify(value)) });
+  const isFirefoxProfile = async (id) => {
+    const p = await getPrisma().profile.findUnique({ where: { id: Number(id) }, select: { browserCore: true } });
+    return Boolean(p && normalizeBrowserCore(p.browserCore) === BROWSER_CORE.FIREFOX);
+  };
+  // 'browser' for the SoftGlaze web app (app version "web-..."), else 'phone' (activity log tag).
+  const mobileDeviceKind = (device) => (device && device.kind) || mobileDeviceKindOf(device && device.appVersion);
+  const ownerActor = async (fn) => {
+    const r = await ai.resolveTokenMember(getPrisma(), { memberId: null });
+    if (!r.ok) throw new Error(r.message);
+    return aiActor.run({ memberId: r.memberId, tokenId: null, tokenName: 'Profile sync', clientName: 'Profile sync', via: 'mobile' }, fn);
+  };
+  return {
+    getPrisma,
+    readSetting,
+    writeSetting,
+    seal: (text) => secretStore.seal(text),
+    open: (text) => secretStore.open(text),
+    emit: emitToAllWindows,
+    appVersion,
+    bridge: {
+      async resolveMember(memberId) {
+        const r = await ai.resolveTokenMember(getPrisma(), { memberId: memberId == null ? null : Number(memberId) });
+        if (!r.ok) return { ok: false, message: r.message };
+        return { ok: true, memberId: r.memberId, member: await mobileFullMember(r.memberId) };
+      },
+      runAs: (device, who, fn) => aiActor.run({ memberId: who.memberId, tokenId: null, tokenName: device.name, clientName: device.name, via: 'mobile', deviceKind: mobileDeviceKind(device) }, fn),
+      async listProfiles() {
+        const db = getPrisma();
+        const where = await scopedProfileWhere({ deletedAt: null });
+        const rows = await db.profile.findMany({
+          where,
+          orderBy: { id: 'asc' },
+          take: 5000,
+          select: { id: true, title: true, groupId: true, tags: true, lastUsedAt: true, assignedMemberId: true, proxy: { select: { lastCountry: true } } }
+        });
+        const groups = new Map((await db.group.findMany({ select: { id: true, name: true } })).map((g) => [g.id, g.name]));
+        const members = new Map((await db.member.findMany({ select: { id: true, name: true } })).map((m) => [m.id, m.name]));
+        const running = new Set(listAllSessions().map((s) => String(s.sessionId)));
+        return rows.map((r) => {
+          let tags = [];
+          try { tags = r.tags ? JSON.parse(r.tags) : []; } catch (e) { tags = []; }
+          return {
+            id: r.id,
+            title: r.title,
+            status: mobileProfileStatus(r.id, running),
+            group: r.groupId ? groups.get(r.groupId) || null : null,
+            tags: Array.isArray(tags) ? tags.map(String) : [],
+            proxyCountry: r.proxy && r.proxy.lastCountry ? String(r.proxy.lastCountry).toUpperCase() : null,
+            member: r.assignedMemberId ? members.get(r.assignedMemberId) || null : null,
+            lastUsedAt: r.lastUsedAt ? new Date(r.lastUsedAt).toISOString() : null
+          };
+        });
+      },
+      startProfile: (id) => launchProfile({ id }),
+      // Free: a phone or the web app may view and approve, not open or stop profiles (freePlan.js).
+      remoteControlAllowed: () => planAllows('phoneControl'),
+      async stopProfile(id) {
+        await requirePermission('profiles.launch');
+        await assertCanAccessProfile(Number(id));
+        await closeAnySession(String(id));
+        reconcileProfileLocks();
+      },
+      approvals: {
+        list: () => ai.listApprovals(),
+        get: (id) => ai.getApproval(id),
+        respond: (id, decision) => ai.respondApproval(id, decision)
+      },
+      canAnswerApproval,
+      async logActivity({ device, memberId, action, profileId, detail }) {
+        const kind = mobileDeviceKind(device);
+        await getPrisma().activityLog.create({
+          data: { profileId: Number(profileId) || 0, memberId: memberId == null ? null : Number(memberId), action, detail: JSON.stringify({ ...detail, via: `[via ${kind}: ${String((device && device.name) || kind).slice(0, 60)}]` }) }
+        });
+      }
+    },
+    sync: {
+      async readProfile(id) {
+        const row = await getPrisma().profile.findUnique({ where: { id: Number(id) }, include: { proxy: true, group: { select: { name: true } } } });
+        if (!row || row.deletedAt) return null;
+        let tags = [];
+        try { tags = row.tags ? JSON.parse(row.tags) : []; } catch (e) { tags = []; }
+        const proxy = row.proxy ? { type: row.proxy.type, host: row.proxy.host, port: row.proxy.port, username: row.proxy.username, password: row.proxy.password, countryCode: row.proxy.lastCountry } : null;
+        return {
+          id: row.id,
+          title: row.title,
+          notes: row.notes,
+          tags: Array.isArray(tags) ? tags.map(String) : [],
+          startUrls: parseStartupUrls(row.startupUrls),
+          folder: row.group ? row.group.name : null,
+          updatedAt: row.updatedAt ? new Date(row.updatedAt).getTime() : 0,
+          proxy,
+          region: {
+            timezoneType: row.timezoneType, timezoneCustom: row.timezoneCustom, languageType: row.languageType, languageCustom: row.languageCustom,
+            locationType: row.locationType, locationLat: row.locationLat, locationLng: row.locationLng, locationAcc: row.locationAcc, webrtc: row.webrtc
+          }
+        };
+      },
+      async writeProfile(id, patch) {
+        const db = getPrisma();
+        const data = {};
+        if (patch.title !== undefined) data.title = String(patch.title).slice(0, 200);
+        if (patch.notes !== undefined) data.notes = patch.notes;
+        if (patch.tags !== undefined) data.tags = JSON.stringify(patch.tags);
+        if (patch.startUrls !== undefined) data.startupUrls = normalizeStartupUrls(patch.startUrls);
+        if (patch.folder !== undefined) {
+          if (patch.folder == null) data.groupId = null;
+          else {
+            const g = await db.group.findFirst({ where: { name: String(patch.folder) }, select: { id: true } });
+            if (g) data.groupId = g.id; // a folder the PC does not have is kept for the phone only
+          }
+        }
+        if (patch.region) {
+          for (const k of ['timezoneType', 'timezoneCustom', 'languageType', 'languageCustom', 'locationType', 'locationLat', 'locationLng', 'locationAcc', 'webrtc']) {
+            if (patch.region[k] !== undefined) data[k] = patch.region[k];
+          }
+        }
+        if (Object.keys(data).length) await db.profile.update({ where: { id: Number(id) }, data });
+      },
+      // A profile a phone shared: created like any new profile (own fingerprint), as the workspace owner.
+      async createProfile({ title }) {
+        const created = await ownerActor(() => createProfile({ title: String(title || 'Phone profile').slice(0, 200) }));
+        return Number(created && created.id);
+      },
+      async exportCookies(id) {
+        if (await isFirefoxProfile(id)) return [];
+        const live = await exportSessionCookies(String(id));
+        if (live) return live;
+        return exportStoredCookies(await offlineProfileOpts(Number(id)));
+      },
+      async replaceCookies(id, params) {
+        if (await isFirefoxProfile(id)) return;
+        const live = await replaceSessionCookies(String(id), params);
+        if (live) return;
+        await replaceStoredCookies(await offlineProfileOpts(Number(id)), params);
+      },
+      snapshotCookies: (syncId, cookies) => writeSealed(`mobileSync.jar.${syncId}`, { at: new Date().toISOString(), cookies }),
+      readSidecar: (syncId) => readSealed(SIDE_PREFIX + syncId),
+      writeSidecar: (syncId, value) => writeSealed(SIDE_PREFIX + syncId, value),
+      readIdMap: () => readSetting('mobileSync.idMap', {}),
+      writeIdMap: (map) => writeSetting('mobileSync.idMap', map),
+      async closeProfile(id) {
+        await closeAnySession(String(id));
+        reconcileProfileLocks();
+      }
+    }
+  };
+}
+
+function buildMobileIpcHost() {
+  return {
+    getWindowMember: () => getActiveMember(),
+    assertPlanAllows: (feature) => assertPlanAllows(feature),
+    membersExist: async () => (await getPrisma().member.count()) > 0,
+    ownerId: async () => {
+      const o = await getPrisma().member.findFirst({ where: { role: 'OWNER' }, orderBy: { id: 'asc' }, select: { id: true } });
+      return o ? o.id : null;
+    },
+    getMember: (id) => getPrisma().member.findUnique({ where: { id: Number(id) } }),
+    visibleMemberIds: async (member) => permissions.visibleMemberIds(await getPrisma().member.findMany(), member),
+    // Members the window member may pair a phone for (themselves and those they manage).
+    async listMembers(member) {
+      const all = await getPrisma().member.findMany({ orderBy: { id: 'asc' }, select: { id: true, name: true, role: true, status: true, parentMemberId: true } });
+      if (!member || member.role === 'OWNER' || member.role === 'SUPER_ADMIN') return all.filter((m) => m.status === 'active');
+      const visible = permissions.visibleMemberIds(all, member);
+      return all.filter((m) => m.status === 'active' && (m.id === member.id || (visible.has(m.id) && m.role !== 'OWNER')));
+    }
+  };
+}
+
 function registerIpcHandlers() {
   if (registered) return;
 
@@ -17007,6 +17463,12 @@ function registerIpcHandlers() {
   registerHandler(CHANNELS.LICENSE_EDIT, editLicense);
   registerHandler(CHANNELS.LICENSE_TERMINATE, terminateLicense);
   registerHandler(CHANNELS.LICENSE_LIST_OWNERS, listOwnerLicenses);
+  registerHandler(CHANNELS.LICENSE_CHOOSE_FREE, chooseFreePlan);
+  registerHandler(CHANNELS.PLAN_USAGE, getPlanUsage);
+  registerHandler(CHANNELS.PLAN_ACK_FREE_WELCOME, ackFreeWelcome);
+  registerHandler(CHANNELS.PLAN_SET_OPENABLE, setFreeOpenableProfiles);
+  registerHandler(CHANNELS.PARTNER_DEALS_LIST, listPartnerDeals);
+  registerHandler(CHANNELS.PARTNER_DEALS_OPEN, openPartnerDeal);
   registerHandler(CHANNELS.PAYMENT_CONFIG_GET, getPaymentConfig);
   registerHandler(CHANNELS.PAYMENT_CONFIG_SET, setPaymentConfig);
   registerHandler(CHANNELS.PAYMENT_CONFIG_VALIDATE, validatePaymentConfig);
@@ -17082,7 +17544,7 @@ function registerIpcHandlers() {
 
   // Softglaze Pro - the loopback server for the Developer API (/api/v1) and SoftGlaze AI (/mcp).
   // Both go through the AI tool registry, acting as the token's member. Off by default.
-  ai.configure({ toolDeps: buildAiToolDeps(), host: buildAiHost() });
+  ai.configure({ toolDeps: buildAiToolDeps(), host: buildAiHost(), quota: { take: () => takeAiActionQuota() } });
   localApi.configure({
     ai,
     readConfig: () => readSetting('localApi', { enabled: false, port: localApi.DEFAULT_PORT }),
@@ -17092,6 +17554,15 @@ function registerIpcHandlers() {
     getWindowMember: () => getActiveMember(),
     visibleMemberIds: async (member) => permissions.visibleMemberIds(await getPrisma().member.findMany(), member)
   });
+  // SoftGlaze phone companion (Settings > Phones): pairing, relay, approvals on the phone, sync.
+  mobile.configure(buildMobileHost());
+  registerMobileIpc(registerHandler, mobile, buildMobileIpcHost());
+  ai.onApprovalEvent((channel, data) => mobile.onApprovalEvent(channel, data));
+  try {
+    const { powerMonitor } = require('electron');
+    powerMonitor.on('suspend', () => { mobile.onSuspend().catch(() => {}); });
+    powerMonitor.on('resume', () => mobile.onResume());
+  } catch (e) { /* no powerMonitor (tests) */ }
   // Bring the session online only when the DB is readable. With at-rest encryption the DB starts
   // locked, and db:unlock runs afterDbReady() itself.
   if (database.isDbUnlocked()) {
@@ -17108,6 +17579,7 @@ async function shutdownIpcHandlers() {
   if (memoryGuardTimer) { clearInterval(memoryGuardTimer); memoryGuardTimer = null; }
   try { const mcp = ai.mcpHandler(); if (mcp) await mcp.dispose(); } catch (e) { /* not configured */ }
   await localApi.stop().catch(() => {});
+  await mobile.shutdown().catch(() => {});
   await autofillBridge.stop().catch(() => {});
   await closeAllProfileSessions();
   await firefoxEngine.closeAllFirefoxSessions().catch(() => {});

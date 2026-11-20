@@ -7,6 +7,7 @@ import MonetizationSettings from '@/components/MonetizationSettings.jsx';
 import DeveloperApiSettings from '@/components/DeveloperApiSettings.jsx';
 import MigrationSettings from '@/components/MigrationSettings.jsx';
 import SyncSettings from '@/components/SyncSettings.jsx';
+import PhonesSettings from '@/components/PhonesSettings.jsx';
 import DbEncryptionSettings from '@/components/DbEncryptionSettings.jsx';
 import WorkspaceBackupSettings from '@/components/WorkspaceBackupSettings.jsx';
 import BrandingSettings from '@/components/BrandingSettings.jsx';
@@ -19,16 +20,9 @@ import NumberInput from '@/components/ui/NumberInput.jsx';
 import { softglazeApi } from '@/lib/softglazeApi.js';
 import { usePermissions } from '@/lib/usePermissions.js';
 import { formatDateTime } from '@/lib/utils.js';
-import { getStoredLang, setLang, SUPPORTED_LANGS } from '@/lib/lang.js';
+import { getStoredLang, setLang, SUPPORTED_LANGS, langOptionLabel } from '@/lib/lang.js';
 import { SHOW_UNAPPLIED_SETTINGS, visibleSectionOrder } from '@/lib/unappliedSettings.mjs';
 import { showRatingEntry } from '@/lib/storeRating.mjs';
-import i18n from '@/i18n/index.js';
-import settingsExtraEn from '@/i18n/locales/en/settingsExtra.json';
-import settingsExtraEs from '@/i18n/locales/es/settingsExtra.json';
-
-// Register the "settingsExtra" namespace here; the central i18n config only bundles "common".
-if (!i18n.hasResourceBundle('en', 'settingsExtra')) i18n.addResourceBundle('en', 'settingsExtra', settingsExtraEn);
-if (!i18n.hasResourceBundle('es', 'settingsExtra')) i18n.addResourceBundle('es', 'settingsExtra', settingsExtraEs);
 
 // Lowercased live search query, shared with every section/row so they can hide
 // themselves when they do not match. Empty string = show everything.
@@ -52,11 +46,11 @@ function CustomSelect({ value, onChange, className = '', children, disabled, id 
         value={value}
         onChange={onChange}
         disabled={disabled}
-        className="w-full appearance-none bg-input-background border border-border rounded pl-3 pr-9 py-1.5 text-foreground text-sm outline-none focus:border-primary focus:ring-1 focus:ring-primary transition disabled:opacity-50 text-ellipsis overflow-hidden whitespace-nowrap cursor-pointer hover:border-muted-dark"
+        className="w-full appearance-none bg-input-background border border-border rounded ps-3 pe-9 py-1.5 text-foreground text-sm outline-none focus:border-primary focus:ring-1 focus:ring-primary transition disabled:opacity-50 text-ellipsis overflow-hidden whitespace-nowrap cursor-pointer hover:border-muted-dark"
       >
         {children}
       </select>
-      <div className="absolute right-3 pointer-events-none text-muted-foreground">
+      <div className="absolute end-3 pointer-events-none text-muted-foreground">
         <ChevronDown className="w-4 h-4" />
       </div>
     </div>
@@ -106,6 +100,7 @@ function buildSections(t, tx) {
   add('dbencryption', 'account', tx('nav.dbEncryption'), '', 'database encryption security');
   add('workspacebackup', 'account', tx('nav.workspaceBackup'), '', 'backup restore export');
   add('developerapi', 'account', tx('nav.developerApi'), '', 'developer api token local');
+  add('phones', 'account', tx('nav.phones'), '', 'phone phones mobile pair qr companion approvals relay sync');
 
   // Sections whose every control is unapplied drop out of the nav, search and page here.
   const order = visibleSectionOrder([
@@ -113,7 +108,7 @@ function buildSections(t, tx) {
     'fingerprint', 'behaviour', 'website', 'ipsetting', 'autofill', 'captcha',
     'localruntime', 'performance', 'reliability', 'sessions', 'scheduler', 'datasync',
     'security', 'multidevice', 'audit', 'email',
-    'billing', 'monetization', 'migration', 'workspacesync', 'branding', 'dbencryption', 'workspacebackup', 'developerapi'
+    'billing', 'monetization', 'migration', 'workspacesync', 'branding', 'dbencryption', 'workspacebackup', 'developerapi', 'phones'
   ]);
   const groupLabels = {
     general: tx('groups.general'),
@@ -357,6 +352,8 @@ export default function SettingsPage() {
               <ReadOnly deny={denyVault}><SearchGate sec={SEC.dbencryption}><DbEncryptionSettings /></SearchGate></ReadOnly>
               <ReadOnly deny={denyEmail}><SearchGate sec={SEC.workspacebackup}><WorkspaceBackupSettings /></SearchGate></ReadOnly>
               <SearchGate sec={SEC.developerapi}><DeveloperApiSettings /></SearchGate>
+              {/* Owner and Admins only (main refuses everyone else; the section renders nothing for them). */}
+              <SearchGate sec={SEC.phones}><PhonesSettings /></SearchGate>
             </GroupBlock>
 
             {q && !anyMatch && (
@@ -377,9 +374,9 @@ function SettingsNav({ groups, active, query, setQuery, onJump, searchRef }) {
   const q = query.trim().toLowerCase();
   const all = groups.flatMap((g) => g.items);
   return (
-    <aside className="lg:sticky lg:top-0 lg:max-h-[calc(100vh-7rem)] lg:overflow-y-auto lg:pr-1" aria-label="Settings sections">
+    <aside className="lg:sticky lg:top-0 lg:max-h-[calc(100vh-7rem)] lg:overflow-y-auto lg:pe-1" aria-label="Settings sections">
       <div className="relative mb-4">
-        <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground pointer-events-none" />
+        <Search className="w-4 h-4 absolute inset-s-3 top-1/2 -translate-y-1/2 text-muted-foreground pointer-events-none" />
         <input
           ref={searchRef}
           type="search"
@@ -388,9 +385,9 @@ function SettingsNav({ groups, active, query, setQuery, onJump, searchRef }) {
           placeholder={tx('ui.searchPlaceholder')}
           aria-label={tx('ui.searchPlaceholder')}
           autoComplete="off"
-          className="w-full bg-input-background border border-border rounded-lg pl-9 pr-9 py-2 text-sm text-foreground placeholder:text-muted-foreground outline-none focus:border-primary focus:ring-1 focus:ring-primary transition"
+          className="w-full bg-input-background border border-border rounded-lg ps-9 pe-9 py-2 text-sm text-foreground placeholder:text-muted-foreground outline-none focus:border-primary focus:ring-1 focus:ring-primary transition"
         />
-        <kbd className="hidden lg:flex absolute right-2.5 top-1/2 -translate-y-1/2 items-center h-5 px-1.5 rounded border border-border bg-secondary text-[10px] font-mono text-muted-foreground pointer-events-none">/</kbd>
+        <kbd className="hidden lg:flex absolute inset-e-2.5 top-1/2 -translate-y-1/2 items-center h-5 px-1.5 rounded border border-border bg-secondary text-[10px] font-mono text-muted-foreground pointer-events-none">/</kbd>
       </div>
 
       <label className="lg:hidden block">
@@ -412,7 +409,7 @@ function SettingsNav({ groups, active, query, setQuery, onJump, searchRef }) {
           return (
             <div key={g.id} className={gi > 0 ? 'border-t border-border' : ''}>
               <div className="flex items-center justify-between gap-2 px-3 pt-3 pb-1.5">
-                <span className="truncate text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">{g.label}</span>
+                <span className="min-w-0 leading-tight [overflow-wrap:anywhere] text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">{g.label}</span>
                 <span className="inline-flex h-4 min-w-[1rem] shrink-0 items-center justify-center rounded-full border border-border bg-secondary px-1 text-[10px] font-medium tabular-nums text-muted-foreground">
                   {g.items.length}
                 </span>
@@ -431,14 +428,14 @@ function SettingsNav({ groups, active, query, setQuery, onJump, searchRef }) {
                           background: 'color-mix(in srgb, var(--primary) 12%, transparent)',
                           borderColor: 'color-mix(in srgb, var(--primary) 26%, transparent)'
                         } : undefined}
-                        className={`relative w-full text-left flex items-center h-8 pl-3 pr-2 rounded-lg border text-[13px] leading-tight transition-colors ${
+                        className={`relative w-full text-start flex items-center min-h-8 py-1.5 ps-3 pe-2 rounded-lg border text-[13px] leading-tight transition-colors ${
                           isActive
                             ? 'text-primary font-medium'
                             : 'border-transparent text-muted-foreground hover:bg-secondary hover:text-foreground'
                         } ${dim ? 'opacity-40' : ''}`}
                       >
-                        {isActive && <span className="absolute left-0 top-1/2 h-4 w-0.5 -translate-y-1/2 rounded-r bg-primary" />}
-                        <span className="truncate">{it.label}</span>
+                        {isActive && <span className="absolute inset-s-0 top-1/2 h-4 w-0.5 -translate-y-1/2 rounded-e bg-primary" />}
+                        <span className="min-w-0 [overflow-wrap:anywhere]">{it.label}</span>
                       </button>
                     </li>
                   );
@@ -600,7 +597,7 @@ function Toggle({ checked, onChange, disabled }) {
       onClick={() => onChange(!checked)}
       className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer items-center rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-background disabled:opacity-50 ${checked ? 'bg-primary' : 'bg-muted-dark'}`}
     >
-      <span className={`pointer-events-none inline-block h-4 w-4 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out ${checked ? 'translate-x-5' : 'translate-x-0'}`} />
+      <span className={`pointer-events-none inline-block h-4 w-4 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out ${checked ? 'translate-x-5 rtl:-translate-x-5' : 'translate-x-0'}`} />
     </button>
   );
 }
@@ -755,7 +752,7 @@ function LanguageSection({ sec }) {
         control={
           <CustomSelect id="settings-language-select" className="w-full sm:w-56" value={lang} onChange={(e) => setLangState(setLang(e.target.value))}>
             {SUPPORTED_LANGS.map((l) => (
-              <option key={l.code} value={l.code}>{l.native}</option>
+              <option key={l.code} value={l.code} lang={l.code}>{langOptionLabel(l)}</option>
             ))}
           </CustomSelect>
         }
@@ -775,7 +772,7 @@ function OnStartupSection({ sec, s, apply }) {
               <label htmlFor="set-onstartup-mode" className="text-sm font-medium text-foreground">{tx('onStartup.startPageLabel')}</label>
               <AppliedBadge />
             </div>
-            <CustomSelect id="set-onstartup-mode" className="w-full sm:w-72" value={s.onStartup.mode} onChange={(e) => apply({ onStartup: { mode: e.target.value } })}>
+            <CustomSelect id="set-onstartup-mode" className="w-full sm:w-[26rem] max-w-full" value={s.onStartup.mode} onChange={(e) => apply({ onStartup: { mode: e.target.value } })}>
               <option value="detection">{tx('onStartup.modeDetection')}</option>
               <option value="last">{tx('onStartup.modeLast')}</option>
               <option value="blank">{tx('onStartup.modeBlank')}</option>
@@ -1300,7 +1297,7 @@ function SessionsSection({ sec, loading, sessions, onClose }) {
                   </div>
                 </div>
                 <Button size="sm" variant="danger" onClick={() => onClose(session.sessionId)} className="shrink-0 px-3">
-                  <StopCircle className="h-4 w-4 mr-1" /> {tx('sessions.close')}
+                  <StopCircle className="h-4 w-4 me-1" /> {tx('sessions.close')}
                 </Button>
               </div>
             </div>
@@ -1340,7 +1337,7 @@ function SchedulerSection({ sec, scheduler, savingSched, saveScheduler, setSched
             <option value={120}>{tx('scheduler.every2hours')}</option>
           </CustomSelect>
         </label>
-        <div className="ml-auto">
+        <div className="ms-auto">
           {scheduler.running ? (
             <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 text-xs font-semibold uppercase tracking-wider">
               <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
@@ -1559,7 +1556,7 @@ function EmailSection({ sec, deny, denyTest }) {
           <GuardedButton deny={deny} variant="primary" onClick={save} disabled={busy}>
             {busy ? <Loader2 className="w-4 h-4 animate-spin" /> : tx('email.saveButton')}
           </GuardedButton>
-          <div className="ml-auto flex items-center gap-2">
+          <div className="ms-auto flex items-center gap-2">
             <input className={inputCls + ' w-56'} value={testTo} onChange={(e) => setTestTo(e.target.value)} disabled={Boolean(denyTest)} title={denyTest || undefined} placeholder="test@recipient.com" />
             <GuardedButton deny={denyTest} variant="secondary" onClick={sendTest} disabled={testing || !testTo.trim()}>
               {testing ? <Loader2 className="w-4 h-4 animate-spin" /> : <><Send className="w-4 h-4" /> {tx('email.test')}</>}

@@ -1,0 +1,116 @@
+{
+  "title": "Điện thoại",
+  "description": "Dùng ứng dụng điện thoại SoftGlaze với máy tính này: xem hồ sơ, mở và dừng hồ sơ, trả lời yêu cầu AI ngay trên điện thoại. Mọi dữ liệu giữa điện thoại và máy tính này đều được mã hóa đầu cuối.",
+  "enable": "Bật ứng dụng đồng hành trên điện thoại",
+  "loading": "Đang tải",
+  "offOwner": "Bật tính năng này để ghép nối điện thoại. Khi đó máy tính này giữ kết nối an toàn với máy chủ chuyển tiếp SoftGlaze, nơi chỉ chuyển tiếp các tin nhắn đã mã hóa.",
+  "offOther": "Chủ sở hữu chưa bật ứng dụng đồng hành trên điện thoại.",
+  "copy": "Sao chép",
+  "cancel": "Hủy",
+  "relay": {
+    "connected": "Đã kết nối máy chủ chuyển tiếp",
+    "connecting": "Đang kết nối máy chủ chuyển tiếp",
+    "authFailed": "Máy chủ chuyển tiếp đã từ chối máy tính này. Hãy kiểm tra địa chỉ máy chủ chuyển tiếp trong Nâng cao."
+  },
+  "pair": {
+    "title": "Ghép nối điện thoại",
+    "help": "Cài SoftGlaze trên điện thoại, rồi quét mã trên màn hình này.",
+    "start": "Ghép nối điện thoại",
+    "qrAlt": "Mã ghép nối cho ứng dụng điện thoại SoftGlaze",
+    "scanTitle": "Quét mã này bằng ứng dụng điện thoại SoftGlaze",
+    "step1": "Mở SoftGlaze trên điện thoại.",
+    "step2": "Vào Cài đặt, Ghép nối với PC, và quét mã này.",
+    "step3": "Kiểm tra cả hai màn hình hiện cùng sáu chữ số.",
+    "expiresIn": "Mã chỉ dùng được một lần và hết hạn sau {{time}}.",
+    "textTitle": "Không quét được? Sao chép mã dạng văn bản",
+    "attemptFailed": "Một điện thoại đã thử mã sai hoặc bị hỏng. Mã vẫn còn hiệu lực."
+  },
+  "confirm": {
+    "title": "{{name}} muốn ghép nối",
+    "help": "Chỉ tiếp tục nếu điện thoại hiện đúng sáu chữ số này.",
+    "helpBrowser": "Chỉ tiếp tục nếu trình duyệt hiện đúng sáu chữ số này. Trình duyệt xem được hồ sơ và trả lời được yêu cầu AI; chỉ đánh dấu Mở và dừng hồ sơ nếu bạn cũng muốn quyền đó.",
+    "codeLabel": "Mã {{code}}",
+    "name": "Tên điện thoại",
+    "member": "Với tư cách",
+    "scopes": "Điện thoại này được làm gì",
+    "match": "Mã khớp, ghép nối",
+    "noMatch": "Mã không khớp"
+  },
+  "scopes": {
+    "view": {
+      "label": "Xem hồ sơ và trạng thái",
+      "help": "Luôn bật. Chỉ những hồ sơ thành viên đó xem được."
+    },
+    "control_profiles": {
+      "label": "Mở và dừng hồ sơ",
+      "help": "Cùng quy tắc như trên máy tính này."
+    },
+    "approve_ai": {
+      "label": "Trả lời yêu cầu AI",
+      "help": "Cho phép hoặc từ chối thao tác của ứng dụng AI, với các token thành viên này được trả lời."
+    },
+    "approve_team": {
+      "label": "Trả lời yêu cầu từ nhóm",
+      "help": "Phê duyệt yêu cầu truy cập từ thành viên nhóm."
+    },
+    "totp": {
+      "label": "Hiện mã 2FA",
+      "help": "Mã xác minh hai bước được lưu trong hồ sơ."
+    },
+    "phone_profiles_linked": {
+      "label": "Đồng bộ hồ sơ",
+      "help": "Các hồ sơ bạn chọn bên dưới cũng mở được trên điện thoại này."
+    }
+  },
+  "roles": {
+    "OWNER": "Chủ sở hữu",
+    "ADMIN": "Quản trị",
+    "MANAGER": "Quản lý",
+    "OPERATOR": "Nhân viên"
+  },
+  "devices": {
+    "title": "Điện thoại và trình duyệt",
+    "kindPhone": "Điện thoại",
+    "kindBrowser": "Trình duyệt",
+    "empty": "Chưa có điện thoại nào.",
+    "online": "Trực tuyến",
+    "offline": "Ngoại tuyến",
+    "lastSeen": "Thấy lần cuối {{when}}",
+    "actsAs": "hoạt động với tư cách {{name}}",
+    "edit": "Sửa {{name}}",
+    "remove": "Gỡ {{name}}",
+    "removeConfirm": "Gỡ {{name}}? Thiết bị sẽ ngừng hoạt động với máy tính này ngay và phải ghép nối lại.",
+    "rename": "Đổi tên",
+    "saveScopes": "Lưu quyền"
+  },
+  "sync": {
+    "title": "Đồng bộ hồ sơ",
+    "help": "Các hồ sơ được chọn cũng mở được trong ứng dụng điện thoại. Cài đặt, trang khởi động và cookie đi theo hồ sơ; mỗi hồ sơ chỉ mở trên một thiết bị tại một thời điểm.",
+    "noPhone": "Chưa có điện thoại nào được đồng bộ. Hãy cấp quyền Đồng bộ hồ sơ cho một điện thoại ở trên.",
+    "now": "Đồng bộ ngay",
+    "search": "Tìm hồ sơ",
+    "toggle": "Đồng bộ {{name}} với điện thoại",
+    "proxyPassword": "Mật khẩu proxy",
+    "offConfirm": "Ngừng đồng bộ {{name}}? Điện thoại vẫn giữ bản sao của chúng.",
+    "removeAll": "Xóa toàn bộ dữ liệu đồng bộ khỏi máy chủ chuyển tiếp",
+    "removeAllConfirm": "Xóa mọi hồ sơ đã đồng bộ khỏi máy chủ chuyển tiếp? Hồ sơ trên máy tính này và trên điện thoại vẫn giữ nguyên.",
+    "lastOk": "Đồng bộ lần cuối {{when}}",
+    "lastError": "Lần đồng bộ cuối thất bại ({{code}}). Ứng dụng sẽ thử lại mỗi phút.",
+    "limits": "Bộ nhớ trang web, tiện ích, mật khẩu đã lưu và tệp tải xuống không được đồng bộ. Mật khẩu proxy chỉ được đồng bộ ở nơi bạn cho phép."
+  },
+  "advanced": {
+    "title": "Nâng cao",
+    "pcName": "Tên của máy tính này trên điện thoại",
+    "relay": "Địa chỉ máy chủ chuyển tiếp",
+    "relayFromEnv": "Được đặt bởi SG_RELAY_URL để thử nghiệm.",
+    "save": "Lưu",
+    "reset": "Đặt lại khóa điện thoại",
+    "resetConfirm": "Đặt lại khóa điện thoại của máy tính này? Mọi điện thoại đã ghép nối sẽ bị gỡ và phải ghép nối lại.",
+    "protocol": "Giao thức {{version}}"
+  },
+  "errors": {
+    "load": "Không tải được cài đặt điện thoại.",
+    "generic": "Không thành công. Hãy thử lại.",
+    "unavailable": "Bản dựng này không hỗ trợ điện thoại."
+  }
+}

@@ -379,7 +379,7 @@ export default function AiPage() {
         onConfirm={stopAll}
         onCancel={() => setStop((s) => ({ ...s, open: false, error: '' }))}
       >
-        <ul className="list-disc space-y-1 pl-5 text-[13px] text-foreground">
+        <ul className="list-disc space-y-1 ps-5 text-[13px] text-foreground">
           <li>{t('stop.point1')}</li>
           <li>{t('stop.point2')}</li>
           <li>{t('stop.point3')}</li>
@@ -417,7 +417,7 @@ function Tile({ icon: Icon, label, value, sub, tone = 'muted', onClick, actionLa
       <div className="mt-1 line-clamp-3 text-[12px] leading-snug text-muted-foreground">{sub}</div>
     </>
   );
-  const cls = 'flex h-full min-h-[150px] w-full flex-col justify-start rounded-xl border border-border bg-card p-4 text-left';
+  const cls = 'flex h-full min-h-[150px] w-full flex-col justify-start rounded-xl border border-border bg-card p-4 text-start';
   if (onClick) {
     return (
       <button type="button" onClick={onClick} aria-label={`${label}: ${actionLabel}`} className={cn(cls, 'transition-colors hover:border-border-strong hover:bg-elevated/40')}>
@@ -489,14 +489,14 @@ function TabBar({ tab, setTab, counts }) {
             tabIndex={on ? 0 : -1}
             onClick={() => setTab(key)}
             className={cn('relative -mb-px inline-flex shrink-0 items-center gap-2 border-b-2 px-3.5 py-2.5 text-[13px] font-semibold transition-colors',
-              key === 'approvals' && 'pr-10',
+              key === 'approvals' && 'pe-10',
               on ? 'border-primary text-foreground' : cn('border-transparent hover:text-foreground', SUBTLE_TEXT))}
           >
             <Icon className={cn('h-4 w-4', on && 'text-primary')} strokeWidth={1.75} />
             {t(`tabs.${key}`)}
             {/* The count sits in a slot the tab always reserves (pr-10), so it never pushes the other tabs. */}
             {key === 'approvals' && count > 0 && (
-              <span className="absolute right-3 top-1/2 min-w-[1.25rem] -translate-y-1/2 rounded-full px-1.5 text-center text-[10.5px] font-bold leading-[18px]" style={{ background: AI_TONE.warning, color: '#111827' }}>
+              <span className="absolute inset-e-3 top-1/2 min-w-[1.25rem] -translate-y-1/2 rounded-full px-1.5 text-center text-[10.5px] font-bold leading-[18px]" style={{ background: AI_TONE.warning, color: '#111827' }}>
                 {count}<span className="sr-only"> {t('tabs.waiting')}</span>
               </span>
             )}

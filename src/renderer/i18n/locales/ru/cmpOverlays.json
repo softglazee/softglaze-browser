@@ -1,0 +1,109 @@
+{
+  "palette": {
+    "dialogLabel": "Палитра команд",
+    "searchPlaceholder": "Поиск страниц, профилей, прокси, участников…",
+    "searchAriaLabel": "Поиск страниц, профилей, прокси и участников",
+    "resultsLabel": "Результаты",
+    "esc": "Esc",
+    "noMatches": "Ничего не найдено.",
+    "nav": {
+      "dashboard": "Главная",
+      "ai": "SoftGlaze AI",
+      "profiles": "Профили",
+      "groups": "Группы",
+      "proxies": "Пул прокси",
+      "freeProxies": "Бесплатные прокси",
+      "proxyProviders": "Прокси-провайдеры",
+      "browsers": "Браузеры",
+      "extensions": "Расширения",
+      "batchImport": "Пакетный импорт",
+      "trash": "Корзина",
+      "automation": "Автоматизация",
+      "members": "Участники",
+      "account": "Аккаунт",
+      "settings": "Настройки"
+    },
+    "hint": {
+      "page": "Страница",
+      "profile": "Профиль",
+      "proxy": "Прокси",
+      "member": "Участник",
+      "action": "Действие"
+    },
+    "fallback": {
+      "profile": "Профиль #{{id}}",
+      "proxy": "Прокси #{{id}}",
+      "member": "Участник #{{id}}"
+    },
+    "action": {
+      "stopAi": "Остановить весь ИИ"
+    }
+  },
+  "wizard": {
+    "skipTitle": "Пропустить настройку",
+    "back": "Назад",
+    "skip": "Пропустить",
+    "saveAndContinue": "Сохранить и продолжить",
+    "saveAndFinish": "Сохранить и завершить",
+    "msg": {
+      "smtpSaved": "SMTP сохранён.",
+      "proxySaved": "Прокси сохранён."
+    },
+    "err": {
+      "smtpSaveFailed": "Не удалось сохранить настройки SMTP.",
+      "proxySaveFailed": "Не удалось сохранить прокси.",
+      "profileCreateFailed": "Не удалось создать профиль."
+    },
+    "welcome": {
+      "title": "Добро пожаловать в SoftGlaze",
+      "subtitle": "Быстрая настройка в 3 шага, и у вас будет первый профиль. Любой шаг можно пропустить.",
+      "subtitleShort_one": "Один быстрый шаг. Его можно пропустить.",
+      "subtitleShort_few": "Быстрая настройка: {{count}} шага. Любой шаг можно пропустить.",
+      "subtitleShort_many": "Быстрая настройка: {{count}} шагов. Любой шаг можно пропустить.",
+      "subtitleShort_other": "Быстрая настройка: {{count}} шага. Любой шаг можно пропустить.",
+      "unavailable": "Серые шаги пропускаются: ваш аккаунт не может их выполнить.",
+      "getStarted": "Начать",
+      "stepEmail": "Почта (SMTP), необязательно, для одноразовых кодов",
+      "stepProxy": "Ваш первый прокси, необязательно",
+      "stepProfile": "Ваш первый профиль браузера"
+    },
+    "smtp": {
+      "title": "Почта (SMTP)",
+      "subtitle": "Необязательно: позволяет приложению отправлять коды подтверждения. Это можно настроить позже в Настройках.",
+      "host": "SMTP-сервер",
+      "hostPlaceholder": "smtp.example.com",
+      "port": "Порт",
+      "portPlaceholder": "587",
+      "username": "Имя пользователя",
+      "usernamePlaceholder": "you@example.com",
+      "password": "Пароль",
+      "passwordPlaceholder": "••••••••"
+    },
+    "proxy": {
+      "title": "Добавьте первый прокси",
+      "subtitle": "Необязательно: дайте каждой личности свою сеть. Ещё прокси можно добавить в пуле прокси.",
+      "type": "Тип",
+      "host": "Хост",
+      "hostPlaceholder": "1.2.3.4",
+      "port": "Порт",
+      "portPlaceholder": "8080",
+      "user": "Логин",
+      "userPlaceholder": "необязательно",
+      "password": "Пароль",
+      "passwordPlaceholder": "необязательно"
+    },
+    "profile": {
+      "title": "Создайте первый профиль",
+      "subtitle": "Для вас будет создан уникальный и внутренне согласованный отпечаток.",
+      "createAndFinish": "Создать и завершить",
+      "name": "Название профиля",
+      "namePlaceholder": "Мой первый профиль",
+      "defaultName": "Мой первый профиль",
+      "deviceType": "Тип устройства",
+      "desktop": "Компьютер",
+      "mobile": "Мобильный (Android)",
+      "mobileNote": "Android эмулируется на настольном движке: согласованные UA, касания, экран и GPU, но это не настоящее устройство.",
+      "proxyAttached": "Ваш новый прокси будет привязан к этому профилю."
+    }
+  }
+}

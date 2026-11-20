@@ -1,0 +1,162 @@
+{
+  "billing": {
+    "status": {
+      "loading": "Chargement…",
+      "sourceOwner": "Propriétaire du code source",
+      "active": "Actif",
+      "activeUntil": "Actif · jusqu'au {{date}}",
+      "trialDaysLeft_one": "Essai · {{count}} j restant",
+      "trialDaysLeft_other": "Essai · {{count}} j restants",
+      "trialDaysLeft_many": "Essai · {{count}} j restants",
+      "graceDaysLeft_one": "Grâce · {{count}} j restant",
+      "graceDaysLeft_other": "Grâce · {{count}} j restants",
+      "graceDaysLeft_many": "Grâce · {{count}} j restants",
+      "subscriptionEnded": "Abonnement terminé"
+    },
+    "subscription": {
+      "title": "Abonnement",
+      "planLine": "SoftGlaze Browser · forfait {{tier}}",
+      "manageButton": "Gérer l'abonnement et les forfaits"
+    },
+    "seats": {
+      "label": "Sièges de l'équipe",
+      "usage": "{{used}} / {{total}} utilisés"
+    },
+    "gateway": {
+      "title": "Moyens de paiement",
+      "description": "Super Admin uniquement. Activez les moyens proposés aux propriétaires au paiement et enregistrez les clés de chaque prestataire.",
+      "loadError": "Impossible de charger les paramètres de paiement.",
+      "footnote": "Les clés sont chiffrées au repos sur cette machine et ne la quittent jamais. Le paiement fonctionne par interrogation (sans webhooks), donc l'application sur plusieurs installations nécessite toujours le serveur de licences. Wise et Manuel sont approuvés par vous sous « Paiements en attente » ci-dessous.",
+      "retry": "Réessayer"
+    },
+    "provider": {
+      "kindManual": "Manuel",
+      "kindAutomated": "Automatique",
+      "on": "actif",
+      "enabled": "Activé",
+      "disabled": "Désactivé",
+      "enableAria": "Activer {{provider}}",
+      "documentation": "Documentation",
+      "secretStoredPlaceholder": "•••••••• (laisser vide pour conserver l'actuelle)",
+      "secretPlaceholder": "Collez la clé",
+      "save": "Enregistrer",
+      "testConnection": "Tester la connexion",
+      "enabledMsg": "Activé.",
+      "disabledMsg": "Désactivé.",
+      "updateError": "Impossible de mettre à jour.",
+      "savedMsg": "Enregistré.",
+      "saveError": "Impossible d'enregistrer.",
+      "connectionOk": "La connexion semble bonne ✓",
+      "validationFailedKeys": "La validation a échoué : vérifiez les clés.",
+      "validationFailed": "La validation a échoué."
+    },
+    "manual": {
+      "title": "Paiements en attente",
+      "description": "Paiements manuels (Wise / virement bancaire) en attente de votre approbation.",
+      "loadError": "Impossible de charger les paiements manuels.",
+      "resolveError": "Impossible de mettre à jour ce paiement.",
+      "ownerFallback": "Propriétaire n° {{id}}",
+      "refPrefix": "réf. :",
+      "approve": "Approuver",
+      "reject": "Refuser",
+      "statusLabel": {
+        "pending": "en attente",
+        "approved": "approuvé",
+        "rejected": "refusé"
+      }
+    }
+  },
+  "monetization": {
+    "heading": "Monétisation",
+    "affiliate": {
+      "title": "Liens d'affiliation et de parrainage",
+      "ownerOnly": "Propriétaire uniquement",
+      "description": "Vos URL partenaires pour les boutons « Acheter » du marché de proxys. Laissez vide pour utiliser le lien SoftGlaze par défaut.",
+      "loadError": "Impossible de charger les liens d'affiliation.",
+      "saveError": "Impossible d'enregistrer les liens d'affiliation.",
+      "savedMsg": "Enregistré. Les boutons du marché utilisent maintenant vos liens.",
+      "customLink": "Lien personnalisé",
+      "defaultLink": "Lien par défaut",
+      "openLinkTitle": "Ouvrir le lien {{provider}}",
+      "saving": "Enregistrement…",
+      "saveButton": "Enregistrer les liens",
+      "footnote": "Ces liens alimentent les boutons « Acheter chez… » / « Ouvrir le tableau de bord » de l'onglet Pool de proxys → Fournisseurs. Ce sont uniquement des URL de parrainage publiques : les jetons et identifiants des proxys ne sont jamais concernés."
+    }
+  },
+  "developerApi": {
+    "title": "Accès à l'API développeur",
+    "description": "Générez des clés API et lancez un serveur REST local pour piloter SoftGlaze par programme.",
+    "copy": "Copier",
+    "errors": {
+      "load": "Impossible de charger les paramètres de l'API développeur.",
+      "nameRequired": "Nommez la clé (ex. « Serveur CI »).",
+      "generate": "Impossible de générer la clé API.",
+      "revoke": "Impossible de révoquer la clé.",
+      "toggleServer": "Impossible de changer l'état du serveur local."
+    },
+    "keys": {
+      "title": "Clés API",
+      "namePlaceholder": "Nom de la clé (ex. Serveur CI)",
+      "generate": "Générer une nouvelle clé API",
+      "copyOnce": "Copiez cette clé maintenant : elle n'est affichée qu'une fois et ne peut pas être récupérée.",
+      "empty": "Aucune clé API pour l'instant.",
+      "lastUsed": "dernière utilisation {{when}}",
+      "neverUsed": "jamais utilisée",
+      "never": "jamais",
+      "revoke": "Révoquer",
+      "revokeConfirm": "Révoquer la clé API « {{name}} » ? Tout script qui l'utilise cesse de fonctionner immédiatement. Cette action est irréversible."
+    },
+    "server": {
+      "title": "API REST locale",
+      "runningAt": "En cours sur",
+      "stoppedPrefix": "Arrêtée · écouterait sur",
+      "loopbackOnly": "(boucle locale uniquement)",
+      "disableTitle": "Désactiver l'API locale",
+      "enableTitle": "Activer l'API locale",
+      "curlExample": "Exemple : lancer un profil via cURL",
+      "footnote": "Le serveur n'accepte que les requêtes de cette machine et exige une clé Bearer valide."
+    }
+  },
+  "migration": {
+    "title": "Transférer des profils",
+    "ownerOnly": "Propriétaire uniquement",
+    "description": "Importez vos profils existants depuis un autre navigateur multi-profils via son API.",
+    "sourcePlatform": "Plateforme source",
+    "noteLabel": "Remarque :",
+    "instructions": "Instructions",
+    "tokenSectionTitle": "Jeton API {{platform}}",
+    "transferring": "Transfert…",
+    "startTransfer": "Lancer le transfert",
+    "tokenFootnote": "Votre jeton est utilisé une seule fois pour ce transfert et n'est jamais enregistré. Les plateformes locales (AdsPower, ixBrowser) doivent être lancées avec leur Local API activée.",
+    "errors": {
+      "tokenRequired": "Saisissez votre {{placeholder}} {{platform}}.",
+      "transferFailed": "Le transfert a échoué."
+    },
+    "log": {
+      "title": "Journal de migration",
+      "imported": "{{created}}/{{total}} importés",
+      "errors_one": "{{count}} erreur",
+      "errors_other": "{{count}} erreur(s)",
+      "errors_many": "{{count}} erreur(s)",
+      "waiting": "En attente de la réponse de la plateforme…"
+    },
+    "platforms": {
+      "dolphin": {
+        "placeholder": "Dolphin_Token",
+        "warning": "Les cookies ne seront pas transférés si vous transférez depuis le forfait gratuit de Dolphin."
+      },
+      "gologin": {
+        "placeholder": "Jeton API GoLogin"
+      },
+      "multilogin": {
+        "placeholder": "Jeton d'automatisation Multilogin"
+      },
+      "adspower": {
+        "placeholder": "AdsPower Local API Key"
+      },
+      "ixbrowser": {
+        "placeholder": "ixBrowser Local API Key"
+      }
+    }
+  }
+}

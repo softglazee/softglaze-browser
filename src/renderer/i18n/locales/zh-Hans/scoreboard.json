@@ -1,0 +1,43 @@
+{
+  "title": "服务商排行榜",
+  "note": "基于你在过去 {{days}} 天内的代理检测结果。",
+  "refresh": "刷新",
+  "show": "显示服务商排行榜",
+  "hide": "隐藏服务商排行榜",
+  "loading": "正在加载排行榜...",
+  "loadError": "无法加载排行榜：{{message}}",
+  "empty": "还没有代理。从服务商拉取一些或添加你自己的代理，然后检测它们，即可查看每个服务商的表现。",
+  "truncated": "仅统计了最新的 {{max}} 次检测。",
+  "scoreHelp": "满分 100 分。检测成功率权重最高，其次是列入黑名单的代理数量（越少越好），然后是速度，最后是每个代理的网站拦截次数。检测次数少于 {{min}} 次的行不评分。",
+  "own": "你自己的代理",
+  "free": "免费代理",
+  "col": {
+    "vendor": "服务商",
+    "score": "评分",
+    "success": "检测成功率",
+    "speed": "速度中位数",
+    "blocklisted": "已列入黑名单",
+    "datacenter": "数据中心",
+    "blocks": "网站拦截",
+    "proxies": "代理",
+    "lastChecked": "上次检测"
+  },
+  "sortBy": "按{{column}}排序",
+  "notEnough": "数据不足",
+  "notEnoughTitle_one": "过去 {{days}} 天内仅有 {{count}} 次检测，评分至少需要 {{min}} 次。",
+  "notEnoughTitle_other": "过去 {{days}} 天内仅有 {{count}} 次检测，评分至少需要 {{min}} 次。",
+  "level": {
+    "good": "良好",
+    "fair": "一般",
+    "poor": "较差"
+  },
+  "scoreTitle": "{{level}}：{{score}} 分（满分 100）",
+  "checks_one": "{{count}} 次检测",
+  "checks_other": "{{count}} 次检测",
+  "ms": "{{ms}} ms",
+  "working": "{{pct}} 可用",
+  "noData": "无数据",
+  "never": "从未",
+  "openProvider": "打开 {{name}}",
+  "topSites": "拦截最多：{{sites}}"
+}

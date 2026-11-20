@@ -1,0 +1,25 @@
+{
+  "contextMenu": {
+    "undo": "元に戻す",
+    "redo": "やり直し",
+    "cut": "切り取り",
+    "copy": "コピー",
+    "paste": "貼り付け",
+    "selectAll": "すべて選択",
+    "copyLink": "リンクをコピー"
+  },
+  "dialogs": {
+    "exportArchiveTitle": "暗号化されたプロファイルアーカイブをエクスポート",
+    "archiveFilter": "SoftGlaze 暗号化アーカイブ",
+    "importProfilesTitle": "インポートする SoftGlaze プロファイルのスプレッドシートを選択",
+    "spreadsheetFilter": "スプレッドシートファイル",
+    "exportProfilesTitle": "SoftGlaze プロファイルをエクスポート",
+    "excelFilter": "Excel ブック",
+    "importIdentitiesTitle": "インポートするアイデンティティのスプレッドシートを選択",
+    "backupTitle": "ワークスペースをバックアップ",
+    "backupFilter": "SoftGlaze ワークスペースのバックアップ",
+    "restoreTitle": "ワークスペースのバックアップを復元",
+    "exportActivityTitle": "アクティビティログをエクスポート",
+    "bindSpreadsheetTitle": "この並列実行に紐付けるスプレッドシートを選択"
+  }
+}

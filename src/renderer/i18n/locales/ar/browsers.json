@@ -1,0 +1,70 @@
+{
+  "header": {
+    "eyebrow": "المحركات",
+    "title": "المتصفحات",
+    "subtitle": "نزّل إصدارات Chrome وFirefox الحقيقية عند الحاجة، فتُثبَّت تلقائيًا وتصبح جاهزة للتشغيل.",
+    "refresh": "تحديث"
+  },
+  "stats": {
+    "chromeInstalled": "Chrome المثبّت",
+    "chromeAvailable": "Chrome المتاح",
+    "firefoxInstalled": "Firefox المثبّت",
+    "firefoxAvailable": "Firefox المتاح"
+  },
+  "counts": {
+    "installedAvailable": "· {{installed}} مثبّت · {{available}} متاح"
+  },
+  "engine": {
+    "heading": "محرك البصمة",
+    "installed": "مثبّت",
+    "notInstalled": "غير مثبّت",
+    "description": "يضبط fingerprint-chromium قيم canvas وWebGL وUA والمنصة والمنطقة الزمنية بشكل أصلي، ويخفي webdriver ويمنع تسرّب WebRTC. فعّله من الإعدادات ← المتصفح.",
+    "progressInstalling": "جارٍ التثبيت",
+    "progressVerifying": "جارٍ التحقق",
+    "installing": "جارٍ التثبيت",
+    "verifying": "جارٍ التحقق",
+    "downloading": "جارٍ التنزيل",
+    "download": "تنزيل (~180 ميغابايت)"
+  },
+  "firefox": {
+    "heading": "Firefox",
+    "ready": "جاهز",
+    "notDetected": "لم يُعثر عليه",
+    "detectedDesc": "جاهز. عُثر عليه في {{path}}. تُشغّل ملفات Firefox متصفح Firefox الحقيقي مع البروكسي ووكيل المستخدم (UA) واللغة والمنطقة الزمنية، مع إيقاف WebRTC.",
+    "notDetectedDesc": "لم يُعثر على Firefox مثبّت على النظام. نزّل إصدارًا أدناه، فيُثبَّت داخل التطبيق وتُشغّل ملفات Firefox متصفح Firefox الحقيقي مع البروكسي ووكيل المستخدم (UA) واللغة والمنطقة الزمنية، مع إيقاف WebRTC.",
+    "fetching": "جارٍ جلب قائمة إصدارات Firefox…",
+    "empty": "لا تتوفر إصدارات Firefox (هل أنت غير متصل بالإنترنت؟)."
+  },
+  "chromium": {
+    "heading": "Chromium (Chrome for Testing)",
+    "subtitle": "إصدارات حقيقية: تتطابق UA وClient-Hints وTLS وworkers فعلًا مع الإصدار.",
+    "fetching": "جارٍ جلب قائمة إصدارات Chrome for Testing…",
+    "empty": "لا تتوفر إصدارات (هل أنت غير متصل بالإنترنت؟)."
+  },
+  "row": {
+    "versionLabel": "{{brand}} {{major}}",
+    "ready": "جاهز",
+    "paused": "متوقف مؤقتًا",
+    "interrupted": "انقطع",
+    "resume": "استئناف",
+    "download": "تنزيل",
+    "retry": "إعادة المحاولة",
+    "downloading": "جارٍ التنزيل",
+    "installing": "جارٍ التثبيت…",
+    "installingShort": "جارٍ التثبيت",
+    "queued": "في قائمة الانتظار…",
+    "pauseDownload": "إيقاف التنزيل مؤقتًا",
+    "pausedPercent": "متوقف مؤقتًا · {{percent}}%",
+    "interruptedPercent": "انقطع · {{percent}}%"
+  },
+  "errors": {
+    "catalogUnreachable": "تعذّر الوصول إلى قائمة المتصفحات. تحقّق من اتصالك بالإنترنت.",
+    "downloadFailed": "فشل التنزيل.",
+    "pauseFailed": "فشل الإيقاف المؤقت.",
+    "resumeFailed": "فشل الاستئناف."
+  },
+  "browsers": {
+    "showAll": "عرض كل الإصدارات ({{n}})",
+    "showLess": "عرض أقل"
+  }
+}

@@ -1,0 +1,52 @@
+{
+  "header": {
+    "eyebrow": "企业仓库",
+    "title": "扩展程序",
+    "summary_one": "已安装 {{count}} 个扩展程序 · 对加载扩展程序的配置文件启用了 {{enabled}} 个",
+    "summary_other": "已安装 {{count}} 个扩展程序 · 对加载扩展程序的配置文件启用了 {{enabled}} 个"
+  },
+  "stats": {
+    "total": "扩展程序总数",
+    "injected": "已启用",
+    "disabled": "已停用"
+  },
+  "caveat": {
+    "before": "扩展程序不会添加到每个配置文件中。只有在配置文件编辑器的“高级”标签页中勾选了“加载 SoftGlaze 扩展程序（使用 Chrome for Testing）”的 Chromium 配置文件才会加载它们（默认关闭）。这些配置文件在启动时通过 Chromium 的",
+    "middle": "参数挂载扩展程序，因此更改会在此类配置文件",
+    "nextLaunch": "下次启动",
+    "after": "时生效。普通 Chrome 会忽略该参数，因此这些配置文件会使用 Chrome for Testing 版本打开：请先在“浏览器”页面下载一个版本，否则配置文件打开时不会加载扩展程序。Firefox 配置文件不会加载它们。"
+  },
+  "importer": {
+    "title": "导入到团队",
+    "description": "粘贴 Chrome 应用商店网址或其 32 位 ID，SoftGlaze 会下载并解压真实的扩展包。",
+    "inputPlaceholder": "https://chromewebstore.google.com/detail/…  或  cjpalhdlnbpafiamejdnhcphjbkeiagm",
+    "submit": "导入到团队"
+  },
+  "installPhase": {
+    "downloading": "正在下载扩展包…",
+    "extracting": "正在解压…",
+    "registering": "正在注册…"
+  },
+  "permissionNotice": "只有管理员及以上角色可以管理团队扩展程序。你可以查看仓库。",
+  "searchPlaceholder": "按名称或 ID 搜索…",
+  "empty": {
+    "loadErrorTitle": "无法加载扩展程序",
+    "noExtTitle": "还没有扩展程序",
+    "noMatchTitle": "没有符合搜索条件的扩展程序",
+    "noExtDesc": "在上方导入一个 Chrome 应用商店扩展程序，将其添加到团队仓库。它会在“高级”标签页中勾选了“加载 SoftGlaze 扩展程序”的配置文件中加载。",
+    "noMatchDesc": "请尝试其他名称或 ID。"
+  },
+  "card": {
+    "unpacked": "未打包的扩展程序",
+    "removeTitle": "从团队中移除",
+    "injected": "已启用",
+    "disabled": "已停用"
+  },
+  "confirmRemove": "从团队仓库中移除“{{name}}”？其本地文件将被删除。",
+  "errors": {
+    "couldNotLoad": "无法加载扩展程序。",
+    "installFailed": "安装失败。",
+    "couldNotUpdate": "无法更新该扩展程序。",
+    "couldNotRemove": "无法移除该扩展程序。"
+  }
+}

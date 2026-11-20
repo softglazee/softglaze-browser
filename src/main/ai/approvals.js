@@ -128,6 +128,9 @@ class ApprovalManager {
       this.lateGrants.set(`${a.tokenId}|${a.fingerprint}`, now + this.lateGrantMs);
     }
     a._resolve({ decision });
+    // Main process only (ai/index.js does not forward it to windows): paired phones and browsers
+    // that got this approval remove its notification.
+    try { this.emit('ai:approval-resolved', { id: a.id, decision }); } catch (e) { /* listener gone */ }
     this._changed();
   }
 

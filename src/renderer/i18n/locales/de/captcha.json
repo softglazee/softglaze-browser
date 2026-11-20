@@ -1,0 +1,191 @@
+{
+  "badgeTitle": "CAPTCHA-Risiko {{score}}/100. Klicken für Gründe und Lösungen.",
+  "title": "CAPTCHA-Wert",
+  "subtitle": "Wie wahrscheinlich Websites dieses Profil prüfen und was das senkt",
+  "outOf100": "von 100",
+  "level": {
+    "low": "Geringes Risiko",
+    "some": "Mittleres Risiko",
+    "high": "Hohes Risiko",
+    "veryHigh": "Sehr hohes Risiko"
+  },
+  "levelShort": {
+    "low": "Gering",
+    "some": "Mittel",
+    "high": "Hoch",
+    "veryHigh": "Sehr hoch"
+  },
+  "column": "CAPTCHA-Risiko",
+  "issues_zero": "Keine Probleme gefunden",
+  "issues_one": "1 Problem",
+  "issues_other": "{{count}} Probleme",
+  "fixable_one": "„Alle beheben“ löst 1",
+  "fixable_other": "„Alle beheben“ löst {{count}}",
+  "leakTest": "Leak-Test",
+  "leakTestTitle": "Detaillierten Leak-Check öffnen, inklusive Live-Test des laufenden Profils",
+  "loadFailed": "Dieses Profil konnte nicht bewertet werden.",
+  "fixAll": "Alle beheben",
+  "fixAllTitle": "Jede Lösung anwenden, die nur die Einstellungen oder den Proxy dieses Profils ändert",
+  "rescore": "Neu bewerten",
+  "done": "Fertig",
+  "runningNote": "Dieses Profil ist geöffnet. Änderungen gelten beim nächsten Start.",
+  "adviceOnly": "Ändern Sie das im Profil-Editor; eine Lösung hier würde das Gerät ändern, das Websites bereits kennen.",
+  "status": {
+    "pass": "OK",
+    "warn": "Risiko",
+    "fail": "Hohes Risiko"
+  },
+  "fix": {
+    "assign-proxy": "Freien Proxy zuweisen",
+    "swap-proxy": "Zu einem freien Proxy wechseln",
+    "check-proxy": "Proxy jetzt prüfen",
+    "tz-auto": "Zeitzone des Proxys nutzen",
+    "lang-auto": "Sprache des Proxys nutzen",
+    "geo-auto": "Standort des Proxys nutzen",
+    "webrtc-safe": "WebRTC auf „Weiterleiten“ setzen",
+    "allow-3p-cookies": "Drittanbieter-Cookies erlauben",
+    "warm-up": "Aufwärmen"
+  },
+  "result": {
+    "swapped": "Nutzt jetzt {{name}}.",
+    "checked": "Proxy geprüft.",
+    "checkFailed": "Der Proxy hat die Prüfung nicht bestanden: {{error}}",
+    "warming": "Aufwärmen gestartet: Das Profil öffnet sich und besucht einige beliebte Websites. Verfolgen Sie es auf der Seite „Automatisierung“.",
+    "cookies": "Drittanbieter-Cookies sind jetzt für jedes Profil erlaubt.",
+    "applied": "Erledigt."
+  },
+  "label": {
+    "proxy": "Proxy",
+    "proxyHealth": "Proxy-Zustand",
+    "blocklist": "Spam-Sperrlisten",
+    "freeProxy": "Kostenloser Proxy",
+    "ipType": "IP-Typ",
+    "sharedProxy": "Geteilter Proxy",
+    "timezone": "Zeitzone",
+    "language": "Sprache",
+    "geolocation": "Standort",
+    "webrtc": "WebRTC",
+    "thirdPartyCookies": "Drittanbieter-Cookies",
+    "history": "Browserverlauf",
+    "device": "Gerät",
+    "osMismatch": "Betriebssystem"
+  },
+  "factor": {
+    "proxy": {
+      "pass": "Nutzt {{name}}.",
+      "warn": "Kein Proxy: Dieses Profil nutzt Ihre eigene Verbindung, die sich alle Profile ohne Proxy teilen."
+    },
+    "proxyHealth": {
+      "pass": "Letzte Prüfung bestanden.",
+      "fail": "Letzte Prüfung nicht bestanden, daher laufen Seiten in Zeitüberschreitungen oder zeigen Fehler.",
+      "never": "Nie geprüft, daher sind Zustand und Sperrlisten-Status unbekannt.",
+      "stale": "Zuletzt vor {{days}} Tagen geprüft."
+    },
+    "blocklist": {
+      "pass": "Auf keiner geprüften Spam-Sperrliste.",
+      "warn": "Noch nicht mit Spam-Sperrlisten abgeglichen.",
+      "fail": "Die Ausgangs-IP steht auf einer Spam-Sperrliste. Google und Cloudflare prüfen gelistete IPs viel häufiger."
+    },
+    "freeProxy": {
+      "fail": "Ein kostenloser öffentlicher Proxy. Die meisten sind markiert, rechnen Sie also mit häufigen CAPTCHAs."
+    },
+    "ipType": {
+      "pass": "Heim- oder Mobilfunknetz{{isp}}.",
+      "warn": "Rechenzentrums-IP{{isp}}. Websites prüfen IPs von Hosting-Firmen viel häufiger als Heimanschlüsse."
+    },
+    "sharedProxy": {
+      "msg_one": "1 anderes Profil nutzt diesen Proxy, daher teilen sie eine IP und können verknüpft werden.",
+      "msg_other": "{{count}} andere Profile nutzen diesen Proxy, daher teilen sie eine IP und können verknüpft werden."
+    },
+    "timezone": {
+      "pass": "Folgt der IP des Proxys.",
+      "warn": "Von Hand gesetzt ({{zone}}), passt daher eventuell nicht zum Proxy.",
+      "fail": "Nutzt die Zeitzone dieses Computers, die nicht zum Land des Proxys passt."
+    },
+    "language": {
+      "pass": "Passt zum Land des Proxys.",
+      "warn": "Sprachregion {{region}} passt nicht zum Land des Proxys {{country}}.",
+      "unverified": "Von Hand gesetzt ({{lang}}); das Land des Proxys ist noch unbekannt, daher ist kein Vergleich möglich."
+    },
+    "geolocation": {
+      "pass": "Folgt der IP des Proxys oder ist blockiert.",
+      "warn": "Von Hand gesetzt, passt daher eventuell nicht zum Proxy."
+    },
+    "webrtc": {
+      "pass": "Modus {{mode}} hält Ihre echte IP verborgen.",
+      "realNoProxy": "„Echt“ ohne Proxy: Websites sehen bereits die IP dieses Computers, WebRTC zeigt ihnen also nichts Neues.",
+      "firefoxOff": "WebRTC ist in Firefox-Profilen aus, was wenige echte Browser tun. Keine Einstellung ändert das.",
+      "warn": "WebRTC ist deaktiviert, was wenige echte Browser tun.",
+      "fail": "Auf „Echt“ gesetzt, was Ihre echte IP hinter dem Proxy zeigt."
+    },
+    "thirdPartyCookies": {
+      "pass": "Erlaubt, wie im normalen Chrome.",
+      "warn": "In den Einstellungen für jedes Profil blockiert. reCAPTCHA und hCaptcha sind darauf angewiesen."
+    },
+    "history": {
+      "pass": "Hat Browserverlauf und Cookies.",
+      "warn": "Noch kaum Cookies oder Verlauf. Websites vertrauen einem Profil, das schon genutzt wurde.",
+      "warmed_one": "{{count}}-mal aufgewärmt, hat also echten Browserverlauf und Cookies.",
+      "warmed_other": "{{count}}-mal aufgewärmt, hat also echten Browserverlauf und Cookies."
+    },
+    "device": {
+      "warn": "Die Grafikkarte (WebGL) passt eventuell nicht zu diesem Gerät oder System.",
+      "fail": "Die Grafikkarte (WebGL) passt nicht zu diesem Gerät oder System."
+    },
+    "osMismatch": {
+      "warn": "Gibt {{claimed}} an, läuft aber auf {{host}}; Schriften und andere Details können das echte System zeigen."
+    }
+  },
+  "prelaunch": {
+    "title_one": "Dieses Profil vor dem Öffnen prüfen",
+    "title_other": "{{count}} Profile vor dem Öffnen prüfen",
+    "subtitle": "Websites sehen diese Unstimmigkeiten, sobald ein Profil geöffnet wird.",
+    "issue": {
+      "uaOs": "Der User-Agent sagt {{ua}}, aber das Profil ist auf {{os}} eingestellt.",
+      "gpuOs": "Die Grafikkarte (WebGL) passt nicht zu {{os}}.",
+      "screen": {
+        "mobile": "Ein Handy mit {{width}}x{{height}}-Bildschirm; Handy-Bildschirme sind schmal und hochkant.",
+        "desktop": "Ein Computer mit {{width}}x{{height}}-Bildschirm; Computer-Bildschirme haben mindestens 1024x600."
+      },
+      "language": "Sprachregion {{region}} passt nicht zum Land des Proxys {{country}}.",
+      "timezone": "Die Zeitzone stammt von diesem Computer, nicht vom Proxy.",
+      "webrtc": "WebRTC steht auf „Echt“, was Ihre echte IP hinter dem Proxy zeigt.",
+      "proxyDead": "Der Proxy hat die letzte Prüfung nicht bestanden.",
+      "socks4Dns": "Nutzt den SOCKS4-Proxy {{proxy}}. Chromium kann DNS-Anfragen nicht über SOCKS4 senden, daher würde jede Website außerhalb des Proxys aufgelöst (ein DNS-Leck), und das Profil öffnet sich nicht. Öffnen Sie es in Firefox oder geben Sie ihm einen SOCKS5- oder HTTP-Proxy."
+    },
+    "os": {
+      "windows": "Windows",
+      "mac": "macOS",
+      "linux": "Linux",
+      "android": "Android",
+      "ios": "iOS"
+    },
+    "editorOnly": "(im Profil-Editor ändern)",
+    "blocking": "(dieses Profil öffnet sich erst, wenn Sie das im Profil-Editor ändern)",
+    "stopAsking": "Vor dem Start nicht mehr prüfen (in den Einstellungen wieder einschalten)",
+    "cancel": "Abbrechen",
+    "launchAnyway": "Trotzdem starten",
+    "fixAndLaunch": "Beheben und starten"
+  },
+  "bulk": {
+    "fix": "CAPTCHA-Probleme beheben",
+    "fixTitle": "Sichere CAPTCHA-Lösungen auf die ausgewählten Profile anwenden: Zeitzone, Sprache, Standort, WebRTC und ein freier Proxy, wenn er das Risiko senkt",
+    "confirm_one": "CAPTCHA-Probleme bei diesem Profil beheben? Es werden nur Einstellungen und Proxys geändert, die das Risiko senken.",
+    "confirm_other": "CAPTCHA-Probleme bei {{count}} Profilen beheben? Es werden nur Einstellungen und Proxys geändert, die das Risiko senken.",
+    "done": "{{changed}} von {{total}} Profilen behoben; {{swapped}} auf einen freien Proxy verschoben.",
+    "noBetter": "{{count}} konnten keinen besseren Proxy erhalten."
+  },
+  "filter": {
+    "any": "Jedes CAPTCHA-Risiko",
+    "low": "Geringes Risiko",
+    "some": "Etwas Risiko",
+    "high": "Hohes Risiko",
+    "veryHigh": "Sehr hohes Risiko",
+    "fixable": "Mit Ein-Klick-Lösungen"
+  },
+  "sort": {
+    "default": "Standardreihenfolge",
+    "riskDesc": "Riskanteste zuerst",
+    "riskAsc": "Sicherste zuerst"
+  }
+}

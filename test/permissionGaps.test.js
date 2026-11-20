@@ -307,6 +307,8 @@ function loadImport(db, items, opts = {}) {
   const fns = loadMain([...VALIDATORS, 'requirePermission', 'limitError', 'assertWithinLimit', 'proxyAddContext', ...SCOPE_FNS, 'importedRotationUrl', 'attachImportedRotationUrl', 'commitProfileImport'], {
     ...ws.deps,
     importPreviewCache: cache, CHANNELS: { BATCH_IMPORT_PROGRESS: 'p' }, proxyScope,
+    // Free plan (1.0.27): no plan cap unless a test gives one.
+    assertPlanProfileCapacity: async () => {}, freePlan: require('../src/main/freePlan'),
     toCountryCode: (v) => String(v || '').trim().toUpperCase(), countryMatches: (a, b) => Boolean(a) && String(a).toUpperCase() === String(b || '').toUpperCase(),
     readSetting: async () => ({}), writeSetting: async () => {},
     findOrCreateProxy: async (_db, raw) => { madeProxies.push(raw); return db.proxy.create({ data: { name: raw, type: 'HTTP', host: raw, port: 1, ownerMemberId: ws.deps.ownerStampId() } }); },
@@ -554,6 +556,6 @@ test('the editor footer wraps instead of clipping, with the same single row on a
   assert.ok(m, 'footer markup');
   assert.match(m[1], /\bflex flex-wrap gap-3\b/);
   assert.doesNotMatch(m[1], /justify-end/);
-  assert.equal(m[2], 'ml-auto flex gap-3', 'Cancel and Save stay together on the right');
+  assert.equal(m[2], 'ms-auto flex gap-3', 'Cancel and Save stay together at the end (right in LTR)');
   assert.doesNotMatch(PAGE, /<div className="flex-1" \/>\s*<Button variant="secondary" onClick=\{closeEditor\}>/, 'no spacer left');
 });

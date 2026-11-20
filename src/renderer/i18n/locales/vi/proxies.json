@@ -1,0 +1,516 @@
+{
+  "header": {
+    "eyebrow": "Mạng",
+    "title": "Kho proxy",
+    "description": "Lưu proxy HTTP và SOCKS5 dùng lại được ngay trên máy, hoặc đồng bộ các kho đã mua trực tiếp từ nhà cung cấp tích hợp."
+  },
+  "rotation": {
+    "label": "Xoay vòng:",
+    "tooltip": "Cách áp dụng kho xoay vòng của hồ sơ khi khởi chạy",
+    "eachLaunch": "Xoay mỗi lần mở",
+    "sticky": "Cố định (proxy cố định)",
+    "failover": "Chuyển sang proxy ổn định",
+    "latencyOptimized": "Nhanh nhất (độ trễ)",
+    "failoverMaxTooltip": "Bỏ qua proxy chậm hơn số ms này (0 = không giới hạn; nếu không proxy nào đạt sẽ dùng toàn bộ kho)",
+    "maxMsPlaceholder": "ms tối đa",
+    "topNTooltip": "Lần lượt giữa N proxy nhanh nhất",
+    "topNPlaceholder": "top N"
+  },
+  "actions": {
+    "testAll": "Kiểm tra tất cả",
+    "testAllTooltip": "Kiểm tra tình trạng mọi proxy cùng lúc",
+    "testAllSummary": "{{ok}}/{{total}} ổn",
+    "checkAll": "Kiểm tra tất cả",
+    "refresh": "Làm mới",
+    "batchAdd": "Thêm hàng loạt",
+    "newProxy": "Proxy mới",
+    "checkNew": "Kiểm tra proxy mới",
+    "checkNewTooltip": "Chỉ kiểm tra các proxy mới thêm, chưa từng được kiểm tra."
+  },
+  "free": {
+    "button": "Proxy miễn phí",
+    "buttonTooltip": "Tìm, kiểm tra và giữ proxy công cộng miễn phí trên trang riêng, tách khỏi proxy trả phí của bạn",
+    "title": "Proxy công cộng miễn phí",
+    "description": "SoftGlaze tải các danh sách công khai do các dự án proxy miễn phí đăng, kiểm tra từng proxy và chỉ giữ những proxy hoạt động, trên trang này và tách khỏi proxy trả phí của bạn.",
+    "warn": {
+      "strangers": "Proxy miễn phí do người lạ vận hành. Đừng dùng chúng để đăng nhập tài khoản, nhập mật khẩu hay thanh toán: chủ proxy có thể thấy lưu lượng không được mã hóa.",
+      "quality": "Chúng chậm, thường ngừng hoạt động sau vài giờ, và nhiều proxy nằm trong danh sách chặn, nên bạn sẽ gặp CAPTCHA nhiều hơn so với proxy trả phí. Với công việc tài khoản thật, hãy dùng nhà cung cấp proxy.",
+      "legal": "Chỉ dùng ở nơi được phép. Tạo nhanh không bao giờ chọn proxy miễn phí trừ khi bạn chọn \"Proxy miễn phí\" làm nguồn proxy."
+    },
+    "checks": "Mỗi proxy được kiểm tra trực tiếp, và proxy HTTP chuyển IP thật của bạn đến trang web sẽ bị loại.",
+    "protocol": "Giao thức",
+    "country": "Quốc gia (không bắt buộc)",
+    "countryPlaceholder": "ví dụ US",
+    "limit": "Số lượng cần thêm",
+    "start": "Tìm proxy miễn phí",
+    "again": "Tìm thêm",
+    "cancel": "Dừng",
+    "close": "Đóng",
+    "done": "Xong",
+    "progress": {
+      "fetching": "Đang tải các danh sách công khai…",
+      "checking": "Đã kiểm tra {{checked}} / {{total}} · {{found}} tốt"
+    },
+    "result": {
+      "added": "Đã thêm {{added}} / {{requested}} theo yêu cầu.",
+      "checked": "Đã kiểm tra {{checked}} / {{total}} ứng viên",
+      "rejected": "{{dead}} không hoạt động, {{leak}} làm lộ IP của bạn, {{country}} sai quốc gia",
+      "planLimit": "Đã đạt giới hạn proxy của gói, nên một số proxy tốt chưa được thêm."
+    },
+    "stopped": {
+      "limit": "Đã dừng: đã đạt số lượng bạn yêu cầu.",
+      "time": "Đã dừng sau 3 phút. Hãy chạy lại để tìm thêm.",
+      "cancelled": "Bạn đã dừng.",
+      "exhausted": "Đã kiểm tra mọi ứng viên trong danh sách."
+    },
+    "errors": {
+      "country": "Hãy dùng mã quốc gia hai chữ cái, như US hoặc DE.",
+      "failed": "Không hoàn tất được việc tìm kiếm."
+    }
+  },
+  "freePage": {
+    "eyebrow": "Proxy",
+    "title": "Proxy miễn phí",
+    "description": "Proxy công cộng miễn phí nằm ở đây, tách khỏi proxy trả phí của bạn. Chúng không bao giờ hiện trong Kho proxy, số liệu hay nhóm của kho, và hồ sơ chỉ dùng chúng khi bạn chọn.",
+    "openPool": "Kho proxy",
+    "refresh": "Làm mới",
+    "warnTitle": "Hãy đọc trước khi dùng proxy miễn phí",
+    "searchTitle": "Tìm proxy miễn phí",
+    "busy": "Đang có một lượt tìm proxy miễn phí.",
+    "stopIt": "Dừng lại",
+    "listTitle": "Proxy miễn phí đã lưu",
+    "listCount": "{{shown}} / {{total}}",
+    "filters": {
+      "protocol": "Giao thức",
+      "protocolAll": "Mọi giao thức",
+      "country": "Quốc gia",
+      "countryAll": "Mọi quốc gia",
+      "countryUnknown": "Chưa rõ quốc gia",
+      "status": "Trạng thái",
+      "statusAll": "Mọi trạng thái",
+      "reset": "Đặt lại bộ lọc"
+    },
+    "status": {
+      "working": "Hoạt động",
+      "dead": "Không hoạt động",
+      "unchecked": "Chưa kiểm tra",
+      "checking": "Đang kiểm tra…"
+    },
+    "table": {
+      "address": "Địa chỉ",
+      "protocol": "Giao thức",
+      "country": "Quốc gia",
+      "speed": "Tốc độ",
+      "lastCheck": "Kiểm tra lần cuối",
+      "status": "Trạng thái",
+      "usedBy": "Được dùng bởi",
+      "actions": "Thao tác",
+      "selectAll": "Chọn tất cả mục đang hiện",
+      "selectRow": "Chọn {{address}}",
+      "loading": "Đang tải proxy miễn phí…",
+      "never": "Chưa bao giờ",
+      "notUsed": "Không có hồ sơ",
+      "usedByCount_one": "{{count}} hồ sơ",
+      "usedByCount_other": "{{count}} hồ sơ"
+    },
+    "actions": {
+      "check": "Kiểm tra ngay",
+      "checkAria": "Kiểm tra {{address}} ngay",
+      "delete": "Xóa",
+      "deleteAria": "Xóa {{address}}",
+      "checkAll": "Kiểm tra tất cả mục đang hiện",
+      "deleteDead": "Xóa proxy không hoạt động",
+      "checkSelected": "Kiểm tra mục đã chọn",
+      "deleteSelected": "Xóa mục đã chọn",
+      "clear": "Bỏ chọn",
+      "selected": "Đã chọn {{count}}"
+    },
+    "confirm": {
+      "delete": "Xóa proxy miễn phí {{address}}?",
+      "deleteUsed_one": "Xóa proxy miễn phí {{address}}? {{count}} hồ sơ đang dùng nó và sẽ mất proxy.",
+      "deleteUsed_other": "Xóa proxy miễn phí {{address}}? {{count}} hồ sơ đang dùng nó và sẽ mất proxy.",
+      "deleteSelected_one": "Xóa {{count}} proxy miễn phí đã chọn?",
+      "deleteSelected_other": "Xóa {{count}} proxy miễn phí đã chọn?",
+      "deleteDead_one": "Xóa {{count}} proxy miễn phí không qua lần kiểm tra gần nhất?",
+      "deleteDead_other": "Xóa {{count}} proxy miễn phí không qua lần kiểm tra gần nhất?"
+    },
+    "checkRun": {
+      "running": "Đang kiểm tra {{done}} / {{total}} · {{ok}} hoạt động, {{fail}} không hoạt động",
+      "done": "Đã kiểm tra {{total}} · {{ok}} hoạt động, {{fail}} không hoạt động",
+      "stop": "Dừng"
+    },
+    "empty": {
+      "title": "Chưa có proxy miễn phí nào",
+      "description": "Dùng ô tìm kiếm ở trên để tìm, kiểm tra và lưu proxy công cộng miễn phí. Chỉ giữ những proxy hoạt động và giữ kín IP của bạn."
+    },
+    "noMatch": {
+      "title": "Không có proxy miễn phí nào khớp bộ lọc",
+      "description": "Đổi hoặc đặt lại bộ lọc để xem các proxy khác."
+    },
+    "errors": {
+      "load": "Không tải được proxy miễn phí.",
+      "delete": "Không xóa được proxy miễn phí.",
+      "check": "Không kiểm tra được proxy miễn phí."
+    }
+  },
+  "tabs": {
+    "custom": "Proxy tùy chỉnh",
+    "providers": "Nhà cung cấp proxy",
+    "integrated": "Tích hợp",
+    "history": "Lịch sử kiểm tra",
+    "groups": "Nhóm và quốc gia"
+  },
+  "stats": {
+    "totalProxies": "Tổng số proxy",
+    "totalTip": "Hiện toàn bộ kho",
+    "splitSub": "{{verified}} đã xác minh · {{unchecked}} chưa kiểm tra",
+    "proxyTypes": "Loại proxy",
+    "verified": "Đã xác minh",
+    "verifiedTip": "Lọc bảng theo proxy đã xác minh",
+    "pctOfPool": "{{pct}}% kho",
+    "failed": "Lỗi",
+    "failedTip": "Lọc bảng theo proxy lỗi",
+    "uncheckedSub": "{{count}} chưa kiểm tra",
+    "nonVerified": "Chưa xác minh",
+    "protocols": "HTTP / SOCKS",
+    "protocolsTip": "Tỷ lệ giao thức trong kho",
+    "protocolsSub": "{{http}} HTTP · {{socks}} SOCKS",
+    "countries": "Quốc gia",
+    "countriesTip": "Mở phân bố theo quốc gia",
+    "topCountry": "{{country}} dẫn đầu · {{count}}",
+    "countriesEmpty": "Chạy kiểm tra để xác định vị trí",
+    "lastCheck": "Kiểm tra lần cuối",
+    "lastCheckTip": "Mở kiểm tra tình trạng tự động",
+    "autoEvery": "Tự kiểm tra mỗi {{n}} phút",
+    "autoOff": "Tự kiểm tra tắt",
+    "justNow": "vừa xong",
+    "minAgo": "{{n}} phút trước",
+    "hrAgo": "{{n}} giờ trước",
+    "dayAgo": "{{n}} ngày trước",
+    "filtering": "đang lọc",
+    "noProxies": "Không có proxy",
+    "total": "tổng"
+  },
+  "search": {
+    "placeholder": "Tìm theo tên proxy, máy chủ hoặc tên người dùng..."
+  },
+  "deleteFiltered": {
+    "tooltip": "Xóa mọi proxy khớp bộ lọc hiện tại",
+    "button": "Xóa tất cả {{scope}} ({{count}})",
+    "confirm_one": "Xóa tất cả {{count}} proxy {{scope}}? Không thể hoàn tác: hồ sơ đang dùng sẽ mất proxy và không khởi chạy được cho đến khi bạn gán proxy khác.",
+    "confirm_other": "Xóa tất cả {{count}} proxy {{scope}}? Không thể hoàn tác: hồ sơ đang dùng sẽ mất proxy và không khởi chạy được cho đến khi bạn gán proxy khác.",
+    "scope": {
+      "all": "tất cả",
+      "filtered": "đã lọc",
+      "matching": "khớp",
+      "verified": "đã xác minh",
+      "failed": "lỗi"
+    }
+  },
+  "filters": {
+    "all": "Tất cả",
+    "ungrouped": "Chưa có nhóm",
+    "byProvider": "Theo nhà cung cấp"
+  },
+  "groups": {
+    "chipTooltip": "Bấm để lọc · kéo proxy vào đây để thêm",
+    "renameRecolor": "Đổi tên / đổi màu",
+    "deleteGroup": "Xóa nhóm",
+    "newGroup": "Nhóm mới",
+    "deleteConfirm": "Xóa nhóm \"{{name}}\"? Proxy vẫn ở trong kho, chỉ không còn thuộc nhóm nào."
+  },
+  "autoGroup": {
+    "granularityTooltip": "Mức chi tiết khi tự nhóm",
+    "country": "Quốc gia",
+    "state": "Bang/Tỉnh",
+    "city": "Thành phố",
+    "buttonTooltip": "Tạo nhóm theo quốc gia/bang/thành phố đã xác minh của từng proxy. Hãy chạy Kiểm tra tất cả trước để proxy có vị trí.",
+    "button": "Tự nhóm",
+    "result_one": "+{{count}} nhóm · đã gán {{assigned}}",
+    "result_other": "+{{count}} nhóm · đã gán {{assigned}}"
+  },
+  "sort": {
+    "tooltip": "Sắp xếp theo độ trễ",
+    "default": "Sắp xếp: mặc định",
+    "fastest": "Nhanh nhất trước",
+    "slowest": "Chậm nhất trước"
+  },
+  "geo": {
+    "toggleTooltip": "Bật/tắt phân bố theo vị trí",
+    "button": "Vị trí",
+    "byCountry": "Proxy theo quốc gia",
+    "summary": "{{countries}} quốc gia · {{proxies}} proxy",
+    "unknown": "Không rõ"
+  },
+  "scheduler": {
+    "tooltip": "Tự động kiểm tra lại mọi proxy theo lịch",
+    "autoCheckEvery": "Tự kiểm tra mỗi",
+    "min": "phút"
+  },
+  "selection": {
+    "count": "Đã chọn {{count}}",
+    "checkSelected": "Kiểm tra mục đã chọn",
+    "moveToGroup": "Chuyển vào nhóm",
+    "noGroupsYet": "Chưa có nhóm nào. Hãy tạo trước.",
+    "removeFromGroup": "Gỡ khỏi nhóm",
+    "deleteSelected": "Xóa mục đã chọn",
+    "clear": "Bỏ chọn",
+    "clearTooltip": "Bỏ chọn tất cả",
+    "copyForExtension": "Sao chép cho SoftGlaze Proxy",
+    "copyForExtensionTooltip": "Sao chép các proxy đã chọn cho mục Nhập hàng loạt của tiện ích trình duyệt SoftGlaze Proxy"
+  },
+  "copyForExtension": {
+    "title": "Sao chép cho SoftGlaze Proxy",
+    "description": "Sao chép các proxy đã chọn thành các dòng mà tiện ích trình duyệt SoftGlaze Proxy đọc được trong ô Nhập hàng loạt. Mỗi dòng ghi rõ loại (http, https, socks5 hoặc socks4), nên proxy SOCKS5 không bao giờ bị đọc nhầm thành HTTP.",
+    "loading": "Đang đếm các proxy đã chọn…",
+    "count": "Số proxy cần sao chép: {{count}}",
+    "skipped": "Đã bỏ qua: {{count}} (loại, địa chỉ hoặc cổng mà tiện ích không đọc được).",
+    "includeCredentials": "Kèm tên người dùng và mật khẩu",
+    "credsNoRole": "Vai trò của bạn không xem được tên người dùng và mật khẩu proxy. Hãy hỏi chủ sở hữu hoặc quản trị viên.",
+    "credsNone": "Không proxy nào đã chọn có tên người dùng hoặc mật khẩu.",
+    "socks5Note": "Proxy SOCKS5 có đăng nhập: {{count}}. Chrome và Edge không đăng nhập được vào proxy SOCKS5, nên tiện ích sẽ không nhận các dòng đó ở đây. Firefox dùng được.",
+    "socks4Note": "Proxy SOCKS4 có đăng nhập: {{count}}. Chúng được sao chép không kèm thông tin đăng nhập, vì SOCKS4 không có mật khẩu và tiện ích không nhận.",
+    "clipboardWarning": "Các chương trình khác trên máy tính này có thể đọc bộ nhớ tạm. Ứng dụng sẽ xóa sau 2 phút nếu bộ nhớ tạm vẫn chứa danh sách này.",
+    "copy": "Sao chép",
+    "copying": "Đang sao chép…",
+    "cancel": "Hủy",
+    "close": "Đóng",
+    "copied": "Đã sao chép {{count}} proxy không kèm tên người dùng hay mật khẩu. Trong tiện ích, mở Proxies, chọn Bulk import và dán.",
+    "copiedWithCredentials": "Đã sao chép {{count}} proxy kèm tên người dùng và mật khẩu. Trong tiện ích, mở Proxies, chọn Bulk import và dán.",
+    "getExtension": "Tải tiện ích SoftGlaze Proxy",
+    "loadError": "Không đọc được các proxy đã chọn.",
+    "copyError": "Không sao chép được proxy."
+  },
+  "table": {
+    "loading": "Đang tải proxy...",
+    "emptyTitle": "Không tìm thấy proxy",
+    "emptyDescription": "Thêm proxy thủ công hoặc dán một loạt chuỗi proxy.",
+    "selectAll": "Chọn tất cả proxy",
+    "selectRow": "Chọn {{name}}",
+    "colName": "Tên",
+    "colType": "Loại",
+    "colEndpoint": "Điểm cuối",
+    "colUsername": "Tên người dùng",
+    "colGroup": "Nhóm",
+    "colProfiles": "Hồ sơ",
+    "colCreated": "Ngày tạo",
+    "colSpeed": "Tốc độ",
+    "colBlocklist": "Danh sách chặn",
+    "colStatus": "Trạng thái",
+    "colActions": "Thao tác",
+    "profileCount_one": "{{count}} hồ sơ",
+    "profileCount_other": "{{count}} hồ sơ",
+    "defaultProxyName": "Proxy"
+  },
+  "rowActions": {
+    "testProxy": "Kiểm tra proxy",
+    "healthHistory": "Lịch sử tình trạng",
+    "editProxy": "Sửa proxy",
+    "deleteProxy": "Xóa proxy",
+    "copyEndpoint": "Sao chép host:port",
+    "check": "Kiểm tra",
+    "rotateIp": "Xoay IP",
+    "rotateIpTitle": "Lấy IP đầu ra mới cho proxy này"
+  },
+  "status": {
+    "checking": "Đang kiểm tra…",
+    "failed": "Lỗi",
+    "ok": "Ổn"
+  },
+  "checker": {
+    "running": "Đang kiểm tra proxy…",
+    "done": "Kiểm tra xong",
+    "healthy": "{{n}} ổn định",
+    "failed": "{{n}} lỗi",
+    "eta": "Còn lại",
+    "stop": "Dừng",
+    "dismiss": "Đóng",
+    "idle": "Đang chờ bắt đầu…",
+    "health": "Tình trạng",
+    "blacklisted": "Nằm trong danh sách chặn",
+    "blacklistShort": "bị chặn",
+    "notBlacklisted": "Không nằm trong danh sách chặn nào đã kiểm tra",
+    "clean": "sạch",
+    "residential": "Dải IP dân cư",
+    "residentialTip": "Dải IP dân cư (Spamhaus PBL), không phải danh sách spam. Điều này bình thường với proxy dân cư và di động; không làm giảm điểm tình trạng.",
+    "hideLog": "Ẩn nhật ký",
+    "showLog": "Hiện nhật ký",
+    "speed": {
+      "fast": "nhanh",
+      "good": "tốt",
+      "ok": "ổn",
+      "slow": "chậm"
+    }
+  },
+  "blacklistFilter": {
+    "all": "Tất cả",
+    "clean": "Sạch",
+    "blacklisted": "Bị chặn",
+    "cleanTip": "Chỉ hiện proxy không nằm trong danh sách chặn nào đã kiểm tra",
+    "blacklistedTip": "Chỉ hiện proxy bị gắn cờ trong danh sách chặn DNS"
+  },
+  "speedFilter": {
+    "all": "Tất cả",
+    "fast": "Nhanh",
+    "slow": "Chậm",
+    "fastTip": "Chỉ hiện proxy đo được từ 2 giây trở xuống",
+    "slowTip": "Chỉ hiện proxy đo được chậm hơn 2 giây"
+  },
+  "bulkDelete": {
+    "confirm_one": "Xóa {{count}} proxy đã chọn? Hồ sơ đang dùng sẽ mất proxy và không khởi chạy được cho đến khi bạn gán proxy khác.",
+    "confirm_other": "Xóa {{count}} proxy đã chọn? Hồ sơ đang dùng sẽ mất proxy và không khởi chạy được cho đến khi bạn gán proxy khác."
+  },
+  "delete": {
+    "confirm": "Xóa proxy \"{{name}}\"?",
+    "profilesNeedProxy": "Số hồ sơ đã dùng proxy bị xóa: {{count}}. Chúng hiện không có proxy và sẽ không khởi chạy được cho đến khi bạn gán một proxy (trong trình sửa hồ sơ, hoặc bằng Proxy ở trang Hồ sơ).",
+    "dismissNotice": "Đóng"
+  },
+  "history": {
+    "dialogTitle": "Lịch sử tình trạng proxy",
+    "title": "Lịch sử tình trạng",
+    "empty": "Chưa có lịch sử. Hãy chạy kiểm tra tình trạng (hoặc bật Tự kiểm tra) và dòng thời gian độ trễ/trạng thái sẽ dần hiện ở đây.",
+    "latencyOverTime": "Độ trễ theo thời gian (ms)",
+    "ok": "ổn",
+    "fail": "lỗi",
+    "checks_one": "{{count}} lần kiểm tra",
+    "checks_other": "{{count}} lần kiểm tra",
+    "close": "Đóng"
+  },
+  "historyCards": {
+    "title": "Lịch sử kiểm tra gần đây",
+    "openDetail": "Mở toàn bộ lịch sử",
+    "regressed": "Từng xác minh, sau đó lỗi",
+    "regressedCount_one": "{{count}} từng xác minh rồi lỗi",
+    "regressedCount_other": "{{count}} từng xác minh rồi lỗi",
+    "empty": "Chưa có lần kiểm tra nào. Hãy chạy Kiểm tra tất cả ở trang Proxy và kết quả sẽ hiện ở đây."
+  },
+  "form": {
+    "dialogTitleEdit": "Sửa proxy",
+    "dialogTitleCreate": "Tạo proxy",
+    "titleEdit": "Sửa proxy",
+    "titleCreate": "Tạo proxy",
+    "descriptionEdit": "Cập nhật một proxy có sẵn. Giữ nguyên mật khẩu đã che để giữ giá trị hiện tại.",
+    "descriptionCreate": "Thêm một proxy có cấu trúc vào kho SQLite cục bộ.",
+    "tipPrefix": "Mẹo: dán proxy của bạn",
+    "tipSuffix": "vào ô Máy chủ để tự điền mọi trường.",
+    "proxyName": "Tên proxy",
+    "proxyNamePlaceholder": "Residential US 01",
+    "type": "Loại",
+    "host": "Máy chủ",
+    "port": "Cổng",
+    "username": "Tên người dùng",
+    "password": "Mật khẩu",
+    "optional": "Không bắt buộc",
+    "cancel": "Hủy",
+    "saving": "Đang lưu...",
+    "saveChanges": "Lưu thay đổi",
+    "createProxy": "Tạo proxy",
+    "socks4Note": "SOCKS4 hoạt động trong hồ sơ Firefox. Hồ sơ Chromium sẽ không mở với nó: Chromium không gửi được truy vấn DNS qua SOCKS4, nên mọi trang web sẽ được tra cứu bên ngoài proxy. Hãy dùng SOCKS5 hoặc HTTP cho hồ sơ Chromium."
+  },
+  "batch": {
+    "dialogTitle": "Thêm proxy hàng loạt",
+    "title": "Thêm proxy hàng loạt",
+    "descriptionPrefix": "Dán mỗi dòng một proxy. Định dạng hỗ trợ:",
+    "defaultType": "Loại mặc định",
+    "providerLabel": "Nhà cung cấp (không bắt buộc)",
+    "providerNone": "Không",
+    "providerHint": "Gắn các proxy này với nhà cung cấp gốc, để chúng được nhóm theo nhà cung cấp ở đây và được tính trên trang Nhà cung cấp proxy.",
+    "proxyLines": "Các dòng proxy",
+    "resultTitle": "Kết quả",
+    "total": "Tổng",
+    "created": "Đã tạo",
+    "skipped": "Đã bỏ qua",
+    "errors": "Lỗi",
+    "lineError": "Dòng {{line}}: {{message}}",
+    "close": "Đóng",
+    "importing": "Đang nhập...",
+    "addProxies": "Thêm proxy"
+  },
+  "groupModal": {
+    "dialogTitleEdit": "Sửa nhóm",
+    "dialogTitleNew": "Nhóm mới",
+    "titleEdit": "Sửa nhóm proxy",
+    "titleNew": "Nhóm proxy mới",
+    "description": "Nhóm proxy theo quốc gia hoặc mục đích (ví dụ Mỹ, Anh, Nhật). Bạn có thể chọn một nhóm khi tạo hồ sơ hàng loạt.",
+    "groupName": "Tên nhóm",
+    "groupNamePlaceholder": "Proxy Mỹ",
+    "color": "Màu",
+    "colorLabel": "Màu {{color}}",
+    "cancel": "Hủy",
+    "saveChanges": "Lưu thay đổi",
+    "createGroup": "Tạo nhóm"
+  },
+  "errors": {
+    "deleteProxies": "Không xóa được proxy.",
+    "loadProxies": "Không tải được proxy.",
+    "copyClipboard": "Không sao chép được vào bộ nhớ tạm.",
+    "deleteSelected": "Không xóa được các proxy đã chọn.",
+    "saveProxy": "Không lưu được proxy.",
+    "batchAdd": "Không thêm được proxy hàng loạt.",
+    "bulkTest": "Kiểm tra hàng loạt thất bại.",
+    "savePolicy": "Không lưu được chính sách proxy.",
+    "saveSchedule": "Không lưu được lịch.",
+    "enterGroupName": "Nhập tên nhóm.",
+    "saveGroup": "Không lưu được nhóm.",
+    "deleteGroup": "Không xóa được nhóm.",
+    "moveProxies": "Không chuyển được proxy.",
+    "autoGroup": "Tự nhóm thất bại. Hãy chạy Kiểm tra tất cả trước để proxy có quốc gia.",
+    "deleteProxy": "Không xóa được proxy. Hãy gỡ các hồ sơ liên kết hoặc đổi proxy được gán cho chúng trước.",
+    "rotate": "Không xoay được IP.",
+    "rotateStatus": "Yêu cầu xoay vòng trả về HTTP {{status}}."
+  },
+  "groupsPage": {
+    "groupsTitle": "Nhóm và quốc gia",
+    "openGroup": "Hiện các proxy này",
+    "noGeo": "Hãy chạy Kiểm tra tất cả ở trang Proxy để xác định quốc gia của từng proxy.",
+    "noProviders": "Chưa có proxy từ nhà cung cấp. Hãy lấy từ Nhà cung cấp proxy.",
+    "scheduleTitle": "Kiểm tra tình trạng tự động"
+  },
+  "filterBar": {
+    "statusTip": "Trạng thái kiểm tra",
+    "statusAll": "Mọi trạng thái",
+    "blocklistAll": "Mọi danh sách chặn",
+    "speedAll": "Mọi tốc độ",
+    "groupTip": "Nhóm hoặc quốc gia",
+    "groupAll": "Tất cả nhóm",
+    "providerAll": "Tất cả nhà cung cấp",
+    "reset": "Đặt lại bộ lọc"
+  },
+  "providerAccount": {
+    "title": "Tài khoản",
+    "check": "Kiểm tra tài khoản",
+    "checkedAt": "Đã kiểm tra {{time}}",
+    "notChecked": "Chưa kiểm tra. Kiểm tra tài khoản sẽ đọc gói, ngày hết hạn, lưu lượng và số dư bằng khóa đã lưu cho nhà cung cấp này.",
+    "notSupported": "API của nhà cung cấp này không báo thông tin tài khoản.",
+    "openDashboard": "Mở bảng điều khiển",
+    "status": "Trạng thái",
+    "statusActive": "Đang hoạt động",
+    "statusExpired": "Đã hết hạn",
+    "statusSuspended": "Tạm ngưng",
+    "statusUnknown": "Không rõ",
+    "plan": "Gói",
+    "expires": "Hết hạn",
+    "daysLeft_one": "Còn {{count}} ngày",
+    "daysLeft_other": "Còn {{count}} ngày",
+    "endsToday": "kết thúc hôm nay",
+    "endedAgo_one": "đã kết thúc {{count}} ngày trước",
+    "endedAgo_other": "đã kết thúc {{count}} ngày trước",
+    "traffic": "Lưu lượng",
+    "trafficLeft": "Còn {{left}}",
+    "trafficUsedOf": "Đã dùng {{used}} / {{total}}",
+    "trafficUsed": "Đã dùng {{used}}",
+    "trafficTotal": "Gói {{total}}",
+    "balance": "Số dư",
+    "noDetails": "Nhà cung cấp đã phản hồi nhưng không báo gói, ngày hết hạn, lưu lượng hay số dư.",
+    "error": "Không kiểm tra được tài khoản: {{message}}",
+    "note": {
+      "firstToExpire": "Ngày hết hạn hiển thị là ngày sớm nhất trong các proxy hoặc gói của bạn.",
+      "summedPlans": "Số liệu là tổng của mọi gói đang hoạt động.",
+      "noActivePlans": "Tài khoản này không có gói nào đang hoạt động.",
+      "noActiveProxies": "Tài khoản này không có proxy nào đang hoạt động.",
+      "planSizeOnly": "API báo dung lượng gói, không báo lưu lượng còn lại.",
+      "firstPageOnly": "Tính từ 1000 proxy đầu tiên của bạn.",
+      "usedLast7Days": "Lưu lượng đã dùng trong 7 ngày qua; API không báo phần còn lại."
+    }
+  }
+}

@@ -1,0 +1,31 @@
+{
+  "brandSelect": {
+    "presentAs": "Dieses Profil als {{brand}} ausgeben"
+  },
+  "versionSelect": {
+    "auto": "Auto",
+    "loadingVersions": "Versionen werden geladen…",
+    "ready": "Bereit",
+    "readyTitle": "Installiert & einsatzbereit",
+    "noVersions": "Keine Versionen gefunden.",
+    "offlineError": "Offline. Der Versionskatalog ist nicht erreichbar.",
+    "downloadFailed": "Download fehlgeschlagen.",
+    "resumeFailed": "Fortsetzen fehlgeschlagen.",
+    "paused": "Pausiert",
+    "interrupted": "Unterbrochen",
+    "resumeTitle": "{{state}} bei {{percent}} %, fortsetzen",
+    "statusInstalling": "inst",
+    "statusQueued": "…",
+    "retryTitle": "Wiederholen ({{error}})",
+    "downloadFailedShort": "Download fehlgeschlagen",
+    "downloadInstallTitle": "Diese Version herunterladen & installieren"
+  },
+  "pager": {
+    "showing": "{{from}} bis {{to}} von {{total}}",
+    "perPage": "Pro Seite",
+    "all": "Alle",
+    "prev": "Zurück",
+    "next": "Weiter",
+    "pageOf": "Seite {{page}} / {{total}}"
+  }
+}

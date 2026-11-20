@@ -1,0 +1,411 @@
+{
+  "actions": {
+    "refresh": "更新"
+  },
+  "groups": {
+    "general": "一般",
+    "browser": "ブラウザ",
+    "runtime": "ランタイム",
+    "security": "セキュリティとチーム",
+    "account": "アカウントとデータ"
+  },
+  "nav": {
+    "billing": "請求",
+    "monetization": "プランと使用状況",
+    "migration": "インポートと移行",
+    "workspaceSync": "ワークスペースの同期",
+    "branding": "ブランディング",
+    "dbEncryption": "データベースの暗号化",
+    "workspaceBackup": "ワークスペースのバックアップ",
+    "developerApi": "開発者API",
+    "phones": "スマートフォン"
+  },
+  "fingerprint": {
+    "title": "フィンガープリントとID",
+    "description": "プロファイル側で上書きしない限り、起動時にすべてのプロファイルに適用されます。"
+  },
+  "behaviour": {
+    "title": "ブラウザの動作",
+    "description": "起動したブラウザの日常的な動作です。"
+  },
+  "ui": {
+    "searchPlaceholder": "設定を検索",
+    "jumpTo": "セクションへ移動",
+    "noResultsTitle": "「{{term}}」に一致する設定はありません",
+    "noResultsDesc": "proxy、camera、loginなど、短い語で検索してみてください。",
+    "experimental": "試験運用",
+    "savedIdle": "すべての変更を保存しました",
+    "saving": "変更を保存中…",
+    "saveError": "変更を保存できませんでした"
+  },
+  "localRuntime": {
+    "title": "ローカルランタイム",
+    "description": "パスはElectronのメインプロセスで解決されます。",
+    "loading": "システム情報を読み込み中...",
+    "sqliteDb": "SQLite DB",
+    "profileRoot": "プロファイルのルート",
+    "databaseUrl": "データベースURL",
+    "configured": "設定済み",
+    "notConfigured": "未設定"
+  },
+  "sessions": {
+    "title": "アクティブなセッション",
+    "description": "現在起動中でリソースを使用しているセッションです。",
+    "loading": "セッションを読み込み中...",
+    "emptyTitle": "アクティブなセッションはありません",
+    "emptyDescription": "プロファイルを起動するとここに表示されます。",
+    "running": "実行中",
+    "created": "作成日時 {{date}}",
+    "close": "閉じる"
+  },
+  "scheduler": {
+    "title": "プロキシ状態チェックのスケジューラー",
+    "description": "保存済みのすべてのプロキシをバックグラウンドで定期的に再チェックし、状態を記録します。",
+    "enabled": "有効",
+    "disabled": "無効",
+    "runSweepEvery": "チェック間隔",
+    "every15min": "15分",
+    "every30min": "30分",
+    "every1hour": "1時間",
+    "every2hours": "2時間",
+    "serviceRunning": "サービス実行中",
+    "idle": "待機中",
+    "noteLabel": "注:",
+    "noteBody": "このバックグラウンドタスクはElectronのメインプロセスで動作するため、アプリを最小化しているときやページを移動しているときもチェックは途切れず続きます。チェック結果はプロキシプール内にステータスバッジとして直接表示されます。"
+  },
+  "toggleRow": {
+    "appliedAtLaunch": "起動時に適用"
+  },
+  "globalPreferences": {
+    "heading": "全体の設定",
+    "loading": "全体の設定を読み込み中…",
+    "saving": "保存中…"
+  },
+  "security": {
+    "title": "アカウントのセキュリティ",
+    "description": "サインインの保護と認証ポリシーです。",
+    "remoteLogin": {
+      "title": "リモートログインの通知",
+      "desc": "よく使う3つのIP以外の新しいIPアドレスからアカウントにサインインされたときに、通知メールを送信します。"
+    },
+    "failedLogin": {
+      "title": "ログイン失敗の警告",
+      "desc": "ログインに3回以上失敗すると、オーナーのメールアドレスに通知メールを送信します。"
+    },
+    "ipAllowlist": {
+      "title": "ログインIPの許可リスト",
+      "desc": "設定すると、メンバーのログインがIPで制限されます（オーナーは対象外）。"
+    },
+    "twoStep": {
+      "title": "2段階認証",
+      "desc": "重要な操作には、認証アプリ、メール、またはSMSによる確認が必要です。",
+      "methodLabel": "方法",
+      "methodApp": "認証アプリ",
+      "methodEmail": "メール",
+      "methodSms": "SMS",
+      "levelLabel": "認証レベル",
+      "levelLow": "低：新しいデバイス、または前回の2FAから90日以上",
+      "levelMedium": "中（推奨）：新しいデバイス、または30日以上",
+      "levelHigh": "高：ログインのたびに2FAが必要"
+    }
+  },
+  "multiDevice": {
+    "title": "マルチデバイスモード",
+    "description": "複数のメンバーが同じプロファイルに同時にアクセスできるかどうかを設定します。",
+    "modeOff": "オフ：1つのプロファイルにつき1人のメンバー",
+    "modeFull": "フル：すべてのプロファイルで同時アクセス可能",
+    "modeSpecified": "指定：選択したプロファイルのみ",
+    "hintBefore": "有効にすると、複数のメンバーが同じプロファイルに同時にアクセスできます。",
+    "hintSpecified": "指定",
+    "hintAfter": "モードでは、「プロファイル」ページで対象のプロファイルを選択してください。"
+  },
+  "website": {
+    "title": "ウェブサイトの管理",
+    "description": "URLのアクセスルールとリソースの読み込みです。",
+    "blockAccess": {
+      "title": "アクセスをブロック",
+      "desc": "ブロックリストと許可リストでURLを管理します。",
+      "blocklist": "ブロックリスト",
+      "allowlist": "許可リスト"
+    },
+    "fbStatic": {
+      "title": "FBの静的リソース",
+      "desc": "有効にすると、Facebookの静的リソースをローカルネットワーク経由で読み込みます。"
+    },
+    "localNetwork": {
+      "title": "ローカルネットワークへのアクセス",
+      "desc": "有効にすると、特定のURLにローカルネットワーク上でアクセスできます。"
+    }
+  },
+  "platform": {
+    "title": "プラットフォーム",
+    "description": "プロファイル一覧の表示をカスタマイズします。",
+    "customIcon": {
+      "title": "カスタムアイコン",
+      "desc": "一覧のプロファイルにカスタムアイコンを表示します。"
+    },
+    "displayCustomNo": {
+      "title": "カスタム番号を表示",
+      "desc": "カスタムのシリアル番号をすべて表示します（例: \"123456\"）。"
+    },
+    "displayLast4": {
+      "title": "カスタム番号の下4桁を表示",
+      "desc": "シリアル番号の下4桁のみを表示します。"
+    }
+  },
+  "ipSetting": {
+    "title": "IP設定",
+    "description": "プロキシ自動設定の優先順位とIPチェッカーです。",
+    "priorityPrefix": "検索の優先順位:",
+    "priorityChain": "前回使用したIP > ASN > 市区町村 > 地域 > 国/地域",
+    "prioritySuffix": "チェックを外した項目はスキップされます。",
+    "lastUsedIp": "前回使用したIP",
+    "asn": "ASN",
+    "asnDesc": "Bright autoでのみ利用できます。",
+    "city": "市区町村",
+    "region": "地域",
+    "country": "国/地域",
+    "ipCheckerLabel": "IPチェッカー"
+  },
+  "dataSync": {
+    "title": "データ同期",
+    "description": "デバイス間で同期するデータを選択します。",
+    "cookie": "Cookie",
+    "passwords": "保存済みパスワード",
+    "bookmarks": "ブックマーク",
+    "localStorage": "ローカルストレージ",
+    "indexedDb": "IndexedDB",
+    "extensionData": "拡張機能のデータ",
+    "history": "履歴"
+  },
+  "browser": {
+    "title": "ブラウザ設定",
+    "description": "起動したブラウザの動作です。「起動時に適用」と表示された項目は、次回のプロファイル起動時に反映されます。",
+    "geoMatch": {
+      "title": "地域の自動一致（タイムゾーン · ロケール · WebRTC）",
+      "desc": "起動時に、各プロファイルのタイムゾーン、言語、WebRTCの出口IPをプロキシの所在地から決定します。オフにすると、各プロファイルで手動設定した値のみを使用します。起動時に適用されます。"
+    },
+    "realtimeTimezone": {
+      "title": "動的IPの変更時にタイムゾーンをリアルタイムで一致",
+      "desc": "動的IPが変わったときに、対応するタイムゾーンと所在地に合わせます。"
+    },
+    "chromeSignin": {
+      "title": "Chromeへのサインインを許可",
+      "desc": "オフの場合、Chrome自体にサインインせずにGmailなどのGoogleのサイトにサインインできます。"
+    },
+    "offerTranslate": {
+      "title": "ページの翻訳を提案",
+      "desc": "読める言語以外のページで翻訳を提案します。"
+    },
+    "disableDevtools": {
+      "title": "ブラウザの開発者ツールを無効化",
+      "desc": "Chromeベースのプロファイルでは、開発者ツールのウィンドウやパネル（F12、Ctrl+Shift+I、検証）を開くとすぐに閉じます。変更後に起動したプロファイルに適用されます。このコンピューター上のご自身のChromeには影響しません。"
+    },
+    "minimizeCdpFootprint": {
+      "title": "CDPの痕跡を最小化（試験運用、CAPTCHAを削減）",
+      "shortTitle": "CDPの痕跡を最小化",
+      "desc": "常時有効なCDPのRuntime.enableを停止します。これはCloudflare/Turnstileが検出する代表的な自動化シグナルです。オンの間のトレードオフ: ペルソナの自動入力、スタートページのチェックリンク、同期セッションのミラーリングが動作しなくなります（CDPバインディングが必要なため）。既定はオフです。オンにしてCAPTCHAが減るかA/Bテストし、プロファイルを再起動してください。"
+    },
+    "blockThirdPartyCookies": {
+      "title": "サードパーティCookieをブロック",
+      "desc": "オフ（推奨）: プロファイルは通常のChromeウィンドウと同じようにサードパーティCookieを保持・送信します。reCAPTCHA、hCaptcha、Cloudflareは訪問者の信頼判定にこれを使うため、CAPTCHAを通りやすくなります。オン: Chromeベースのプロファイルでブロックします。変更後に起動したプロファイルに適用されます。"
+    },
+    "checkBeforeLaunch": {
+      "title": "起動前にプロファイルをチェック",
+      "desc": "「プロファイル」ページからプロファイルを開く前に、明らかな不一致（システム、グラフィックカード、画面、言語、タイムゾーン、WebRTC、応答しないプロキシ）を一覧表示し、先に修正するよう提案します。"
+    },
+    "switchProxyOnBlock": {
+      "title": "サイトにブロックされたらプロキシを切り替え",
+      "desc": "サイトがChromeベースのプロファイルをブロックページやCAPTCHAページに留め続ける場合、プロキシのローテーションリンクから新しいIPを取得するか、より良い予備のプロキシにプロファイルを移して、ページを開き直します。1プロファイルにつき1時間に最大2回までで、自動化やLocal APIが使用中のときは行いません。ブロックはすべて、失敗したプロキシとともに記録されます。",
+      "toast": {
+        "blocked": "{{site}} が {{profile}} をブロックしました（{{kind}}）。",
+        "rotated": "{{proxy}} の新しいIPを取得し、ページを再読み込みしました。",
+        "switched": "{{proxy}} に切り替えてページを開き直しました。",
+        "notReopened": "{{proxy}} に切り替えましたが、プロファイルは再度開きませんでした。",
+        "none": {
+          "disabled": "設定でプロキシの切り替えがオフのため、何も変更していません。",
+          "noProxy": "このプロファイルは保存済みプロキシなしで実行中のため、何も変更していません。",
+          "busy": "自動化またはLocal APIがこのプロファイルを使用中のため、何も変更していません。",
+          "limit": "このプロファイルは直近1時間ですでに{{limit}}回切り替えたため、何も変更していません。",
+          "proxyPool": "このプロファイルはローテーションプールを使用しているため、何も変更していません。",
+          "noSpare": "より良い予備のプロキシがないため、何も変更していません。",
+          "noPermission": "あなたのロールではこのプロファイルのプロキシを変更できないため、何も変更していません。",
+          "signedOut": "誰もサインインしていないため、何も変更していません。",
+          "inProgress": "このプロファイルの切り替えはすでに実行中です。",
+          "failed": "切り替えに失敗したため、何も変更していません。"
+        },
+        "kind": {
+          "googleSorry": "Googleの異常なトラフィックのページ",
+          "rateLimit": "リクエスト過多",
+          "cloudflare": "Cloudflareのチャレンジ",
+          "datadome": "DataDomeのブロック",
+          "accessDenied": "Access Deniedのページ",
+          "perimeterx": "PerimeterXのブロック",
+          "unknown": "ブロックページ"
+        }
+      }
+    },
+    "lockExtensions": {
+      "title": "拡張機能のインストール/削除を無効化",
+      "desc": "Chromeベースのプロファイルでは、拡張機能ページとChrome ウェブストアを開くとすぐに閉じるため、拡張機能の追加、削除、オフができません。SoftGlazeの「拡張機能」ページからインストールした拡張機能は引き続き読み込まれます。変更後に起動したプロファイルに適用されます。"
+    },
+    "virtualCamera": {
+      "title": "仮想カメラ",
+      "desc": "ローカルの動画をライブカメラ映像として再現します。Chromeバージョン140以降でのみ有効です。"
+    },
+    "mobileSimulation": {
+      "title": "モバイル表示の最適化",
+      "desc": "インターフェースを実際のモバイルデバイスの操作感に近づけます。Chromeバージョン143以降でのみ有効です。"
+    },
+    "secureAccess": {
+      "title": "安全なアクセス（HTTPS）",
+      "desc": "可能な限りHTTPSを使用し、HTTPS以外のサイトを読み込む前に警告します。"
+    },
+    "disableVideos": {
+      "title": "動画の読み込みを無効化",
+      "desc": "メディアのダウンロードをブロックしてプロキシの通信量を節約します。"
+    },
+    "disableImages": {
+      "title": "画像の読み込みを無効化",
+      "desc": "画像の読み込みをブロックして通信量を節約します。注: 画像の読み込みは完全に無効になります。下のKBのしきい値は、今後のリクエスト単位のフィルタリング用に保存されます。",
+      "skipUnder": "スキップする画像サイズ（未満）",
+      "kb": "KB"
+    },
+    "antidetectEngine": {
+      "title": "ネイティブのフィンガープリントエンジン（fingerprint-chromium）",
+      "desc": "Chromeプロファイルをfingerprint-chromiumで起動します。これはソースレベルで改変されたChromiumで、各プロファイルのフィンガープリント設定（canvas、WebGL、オーディオ、UA、プラットフォーム、タイムゾーン）をバイナリレベルで適用し、navigator.webdriverとHeadlessChromeのUAを非表示にし、WebRTCによる実IPの漏えいをネイティブに防ぎます。JSの注入がないため、サイトに検出されるタイミングの競合もありません。fingerprint-chromiumのバイナリが必要で、ない場合は標準のChromeで起動します。このエンジンでは、ページとアプリの連携が従来使っていたCDPバインディングが使えないため、SoftGlazeはバインディング不要の経路で通信します。データ保管庫の自動入力、マクロレコーダー、スタートページのリンク、セッションのミラーリングはすべてこのエンジンで動作します。既定はオフです。オンにしてプロファイルを再起動してください。"
+    }
+  },
+  "performance": {
+    "title": "パフォーマンス",
+    "description": "多数のプロファイルを一度に起動するための設定です。一括起動と同時実行セッションの上限に適用されます。",
+    "parallelLimit": {
+      "title": "同時起動数の上限",
+      "desc": "一括起動で同時に立ち上げるプロファイルの数です。多いほど速くなりますが、RAMの使用量が増えます。推奨は3〜8です。"
+    },
+    "maxRunning": {
+      "title": "実行中プロファイルの最大数",
+      "desc": "同時に実行できるプロファイルの絶対的な上限です（メモリ保護）。0にすると無制限です。上限を超える起動は、わかりやすいメッセージとともにブロックされます。"
+    }
+  },
+  "reliability": {
+    "title": "信頼性",
+    "description": "前回のセッションを復元し、クラッシュしたプロファイルを回復し、多数のプロファイル実行時のメモリ不足を防ぎます。",
+    "restoreSession": {
+      "title": "起動時に前回のセッションを復元",
+      "desc": "SoftGlazeを再度開いたときに、前回終了またはクラッシュした時点で実行中だったプロファイルを再起動するか確認します。"
+    },
+    "autoRestart": {
+      "title": "クラッシュしたプロファイルを自動で再起動",
+      "desc": "プロファイルのブラウザが単独でクラッシュした場合、自動で再起動します。クラッシュを繰り返すプロファイルがループしないよう、プロファイルごとに回数の上限があります。",
+      "maxRetries": "プロファイルごとの最大再試行回数"
+    },
+    "memoryGuard": {
+      "title": "メモリガード",
+      "desc": "システムのメモリが不足したら、メモリが回復するまで古い順に実行中のプロファイルを自動で閉じます。既定はオフで、有効にしない限りプロファイルを閉じることはありません。",
+      "triggerBelow": "空きRAMがこの値を下回ったら作動",
+      "stopWhenReaches": "空きRAMがこの値に達したら停止"
+    }
+  },
+  "smartAutofill": {
+    "title": "スマート自動入力",
+    "description": "起動したプロファイルで登録フォームを検出し、保存したペルソナから入力するIDデータ保管庫のウィジェットです。",
+    "enable": {
+      "title": "スマート自動入力を有効化",
+      "desc": "起動したプロファイルに自動入力ウィジェットを挿入します。Chromiumではページ内ブリッジを使用します。オフにすると挿入を一切行いません。"
+    },
+    "firefox": {
+      "title": "Firefoxの自動入力",
+      "desc": "Firefoxプロファイルにも自動入力のWebExtensionをインストールします（Firefoxにはページ内ブリッジがありません）。Firefox Developer Edition / Nightlyでは署名なしで読み込まれます。リリース版Firefoxには、インストーラーに同梱されたMozilla署名済みのビルドが必要です。"
+    },
+    "members": {
+      "title": "チームメンバーが自動入力でデータ保管庫を使用可能",
+      "desc": "オフ（既定）: 起動したプロファイルの自動入力ボタンでデータ保管庫のIDを使えるのは、オーナーがサインインしている間のみです。オン: 管理者、マネージャー、オペレーターも使えますが、データ保管庫のページは開けません。この設定を変更できるのはオーナーのみです。"
+    }
+  },
+  "audit": {
+    "title": "監査ログ",
+    "description": "チームのアクティビティとセキュリティイベント（メンバーの変更、サインイン、権限の編集）を、起動時に削除するまで保持する期間です。",
+    "retentionTitle": "保持期間",
+    "retentionDesc": "これより古いアクティビティはSoftGlazeの起動時に削除されます。0にすると全履歴を無期限に保持します。",
+    "days": "日"
+  },
+  "updates": {
+    "title": "アップデート",
+    "description": "アプリのアップデートを確認してインストールします。アップデートはインストール前に署名が検証されます。",
+    "checkDefault": "SoftGlaze Browserの新しいバージョンがあるか確認します。",
+    "notEnabled": "このビルドでは自動アップデートが有効になっていません。",
+    "checking": "アップデートを確認中…",
+    "available": "アップデート {{version}} があります。バックグラウンドでダウンロード中…",
+    "downloading": "{{version}} をダウンロード中… {{percent}}%",
+    "ready": "アップデート {{version}} をインストールできます。",
+    "errorWithReason": "アップデートを確認できませんでした：{{reason}}",
+    "errorNoReason": "アップデートを確認できませんでした。",
+    "upToDate": "最新バージョンです。",
+    "installRestart": "インストールして再起動",
+    "checkForUpdates": "アップデートを確認"
+  },
+  "onStartup": {
+    "title": "起動時",
+    "description": "プロファイルを起動したときの動作です。",
+    "startPageLabel": "スタートページ",
+    "modeDetection": "プロキシ/フィンガープリントの検出ページを表示",
+    "modeLast": "前回開いていたページから続ける",
+    "modeBlank": "プロキシの検出ページを開かない（空白）",
+    "onlyWithProxy": {
+      "title": "利用可能なプロキシがある場合のみ開く",
+      "desc": "プロキシが見つからない場合、ブラウザは開きません。（そうしないと、IPに基づくフィンガープリント項目が一致しなくなります。）"
+    },
+    "onlyWhenExtensionLoaded": {
+      "title": "拡張機能のデータが読み込まれた場合のみ開く",
+      "desc": "拡張機能のデータが正常に読み込まれた場合のみブラウザを開きます。"
+    },
+    "blockIfCountryChanged": {
+      "title": "国/地域が変わった場合はブロック",
+      "desc": "前回開いたときと国/地域が異なる場合は、プロファイルを開きません。"
+    }
+  },
+  "captcha": {
+    "title": "CAPTCHAの自動解決",
+    "description": "有料のサードパーティ製ソルバーを使って、閲覧中にreCAPTCHA v2とhCaptchaを自動で解決します。これはフィンガープリントとは別の機能です。きれいなフィンガープリントはCAPTCHAの出現頻度を下げますが、解決にはプロバイダーが1回ごとに課金する有料サービスが必要です（SoftGlazeによる課金ではありません）。",
+    "enable": {
+      "title": "CAPTCHAの自動解決を有効化",
+      "desc": "オンにすると、起動したプロファイルが対応するCAPTCHAを検出し、ソルバーに自動で送信します。"
+    },
+    "providerLabel": "ソルバーのプロバイダー",
+    "apiKeyLabel": "APIキー",
+    "apiKeyPlaceholderAnticaptcha": "Anti-CaptchaのclientKey",
+    "apiKeyPlaceholder2captcha": "2captchaのAPIキー",
+    "billedAnticaptcha": "設定DBにローカル保存されます。解決ごとにAnti-Captchaから課金されます。",
+    "billed2captcha": "設定DBにローカル保存されます。解決ごとに2captchaから課金されます。",
+    "solveRecaptchaV2": "reCAPTCHA v2を解決",
+    "solveHcaptcha": "hCaptchaを解決"
+  },
+  "email": {
+    "title": "メール（認証コード）",
+    "configured": "設定済み",
+    "offlineMode": "オフラインモード",
+    "description": "登録時にOTPコードを送信するためのSMTPです。空欄のままにするとオフラインで動作し、コードはメールで送らずアプリ内に表示されます。",
+    "smtpHost": "SMTPホスト",
+    "port": "ポート",
+    "encryption": "暗号化",
+    "username": "ユーザー名",
+    "password": "パスワード",
+    "passwordSavedHint": "（保存済み。変更しない場合は空欄）",
+    "fromName": "差出人名",
+    "saved": "メール設定を保存しました。",
+    "saveFailed": "メール設定を保存できませんでした。",
+    "noSmtpYet": "SMTPがまだ設定されていません。先に設定を保存してください。",
+    "testSent": "{{to}} にテストメールを送信しました。",
+    "testFailed": "テストに失敗しました。設定を確認してください。",
+    "saveButton": "メール設定を保存",
+    "test": "テスト"
+  },
+  "errors": {
+    "loadSettings": "設定を読み込めませんでした。",
+    "closeSession": "セッションを閉じられませんでした。",
+    "updateScheduler": "スケジューラーを更新できませんでした。",
+    "loadGlobal": "全体の設定を読み込めませんでした。",
+    "saveSetting": "設定を保存できませんでした。"
+  }
+}

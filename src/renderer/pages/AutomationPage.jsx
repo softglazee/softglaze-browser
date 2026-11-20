@@ -11,14 +11,7 @@ import { useDialog } from '@/lib/useDialog.js';
 import NameDialog from '@/components/NameDialog.jsx';
 import NumberInput from '@/components/ui/NumberInput.jsx';
 import WarmAutopilotCard from '@/components/WarmAutopilotCard.jsx';
-import i18n from '@/i18n/index.js';
-import automationEn from '@/i18n/locales/en/automation.json';
-import automationEs from '@/i18n/locales/es/automation.json';
-
-// Registers the automation namespace without touching the central i18n config; the guard keeps
-// it safe across hot reloads.
-if (!i18n.hasResourceBundle('en', 'automation')) i18n.addResourceBundle('en', 'automation', automationEn);
-if (!i18n.hasResourceBundle('es', 'automation')) i18n.addResourceBundle('es', 'automation', automationEs);
+import { fmtDateTime, fmtTime } from '@/lib/intl.mjs';
 
 const TABS = [
   { key: 'macros', label: 'My Macros', icon: Workflow },
@@ -1037,8 +1030,8 @@ function ParallelPanel() {
               <span className="text-muted-foreground/40">·</span>
               <button onClick={clearAll} className="text-[10.5px] text-muted-foreground hover:text-foreground">{t('parallel.clear')}</button>
               <div className="relative">
-                <Search className="w-3.5 h-3.5 text-muted-foreground absolute left-2 top-1/2 -translate-y-1/2" />
-                <input value={search} onChange={(e) => setSearch(e.target.value)} placeholder={t('parallel.searchPlaceholder')} className="h-7 w-36 bg-input-background border border-border rounded-lg pl-7 pr-2 text-[12px] text-foreground outline-none focus:border-primary" />
+                <Search className="w-3.5 h-3.5 text-muted-foreground absolute inset-s-2 top-1/2 -translate-y-1/2" />
+                <input value={search} onChange={(e) => setSearch(e.target.value)} placeholder={t('parallel.searchPlaceholder')} className="h-7 w-36 bg-input-background border border-border rounded-lg ps-7 pe-2 text-[12px] text-foreground outline-none focus:border-primary" />
               </div>
             </div>
           </div>
@@ -1123,8 +1116,8 @@ function ParallelPanel() {
               <span className="w-2.5 h-2.5 rounded-full bg-amber-500/70" />
               <span className="w-2.5 h-2.5 rounded-full bg-emerald-500/70" />
             </span>
-            <span className="text-[11.5px] font-medium text-muted-foreground ml-1">{t('parallel.runConsole')}</span>
-            <div className="ml-auto flex items-center gap-2">
+            <span className="text-[11.5px] font-medium text-muted-foreground ms-1">{t('parallel.runConsole')}</span>
+            <div className="ms-auto flex items-center gap-2">
               {running && <span className="text-[10.5px] text-emerald-400 inline-flex items-center gap-1"><span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" /> {t('parallel.live')}</span>}
               <ConsoleToolbar logs={logs} onClear={clearLogs} format={fmtParLine} filename="softglaze-parallel.log" t={t} />
             </div>
@@ -1458,7 +1451,7 @@ function WarmerPanel() {
             <button onClick={() => fileRef.current && fileRef.current.click()} className="h-8 px-2.5 rounded-lg border border-border text-[12px] text-foreground hover:bg-secondary inline-flex items-center gap-1"><FileSpreadsheet className="w-3.5 h-3.5" /> {t('warmer.importFile')}</button>
             <input ref={fileRef} type="file" accept=".txt,.csv,text/plain,text/csv" onChange={importFile} className="hidden" />
             {sites.length > 0 && (
-              <button onClick={clearSites} className="h-8 px-2.5 ml-auto rounded-lg border border-border text-[12px] text-muted-foreground hover:text-red-400 hover:bg-red-500/10 inline-flex items-center gap-1"><Trash2 className="w-3.5 h-3.5" /> {t('warmer.clearAll')}</button>
+              <button onClick={clearSites} className="h-8 px-2.5 ms-auto rounded-lg border border-border text-[12px] text-muted-foreground hover:text-red-400 hover:bg-red-500/10 inline-flex items-center gap-1"><Trash2 className="w-3.5 h-3.5" /> {t('warmer.clearAll')}</button>
             )}
           </div>
           {showBulk && (
@@ -1474,7 +1467,7 @@ function WarmerPanel() {
           <div className="flex flex-wrap items-center gap-1.5">
             <button onClick={() => { if (!sites.length) { setErr(t('warmer.errors.addSite')); return; } setShowListName(true); }} disabled={!sites.length} className="h-7 px-2.5 rounded-md border border-border text-[11px] text-foreground hover:bg-secondary disabled:opacity-50 inline-flex items-center gap-1"><Save className="w-3.5 h-3.5" /> {t('warmer.saveList')}</button>
             {savedLists.map((l) => (
-              <span key={l.id} className="inline-flex items-center gap-1 h-7 pl-2 pr-1 rounded-md border border-border bg-elevated/40 text-[11px] text-foreground">
+              <span key={l.id} className="inline-flex items-center gap-1 h-7 ps-2 pe-1 rounded-md border border-border bg-elevated/40 text-[11px] text-foreground">
                 <button onClick={() => loadList(l.id)} title={t('warmer.loadListTitle')} className="hover:text-orange-400 max-w-[130px] truncate">{l.name} <span className="text-muted-foreground">({(l.sites || []).length})</span></button>
                 <button onClick={() => deleteList(l.id)} title={t('warmer.deleteListTitle')} className="w-4 h-4 grid place-items-center rounded text-muted-foreground hover:text-red-400"><X className="w-3 h-3" /></button>
               </span>
@@ -1565,8 +1558,8 @@ function WarmerPanel() {
           <div className="flex items-center justify-between mb-1.5">
             <label className="text-[10px] uppercase tracking-wider font-semibold text-muted-foreground">{t('warmer.profilesLabel', { count: selected.size })}</label>
             <div className="relative">
-              <Search className="w-3.5 h-3.5 text-muted-foreground absolute left-2 top-1/2 -translate-y-1/2" />
-              <input value={search} onChange={(e) => setSearch(e.target.value)} placeholder={t('warmer.searchPlaceholder')} className="h-7 w-40 bg-input-background border border-border rounded-lg pl-7 pr-2 text-[12px] text-foreground outline-none focus:border-primary" />
+              <Search className="w-3.5 h-3.5 text-muted-foreground absolute inset-s-2 top-1/2 -translate-y-1/2" />
+              <input value={search} onChange={(e) => setSearch(e.target.value)} placeholder={t('warmer.searchPlaceholder')} className="h-7 w-40 bg-input-background border border-border rounded-lg ps-7 pe-2 text-[12px] text-foreground outline-none focus:border-primary" />
             </div>
           </div>
 
@@ -1635,8 +1628,8 @@ function WarmerPanel() {
               <span className="w-2.5 h-2.5 rounded-full bg-amber-500/70" />
               <span className="w-2.5 h-2.5 rounded-full bg-emerald-500/70" />
             </span>
-            <span className="text-[11.5px] font-medium text-muted-foreground ml-1">{t('warmer.warmupConsole')}</span>
-            <div className="ml-auto flex items-center gap-2">
+            <span className="text-[11.5px] font-medium text-muted-foreground ms-1">{t('warmer.warmupConsole')}</span>
+            <div className="ms-auto flex items-center gap-2">
               {running && <span className="text-[10.5px] text-emerald-400 inline-flex items-center gap-1"><span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" /> {t('warmer.live')}</span>}
               <ConsoleToolbar logs={logs} onClear={clearLogs} format={fmtWarmLine} filename="softglaze-warmup.log" t={t} />
             </div>
@@ -1714,7 +1707,7 @@ function HistoryPanel() {
     <div className="rounded-xl border border-border bg-card overflow-hidden">
       <table className="w-full text-[12.5px]">
         <thead className="bg-elevated/40 text-muted-foreground">
-          <tr className="text-left">
+          <tr className="text-start">
             <th className="px-4 py-2.5 font-semibold">{t('history.columns.task')}</th>
             <th className="px-4 py-2.5 font-semibold">{t('history.columns.profiles')}</th>
             <th className="px-4 py-2.5 font-semibold">{t('history.columns.detail')}</th>
@@ -1811,7 +1804,7 @@ function RunCounter({ total = 0, running = 0, done = 0, remaining = null, mode =
       {chip(tr('counter.running', 'running'), running, 'bg-amber-500/12 text-amber-400')}
       {chip(tr('counter.done', 'done'), done, 'bg-emerald-500/12 text-emerald-400')}
       {chip(tr('counter.queued', 'queued'), rem, 'bg-sky-500/12 text-sky-400')}
-      {mode ? <span className="text-[10.5px] text-muted-foreground ml-0.5">· {mode}</span> : null}
+      {mode ? <span className="text-[10.5px] text-muted-foreground ms-0.5">· {mode}</span> : null}
     </div>
   );
 }
@@ -1865,8 +1858,8 @@ function ConsoleToolbar({ logs, onClear, format, filename = 'console.log', t }) 
 // --- helpers ---
 function fmt(value) {
   if (!value) return '-';
-  try { return new Date(value).toLocaleString(); } catch (e) { return '-'; }
+  return fmtDateTime(value);
 }
 function ts(value) {
-  try { return new Date(value || Date.now()).toLocaleTimeString(); } catch (e) { return ''; }
+  return fmtTime(value || Date.now());
 }

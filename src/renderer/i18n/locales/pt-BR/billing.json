@@ -1,0 +1,347 @@
+{
+  "common": {
+    "cancel": "Cancelar",
+    "save": "Salvar",
+    "edit": "Editar",
+    "delete": "Excluir"
+  },
+  "header": {
+    "title": "Cobrança e planos",
+    "description": "Gerencie sua assinatura, compare planos e faça upgrade, tudo em um só lugar."
+  },
+  "status": {
+    "loading": "Carregando…",
+    "sourceOwner": "Dono do código",
+    "active": "Ativa",
+    "activeRenews": "Ativa · renova em {{date}}",
+    "trial": "Teste",
+    "trialDaysLeft": "Teste · faltam {{days}}d",
+    "graceDaysLeft": "Carência · faltam {{days}}d",
+    "subscriptionEnded": "Assinatura encerrada",
+    "free": "Plano Free"
+  },
+  "backend": {
+    "licensedVerified": "Licenciado e verificado",
+    "renews": "renova em {{date}}",
+    "noLicense": "Licenciamento ativo: ainda não há licença paga para esta instalação.",
+    "trialVerified": "Teste grátis, verificado",
+    "trialEnds": "termina em {{date}}"
+  },
+  "current": {
+    "title": "Plano atual",
+    "sourceOwnerAllFeatures": "Dono do código · todos os recursos",
+    "paid": "pago",
+    "freeTrial": "teste grátis",
+    "freeForever": "Plano Free · grátis para sempre"
+  },
+  "grace": {
+    "message_one": "Seu {{kind}} terminou: resta {{count}} dia de carência. Renove abaixo para não perder o acesso.",
+    "message_many": "Seu {{kind}} terminou: restam {{count}} dias de carência. Renove abaixo para não perder o acesso.",
+    "message_other": "Seu {{kind}} terminou: restam {{count}} dias de carência. Renove abaixo para não perder o acesso.",
+    "kindTrial": "teste grátis",
+    "kindSubscription": "plano de assinatura"
+  },
+  "banned": {
+    "message": "Sua assinatura terminou e a abertura de perfis está bloqueada. Assine ou digite um código de compra para recuperar o acesso."
+  },
+  "trialRemaining": {
+    "message_one": "Teste grátis: resta {{count}} dia.",
+    "message_many": "Teste grátis: restam {{count}} dias.",
+    "message_other": "Teste grátis: restam {{count}} dias."
+  },
+  "seats": {
+    "label": "Vagas da equipe",
+    "usage": "{{used}} / {{total}} usadas",
+    "upgradeToAddMore": "· faça upgrade para adicionar mais"
+  },
+  "exempt": {
+    "note": "Você é o dono do código: isento do sistema de assinatura. Todos os recursos estão incluídos."
+  },
+  "checkout": {
+    "waiting": "Aguardando seu pagamento…",
+    "waitingForPlan": "Aguardando seu pagamento · {{plan}}…",
+    "opened": "Uma página de pagamento abriu no seu navegador. Depois de pagar, isto atualiza sozinho.",
+    "reopen": "Reabrir página de pagamento"
+  },
+  "plans": {
+    "chooseHeading": "Escolha um plano",
+    "bestValue": "Melhor custo-benefício",
+    "current": "Atual",
+    "footerNote": "Os pagamentos são processados pelas formas que seu administrador ativou. Depois de pagar no navegador, esta página ativa seu plano automaticamente."
+  },
+  "period": {
+    "label": "Período de cobrança",
+    "monthly": "Mensal",
+    "yearly": "Anual",
+    "billedYearly": "Cobrado anualmente, cerca de {{perMonth}} por mês",
+    "monthsFree_one": "{{count}} mês grátis, você economiza {{saving}}",
+    "monthsFree_many": "{{count}} meses grátis, você economiza {{saving}}",
+    "monthsFree_other": "{{count}} meses grátis, você economiza {{saving}}",
+    "monthsFreeShort_one": "{{count}} mês grátis",
+    "monthsFreeShort_many": "{{count}} meses grátis",
+    "monthsFreeShort_other": "{{count}} meses grátis",
+    "save": "Você economiza {{saving}} por ano"
+  },
+  "cta": {
+    "included": "Incluído",
+    "onPaidPlan": "Em um plano pago",
+    "trialActiveDaysLeft": "Teste ativo · faltam {{days}}d",
+    "startFreeTrial": "Começar teste grátis",
+    "trialUsed": "Teste grátis já usado",
+    "currentPlan": "Plano atual",
+    "upgradeEnterprise": "Mudar para Enterprise",
+    "downgradePro": "Voltar para o Pro",
+    "choosePlan": "Escolher {{name}}"
+  },
+  "trial": {
+    "started": "Seu teste grátis com acesso completo está ativo. Aproveite!",
+    "startedWithDays": "Seu teste grátis está ativo: {{days}} dias de acesso completo. Aproveite!",
+    "errors": {
+      "failed": "Não foi possível começar o teste."
+    }
+  },
+  "redeem": {
+    "label": "Tem um código de compra?",
+    "apply": "Aplicar",
+    "success": "Código de compra aplicado. Obrigado!",
+    "errors": {
+      "empty": "Digite seu código de compra.",
+      "failed": "Não foi possível aplicar esse código."
+    }
+  },
+  "pay": {
+    "received": "Pagamento recebido: seu plano já está ativo!",
+    "errors": {
+      "noMethods": "A compra dentro do app está pausada enquanto adicionamos um novo provedor de pagamento. Escreva para support@softglaze.com para comprar por fatura e depois digite seu código de compra abaixo.",
+      "checkoutFailed": "Não foi possível iniciar o checkout.",
+      "submitFailed": "Não foi possível enviar seu pagamento."
+    }
+  },
+  "payModal": {
+    "title": "Pagar {{name}}",
+    "manualSubmitted": "Pagamento enviado. Um administrador vai revisá-lo e ativar seu plano em breve.",
+    "manualBadge": "Manual",
+    "continueTo": "Continuar para {{method}}",
+    "openPayLink": "Abrir link de pagamento",
+    "referencePlaceholder": "Referência do pagamento / ID da transação",
+    "notePlaceholder": "Observação (opcional)",
+    "submitForApproval": "Já paguei: enviar para aprovação",
+    "manualActivationNote": "Seu plano é ativado assim que um administrador confirmar o pagamento."
+  },
+  "admin": {
+    "configureMethods": "Configure as formas de pagamento em Configurações"
+  },
+  "invoices": {
+    "title": "Faturas",
+    "subtitleAdmin": "Todos os pagamentos de todos os proprietários: automáticos + manuais.",
+    "subtitleUser": "Seus recibos de pagamento.",
+    "add": "Adicionar",
+    "empty": "Ainda não há faturas.",
+    "manualSuffix": "manual",
+    "confirmDelete": "Excluir esta fatura?",
+    "cols": {
+      "date": "Data",
+      "owner": "Proprietário",
+      "amount": "Valor",
+      "method": "Forma",
+      "status": "Status",
+      "reference": "Referência"
+    },
+    "errors": {
+      "loadFailed": "Não foi possível carregar as faturas.",
+      "deleteFailed": "Não foi possível excluir."
+    }
+  },
+  "invoiceForm": {
+    "addTitle": "Adicionar fatura",
+    "editTitle": "Editar fatura",
+    "ownerMemberId": "ID do membro proprietário",
+    "optionalPlaceholder": "(opcional)",
+    "amount": "Valor",
+    "currency": "Moeda",
+    "method": "Forma",
+    "status": "Status",
+    "tier": "Nível",
+    "months": "Meses",
+    "reference": "Referência",
+    "referencePlaceholder": "transação / código",
+    "note": "Observação",
+    "errors": {
+      "invalidAmount": "Digite um valor válido.",
+      "saveFailed": "Não foi possível salvar a fatura."
+    }
+  },
+  "planManager": {
+    "title": "Planos e pacotes",
+    "subtitle": "Defina preços, edite detalhes e crie novos pacotes. As alterações valem no checkout na hora.",
+    "newPackage": "Novo pacote",
+    "activeBadge": "Ativo",
+    "hiddenBadge": "Oculto",
+    "termMeta": "prazo de {{months}} meses · {{tier}}",
+    "hide": "Ocultar",
+    "show": "Mostrar",
+    "hideTitle": "Ocultar do checkout",
+    "showTitle": "Mostrar no checkout",
+    "deleteTitle": "Excluir plano",
+    "confirmDelete": "Excluir o plano “{{name}}”? Os compradores não vão mais vê-lo.",
+    "errors": {
+      "loadFailed": "Não foi possível carregar os planos.",
+      "updateFailed": "Não foi possível atualizar o plano.",
+      "deleteFailed": "Não foi possível excluir o plano."
+    }
+  },
+  "planForm": {
+    "newTitle": "Novo pacote",
+    "editTitle": "Editar {{name}}",
+    "editTitleAria": "Editar pacote",
+    "packageName": "Nome do pacote",
+    "planType": "Tipo de plano",
+    "typePaid": "Pago",
+    "typeTrial": "Teste grátis",
+    "trialLength": "Duração do teste (dias)",
+    "price": "Preço",
+    "currency": "Moeda",
+    "shownAs": "Exibido como",
+    "trialShownValue": "{{days}} dias · grátis",
+    "billedPer": "Cobrado por",
+    "term": "Prazo (meses concedidos)",
+    "featureTier": "Nível de recursos",
+    "bestValue": "Melhor custo-benefício",
+    "active": "Ativo",
+    "tagline": "Slogan",
+    "taglinePlaceholder": "Tudo o que um operador individual precisa.",
+    "features": "Recursos (um por linha)",
+    "featuresPlaceholder": "Perfis de navegador ilimitados\nMotor de impressão digital completo\nPool de proxies e rotação",
+    "savePackage": "Salvar pacote",
+    "errors": {
+      "nameRequired": "Dê um nome ao pacote.",
+      "invalidPrice": "Digite um preço válido.",
+      "saveFailed": "Não foi possível salvar o plano."
+    }
+  },
+  "subscribers": {
+    "title": "Assinantes",
+    "subtitle": "Todas as contas, quando entraram, o plano e a validade. {{count}} no total.",
+    "assignPlan": "Atribuir plano",
+    "empty": "Ainda não há contas de proprietários.",
+    "trialSuffix": "teste",
+    "daysLeftShort": "{{days}}d",
+    "assign": "Atribuir",
+    "assignTitle": "Atribuir / conceder um plano",
+    "state": {
+      "ended": "Encerrada",
+      "grace": "Carência",
+      "active": "Ativa",
+      "trial": "Teste"
+    },
+    "cols": {
+      "account": "Conta",
+      "joined": "Entrou em",
+      "plan": "Plano",
+      "state": "Estado",
+      "expires": "Validade",
+      "team": "Equipe"
+    },
+    "errors": {
+      "loadFailed": "Não foi possível carregar os assinantes."
+    }
+  },
+  "assignForm": {
+    "title": "Atribuir um plano",
+    "account": "Conta",
+    "plan": "Plano",
+    "months": "Meses",
+    "monthsWithDefault": "Meses (padrão {{default}})",
+    "recordAsPaid": "Registrar como venda paga",
+    "noteOptional": "Observação (opcional)",
+    "notePlaceholder": "Por que isto foi concedido",
+    "grantNote": "Concede o prazo na hora e remove qualquer bloqueio de assinatura.",
+    "grantNotePaid": "Uma fatura paga é registrada.",
+    "grantNoteFree": "Registrado como concessão de $0.",
+    "fallbackAccount": "conta",
+    "fallbackPlan": "plano",
+    "success_one": "{{plan}} atribuído a {{name}}: {{count}} mês.",
+    "success_many": "{{plan}} atribuído a {{name}}: {{count}} meses.",
+    "success_other": "{{plan}} atribuído a {{name}}: {{count}} meses.",
+    "errors": {
+      "chooseAccount": "Escolha uma conta.",
+      "choosePlan": "Escolha um plano.",
+      "assignFailed": "Não foi possível atribuir o plano."
+    }
+  },
+  "planText": {
+    "trialTagline": "Teste todos os recursos de graça: acesso completo, sem cartão.",
+    "trialFullAccess": "Acesso completo a todos os recursos",
+    "trialTools": "Todas as ferramentas de impressão digital, proxy e vazamento",
+    "trialMacros": "Macros, aquecedor de cookies e perfis móveis",
+    "trialBackupSeats": "Backup criptografado e vagas para equipe",
+    "trialNoCard": "Sem cartão de crédito",
+    "trialUpgrade": "Mude para um plano pago quando quiser",
+    "proTagline": "Tudo o que um operador individual precisa para gerenciar perfis em escala.",
+    "proProfiles": "Perfis de navegador locais ilimitados",
+    "proFingerprint": "Motor de impressão digital completo + verificação de vazamentos",
+    "proProxies": "Pool de proxies, política de rotação e ajuste automático por região",
+    "proMacros": "Gravador de macros, agendador e execuções com dados",
+    "proCookieWarmer": "Aquecedor de cookies",
+    "proMobile": "Perfis de dispositivos móveis / Android",
+    "proBackup": "Backup e restauração criptografados do espaço de trabalho",
+    "proDbEncryption": "Criptografia completa do banco de dados em repouso",
+    "proPalette": "Paleta de comandos + boas-vindas guiadas",
+    "proSeats": "Até 3 membros da equipe",
+    "proParallel": "Execução paralela, até 3 perfis ao mesmo tempo, com console ao vivo",
+    "entTagline": "Para equipes: até 25 membros, 10 perfis ao mesmo tempo e exportação do log de auditoria.",
+    "entEverythingInPro": "Tudo do Pro, mais:",
+    "entSeats": "Até 25 membros da equipe",
+    "entParallel": "Execução paralela, até 10 perfis ao mesmo tempo, com console ao vivo",
+    "entAuditExport": "Exportação do log de auditoria (CSV / JSON)",
+    "entSupport": "Suporte prioritário por e-mail"
+  },
+  "serverErrors": {
+    "SIGNUP_INVALID_EMAIL": "Digite um endereço de e-mail válido.",
+    "SIGNUP_DISPOSABLE_EMAIL": "Use um endereço de e-mail permanente.",
+    "SIGNUP_NO_MX": "Não encontramos um servidor de e-mail para esse endereço.",
+    "SIGNUP_BAD_CODE": "Esse código está errado ou expirou. Confira o e-mail ou peça um código novo.",
+    "SIGNUP_OFFLINE": "Conecte-se à internet para criar sua conta.",
+    "SIGNUP_FAILED": "Não conseguimos verificar esse e-mail agora. Tente de novo em alguns minutos.",
+    "RATE_LIMITED": "Tentativas demais. Tente de novo em alguns minutos.",
+    "TRIAL_USED": "Um teste grátis já foi usado neste computador ou e-mail. Escolha um plano ou digite um código de compra.",
+    "TRIAL_OFFLINE": "Conecte-se à internet para começar o teste grátis.",
+    "TRIAL_VERIFY_EMAIL": "Confirme seu endereço de e-mail para começar o teste grátis. Enviamos um código de 6 dígitos.",
+    "TRIAL_NO_EMAIL": "Adicione um endereço de e-mail à conta do proprietário antes e depois comece o teste grátis.",
+    "TRIAL_FAILED": "Não foi possível começar o teste grátis agora. Tente de novo em alguns minutos.",
+    "SERVER_UNAVAILABLE": "Nosso servidor de licenças não está respondendo agora. Tente de novo em alguns minutos.",
+    "MACHINE_MISMATCH": "Esta licença está registrada em outro computador. Transfira-a para este PC ou peça ao seu administrador para redefini-la.",
+    "SIGNUP_INVALID_PHONE": "Digite o telefone com + e o código do país, ou deixe em branco.",
+    "SIGNUP_USE_CASE": "Escolha para que você vai usar o SoftGlaze.",
+    "SIGNUP_USE_CASE_OTHER": "Conte em poucas palavras para que você vai usar o SoftGlaze.",
+    "CONFIRM_OFFLINE": "Conecte-se à internet para confirmar seu e-mail."
+  },
+  "store": {
+    "cardTitle": "Assinatura pela Microsoft Store",
+    "processedBy": "Nesta versão, a Microsoft processa o pagamento: você paga com sua conta Microsoft e a Microsoft cobra a assinatura todo mês, ou todo ano em um plano anual.",
+    "upgradeNote": "Passar do Pro para o Enterprise inicia uma segunda assinatura. Cancele o Pro na sua conta Microsoft para ele não renovar.",
+    "periodNote": "Trocar entre cobrança mensal e anual também inicia uma segunda assinatura. Cancele a antiga na sua conta Microsoft para ela não renovar.",
+    "downgradeNote": "Para passar do Enterprise para o Pro, cancele o Enterprise na sua conta Microsoft e compre o Pro quando ele terminar.",
+    "buyWith": "Comprar pela Microsoft Store",
+    "buyWithPrice": "Comprar pela Microsoft Store · {{price}}",
+    "priceFrom": "Preço da Microsoft Store, na sua moeda",
+    "restore": "Restaurar compras da Microsoft Store",
+    "moveHere": "Transferir para este computador",
+    "manage": "Gerenciar ou cancelar na sua conta Microsoft",
+    "result": {
+      "active": "Obrigado. Seu plano {{plan}} está ativo.",
+      "cancelled": "Compra cancelada. Nada foi cobrado.",
+      "pending": "A Microsoft recebeu sua compra. Estamos confirmando, o que pode levar um minuto.",
+      "pendingLong": "Sua compra ainda não foi confirmada. Clique em Restaurar compras da Microsoft Store daqui a alguns minutos ou escreva para support@softglaze.com.",
+      "pendingOffline": "Sua compra está salva neste computador. Ela será ativada assim que o app conseguir acessar nosso servidor.",
+      "pendingReview": "Recebemos sua compra e estamos verificando. Seu plano será ativado assim que ela for aprovada.",
+      "none": "Nenhuma assinatura ativa da Microsoft Store para este app foi encontrada nesta conta Microsoft.",
+      "inUse": "Esta assinatura está em uso em outro computador. Você pode transferi-la para este.",
+      "moveLimit": "Esta assinatura já foi transferida para outro computador duas vezes nos últimos 30 dias. Escreva para support@softglaze.com para pedir ajuda.",
+      "unavailable": "Compras pela Microsoft Store não estão disponíveis agora. Tente de novo mais tarde.",
+      "productMissing": "Este plano ainda não está disponível na Microsoft Store.",
+      "network": "Não foi possível acessar a Microsoft Store. Verifique sua conexão com a internet e tente de novo.",
+      "error": "Não foi possível concluir a compra: {{message}}"
+    }
+  }
+}

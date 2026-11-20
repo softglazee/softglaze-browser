@@ -1,6 +1,6 @@
 {
   "name": "softglaze-browser",
-  "version": "1.0.26",
+  "version": "1.0.27",
   "description": "Local-first desktop app for isolated browser profiles, each with its own fingerprint, proxy and storage",
   "license": "BUSL-1.1",
   "author": "SOFTGLAZE (SMC-PRIVATE) LIMITED <https://softglaze.com>",
@@ -54,6 +54,7 @@
     "react-router-dom": "^7.17.0",
     "rebrowser-puppeteer-core": "^22.15.0",
     "tailwind-merge": "^3.6.0",
+    "ws": "^8.21.0",
     "xlsx": "https://cdn.sheetjs.com/xlsx-0.20.3/xlsx-0.20.3.tgz",
     "zod": "^4.6.7"
   },
@@ -102,6 +103,7 @@
       "dist/**/*",
       "src/main/**/*",
       "src/preload/**/*",
+      "src/renderer/i18n/locales/*/main.json",
       "prisma/**/*",
       "!prisma/**/*.sqlite",
       "!prisma/**/*.sqlite-journal",

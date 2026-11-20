@@ -1,0 +1,411 @@
+{
+  "actions": {
+    "refresh": "Muat ulang"
+  },
+  "groups": {
+    "general": "Umum",
+    "browser": "Browser",
+    "runtime": "Runtime",
+    "security": "Keamanan & tim",
+    "account": "Akun & data"
+  },
+  "nav": {
+    "billing": "Tagihan",
+    "monetization": "Paket & pemakaian",
+    "migration": "Impor & migrasi",
+    "workspaceSync": "Sinkron ruang kerja",
+    "branding": "Merek",
+    "dbEncryption": "Enkripsi database",
+    "workspaceBackup": "Cadangan ruang kerja",
+    "developerApi": "API developer",
+    "phones": "Ponsel"
+  },
+  "fingerprint": {
+    "title": "Fingerprint & identitas",
+    "description": "Diterapkan ke setiap profil saat dibuka, kecuali profil menimpanya."
+  },
+  "behaviour": {
+    "title": "Perilaku browser",
+    "description": "Cara browser yang dibuka berperilaku sehari-hari."
+  },
+  "ui": {
+    "searchPlaceholder": "Cari pengaturan",
+    "jumpTo": "Lompat ke bagian",
+    "noResultsTitle": "Tidak ada pengaturan yang cocok dengan “{{term}}”",
+    "noResultsDesc": "Coba kata yang lebih pendek, misalnya proxy, kamera, atau login.",
+    "experimental": "Eksperimental",
+    "savedIdle": "Semua perubahan tersimpan",
+    "saving": "Menyimpan perubahan…",
+    "saveError": "Tidak bisa menyimpan perubahan"
+  },
+  "localRuntime": {
+    "title": "Runtime lokal",
+    "description": "Jalur ditentukan di proses utama Electron.",
+    "loading": "Memuat info sistem...",
+    "sqliteDb": "DB SQLite",
+    "profileRoot": "Folder profil",
+    "databaseUrl": "URL database",
+    "configured": "Diatur",
+    "notConfigured": "Belum diatur"
+  },
+  "sessions": {
+    "title": "Sesi aktif",
+    "description": "Sesi yang sedang dibuka dan memakai sumber daya.",
+    "loading": "Memuat sesi...",
+    "emptyTitle": "Tidak ada sesi aktif",
+    "emptyDescription": "Buka profil untuk melihatnya di sini.",
+    "running": "Berjalan",
+    "created": "Dibuat {{date}}",
+    "close": "Tutup"
+  },
+  "scheduler": {
+    "title": "Penjadwal kesehatan proxy",
+    "description": "Cek ulang setiap proxy tersimpan secara berkala di latar belakang dan simpan status kesehatannya.",
+    "enabled": "Aktif",
+    "disabled": "Nonaktif",
+    "runSweepEvery": "Cek setiap",
+    "every15min": "15 mnt",
+    "every30min": "30 mnt",
+    "every1hour": "1 jam",
+    "every2hours": "2 jam",
+    "serviceRunning": "Layanan berjalan",
+    "idle": "Diam",
+    "noteLabel": "Catatan:",
+    "noteBody": "Tugas latar belakang ini berjalan di proses utama Electron, jadi pengecekan tetap berlanjut meski aplikasi diminimalkan atau Anda berpindah halaman. Hasil kesehatan ditampilkan langsung sebagai lencana status di Kumpulan proxy."
+  },
+  "toggleRow": {
+    "appliedAtLaunch": "Berlaku saat dibuka"
+  },
+  "globalPreferences": {
+    "heading": "Preferensi umum",
+    "loading": "Memuat pengaturan umum…",
+    "saving": "Menyimpan…"
+  },
+  "security": {
+    "title": "Keamanan akun",
+    "description": "Perlindungan masuk dan kebijakan verifikasi.",
+    "remoteLogin": {
+      "title": "Pengingat login jarak jauh",
+      "desc": "Email pengingat dikirim saat akun Anda masuk dari alamat IP baru, di luar 3 IP yang biasa dipakai."
+    },
+    "failedLogin": {
+      "title": "Peringatan login gagal",
+      "desc": "Jika login gagal lebih dari 3 kali, email pengingat dikirim ke email Pemilik."
+    },
+    "ipAllowlist": {
+      "title": "Daftar IP yang diizinkan untuk login",
+      "desc": "Setelah diatur, login anggota dibatasi menurut IP (Pemilik tidak terpengaruh)."
+    },
+    "twoStep": {
+      "title": "Verifikasi dua langkah",
+      "desc": "Aksi sensitif memerlukan verifikasi lewat aplikasi autentikator, email, atau SMS.",
+      "methodLabel": "Metode",
+      "methodApp": "Aplikasi autentikator",
+      "methodEmail": "Email",
+      "methodSms": "SMS",
+      "levelLabel": "Tingkat autentikasi",
+      "levelLow": "Rendah: perangkat baru atau 90+ hari sejak 2FA terakhir",
+      "levelMedium": "Sedang (disarankan): perangkat baru atau 30+ hari",
+      "levelHigh": "Tinggi: 2FA wajib setiap login"
+    }
+  },
+  "multiDevice": {
+    "title": "Mode multi-perangkat",
+    "description": "Atur apakah beberapa anggota boleh mengakses profil yang sama bersamaan.",
+    "modeOff": "Mati: satu anggota per profil",
+    "modeFull": "Penuh: semua profil mendukung akses bersamaan",
+    "modeSpecified": "Tertentu: hanya profil terpilih",
+    "hintBefore": "Saat aktif, beberapa anggota bisa mengakses profil yang sama bersamaan. Dalam mode ",
+    "hintSpecified": "Tertentu",
+    "hintAfter": ", pilih profil yang memenuhi syarat dari halaman Profil."
+  },
+  "website": {
+    "title": "Pengelolaan situs web",
+    "description": "Aturan akses URL dan pemuatan sumber daya.",
+    "blockAccess": {
+      "title": "Blokir akses",
+      "desc": "Gunakan daftar blokir dan daftar izin untuk mengelola URL.",
+      "blocklist": "Daftar blokir",
+      "allowlist": "Daftar izin"
+    },
+    "fbStatic": {
+      "title": "Sumber daya statis FB",
+      "desc": "Saat aktif, sumber daya statis Facebook dimuat lewat jaringan lokal."
+    },
+    "localNetwork": {
+      "title": "Akses jaringan lokal",
+      "desc": "Saat aktif, URL tertentu bisa diakses di jaringan lokal."
+    }
+  },
+  "platform": {
+    "title": "Platform",
+    "description": "Sesuaikan tampilan daftar profil.",
+    "customIcon": {
+      "title": "Ikon kustom",
+      "desc": "Tampilkan ikon kustom untuk profil di daftar."
+    },
+    "displayCustomNo": {
+      "title": "Tampilkan No. kustom",
+      "desc": "Tampilkan nomor seri kustom lengkap (mis. \"123456\")."
+    },
+    "displayLast4": {
+      "title": "Tampilkan 4 digit terakhir No. kustom",
+      "desc": "Tampilkan hanya 4 digit terakhir nomor seri."
+    }
+  },
+  "ipSetting": {
+    "title": "Pengaturan IP",
+    "description": "Prioritas konfigurasi proxy otomatis dan pemeriksa IP.",
+    "priorityPrefix": "Prioritas pencarian:",
+    "priorityChain": "IP terakhir dipakai > ASN > Kota > Wilayah > Negara/Wilayah",
+    "prioritySuffix": "Opsi yang tidak dicentang dilewati.",
+    "lastUsedIp": "IP terakhir dipakai",
+    "asn": "ASN",
+    "asnDesc": "Hanya tersedia untuk Bright auto.",
+    "city": "Kota",
+    "region": "Wilayah",
+    "country": "Negara/Wilayah",
+    "ipCheckerLabel": "Pemeriksa IP"
+  },
+  "dataSync": {
+    "title": "Sinkronisasi data",
+    "description": "Pilih data yang disinkronkan antarperangkat.",
+    "cookie": "Cookie",
+    "passwords": "Kata sandi tersimpan",
+    "bookmarks": "Bookmark",
+    "localStorage": "Penyimpanan lokal",
+    "indexedDb": "IndexedDB",
+    "extensionData": "Data ekstensi",
+    "history": "Riwayat"
+  },
+  "browser": {
+    "title": "Pengaturan browser",
+    "description": "Perilaku browser yang dibuka. Item bertanda “Berlaku saat dibuka” berlaku pada pembukaan profil berikutnya.",
+    "geoMatch": {
+      "title": "Pencocokan lokasi otomatis (zona waktu · bahasa · WebRTC)",
+      "desc": "Tentukan zona waktu, bahasa, dan IP keluar WebRTC setiap profil dari lokasi proxy-nya saat dibuka. Matikan untuk hanya memakai nilai manual tiap profil. Berlaku saat dibuka."
+    },
+    "realtimeTimezone": {
+      "title": "Cocokkan zona waktu secara langsung saat IP dinamis berubah",
+      "desc": "Cocokkan zona waktu dan lokasi yang sesuai saat IP dinamis berubah."
+    },
+    "chromeSignin": {
+      "title": "Izinkan masuk ke Chrome",
+      "desc": "Saat mati, Anda bisa masuk ke situs Google seperti Gmail tanpa masuk ke Chrome itu sendiri."
+    },
+    "offerTranslate": {
+      "title": "Tawarkan terjemahan halaman",
+      "desc": "Tawarkan terjemahan untuk halaman yang bukan dalam bahasa yang Anda baca."
+    },
+    "disableDevtools": {
+      "title": "Nonaktifkan Alat Developer browser",
+      "desc": "Di profil berbasis Chrome, setiap jendela atau panel Alat Developer (F12, Ctrl+Shift+I, Inspect) ditutup begitu terbuka. Berlaku untuk profil yang dibuka setelah Anda mengubahnya. Chrome Anda sendiri di komputer ini tidak terpengaruh."
+    },
+    "minimizeCdpFootprint": {
+      "title": "Kurangi jejak CDP (eksperimental, lebih sedikit CAPTCHA)",
+      "shortTitle": "Kurangi jejak CDP",
+      "desc": "Menghapus Runtime.enable CDP yang terus aktif, sinyal otomatisasi utama yang dikenali Cloudflare/Turnstile. KONSEKUENSI saat AKTIF: autofill persona, tautan cek di halaman awal, dan pencerminan sesi tersinkron berhenti bekerja (semuanya butuh binding CDP). Mati secara default; aktifkan untuk membandingkan apakah CAPTCHA berkurang, lalu buka ulang profil."
+    },
+    "blockThirdPartyCookies": {
+      "title": "Blokir cookie pihak ketiga",
+      "desc": "Mati (disarankan): profil menyimpan dan mengirim cookie pihak ketiga seperti jendela Chrome biasa, yang dipakai reCAPTCHA, hCaptcha, dan Cloudflare untuk memercayai pengunjung, jadi CAPTCHA lebih mudah. Aktif: profil berbasis Chrome memblokirnya. Berlaku untuk profil yang dibuka setelah Anda mengubahnya."
+    },
+    "checkBeforeLaunch": {
+      "title": "Cek profil sebelum dibuka",
+      "desc": "Sebelum profil dibuka dari halaman Profil, tampilkan ketidakcocokan yang jelas (sistem, kartu grafis, layar, bahasa, zona waktu, WebRTC, proxy mati) dan tawarkan perbaikan lebih dulu."
+    },
+    "switchProxyOnBlock": {
+      "title": "Ganti proxy saat situs memblokir profil",
+      "desc": "Saat situs menahan profil berbasis Chrome di halaman blokir atau CAPTCHA, ambil IP baru dari tautan rotasi proxy, atau pindahkan profil ke proxy cadangan yang lebih baik, lalu buka halaman itu lagi. Paling banyak dua kali per jam per profil, dan tidak pernah saat otomatisasi atau Local API sedang memakainya. Setiap blokir dicatat beserta proxy yang gagal.",
+      "toast": {
+        "blocked": "{{site}} memblokir {{profile}} ({{kind}}).",
+        "rotated": "IP baru didapat untuk {{proxy}} dan halaman dimuat ulang.",
+        "switched": "Beralih ke {{proxy}} dan halaman dibuka lagi.",
+        "notReopened": "Beralih ke {{proxy}}, tetapi profil tidak terbuka lagi.",
+        "none": {
+          "disabled": "Penggantian proxy mati di Pengaturan, jadi tidak ada yang diubah.",
+          "noProxy": "Profil berjalan tanpa proxy tersimpan, jadi tidak ada yang diubah.",
+          "busy": "Otomatisasi atau Local API sedang memakai profil ini, jadi tidak ada yang diubah.",
+          "limit": "Profil ini sudah berganti {{limit}} kali dalam satu jam terakhir, jadi tidak ada yang diubah.",
+          "proxyPool": "Profil memakai kumpulan rotasi, jadi tidak ada yang diubah.",
+          "noSpare": "Tidak ada proxy cadangan yang lebih baik, jadi tidak ada yang diubah.",
+          "noPermission": "Peran Anda tidak bisa mengubah proxy profil ini, jadi tidak ada yang diubah.",
+          "signedOut": "Tidak ada yang masuk, jadi tidak ada yang diubah.",
+          "inProgress": "Penggantian untuk profil ini sudah berjalan.",
+          "failed": "Penggantian gagal, jadi tidak ada yang diubah."
+        },
+        "kind": {
+          "googleSorry": "halaman lalu lintas tidak biasa Google",
+          "rateLimit": "terlalu banyak permintaan",
+          "cloudflare": "tantangan Cloudflare",
+          "datadome": "blokir DataDome",
+          "accessDenied": "halaman Access Denied",
+          "perimeterx": "blokir PerimeterX",
+          "unknown": "halaman blokir"
+        }
+      }
+    },
+    "lockExtensions": {
+      "title": "Nonaktifkan pemasangan/penghapusan ekstensi",
+      "desc": "Di profil berbasis Chrome, halaman Ekstensi dan Chrome Web Store ditutup begitu terbuka, jadi ekstensi tidak bisa ditambah, dihapus, atau dimatikan. Ekstensi yang Anda pasang dari halaman Ekstensi di SoftGlaze tetap dimuat. Berlaku untuk profil yang dibuka setelah Anda mengubahnya."
+    },
+    "virtualCamera": {
+      "title": "Kamera virtual",
+      "desc": "Simulasikan video lokal sebagai siaran kamera langsung. Hanya berlaku untuk Chrome versi 140 ke atas."
+    },
+    "mobileSimulation": {
+      "title": "Optimasi simulasi seluler",
+      "desc": "Membuat antarmuka lebih mirip pengalaman perangkat seluler asli. Hanya berlaku untuk Chrome versi 143 ke atas."
+    },
+    "secureAccess": {
+      "title": "Akses aman (HTTPS)",
+      "desc": "Bila memungkinkan, pakai HTTPS dan beri peringatan sebelum memuat situs non-HTTPS."
+    },
+    "disableVideos": {
+      "title": "Jangan muat video",
+      "desc": "Blokir unduhan media untuk menghemat trafik proxy."
+    },
+    "disableImages": {
+      "title": "Jangan muat gambar",
+      "desc": "Blokir pemuatan gambar untuk menghemat trafik. Catatan: pemuatan gambar dinonaktifkan sepenuhnya; ambang KB di bawah disimpan untuk penyaringan per permintaan di masa depan.",
+      "skipUnder": "Lewati gambar di bawah",
+      "kb": "KB"
+    },
+    "antidetectEngine": {
+      "title": "Mesin fingerprint native (fingerprint-chromium)",
+      "desc": "Buka profil Chrome di fingerprint-chromium, Chromium yang dimodifikasi di kode sumbernya, yang menerapkan pengaturan fingerprint tiap profil (canvas, WebGL, audio, UA, platform, zona waktu) di tingkat biner, menyembunyikan navigator.webdriver + UA HeadlessChrome, dan memblokir kebocoran IP asli WebRTC secara native, tanpa balapan injeksi JS yang bisa ditangkap situs. Memerlukan biner fingerprint-chromium; tanpa itu memakai Chrome biasa. Mesin ini tidak memakai binding CDP yang dulu diandalkan jembatan halaman-ke-aplikasi, jadi SoftGlaze mengalihkan panggilan itu lewat saluran tanpa binding: autofill Brankas Data, perekam makro, tautan halaman awal, dan pencerminan sesi semuanya bekerja di mesin ini. Mati secara default: aktifkan lalu buka ulang profil."
+    }
+  },
+  "performance": {
+    "title": "Performa",
+    "description": "Kontrol untuk membuka banyak profil sekaligus: berlaku untuk pembukaan massal dan batas sesi yang berjalan.",
+    "parallelLimit": {
+      "title": "Batas pembukaan paralel",
+      "desc": "Berapa profil yang dibuka bersamaan saat pembukaan massal. Lebih tinggi lebih cepat tetapi memakai lebih banyak RAM. Disarankan 3-8."
+    },
+    "maxRunning": {
+      "title": "Maks profil berjalan",
+      "desc": "Batas mutlak profil yang berjalan sekaligus (keamanan memori). Biarkan 0 untuk tanpa batas; pembukaan yang melewati batas diblokir dengan pesan yang jelas."
+    }
+  },
+  "reliability": {
+    "title": "Keandalan",
+    "description": "Pulihkan sesi terakhir, pulihkan profil yang macet, dan cegah kehabisan memori saat banyak profil berjalan sekaligus.",
+    "restoreSession": {
+      "title": "Pulihkan sesi terakhir saat mulai",
+      "desc": "Saat SoftGlaze dibuka lagi, tawarkan untuk membuka ulang profil yang berjalan saat terakhir ditutup atau macet."
+    },
+    "autoRestart": {
+      "title": "Mulai ulang otomatis profil yang macet",
+      "desc": "Jika browser sebuah profil macet sendiri, buka ulang otomatis. Dibatasi per profil agar profil yang terus macet tidak berputar tanpa henti.",
+      "maxRetries": "Maks percobaan per profil"
+    },
+    "memoryGuard": {
+      "title": "Penjaga memori",
+      "desc": "Saat memori sistem menipis, tutup otomatis profil yang paling lama berjalan sampai memori pulih. Mati secara default: tidak akan pernah menutup profil kecuali diaktifkan.",
+      "triggerBelow": "Picu saat RAM bebas di bawah",
+      "stopWhenReaches": "berhenti saat RAM bebas mencapai"
+    }
+  },
+  "smartAutofill": {
+    "title": "Smart Autofill",
+    "description": "Widget Brankas Data Identitas yang mendeteksi formulir pendaftaran di profil yang dibuka dan mengisinya dari persona tersimpan Anda.",
+    "enable": {
+      "title": "Aktifkan Smart Autofill",
+      "desc": "Sisipkan widget autofill ke profil yang dibuka. Di Chromium memakai jembatan di halaman; mematikan ini melewati penyisipan sepenuhnya."
+    },
+    "firefox": {
+      "title": "Autofill Firefox",
+      "desc": "Pasang juga WebExtension autofill ke profil Firefox (Firefox tidak punya jembatan di halaman). Dimuat tanpa tanda tangan di Firefox Developer Edition / Nightly; Firefox rilis memerlukan build bertanda tangan Mozilla yang disertakan dengan installer."
+    },
+    "members": {
+      "title": "Anggota tim bisa memakai Brankas Data untuk autofill",
+      "desc": "Mati (bawaan): tombol autofill di profil yang dibuka hanya menawarkan identitas Brankas Data selama Pemilik sedang masuk. Aktif: Admin, Manajer, dan Operator juga mendapatkannya, tanpa bisa membuka halaman Brankas Data. Hanya Pemilik yang bisa mengubah ini."
+    }
+  },
+  "audit": {
+    "title": "Log audit",
+    "description": "Berapa lama aktivitas tim dan kejadian keamanan (perubahan anggota, login, perubahan izin) disimpan sebelum dibersihkan saat mulai.",
+    "retentionTitle": "Masa simpan",
+    "retentionDesc": "Aktivitas yang lebih lama dari ini dihapus saat SoftGlaze mulai. Atur ke 0 untuk menyimpan seluruh riwayat selamanya.",
+    "days": "hari"
+  },
+  "updates": {
+    "title": "Pembaruan",
+    "description": "Periksa dan pasang pembaruan aplikasi. Tanda tangan pembaruan diverifikasi sebelum dipasang.",
+    "checkDefault": "Periksa apakah ada versi SoftGlaze Browser yang lebih baru.",
+    "notEnabled": "Pembaruan otomatis tidak aktif di build ini.",
+    "checking": "Memeriksa pembaruan…",
+    "available": "Pembaruan {{version}} tersedia: mengunduh di latar belakang…",
+    "downloading": "Mengunduh {{version}}… {{percent}}%",
+    "ready": "Pembaruan {{version}} siap dipasang.",
+    "errorWithReason": "Tidak bisa memeriksa pembaruan: {{reason}}",
+    "errorNoReason": "Tidak bisa memeriksa pembaruan.",
+    "upToDate": "Anda memakai versi terbaru.",
+    "installRestart": "Pasang & mulai ulang",
+    "checkForUpdates": "Periksa pembaruan"
+  },
+  "onStartup": {
+    "title": "Saat dibuka",
+    "description": "Yang terjadi saat profil dibuka.",
+    "startPageLabel": "Halaman awal",
+    "modeDetection": "Tampilkan halaman deteksi proxy/fingerprint",
+    "modeLast": "Lanjutkan di halaman terakhir yang dibuka",
+    "modeBlank": "Jangan buka halaman deteksi proxy (kosong)",
+    "onlyWithProxy": {
+      "title": "Hanya buka dengan proxy yang tersedia",
+      "desc": "Jika proxy tidak ditemukan, browser tidak akan terbuka. (Jika tidak, item fingerprint berbasis IP tidak akan cocok.)"
+    },
+    "onlyWhenExtensionLoaded": {
+      "title": "Hanya buka saat data ekstensi termuat",
+      "desc": "Buka browser hanya saat data ekstensi berhasil dimuat."
+    },
+    "blockIfCountryChanged": {
+      "title": "Blokir jika negara/wilayah berubah",
+      "desc": "Jangan buka profil jika negara/wilayahnya berbeda dari saat terakhir dibuka."
+    }
+  },
+  "captcha": {
+    "title": "Penyelesaian CAPTCHA otomatis",
+    "description": "Selesaikan reCAPTCHA v2 dan hCaptcha secara otomatis saat menjelajah memakai layanan pihak ketiga berbayar. Ini terpisah dari fingerprint: fingerprint yang bersih mengurangi seberapa sering CAPTCHA muncul, tetapi menyelesaikannya butuh layanan berbayar yang ditagih per penyelesaian oleh penyedianya (bukan oleh SoftGlaze).",
+    "enable": {
+      "title": "Aktifkan penyelesaian CAPTCHA otomatis",
+      "desc": "Saat aktif, profil yang dibuka mendeteksi CAPTCHA yang didukung dan mengirimkannya ke layanan penyelesai Anda secara otomatis."
+    },
+    "providerLabel": "Penyedia penyelesai",
+    "apiKeyLabel": "Kunci API",
+    "apiKeyPlaceholderAnticaptcha": "clientKey Anti-Captcha",
+    "apiKeyPlaceholder2captcha": "Kunci API 2captcha",
+    "billedAnticaptcha": "Disimpan lokal di DB pengaturan Anda. Anda ditagih per penyelesaian oleh Anti-Captcha.",
+    "billed2captcha": "Disimpan lokal di DB pengaturan Anda. Anda ditagih per penyelesaian oleh 2captcha.",
+    "solveRecaptchaV2": "Selesaikan reCAPTCHA v2",
+    "solveHcaptcha": "Selesaikan hCaptcha"
+  },
+  "email": {
+    "title": "Email (kode verifikasi)",
+    "configured": "Diatur",
+    "offlineMode": "Mode offline",
+    "description": "SMTP untuk mengirim kode OTP saat pendaftaran. Kosongkan untuk berjalan offline: kode lalu ditampilkan di aplikasi, bukan dikirim lewat email.",
+    "smtpHost": "Host SMTP",
+    "port": "Port",
+    "encryption": "Enkripsi",
+    "username": "Nama pengguna",
+    "password": "Kata sandi",
+    "passwordSavedHint": "(tersimpan: kosongkan untuk mempertahankan)",
+    "fromName": "Nama pengirim",
+    "saved": "Pengaturan email tersimpan.",
+    "saveFailed": "Tidak bisa menyimpan pengaturan email.",
+    "noSmtpYet": "SMTP belum diatur: simpan pengaturan Anda dulu.",
+    "testSent": "Email uji dikirim ke {{to}}.",
+    "testFailed": "Uji gagal: periksa pengaturan Anda.",
+    "saveButton": "Simpan pengaturan email",
+    "test": "Uji"
+  },
+  "errors": {
+    "loadSettings": "Gagal memuat pengaturan.",
+    "closeSession": "Gagal menutup sesi.",
+    "updateScheduler": "Gagal memperbarui penjadwal.",
+    "loadGlobal": "Gagal memuat pengaturan umum.",
+    "saveSetting": "Gagal menyimpan pengaturan."
+  }
+}

@@ -1,0 +1,52 @@
+{
+  "header": {
+    "eyebrow": "ワークスペース",
+    "title": "ゴミ箱と復元",
+    "description": "削除したプロファイルを復元するか、ストレージから完全に消去します。"
+  },
+  "actions": {
+    "emptyTrash": "ゴミ箱を空にする",
+    "restore": "復元",
+    "deleteForever": "完全に削除",
+    "clear": "クリア",
+    "restoreTitle": "プロファイルを復元",
+    "purgeTitle": "完全に削除"
+  },
+  "errors": {
+    "loadFailed": "ゴミ箱を読み込めませんでした。"
+  },
+  "warning": {
+    "title": "完全削除",
+    "body": "復元すると、プロファイルは変更されずにリストへ戻ります。完全に削除すると、プロファイルとそのすべてのブラウザデータ（Cookie、キャッシュ、ログイン情報）がこのコンピューターから消去されます。"
+  },
+  "toolbar": {
+    "searchPlaceholder": "削除したプロファイルを検索..."
+  },
+  "bulk": {
+    "selected": "{{count}}件選択中"
+  },
+  "table": {
+    "profileName": "プロファイル名",
+    "proxy": "プロキシ",
+    "deletedDate": "削除日",
+    "actions": "操作",
+    "directProxy": "直接接続",
+    "defaultBrowser": "Chrome"
+  },
+  "empty": {
+    "title": "ゴミ箱は空です",
+    "noMatch": "検索に一致する削除済みプロファイルはありません。",
+    "none": "削除済みのプロファイルはありません。きれいな状態です！"
+  },
+  "confirm": {
+    "purgeWithData": "「{{title}}」を完全に削除しますか？この操作は元に戻せず、ローカルのブラウザデータも消去されます。",
+    "bulkPurgeWithData_other": "{{count}}件のプロファイルを完全に削除しますか？この操作は元に戻せず、ローカルのブラウザデータも消去されます。",
+    "emptyTrashWithData_other": "ゴミ箱内のすべてのプロファイル（{{count}}件）を完全に削除しますか？この操作は元に戻せず、ローカルのブラウザデータも消去されます。"
+  },
+  "pager": {
+    "showing": "{{total}}件中 {{from}}-{{to}}件を表示",
+    "prev": "前へ",
+    "next": "次へ"
+  },
+  "bulkSkipped": "変更されなかったプロファイル: {{count}}件。{{reason}}"
+}

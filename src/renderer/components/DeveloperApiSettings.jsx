@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Terminal, KeyRound, Loader2, Plus, Copy, Check, Trash2, Power, ServerCog, AlertTriangle } from 'lucide-react';
 import { softglazeApi } from '@/lib/softglazeApi.js';
+import { fmtDateTime } from '@/lib/intl.mjs';
 
 export default function DeveloperApiSettings() {
   const { t } = useTranslation('cmpSettingsA');
@@ -181,7 +182,7 @@ export default function DeveloperApiSettings() {
                 style={{ background: status?.enabled ? '#22c55e' : 'var(--switch-background, #3f3f46)' }}
                 title={status?.enabled ? t('developerApi.server.disableTitle') : t('developerApi.server.enableTitle')}
               >
-                <span className={`inline-block transform rounded-full bg-white shadow transition-transform ${status?.enabled ? 'translate-x-5' : 'translate-x-1'}`} style={{ height: 18, width: 18 }} />
+                <span className={`inline-block transform rounded-full bg-white shadow transition-transform ${status?.enabled ? 'translate-x-5 rtl:-translate-x-5' : 'translate-x-1 rtl:-translate-x-1'}`} style={{ height: 18, width: 18 }} />
               </button>
             </div>
 
@@ -207,5 +208,5 @@ export default function DeveloperApiSettings() {
 
 function fmt(value, t) {
   if (!value) return t('developerApi.keys.never');
-  try { return new Date(value).toLocaleString(); } catch (e) { return t('developerApi.keys.never'); }
+  return fmtDateTime(value, t('developerApi.keys.never'));
 }

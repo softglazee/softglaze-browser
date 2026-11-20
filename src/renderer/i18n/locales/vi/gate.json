@@ -1,0 +1,293 @@
+{
+  "common": {
+    "back": "Quay lại",
+    "redeem": "Đổi mã",
+    "go": "Vào"
+  },
+  "remember": {
+    "label": "Duy trì đăng nhập trên thiết bị này",
+    "unavailable": "Thiết bị này không lưu thông tin đăng nhập an toàn được (không có mã hóa của hệ điều hành), nên bạn sẽ phải đăng nhập lại ở lần khởi chạy tới."
+  },
+  "brand": {
+    "footer": "© {{year}} SoftGlaze · Không gian làm việc cục bộ"
+  },
+  "license": {
+    "machineMismatch": "Giấy phép này đã đăng ký cho một máy tính khác. Hãy chuyển nó sang PC này hoặc nhờ quản trị viên đặt lại."
+  },
+  "pay": {
+    "noMethods": "Mua trong ứng dụng đang tạm dừng trong khi chúng tôi thêm nhà cung cấp thanh toán mới. Hãy gửi email đến support@softglaze.com để mua theo hóa đơn, rồi nhập mã mua hàng.",
+    "submitted": "Đã gửi thanh toán. Quản trị viên sẽ xem xét và sớm kích hoạt gói của bạn.",
+    "manualBadge": "Thủ công",
+    "continueTo": "Tiếp tục đến {{label}}",
+    "openPaymentLink": "Mở liên kết thanh toán",
+    "referencePlaceholder": "Mã tham chiếu thanh toán / mã giao dịch",
+    "submitForApproval": "Tôi đã thanh toán, gửi để phê duyệt"
+  },
+  "banned": {
+    "blockedHeading": "Quyền truy cập của bạn đã bị chặn",
+    "endedHeading": "Gói đăng ký của bạn đã kết thúc",
+    "blockedBodyNamed": "{{name}}, quản trị viên đã chặn tài khoản của bạn. Vui lòng liên hệ họ để khôi phục quyền truy cập. Dữ liệu của bạn vẫn an toàn.",
+    "blockedBody": "Quản trị viên đã chặn tài khoản của bạn. Vui lòng liên hệ họ để khôi phục quyền truy cập. Dữ liệu của bạn vẫn an toàn.",
+    "endedBodyNamed": "{{name}}, giấy phép này không còn hiệu lực (đã hoàn tiền, đã thu hồi hoặc đã đăng ký cho máy tính khác). Hãy chọn một gói để mở khóa không gian làm việc. Hồ sơ và dữ liệu của bạn vẫn an toàn và đang chờ bạn.",
+    "endedBody": "Giấy phép này không còn hiệu lực (đã hoàn tiền, đã thu hồi hoặc đã đăng ký cho máy tính khác). Hãy chọn một gói để mở khóa không gian làm việc. Hồ sơ và dữ liệu của bạn vẫn an toàn và đang chờ bạn.",
+    "haveCode": "Có mã mua hàng?",
+    "needHelp": "Cần trợ giúp? Hãy liên hệ quản trị viên.",
+    "signOut": "Đăng xuất"
+  },
+  "register": {
+    "title": "Tạo tài khoản",
+    "subtitle": "Đây là tài khoản chính của bạn, chủ sở hữu không gian làm việc.",
+    "firstName": "Tên",
+    "lastName": "Họ",
+    "email": "Email",
+    "emailPlaceholder": "you@workspace.com",
+    "phone": "Số điện thoại",
+    "phonePlaceholder": "+31 6 12345678",
+    "password": "Mật khẩu",
+    "passwordPlaceholder": "Từ 8 ký tự",
+    "confirm": "Xác nhận",
+    "confirmPlaceholder": "Nhập lại",
+    "continue": "Tiếp tục",
+    "storedLocally": "Được lưu cục bộ và mã hóa trên thiết bị này",
+    "haveAccount": "Đã có tài khoản?",
+    "logIn": "Đăng nhập",
+    "consent": "Gửi cho tôi tin sản phẩm và mẹo qua email",
+    "consentNote": "Mã xác minh, nhắc nhở dùng thử và email tài khoản luôn được gửi. Tin sản phẩm chỉ gửi khi bạn đánh dấu ô này.",
+    "checkedByServer": "Chúng tôi gửi mã qua email để xác nhận địa chỉ này. Hồ sơ và dữ liệu của bạn ở lại trên thiết bị này.",
+    "phoneOptional": "Số điện thoại (không bắt buộc)",
+    "phoneIntlPlaceholder": "+44 20 7946 0958",
+    "phoneHint": "Bắt đầu bằng + và mã quốc gia."
+  },
+  "verify": {
+    "title": "Xác minh email",
+    "subtitlePrefix": "Nhập mã 6 chữ số đã gửi đến",
+    "subtitleSuffix": ".",
+    "devModePrefix": "Chế độ dev: chưa có email nào thực sự được gửi. Mã của bạn là",
+    "devModeSuffix": ".",
+    "verifyCreate": "Xác minh và tạo tài khoản",
+    "resendIn": "Gửi lại mã sau {{count}} giây",
+    "resend": "Gửi lại mã",
+    "checkSpam": "Mã có thể mất một phút để đến. Hãy kiểm tra thư mục spam nếu bạn không thấy."
+  },
+  "lead": {
+    "useCase": "Bạn sẽ dùng SoftGlaze để làm gì?",
+    "useCasePlaceholder": "Chọn một mục",
+    "useCases": {
+      "ecommerce": "Cửa hàng thương mại điện tử và sàn bán hàng",
+      "social_media": "Tài khoản mạng xã hội",
+      "affiliate_marketing": "Tiếp thị liên kết và mua quảng cáo",
+      "agency": "Công việc agency cho khách hàng",
+      "web_research": "Nghiên cứu web và kiểm thử",
+      "other": "Việc khác"
+    },
+    "useCaseOther": "Cho chúng tôi biết trong vài từ",
+    "useCaseOtherPlaceholder": "Ví dụ: kiểm tra giá theo quốc gia",
+    "company": "Công ty hoặc trang web (không bắt buộc)",
+    "companyPlaceholder": "Acme Ltd hoặc acme.com"
+  },
+  "confirm": {
+    "title": "Xác nhận email",
+    "subtitle": "Mỗi không gian làm việc SoftGlaze giờ cần một email đã xác nhận. Hãy kiểm tra thông tin và chúng tôi sẽ gửi cho bạn mã 6 chữ số.",
+    "sendCode": "Gửi mã",
+    "codeTitle": "Nhập mã",
+    "codeBody": "Chúng tôi đã gửi mã 6 chữ số đến {{email}}. Nhập mã để xác nhận email cho không gian làm việc này.",
+    "confirmContinue": "Xác nhận và tiếp tục",
+    "changeDetails": "Đổi thông tin",
+    "dataNote": "Hồ sơ và dữ liệu của bạn ở lại trên máy tính này. Chúng tôi giữ các thông tin này để chăm sóc tài khoản của bạn.",
+    "later": "Tiếp tục lúc này",
+    "laterNote": "Chúng tôi không kết nối được máy chủ. Bạn có thể dùng ứng dụng ngay, và chúng tôi sẽ hỏi lại ở lần khởi động tới.",
+    "memberTitle": "Chủ sở hữu cần xác nhận không gian làm việc này",
+    "memberBody": "Trước khi dùng được không gian làm việc này, chủ sở hữu phải xác nhận email. Hãy nhờ chủ sở hữu đăng nhập và xác nhận, hoặc đăng nhập với tư cách chủ sở hữu.",
+    "signInAsOwner": "Đăng nhập với tư cách chủ sở hữu"
+  },
+  "plan": {
+    "title": "Mọi thứ đã sẵn sàng",
+    "subtitlePrefix": "Tài khoản của bạn đã sẵn sàng với",
+    "trialHighlight": "7 ngày dùng thử miễn phí",
+    "subtitleSuffix": ". Bắt đầu ngay, hoặc kích hoạt gói trả phí.",
+    "startTrialTitle": "Bắt đầu 7 ngày dùng thử miễn phí",
+    "startTrialSubtitle": "Chưa cần thanh toán. Mọi tính năng đều được mở.",
+    "activatePaid": "Kích hoạt gói trả phí ngay",
+    "haveCode": "Có mã mua hàng?",
+    "skip": "Bỏ qua và bắt đầu dùng thử",
+    "tenantTitle": "Tài khoản của bạn đã sẵn sàng",
+    "tenantSubtitle": "Bắt đầu dùng thử miễn phí, hoặc chọn một gói.",
+    "tenantTrialSubtitle": "Truy cập đầy đủ, không cần thanh toán. Mỗi máy tính và email chỉ được dùng thử miễn phí một lần.",
+    "choosePlan": "Hoặc chọn một gói",
+    "verifyTitle": "Xác nhận email",
+    "verifyBody": "Chúng tôi đã gửi mã 6 chữ số đến {{email}}. Nhập mã để bắt đầu dùng thử miễn phí.",
+    "verifyStart": "Xác nhận và bắt đầu dùng thử",
+    "continueFreeTitle": "Tiếp tục với gói Miễn phí",
+    "continueFreeSubtitle": "Miễn phí mãi mãi: 25 hồ sơ, mỗi lần chạy 1 hồ sơ. Nâng cấp bất cứ lúc nào.",
+    "trialUsedFree": "Máy tính hoặc email này đã dùng bản dùng thử miễn phí. Bạn có thể tiếp tục với gói Miễn phí."
+  },
+  "login": {
+    "welcomeBackNamed": "Chào mừng trở lại, {{name}}",
+    "welcomeBack": "Chào mừng trở lại",
+    "subtitle": "Đăng nhập để mở khóa không gian làm việc.",
+    "email": "Email",
+    "password": "Mật khẩu",
+    "forgot": "Quên?",
+    "passwordPlaceholder": "Mật khẩu chính",
+    "forgotBody": "Mật khẩu chính không khôi phục được trên bản cài cục bộ, vì nó không bao giờ rời thiết bị này. Nếu mất, bạn phải đặt lại không gian làm việc từ Cài đặt.",
+    "signIn": "Đăng nhập",
+    "noAccount": "Chưa có tài khoản?",
+    "newHere": "Mới dùng SoftGlaze?",
+    "createOne": "Tạo tài khoản",
+    "haveInvite": "Có mã mời?",
+    "teamSignIn": "Thành viên nhóm đăng nhập"
+  },
+  "invite": {
+    "title": "Đổi mã mời",
+    "subtitle": "Nhập mã bạn được cấp và đặt mật khẩu cho tài khoản.",
+    "code": "Mã mời",
+    "codePlaceholder": "SG-XXXX-XXXX",
+    "yourName": "Tên của bạn",
+    "optional": "(không bắt buộc)",
+    "namePlaceholder": "Họ và tên",
+    "setPassword": "Đặt mật khẩu",
+    "passwordPlaceholder": "Từ 6 ký tự",
+    "join": "Tham gia không gian làm việc"
+  },
+  "member": {
+    "title": "Thành viên nhóm đăng nhập",
+    "subtitle": "Dùng email/tên và mật khẩu đã đặt khi bạn đổi mã mời.",
+    "identifier": "Email hoặc tên",
+    "identifierPlaceholder": "you@workspace.com",
+    "password": "Mật khẩu",
+    "passwordPlaceholder": "Mật khẩu của bạn",
+    "signIn": "Đăng nhập",
+    "haveInviteInstead": "Bạn có mã mời?",
+    "redeemIt": "Đổi mã"
+  },
+  "super": {
+    "title": "Super Admin",
+    "access": "Truy cập Super Admin",
+    "setupSubtitlePrefix": "Thiết lập lần đầu. Tạo thông tin đăng nhập Super Admin cho",
+    "setupSubtitleHighlight": "bản cài đặt này",
+    "setupSubtitleSuffix": "- thông tin được lưu dạng băm trên thiết bị này và là cách duy nhất để vào, nên hãy giữ cẩn thận.",
+    "username": "Tên người dùng",
+    "usernamePlaceholder": "superadmin",
+    "password": "Mật khẩu",
+    "setupPasswordPlaceholder": "Ít nhất 8 ký tự",
+    "confirmPassword": "Xác nhận mật khẩu",
+    "confirmPasswordPlaceholder": "Nhập lại mật khẩu",
+    "createCredentials": "Tạo thông tin đăng nhập",
+    "loginSubtitle": "Truy cập của chủ mã nguồn. Bỏ qua đăng ký và mở khóa toàn bộ không gian làm việc.",
+    "usernameOrEmail": "Tên người dùng hoặc email",
+    "loginPasswordPlaceholder": "Mật khẩu",
+    "enterWorkspace": "Vào không gian làm việc"
+  },
+  "pick": {
+    "title": "Ai đang làm việc?",
+    "subtitle": "Chọn hồ sơ thành viên của bạn để tiếp tục.",
+    "pin": "Mã PIN",
+    "suspended": "Tạm ngưng",
+    "pinPlaceholder": "Nhập mã PIN",
+    "haveInvite": "Có mã mời?",
+    "teamSignIn": "Thành viên nhóm đăng nhập"
+  },
+  "db": {
+    "title": "Mở khóa cơ sở dữ liệu",
+    "subtitle": "Cơ sở dữ liệu của không gian làm việc này đã được mã hóa. Nhập mật khẩu không gian làm việc để giải mã và mở.",
+    "workspacePassword": "Mật khẩu không gian làm việc",
+    "passwordPlaceholder": "Mật khẩu không gian làm việc",
+    "unlock": "Mở khóa",
+    "corrupted": "Nếu bạn chắc chắn mật khẩu đúng, tệp cơ sở dữ liệu có thể đã hỏng. Bạn có thể khôi phục bằng cách cài lại và khôi phục bản sao lưu không gian làm việc (Cài đặt → Sao lưu và khôi phục không gian làm việc). Không có cách đặt lại mật khẩu: dữ liệu chỉ mở được bằng đúng mật khẩu."
+  },
+  "errors": {
+    "enterFirstLast": "Nhập họ và tên của bạn.",
+    "validEmail": "Hãy nhập địa chỉ email hợp lệ.",
+    "validPhone": "Hãy nhập số điện thoại hợp lệ.",
+    "password8": "Mật khẩu phải có ít nhất 8 ký tự.",
+    "passwordsNoMatch": "Mật khẩu không khớp.",
+    "couldNotSendCode": "Không gửi được mã xác minh.",
+    "couldNotResendCode": "Không gửi lại được mã.",
+    "enter6Digit": "Nhập mã 6 chữ số.",
+    "verificationFailed": "Xác minh thất bại.",
+    "incorrectPassword": "Mật khẩu không đúng.",
+    "couldNotSignIn": "Không đăng nhập được.",
+    "superSetupRequired": "Chưa đặt thông tin đăng nhập Super Admin. Hãy tạo bên dưới.",
+    "invalidSuperCredentials": "Thông tin đăng nhập Super Admin không hợp lệ.",
+    "couldNotCreateSuper": "Không tạo được thông tin đăng nhập Super Admin.",
+    "enterInviteCode": "Nhập mã mời của bạn.",
+    "password6": "Mật khẩu phải có ít nhất 6 ký tự.",
+    "couldNotRedeemInvite": "Không đổi được mã mời này.",
+    "enterEmailNamePassword": "Nhập email/tên và mật khẩu của bạn.",
+    "enterPurchaseCode": "Nhập mã mua hàng của bạn.",
+    "invalidPurchaseCode": "Mã mua hàng này không hợp lệ.",
+    "noPaymentMethod": "Chưa có phương thức thanh toán nào.",
+    "paymentNotStarted": "Không bắt đầu được thanh toán.",
+    "couldNotSubmitPayment": "Không gửi được thanh toán của bạn.",
+    "enterWorkspacePassword": "Nhập mật khẩu không gian làm việc.",
+    "dbStillLocked": "Cơ sở dữ liệu vẫn đang khóa. Vui lòng thử lại.",
+    "dbMissing": "Thiếu tệp cơ sở dữ liệu đã mã hóa. Hãy khôi phục từ bản sao lưu không gian làm việc.",
+    "dbUnlockFailed": "Mật khẩu không đúng, hoặc tệp đã hỏng.",
+    "couldNotUnlockDb": "Không mở khóa được cơ sở dữ liệu.",
+    "trialFailed": "Không bắt đầu được dùng thử miễn phí."
+  },
+  "serverErrors": {
+    "SIGNUP_INVALID_EMAIL": "Hãy nhập địa chỉ email hợp lệ.",
+    "SIGNUP_DISPOSABLE_EMAIL": "Vui lòng dùng địa chỉ email cố định.",
+    "SIGNUP_NO_MX": "Chúng tôi không tìm thấy máy chủ thư cho địa chỉ này.",
+    "SIGNUP_BAD_CODE": "Mã không đúng hoặc đã hết hạn. Hãy kiểm tra email hoặc yêu cầu mã mới.",
+    "SIGNUP_OFFLINE": "Hãy kết nối internet để tạo tài khoản.",
+    "SIGNUP_FAILED": "Hiện chưa kiểm tra được email này. Hãy thử lại sau vài phút.",
+    "RATE_LIMITED": "Quá nhiều lần thử, hãy thử lại sau vài phút.",
+    "TRIAL_USED": "Máy tính hoặc email này đã dùng bản dùng thử miễn phí. Hãy chọn một gói hoặc nhập mã mua hàng.",
+    "TRIAL_OFFLINE": "Hãy kết nối internet để bắt đầu dùng thử miễn phí.",
+    "TRIAL_VERIFY_EMAIL": "Hãy xác nhận địa chỉ email để bắt đầu dùng thử miễn phí. Chúng tôi đã gửi cho bạn mã 6 chữ số.",
+    "TRIAL_NO_EMAIL": "Hãy thêm địa chỉ email cho tài khoản chủ sở hữu trước, rồi bắt đầu dùng thử miễn phí.",
+    "TRIAL_FAILED": "Hiện chưa bắt đầu được dùng thử miễn phí. Hãy thử lại sau vài phút.",
+    "SERVER_UNAVAILABLE": "Máy chủ cấp phép của chúng tôi hiện không phản hồi. Hãy thử lại sau vài phút.",
+    "MACHINE_MISMATCH": "Giấy phép này đã đăng ký cho một máy tính khác. Hãy chuyển nó sang PC này hoặc nhờ quản trị viên đặt lại.",
+    "SIGNUP_INVALID_PHONE": "Hãy nhập số điện thoại có dấu + và mã quốc gia, hoặc để trống.",
+    "SIGNUP_USE_CASE": "Hãy chọn mục đích bạn dùng SoftGlaze.",
+    "SIGNUP_USE_CASE_OTHER": "Cho chúng tôi biết trong vài từ bạn sẽ dùng SoftGlaze để làm gì.",
+    "CONFIRM_OFFLINE": "Hãy kết nối internet để xác nhận email."
+  },
+  "panel": {
+    "label": "Giới thiệu sản phẩm SoftGlaze",
+    "carousel": "băng chuyền",
+    "slide": "trang chiếu",
+    "slideOf": "{{n}} / {{total}}",
+    "prev": "Trang chiếu trước",
+    "next": "Trang chiếu tiếp theo",
+    "pause": "Tạm dừng trình chiếu",
+    "play": "Phát trình chiếu",
+    "goTo": "Hiện trang chiếu {{n}}: {{title}}",
+    "trust": "Hồ sơ, cookie và thông tin đăng nhập luôn nằm trên máy tính này.",
+    "slides": {
+      "free": {
+        "title": "Bắt đầu miễn phí với 25 hồ sơ trình duyệt",
+        "body": "Không cần thẻ, không giới hạn thời gian. Mọi tài khoản mới cũng được dùng thử Pro miễn phí trong 7 ngày.",
+        "alt": "Trang Hồ sơ với mười hồ sơ, proxy của từng hồ sơ và thời điểm dùng gần nhất"
+      },
+      "fingerprint": {
+        "title": "Mỗi hồ sơ giữ dấu vân tay riêng",
+        "body": "Canvas, WebGL, phông chữ, âm thanh và múi giờ được đặt cho từng hồ sơ và giữ nguyên ở mỗi lần khởi chạy. Hãy gán cho mỗi hồ sơ một proxy HTTP, HTTPS hoặc SOCKS5 của riêng bạn.",
+        "alt": "Thẻ Dấu vân tay của một hồ sơ bên cạnh phần tổng quan môi trường"
+      },
+      "ai": {
+        "title": "AI Agent làm việc, bạn phê duyệt",
+        "body": "Claude, ChatGPT, Cursor và các ứng dụng MCP khác chạy tác vụ trong hồ sơ của bạn. Bạn quyết định hành động nào cần phê duyệt, và mọi bước đều được ghi lại.",
+        "alt": "Yêu cầu phê duyệt từ Claude Desktop để điền biểu mẫu đăng nhập"
+      },
+      "phone": {
+        "title": "Phê duyệt yêu cầu từ điện thoại",
+        "body": "Ứng dụng điện thoại và ứng dụng web SoftGlaze hiển thị từng yêu cầu kèm chi tiết. Cho phép một lần, cho phép trong một giờ, hoặc từ chối. Có trong mọi gói.",
+        "alt": "Màn hình Phê duyệt trên điện thoại với một yêu cầu đang chờ trả lời"
+      },
+      "team": {
+        "title": "Làm việc nhóm với vai trò rõ ràng",
+        "body": "Các vai trò Chủ sở hữu, Quản trị, Quản lý và Nhân viên quyết định ai được xem và mở từng hồ sơ. Pro có 3 chỗ cho nhóm, Enterprise có 25.",
+        "alt": "Trang Thành viên với năm thành viên nhóm và vai trò của họ"
+      }
+    }
+  },
+  "controls": {
+    "language": "Ngôn ngữ: {{lang}}",
+    "toLight": "Chuyển sang giao diện sáng",
+    "toDark": "Chuyển sang giao diện tối"
+  }
+}

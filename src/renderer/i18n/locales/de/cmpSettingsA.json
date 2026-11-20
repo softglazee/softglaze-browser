@@ -1,0 +1,159 @@
+{
+  "billing": {
+    "status": {
+      "loading": "Lädt…",
+      "sourceOwner": "Quellcode-Inhaber",
+      "active": "Aktiv",
+      "activeUntil": "Aktiv · bis {{date}}",
+      "trialDaysLeft_one": "Test · noch {{count}} T.",
+      "trialDaysLeft_other": "Test · noch {{count}} T.",
+      "graceDaysLeft_one": "Kulanz · noch {{count}} T.",
+      "graceDaysLeft_other": "Kulanz · noch {{count}} T.",
+      "subscriptionEnded": "Abonnement beendet"
+    },
+    "subscription": {
+      "title": "Abonnement",
+      "planLine": "SoftGlaze Browser · Tarif {{tier}}",
+      "manageButton": "Abonnement & Tarife verwalten"
+    },
+    "seats": {
+      "label": "Teamplätze",
+      "usage": "{{used}} / {{total}} belegt"
+    },
+    "gateway": {
+      "title": "Zahlungsmethoden",
+      "description": "Nur Super-Admin. Aktivieren Sie die Methoden, die Inhabern an der Kasse angezeigt werden, und speichern Sie die Schlüssel jedes Anbieters.",
+      "loadError": "Zahlungseinstellungen konnten nicht geladen werden.",
+      "footnote": "Schlüssel werden auf diesem Gerät verschlüsselt gespeichert und verlassen es nie. Die Kasse fragt den Status ab (keine Webhooks), daher braucht die Durchsetzung über mehrere Installationen weiterhin das Lizenz-Backend. Wise & Manuell geben Sie unten unter „Offene Zahlungen“ frei.",
+      "retry": "Wiederholen"
+    },
+    "provider": {
+      "kindManual": "Manuell",
+      "kindAutomated": "Automatisch",
+      "on": "an",
+      "enabled": "Aktiviert",
+      "disabled": "Deaktiviert",
+      "enableAria": "{{provider}} aktivieren",
+      "documentation": "Dokumentation",
+      "secretStoredPlaceholder": "•••••••• (leer lassen, um den aktuellen zu behalten)",
+      "secretPlaceholder": "Schlüssel einfügen",
+      "save": "Speichern",
+      "testConnection": "Verbindung testen",
+      "enabledMsg": "Aktiviert.",
+      "disabledMsg": "Deaktiviert.",
+      "updateError": "Aktualisierung fehlgeschlagen.",
+      "savedMsg": "Gespeichert.",
+      "saveError": "Speichern fehlgeschlagen.",
+      "connectionOk": "Verbindung sieht gut aus ✓",
+      "validationFailedKeys": "Prüfung fehlgeschlagen. Prüfen Sie die Schlüssel.",
+      "validationFailed": "Prüfung fehlgeschlagen."
+    },
+    "manual": {
+      "title": "Offene Zahlungen",
+      "description": "Manuelle Einreichungen (Wise / Banküberweisung), die auf Ihre Freigabe warten.",
+      "loadError": "Manuelle Zahlungen konnten nicht geladen werden.",
+      "resolveError": "Diese Zahlung konnte nicht aktualisiert werden.",
+      "ownerFallback": "Inhaber #{{id}}",
+      "refPrefix": "Ref.:",
+      "approve": "Freigeben",
+      "reject": "Ablehnen",
+      "statusLabel": {
+        "pending": "offen",
+        "approved": "freigegeben",
+        "rejected": "abgelehnt"
+      }
+    }
+  },
+  "monetization": {
+    "heading": "Monetarisierung",
+    "affiliate": {
+      "title": "Affiliate- & Empfehlungslinks",
+      "ownerOnly": "Nur Inhaber",
+      "description": "Ihre Partner-URLs für die „Kaufen“-Buttons im Proxy-Marktplatz. Leer lassen, um den SoftGlaze-Standard zu verwenden.",
+      "loadError": "Affiliate-Links konnten nicht geladen werden.",
+      "saveError": "Affiliate-Links konnten nicht gespeichert werden.",
+      "savedMsg": "Gespeichert. Die Marktplatz-Buttons nutzen jetzt Ihre Links.",
+      "customLink": "Eigener Link",
+      "defaultLink": "Standardlink",
+      "openLinkTitle": "{{provider}}-Link öffnen",
+      "saving": "Speichert…",
+      "saveButton": "Links speichern",
+      "footnote": "Diese Links stehen hinter den Buttons „Kaufen bei…“ / „Dashboard öffnen“ im Proxy-Pool → Tab „Anbieter“. Es sind nur öffentliche Empfehlungs-URLs. Proxy-Tokens und Zugangsdaten sind nie betroffen."
+    }
+  },
+  "developerApi": {
+    "title": "Entwickler-API-Zugriff",
+    "description": "Erzeugen Sie API-Schlüssel und betreiben Sie einen lokalen REST-Server, um SoftGlaze per Programm zu steuern.",
+    "copy": "Kopieren",
+    "errors": {
+      "load": "Entwickler-API-Einstellungen konnten nicht geladen werden.",
+      "nameRequired": "Benennen Sie den Schlüssel (z. B. „CI-Server“).",
+      "generate": "API-Schlüssel konnte nicht erzeugt werden.",
+      "revoke": "Schlüssel konnte nicht widerrufen werden.",
+      "toggleServer": "Der Status des lokalen Servers konnte nicht geändert werden."
+    },
+    "keys": {
+      "title": "API-Schlüssel",
+      "namePlaceholder": "Schlüsselname (z. B. CI-Server)",
+      "generate": "Neuen API-Schlüssel erzeugen",
+      "copyOnce": "Kopieren Sie diesen Schlüssel jetzt. Er wird nur einmal angezeigt und lässt sich nicht wiederherstellen.",
+      "empty": "Noch keine API-Schlüssel.",
+      "lastUsed": "zuletzt genutzt {{when}}",
+      "neverUsed": "nie genutzt",
+      "never": "nie",
+      "revoke": "Widerrufen",
+      "revokeConfirm": "API-Schlüssel „{{name}}“ widerrufen? Jedes Skript, das ihn nutzt, funktioniert sofort nicht mehr. Das kann nicht rückgängig gemacht werden."
+    },
+    "server": {
+      "title": "Lokale REST-API",
+      "runningAt": "Läuft unter",
+      "stoppedPrefix": "Gestoppt · würde binden an",
+      "loopbackOnly": "(nur Loopback)",
+      "disableTitle": "Lokale API deaktivieren",
+      "enableTitle": "Lokale API aktivieren",
+      "curlExample": "Beispiel: ein Profil per cURL starten",
+      "footnote": "Der Server nimmt nur Anfragen von diesem Gerät an und verlangt einen gültigen Bearer-Schlüssel."
+    }
+  },
+  "migration": {
+    "title": "Profile übertragen",
+    "ownerOnly": "Nur Inhaber",
+    "description": "Importieren Sie Ihre vorhandenen Profile aus einem anderen Multi-Profil-Browser über dessen API.",
+    "sourcePlatform": "Quellplattform",
+    "noteLabel": "Hinweis:",
+    "instructions": "Anleitung",
+    "tokenSectionTitle": "{{platform}}-API-Token",
+    "transferring": "Wird übertragen…",
+    "startTransfer": "Übertragung starten",
+    "tokenFootnote": "Ihr Token wird einmal für diese Übertragung genutzt und nie gespeichert. Lokale Plattformen (AdsPower, ixBrowser) müssen mit aktivierter Local API laufen.",
+    "errors": {
+      "tokenRequired": "Geben Sie Ihr {{platform}} {{placeholder}} ein.",
+      "transferFailed": "Übertragung fehlgeschlagen."
+    },
+    "log": {
+      "title": "Migrationsprotokoll",
+      "imported": "{{created}}/{{total}} importiert",
+      "errors_one": "{{count}} Fehler",
+      "errors_other": "{{count}} Fehler",
+      "waiting": "Warte auf Antwort der Plattform…"
+    },
+    "platforms": {
+      "dolphin": {
+        "placeholder": "Dolphin_Token",
+        "warning": "Cookies werden nicht übertragen, wenn Sie vom kostenlosen Tarif von Dolphin übertragen."
+      },
+      "gologin": {
+        "placeholder": "GoLogin-API-Token"
+      },
+      "multilogin": {
+        "placeholder": "Multilogin-Automatisierungstoken"
+      },
+      "adspower": {
+        "placeholder": "AdsPower Local API Key"
+      },
+      "ixbrowser": {
+        "placeholder": "ixBrowser Local API Key"
+      }
+    }
+  }
+}

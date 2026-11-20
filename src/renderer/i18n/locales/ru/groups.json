@@ -1,0 +1,53 @@
+{
+  "header": {
+    "eyebrow": "Организация",
+    "title": "Группы и теги",
+    "description": "Распределяйте профили по группам и отмечайте их тегами для быстрой фильтрации."
+  },
+  "filters": {
+    "allProfiles": "Все профили",
+    "ungrouped": "Без группы",
+    "group": "Группа"
+  },
+  "sidebar": {
+    "directories": "Каталоги",
+    "createGroup": "Создать группу",
+    "renameGroup": "Переименовать группу {{name}}",
+    "deleteGroup": "Удалить группу {{name}}",
+    "groupNamePlaceholder": "Название группы..."
+  },
+  "table": {
+    "searchPlaceholder": "Поиск профилей...",
+    "loading": "Загрузка групп...",
+    "colProfileName": "Название профиля",
+    "colGroupAssignment": "Группа",
+    "colTags": "Теги"
+  },
+  "tagFilter": {
+    "label": "Фильтры",
+    "clear": "сбросить"
+  },
+  "bulk": {
+    "selected_one": "Выбран {{count}}",
+    "selected_few": "Выбрано {{count}}",
+    "selected_many": "Выбрано {{count}}",
+    "selected_other": "Выбрано {{count}}",
+    "moveTo": "Переместить в:",
+    "chooseGroup": "Выберите группу…",
+    "clear": "Сбросить"
+  },
+  "empty": {
+    "title": "Профили не найдены",
+    "noMatch": "Нет профилей, подходящих под фильтры.",
+    "groupEmpty": "В этой группе пусто. Перемещайте сюда профили через список «Группа»."
+  },
+  "tags": {
+    "add": "Добавить тег",
+    "remove": "Удалить тег",
+    "inputPlaceholder": "тег + Enter"
+  },
+  "deleteConfirm": "Удалить группу «{{name}}»? Её профили станут «Без группы» (сами профили не удаляются).",
+  "errors": {
+    "loadFailed": "Не удалось загрузить группы."
+  }
+}

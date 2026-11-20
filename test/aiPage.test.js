@@ -546,8 +546,9 @@ test('strings: en and es carry the same keys, and every literal t() key used by 
     }
   }
   const idx = read('src', 'renderer', 'i18n', 'index.js');
-  assert.match(idx, /ai: aiEn,/);
-  assert.match(idx, /ai: aiEs,/);
+  // i18n/index.js registers every locales/<code>/ai.json (English eager, others lazy).
+  assert.match(idx, /import\.meta\.glob\('\.\/locales\/en\/\*\.json', \{ eager: true/);
+  assert.match(idx, /import\.meta\.glob\(\['\.\/locales\/\*\/\*\.json'/);
   assert.match(en.automation.warning, /^These tools will run without asking you\. They stay limited to the chosen groups, are logged, and stop with Stop all AI\.$/);
   assert.match(en.settings.hosts.description, /For n8n or other tools running in Docker, add host\.docker\.internal\./);
   assert.match(en.settings.expert.warning, /Detectable\./);

@@ -1,0 +1,111 @@
+{
+  "choose": {
+    "title": "创建免费账号",
+    "subtitle": "使用已有账号，无需新密码。",
+    "google": "使用 Google 继续",
+    "microsoft": "使用 Microsoft 继续",
+    "facebook": "使用 Facebook 继续",
+    "linkedin": "使用 LinkedIn 继续",
+    "allowEmail": "允许访问邮箱并重试 Facebook",
+    "github": "使用 GitHub 继续",
+    "email": "使用邮箱继续",
+    "moreOptions": "使用密码设置",
+    "moreOptionsHint": "想用名称和密码？",
+    "privacy": "我们只会获取你的姓名和已验证的邮箱地址。",
+    "haveAccount": "这台电脑上已有工作区？",
+    "logIn": "使用密码登录",
+    "signInTitle": "登录 SoftGlaze",
+    "signInSubtitle": "请使用注册时的账号。如果你的套餐在另一台电脑上，可以将其转移到这台电脑。",
+    "entryLabel": "新用户或老用户",
+    "entryNew": "新账号",
+    "entryReturning": "我已有账号"
+  },
+  "unlock": {
+    "title": "欢迎回来",
+    "titleNamed": "欢迎回来，{{name}}",
+    "subtitle": "请使用此工作区所属的账号登录。",
+    "account": "工作区账号：{{email}}",
+    "passwordInstead": "使用密码登录",
+    "haveInvite": "我有邀请码",
+    "teamSignIn": "团队成员登录"
+  },
+  "link": {
+    "title": "登录你的 SoftGlaze 账号",
+    "subtitle": "在这里和其他电脑上使用一键登录。你的工作区保持不变。"
+  },
+  "email": {
+    "title": "使用邮箱继续",
+    "subtitle": "我们会向你的邮箱发送 6 位验证码，无需密码。",
+    "label": "邮箱地址",
+    "placeholder": "you@company.com",
+    "send": "发送验证码",
+    "codeTitle": "请查收邮件",
+    "codeBody": "请输入我们发送到 {{email}} 的 6 位验证码。",
+    "codeLabel": "6 位验证码",
+    "verify": "继续",
+    "resend": "重新发送验证码",
+    "resendIn": "{{count}} 秒后可重新发送",
+    "checkSpam": "邮件可能需要一分钟才能送达。如果没有收到，请检查垃圾邮件文件夹。",
+    "devCode": "此版本未设置邮件服务器，验证码如下：{{code}}",
+    "change": "使用其他邮箱"
+  },
+  "waiting": {
+    "title": "在浏览器中完成登录",
+    "body": "我们已在你的浏览器中打开 {{provider}}。请在那里登录，然后返回这里。",
+    "status": "正在等待 {{provider}}...",
+    "reopen": "重新打开页面",
+    "anotherWay": "没有跳转回来？试试其他方式",
+    "cancel": "取消"
+  },
+  "back": "返回",
+  "useCase": {
+    "title": "你打算用 SoftGlaze 做什么？",
+    "subtitle": "可选。这有助于我们为你改进 SoftGlaze。",
+    "continue": "继续",
+    "skip": "跳过"
+  },
+  "move": {
+    "title": "你的订阅",
+    "moved": "完成。你的订阅现在可在这台电脑上使用。"
+  },
+  "account": {
+    "title": "登录方式",
+    "subtitle": "你登录 SoftGlaze 账号的方式。在新电脑上登录时，许可证也会转移到那台电脑。",
+    "signedInAs": "已登录为 {{email}}",
+    "google": "Google",
+    "microsoft": "Microsoft",
+    "facebook": "Facebook",
+    "linkedin": "LinkedIn",
+    "github": "GitHub",
+    "githubLogin": "GitHub（@{{login}}）",
+    "email": "邮箱验证码",
+    "lastUsed": "上次使用：{{date}}",
+    "linkedOn": "关联于 {{date}}",
+    "signOut": "退出登录",
+    "signOutConfirm": "在这台电脑上退出 SoftGlaze 账号？之后随时可以用同一账号重新登录。",
+    "signingOut": "正在退出登录...",
+    "offline": "离线：显示的是这台电脑保存的信息。",
+    "notSignedIn": "登录 SoftGlaze 账号，即可在这里和其他电脑上使用一键登录。",
+    "signInWorkspace": "此工作区通过你的登录打开。如果你还想在没有网络时登录，请在上方添加密码。",
+    "linked": "已登录。你的登录方式如下。",
+    "loading": "正在加载登录方式...",
+    "notAvailable": "一键登录需要 SoftGlaze 许可证服务器，而此版本不使用该服务器。"
+  },
+  "errors": {
+    "SIGNIN_OFFLINE": "请连接互联网后再登录。",
+    "SIGNIN_EXPIRED": "此登录已过期或已被使用，请重试。",
+    "SIGNIN_ACCOUNT_MISMATCH": "此工作区属于另一个 SoftGlaze 账号。请使用创建它时所用的账号登录。",
+    "SIGNIN_EMAIL_MISMATCH": "请使用此工作区的邮箱地址。",
+    "SIGNIN_EMAIL_NOT_VERIFIED": "您登录所用的账号没有已验证的邮箱地址。请在该账号中完成验证（GitHub 上：Settings > Emails），或使用邮箱继续。",
+    "SIGNIN_EMAIL_MISSING": "您的 Facebook 账号没有共享邮箱。请使用 Google 或邮箱登录，或允许访问邮箱。",
+    "SIGNIN_DISPOSABLE_EMAIL": "请使用长期有效的邮箱地址。",
+    "SIGNIN_UNAVAILABLE": "此登录方式暂不可用。请使用邮箱继续，或使用“更多选项”。",
+    "SIGNIN_FAILED": "登录未完成，请稍后重试。",
+    "SIGNIN_TIMEOUT": "登录耗时过长，请重试。",
+    "SIGNIN_NOT_ALLOWED": "此工作区不支持这种登录方式。",
+    "SIGNIN_KEY_LOST": "无法在这台电脑上通过您的登录打开此工作区。请使用密码登录。",
+    "SIGNIN_SESSION_ENDED": "您的登录已结束，请重新登录。",
+    "SIGNIN_BAD_INPUT": "请输入有效的邮箱地址。",
+    "MOVE_FAILED": "目前无法转移许可证，请稍后重试。"
+  }
+}

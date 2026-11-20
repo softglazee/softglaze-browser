@@ -1,0 +1,111 @@
+{
+  "choose": {
+    "title": "無料アカウントを作成",
+    "subtitle": "お持ちのアカウントを使用します。新しいパスワードは不要です。",
+    "google": "Googleで続行",
+    "microsoft": "Microsoftで続行",
+    "facebook": "Facebookで続行",
+    "linkedin": "LinkedInで続行",
+    "allowEmail": "メールへのアクセスを許可してFacebookを再試行",
+    "github": "GitHubで続行",
+    "email": "メールアドレスで続行",
+    "moreOptions": "パスワードで設定",
+    "moreOptionsHint": "名前とパスワードを使いますか？",
+    "privacy": "受け取るのはお名前と確認済みのメールアドレスのみです。",
+    "haveAccount": "このコンピューターにすでにワークスペースがありますか？",
+    "logIn": "パスワードでサインイン",
+    "signInTitle": "SoftGlaze にサインイン",
+    "signInSubtitle": "登録したアカウントを使用してください。プランが別のコンピューターにある場合は、このコンピューターに移行できます。",
+    "entryLabel": "新規または既存",
+    "entryNew": "新規アカウント",
+    "entryReturning": "アカウントをお持ちの方"
+  },
+  "unlock": {
+    "title": "おかえりなさい",
+    "titleNamed": "おかえりなさい、{{name}}さん",
+    "subtitle": "このワークスペースが属するアカウントでサインインしてください。",
+    "account": "ワークスペースのアカウント：{{email}}",
+    "passwordInstead": "パスワードでサインイン",
+    "haveInvite": "招待コードを持っています",
+    "teamSignIn": "チームメンバーのサインイン"
+  },
+  "link": {
+    "title": "SoftGlazeアカウントにサインイン",
+    "subtitle": "このコンピューターと他のコンピューターでワンクリックサインインを使用できます。ワークスペースはそのままです。"
+  },
+  "email": {
+    "title": "メールアドレスで続行",
+    "subtitle": "6桁のコードをメールでお送りします。パスワードは不要です。",
+    "label": "メールアドレス",
+    "placeholder": "you@company.com",
+    "send": "コードを送信",
+    "codeTitle": "メールを確認してください",
+    "codeBody": "{{email}} に送信した6桁のコードを入力してください。",
+    "codeLabel": "6桁のコード",
+    "verify": "続行",
+    "resend": "新しいコードを送信",
+    "resendIn": "{{count}}秒後に新しいコードを送信できます",
+    "checkSpam": "1分ほどかかる場合があります。届かない場合は迷惑メールフォルダーを確認してください。",
+    "devCode": "このビルドにはメールサーバーが設定されていないため、コードをここに表示します：{{code}}",
+    "change": "別のメールアドレスを使用"
+  },
+  "waiting": {
+    "title": "ブラウザで完了してください",
+    "body": "ブラウザで{{provider}}を開きました。そちらでサインインしてから、ここに戻ってください。",
+    "status": "{{provider}}を待っています...",
+    "reopen": "ページをもう一度開く",
+    "anotherWay": "戻れませんでしたか？別の方法を試す",
+    "cancel": "キャンセル"
+  },
+  "back": "戻る",
+  "useCase": {
+    "title": "SoftGlazeを何に使いますか？",
+    "subtitle": "任意です。SoftGlazeの改善に役立てます。",
+    "continue": "続行",
+    "skip": "スキップ"
+  },
+  "move": {
+    "title": "サブスクリプション",
+    "moved": "完了しました。サブスクリプションがこのコンピューターで使えるようになりました。"
+  },
+  "account": {
+    "title": "サインイン方法",
+    "subtitle": "SoftGlazeアカウントへのサインイン方法です。新しいコンピューターでサインインすると、ライセンスもそのコンピューターに移行します。",
+    "signedInAs": "{{email}}としてサインイン中",
+    "google": "Google",
+    "microsoft": "Microsoft",
+    "facebook": "Facebook",
+    "linkedin": "LinkedIn",
+    "github": "GitHub",
+    "githubLogin": "GitHub (@{{login}})",
+    "email": "メールのコード",
+    "lastUsed": "最終使用 {{date}}",
+    "linkedOn": "連携日 {{date}}",
+    "signOut": "サインアウト",
+    "signOutConfirm": "このコンピューターでSoftGlazeアカウントからサインアウトしますか？同じアカウントでいつでも再度サインインできます。",
+    "signingOut": "サインアウト中...",
+    "offline": "オフライン：このコンピューターに保存された情報を表示しています。",
+    "notSignedIn": "SoftGlazeアカウントにサインインすると、このコンピューターと他のコンピューターでワンクリックサインインを使用できます。",
+    "signInWorkspace": "このワークスペースはサインインで開きます。インターネットなしでもサインインしたい場合は、上でパスワードを追加してください。",
+    "linked": "サインインしました。サインイン方法は下に表示されます。",
+    "loading": "サインイン方法を読み込み中...",
+    "notAvailable": "ワンクリックサインインにはSoftGlazeライセンスサーバーが必要ですが、このビルドでは使用していません。"
+  },
+  "errors": {
+    "SIGNIN_OFFLINE": "サインインするにはインターネットに接続してください。",
+    "SIGNIN_EXPIRED": "このサインインは期限切れか、すでに使用済みです。もう一度お試しください。",
+    "SIGNIN_ACCOUNT_MISMATCH": "このワークスペースは別のSoftGlazeアカウントに属しています。作成時のアカウントでサインインしてください。",
+    "SIGNIN_EMAIL_MISMATCH": "このワークスペースのメールアドレスを使用してください。",
+    "SIGNIN_EMAIL_NOT_VERIFIED": "サインインしたアカウントには確認済みのメールアドレスがありません。そちらで確認するか（GitHubの場合：Settings > Emails）、メールアドレスで続行してください。",
+    "SIGNIN_EMAIL_MISSING": "Facebookアカウントからメールアドレスが共有されませんでした。Googleまたはメールアドレスでサインインするか、メールへのアクセスを許可してください。",
+    "SIGNIN_DISPOSABLE_EMAIL": "恒久的に使えるメールアドレスを使用してください。",
+    "SIGNIN_UNAVAILABLE": "このサインイン方法はまだ利用できません。メールアドレスで続行するか、「その他のオプション」を使用してください。",
+    "SIGNIN_FAILED": "サインインが完了しませんでした。1分後にもう一度お試しください。",
+    "SIGNIN_TIMEOUT": "サインインに時間がかかりすぎました。もう一度お試しください。",
+    "SIGNIN_NOT_ALLOWED": "このワークスペースではこのサインイン方法を利用できません。",
+    "SIGNIN_KEY_LOST": "このコンピューターでは、サインインでこのワークスペースを開けませんでした。パスワードでサインインしてください。",
+    "SIGNIN_SESSION_ENDED": "サインインが終了しました。もう一度サインインしてください。",
+    "SIGNIN_BAD_INPUT": "有効なメールアドレスを入力してください。",
+    "MOVE_FAILED": "現在ライセンスを移行できません。1分後にもう一度お試しください。"
+  }
+}

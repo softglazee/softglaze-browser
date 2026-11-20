@@ -1,0 +1,293 @@
+{
+  "common": {
+    "back": "Geri",
+    "redeem": "Kullan",
+    "go": "Git"
+  },
+  "remember": {
+    "label": "Bu cihazda oturumumu açık tut",
+    "unavailable": "Bu cihaz oturum bilgisini güvenle saklayamıyor (işletim sistemi şifrelemesi yok), bu yüzden bir sonraki başlatmada yeniden giriş yapmanız istenir."
+  },
+  "brand": {
+    "footer": "© {{year}} SoftGlaze · Yerel çalışma alanı"
+  },
+  "license": {
+    "machineMismatch": "Bu lisans başka bir bilgisayara kayıtlı. Bu PC'ye taşıyın veya yöneticinizden sıfırlamasını isteyin."
+  },
+  "pay": {
+    "noMethods": "Yeni bir ödeme sağlayıcısı eklenirken uygulama içi satın alma duraklatıldı. Faturayla satın almak için support@softglaze.com adresine yazın, ardından satın alma kodunuzu girin.",
+    "submitted": "Ödeme gönderildi. Bir yönetici inceleyip planınızı kısa süre içinde etkinleştirecek.",
+    "manualBadge": "Manuel",
+    "continueTo": "{{label}} ile devam et",
+    "openPaymentLink": "Ödeme bağlantısını aç",
+    "referencePlaceholder": "Ödeme referansı / işlem kimliği",
+    "submitForApproval": "Ödedim, onaya gönder"
+  },
+  "banned": {
+    "blockedHeading": "Hesabınız engellendi",
+    "endedHeading": "Aboneliğiniz sona erdi",
+    "blockedBodyNamed": "{{name}}, hesabınız bir yönetici tarafından engellendi. Erişimi geri almak için onunla iletişime geçin. Verileriniz güvende.",
+    "blockedBody": "Hesabınız bir yönetici tarafından engellendi. Erişimi geri almak için onunla iletişime geçin. Verileriniz güvende.",
+    "endedBodyNamed": "{{name}}, bu lisans artık etkin değil (iade edildi, iptal edildi veya başka bir bilgisayara kayıtlı). Çalışma alanınızın kilidini açmak için bir plan seçin. Profilleriniz ve verileriniz güvende ve sizi bekliyor.",
+    "endedBody": "Bu lisans artık etkin değil (iade edildi, iptal edildi veya başka bir bilgisayara kayıtlı). Çalışma alanınızın kilidini açmak için bir plan seçin. Profilleriniz ve verileriniz güvende ve sizi bekliyor.",
+    "haveCode": "Satın alma kodunuz mu var?",
+    "needHelp": "Yardım mı gerekiyor? Yöneticinizle iletişime geçin.",
+    "signOut": "Çıkış yap"
+  },
+  "register": {
+    "title": "Hesabınızı oluşturun",
+    "subtitle": "Bu, çalışma alanının sahibi olan ana hesabınızdır.",
+    "firstName": "Ad",
+    "lastName": "Soyad",
+    "email": "E-posta",
+    "emailPlaceholder": "siz@sirket.com",
+    "phone": "Telefon numarası",
+    "phonePlaceholder": "+90 532 123 45 67",
+    "password": "Parola",
+    "passwordPlaceholder": "8+ karakter",
+    "confirm": "Onayla",
+    "confirmPlaceholder": "Tekrar",
+    "continue": "Devam",
+    "storedLocally": "Bu cihazda yerel olarak ve şifreli saklanır",
+    "haveAccount": "Zaten hesabınız var mı?",
+    "logIn": "Giriş yap",
+    "consent": "Bana ürün haberleri ve ipuçları e-postala",
+    "consentNote": "Kodunuz, deneme hatırlatmaları ve hesap e-postaları her zaman gönderilir. Ürün haberleri yalnızca kutuyu işaretlerseniz.",
+    "checkedByServer": "Bu adresi doğrulamak için size bir kod e-postalarız. Profilleriniz ve verileriniz bu cihazda kalır.",
+    "phoneOptional": "Telefon numarası (isteğe bağlı)",
+    "phoneIntlPlaceholder": "+90 212 123 45 67",
+    "phoneHint": "+ ve ülke kodunuzla başlayın."
+  },
+  "verify": {
+    "title": "E-postanızı doğrulayın",
+    "subtitlePrefix": "Şu adrese gönderilen 6 haneli kodu girin:",
+    "subtitleSuffix": ".",
+    "devModePrefix": "Geliştirici modu: henüz gerçekten e-posta gönderilmiyor. Kodunuz:",
+    "devModeSuffix": ".",
+    "verifyCreate": "Doğrula ve hesap oluştur",
+    "resendIn": "{{count}} sn sonra kodu tekrar gönder",
+    "resend": "Kodu tekrar gönder",
+    "checkSpam": "Kodun gelmesi bir dakika sürebilir. Göremiyorsanız istenmeyen e-posta klasörünüzü kontrol edin."
+  },
+  "lead": {
+    "useCase": "SoftGlaze'i ne için kullanacaksınız?",
+    "useCasePlaceholder": "Birini seçin",
+    "useCases": {
+      "ecommerce": "E-ticaret mağazaları ve pazar yerleri",
+      "social_media": "Sosyal medya hesapları",
+      "affiliate_marketing": "Ortaklık pazarlaması ve medya satın alma",
+      "agency": "Müşteriler için ajans işleri",
+      "web_research": "Web araştırması ve QA",
+      "other": "Başka bir şey"
+    },
+    "useCaseOther": "Birkaç kelimeyle anlatın",
+    "useCaseOtherPlaceholder": "Örneğin: ülkeye göre fiyat kontrolü",
+    "company": "Şirket veya web sitesi (isteğe bağlı)",
+    "companyPlaceholder": "Acme Ltd veya acme.com"
+  },
+  "confirm": {
+    "title": "E-postanızı onaylayın",
+    "subtitle": "Her SoftGlaze çalışma alanı artık onaylanmış bir e-posta gerektiriyor. Bilgilerinizi kontrol edin, size 6 haneli bir kod e-postalayalım.",
+    "sendCode": "Kodu gönder",
+    "codeTitle": "Kodu girin",
+    "codeBody": "{{email}} adresine 6 haneli bir kod gönderdik. Bu çalışma alanının e-postasını onaylamak için girin.",
+    "confirmContinue": "Onayla ve devam et",
+    "changeDetails": "Bilgileri değiştir",
+    "dataNote": "Profilleriniz ve verileriniz bu bilgisayarda kalır. Hesabınızla ilgilenmek için bu bilgileri saklarız.",
+    "later": "Şimdilik devam et",
+    "laterNote": "Sunucumuza ulaşamadık. Uygulamayı şimdi kullanabilirsiniz; bir sonraki başlatmada tekrar soracağız.",
+    "memberTitle": "Bu çalışma alanını sahibin onaylaması gerekiyor",
+    "memberBody": "Bu çalışma alanı kullanılmadan önce sahibinin e-postasını onaylaması gerekir. Sahipten giriş yapıp bunu yapmasını isteyin veya sahip olarak giriş yapın.",
+    "signInAsOwner": "Sahip olarak giriş yap"
+  },
+  "plan": {
+    "title": "Her şey hazır",
+    "subtitlePrefix": "Hesabınız şu ayrıcalıkla hazır:",
+    "trialHighlight": "7 günlük ücretsiz deneme",
+    "subtitleSuffix": ". Şimdi başlayın veya ücretli bir plan etkinleştirin.",
+    "startTrialTitle": "7 günlük ücretsiz denemeyi başlat",
+    "startTrialSubtitle": "Şimdi ödeme yok. Tüm özellikler açık.",
+    "activatePaid": "Şimdi ücretli plan etkinleştir",
+    "haveCode": "Satın alma kodunuz mu var?",
+    "skip": "Atla ve denemeyi başlat",
+    "tenantTitle": "Hesabınız hazır",
+    "tenantSubtitle": "Ücretsiz denemenizi başlatın veya bir plan seçin.",
+    "tenantTrialSubtitle": "Tam erişim, ödeme yok. Bilgisayar ve e-posta başına bir ücretsiz deneme.",
+    "choosePlan": "Veya bir plan seçin",
+    "verifyTitle": "E-postanızı onaylayın",
+    "verifyBody": "{{email}} adresine 6 haneli bir kod gönderdik. Ücretsiz denemeyi başlatmak için girin.",
+    "verifyStart": "Onayla ve denemeyi başlat",
+    "continueFreeTitle": "Free ile devam et",
+    "continueFreeSubtitle": "Sonsuza kadar ücretsiz: 25 profil, aynı anda 1 çalışan. İstediğiniz zaman yükseltin.",
+    "trialUsedFree": "Ücretsiz deneme bu bilgisayarda veya e-postada zaten kullanıldı. Free planla devam edebilirsiniz."
+  },
+  "login": {
+    "welcomeBackNamed": "Tekrar hoş geldiniz, {{name}}",
+    "welcomeBack": "Tekrar hoş geldiniz",
+    "subtitle": "Çalışma alanınızın kilidini açmak için giriş yapın.",
+    "email": "E-posta",
+    "password": "Parola",
+    "forgot": "Unuttunuz mu?",
+    "passwordPlaceholder": "Ana parola",
+    "forgotBody": "Ana parolanız bu cihazdan asla çıkmadığı için yerel kurulumda kurtarılamaz. Kaybolursa çalışma alanının Ayarlar'dan sıfırlanması gerekir.",
+    "signIn": "Giriş yap",
+    "noAccount": "Hesabınız yok mu?",
+    "newHere": "SoftGlaze'de yeni misiniz?",
+    "createOne": "Hesabınızı oluşturun",
+    "haveInvite": "Davet kodunuz mu var?",
+    "teamSignIn": "Ekip üyesi girişi"
+  },
+  "invite": {
+    "title": "Davetinizi kullanın",
+    "subtitle": "Size verilen kodu girin ve hesabınız için bir parola belirleyin.",
+    "code": "Davet kodu",
+    "codePlaceholder": "SG-XXXX-XXXX",
+    "yourName": "Adınız",
+    "optional": "(isteğe bağlı)",
+    "namePlaceholder": "Ad soyad",
+    "setPassword": "Parola belirleyin",
+    "passwordPlaceholder": "6+ karakter",
+    "join": "Çalışma alanına katıl"
+  },
+  "member": {
+    "title": "Ekip üyesi girişi",
+    "subtitle": "Davetinizi kullanırken belirlediğiniz e-posta/ad ve parolayı kullanın.",
+    "identifier": "E-posta veya ad",
+    "identifierPlaceholder": "siz@sirket.com",
+    "password": "Parola",
+    "passwordPlaceholder": "Parolanız",
+    "signIn": "Giriş yap",
+    "haveInviteInstead": "Bunun yerine davet kodunuz mu var?",
+    "redeemIt": "Kullanın"
+  },
+  "super": {
+    "title": "Süper Yönetici",
+    "access": "Süper Yönetici erişimi",
+    "setupSubtitlePrefix": "İlk kurulum. Süper Yönetici kimlik bilgisini şunun için oluşturun:",
+    "setupSubtitleHighlight": "bu kurulum",
+    "setupSubtitleSuffix": "(bu cihazda karma olarak saklanır ve tek giriş yoludur, bu yüzden güvende tutun).",
+    "username": "Kullanıcı adı",
+    "usernamePlaceholder": "superadmin",
+    "password": "Parola",
+    "setupPasswordPlaceholder": "En az 8 karakter",
+    "confirmPassword": "Parolayı onaylayın",
+    "confirmPasswordPlaceholder": "Parolayı tekrar girin",
+    "createCredentials": "Kimlik bilgilerini oluştur",
+    "loginSubtitle": "Kaynak sahibi erişimi. Kaydı atlar ve tüm çalışma alanının kilidini açar.",
+    "usernameOrEmail": "Kullanıcı adı veya e-posta",
+    "loginPasswordPlaceholder": "Parola",
+    "enterWorkspace": "Çalışma alanına gir"
+  },
+  "pick": {
+    "title": "Kim çalışıyor?",
+    "subtitle": "Devam etmek için üye profilinizi seçin.",
+    "pin": "PIN",
+    "suspended": "Askıya alındı",
+    "pinPlaceholder": "PIN girin",
+    "haveInvite": "Davet kodunuz mu var?",
+    "teamSignIn": "Ekip üyesi girişi"
+  },
+  "db": {
+    "title": "Veritabanınızın kilidini açın",
+    "subtitle": "Bu çalışma alanının veritabanı şifreli. Çözüp açmak için çalışma alanı parolanızı girin.",
+    "workspacePassword": "Çalışma alanı parolası",
+    "passwordPlaceholder": "Çalışma alanı parolası",
+    "unlock": "Kilidi aç",
+    "corrupted": "Parolanın doğru olduğundan eminseniz veritabanı dosyası hasar görmüş olabilir. Uygulamayı yeniden kurup bir çalışma alanı yedeğini geri yükleyerek kurtarabilirsiniz (Ayarlar → Çalışma Alanı Yedekleme ve Geri Yükleme). Parola sıfırlama yoktur. Veriler yalnızca doğru parolayla açılabilir."
+  },
+  "errors": {
+    "enterFirstLast": "Adınızı ve soyadınızı girin.",
+    "validEmail": "Geçerli bir e-posta adresi girin.",
+    "validPhone": "Geçerli bir telefon numarası girin.",
+    "password8": "Parola en az 8 karakter olmalıdır.",
+    "passwordsNoMatch": "Parolalar eşleşmiyor.",
+    "couldNotSendCode": "Doğrulama kodu gönderilemedi.",
+    "couldNotResendCode": "Kod tekrar gönderilemedi.",
+    "enter6Digit": "6 haneli kodu girin.",
+    "verificationFailed": "Doğrulama başarısız oldu.",
+    "incorrectPassword": "Yanlış parola.",
+    "couldNotSignIn": "Giriş yapılamadı.",
+    "superSetupRequired": "Henüz Süper Yönetici kimlik bilgisi yok. Aşağıdan oluşturun.",
+    "invalidSuperCredentials": "Geçersiz Süper Yönetici kimlik bilgileri.",
+    "couldNotCreateSuper": "Süper Yönetici kimlik bilgileri oluşturulamadı.",
+    "enterInviteCode": "Davet kodunuzu girin.",
+    "password6": "Parola en az 6 karakter olmalıdır.",
+    "couldNotRedeemInvite": "Bu davet kodu kullanılamadı.",
+    "enterEmailNamePassword": "E-posta/adınızı ve parolanızı girin.",
+    "enterPurchaseCode": "Satın alma kodunuzu girin.",
+    "invalidPurchaseCode": "Bu satın alma kodu geçerli değil.",
+    "noPaymentMethod": "Henüz kullanılabilir ödeme yöntemi yok.",
+    "paymentNotStarted": "Ödeme başlatılamadı.",
+    "couldNotSubmitPayment": "Ödemeniz gönderilemedi.",
+    "enterWorkspacePassword": "Çalışma alanı parolanızı girin.",
+    "dbStillLocked": "Veritabanı hâlâ kilitli. Lütfen tekrar deneyin.",
+    "dbMissing": "Şifreli veritabanı dosyası eksik. Kurtarmak için bir çalışma alanı yedeğini geri yükleyin.",
+    "dbUnlockFailed": "Yanlış parola veya dosya bozuk.",
+    "couldNotUnlockDb": "Veritabanının kilidi açılamadı.",
+    "trialFailed": "Ücretsiz deneme başlatılamadı."
+  },
+  "serverErrors": {
+    "SIGNUP_INVALID_EMAIL": "Geçerli bir e-posta adresi girin.",
+    "SIGNUP_DISPOSABLE_EMAIL": "Lütfen kalıcı bir e-posta adresi kullanın.",
+    "SIGNUP_NO_MX": "Bu adres için bir e-posta sunucusu bulamadık.",
+    "SIGNUP_BAD_CODE": "Bu kod doğru değil veya süresi doldu. E-postayı kontrol edin veya yeni bir kod isteyin.",
+    "SIGNUP_OFFLINE": "Hesabınızı oluşturmak için internete bağlanın.",
+    "SIGNUP_FAILED": "Bu e-postayı şu anda kontrol edemedik. Birkaç dakika sonra tekrar deneyin.",
+    "RATE_LIMITED": "Çok fazla deneme, birkaç dakika sonra tekrar deneyin.",
+    "TRIAL_USED": "Bu bilgisayarda veya e-postada ücretsiz deneme zaten kullanıldı. Bir plan seçin veya satın alma kodu girin.",
+    "TRIAL_OFFLINE": "Ücretsiz denemeyi başlatmak için internete bağlanın.",
+    "TRIAL_VERIFY_EMAIL": "Ücretsiz denemeyi başlatmak için e-posta adresinizi onaylayın. Size 6 haneli bir kod gönderdik.",
+    "TRIAL_NO_EMAIL": "Önce sahip hesabına bir e-posta adresi ekleyin, ardından ücretsiz denemeyi başlatın.",
+    "TRIAL_FAILED": "Ücretsiz deneme şu anda başlatılamadı. Birkaç dakika sonra tekrar deneyin.",
+    "SERVER_UNAVAILABLE": "Lisans sunucumuz şu anda yanıt vermiyor. Birkaç dakika sonra tekrar deneyin.",
+    "MACHINE_MISMATCH": "Bu lisans başka bir bilgisayara kayıtlı. Bu PC'ye taşıyın veya yöneticinizden sıfırlamasını isteyin.",
+    "SIGNUP_INVALID_PHONE": "Telefon numarasını + ve ülke koduyla girin veya boş bırakın.",
+    "SIGNUP_USE_CASE": "SoftGlaze'i ne için kullanacağınızı seçin.",
+    "SIGNUP_USE_CASE_OTHER": "SoftGlaze'i ne için kullanacağınızı birkaç kelimeyle anlatın.",
+    "CONFIRM_OFFLINE": "E-postanızı onaylamak için internete bağlanın."
+  },
+  "panel": {
+    "label": "SoftGlaze ürün turu",
+    "carousel": "döngü",
+    "slide": "slayt",
+    "slideOf": "{{n}} / {{total}}",
+    "prev": "Önceki slayt",
+    "next": "Sonraki slayt",
+    "pause": "Slaytları duraklat",
+    "play": "Slaytları oynat",
+    "goTo": "{{n}}. slaytı göster: {{title}}",
+    "trust": "Profiller, çerezler ve oturum bilgileri bu bilgisayarda kalır.",
+    "slides": {
+      "free": {
+        "title": "25 tarayıcı profiliyle ücretsiz başlayın",
+        "body": "Kart yok, süre sınırı yok. Her yeni hesap ayrıca Pro'yu 7 gün ücretsiz deneyebilir.",
+        "alt": "On profil, proxy'leri ve son kullanım zamanlarıyla Profiller sayfası"
+      },
+      "fingerprint": {
+        "title": "Her profilin kendi parmak izi",
+        "body": "Canvas, WebGL, yazı tipleri, ses ve saat dilimi profil başına ayarlanır ve her başlatmada aynı kalır. Her birine kendi HTTP, HTTPS veya SOCKS5 proxy'nizi verin.",
+        "alt": "Bir profilin Parmak izi sekmesi ve yanında ortam özeti"
+      },
+      "ai": {
+        "title": "Yapay zekâ ajanları çalışır, siz onaylarsınız",
+        "body": "Claude, ChatGPT, Cursor ve diğer MCP uygulamaları profillerinizde görevleri yürütür. Hangi işlemlerin onayınızı gerektirdiğine siz karar verirsiniz ve her adım kaydedilir.",
+        "alt": "Claude Desktop'tan bir giriş formunu doldurmak için gelen onay isteği"
+      },
+      "phone": {
+        "title": "İstekleri telefonunuzdan onaylayın",
+        "body": "SoftGlaze telefon uygulaması ve web uygulaması her isteği ayrıntılarıyla gösterir. Bir kez veya bir saatliğine izin verin ya da reddedin. Tüm planlara dahildir.",
+        "alt": "Telefonda yanıt bekleyen bir isteğin bulunduğu Onaylar ekranı"
+      },
+      "team": {
+        "title": "Net rollerle ekip olarak çalışın",
+        "body": "Sahip, Yönetici, Müdür ve Operatör rolleri her profili kimin görüp açabileceğini belirler. Pro 3 kullanıcı, Enterprise 25 kullanıcı içerir.",
+        "alt": "Beş ekip üyesi ve rolleriyle Üyeler sayfası"
+      }
+    }
+  },
+  "controls": {
+    "language": "Dil: {{lang}}",
+    "toLight": "Açık temaya geç",
+    "toDark": "Koyu temaya geç"
+  }
+}

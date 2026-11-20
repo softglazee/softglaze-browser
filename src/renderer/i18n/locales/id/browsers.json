@@ -1,0 +1,70 @@
+{
+  "header": {
+    "eyebrow": "Mesin",
+    "title": "Browser",
+    "subtitle": "Unduh build Chrome & Firefox asli saat dibutuhkan: terpasang otomatis dan siap dibuka.",
+    "refresh": "Muat ulang"
+  },
+  "stats": {
+    "chromeInstalled": "Chrome terpasang",
+    "chromeAvailable": "Chrome tersedia",
+    "firefoxInstalled": "Firefox terpasang",
+    "firefoxAvailable": "Firefox tersedia"
+  },
+  "counts": {
+    "installedAvailable": "· {{installed}} terpasang · {{available}} tersedia"
+  },
+  "engine": {
+    "heading": "Mesin fingerprint",
+    "installed": "Terpasang",
+    "notInstalled": "Belum terpasang",
+    "description": "fingerprint-chromium mengatur canvas, WebGL, UA, platform, dan zona waktu secara native, menyembunyikan webdriver, dan memblokir kebocoran WebRTC. Aktifkan di Pengaturan → Browser.",
+    "progressInstalling": "memasang",
+    "progressVerifying": "memverifikasi",
+    "installing": "Memasang",
+    "verifying": "Memverifikasi",
+    "downloading": "Mengunduh",
+    "download": "Unduh (~180 MB)"
+  },
+  "firefox": {
+    "heading": "Firefox",
+    "ready": "Siap",
+    "notDetected": "Tidak ditemukan",
+    "detectedDesc": "Siap. Ditemukan di {{path}}. Profil Firefox membuka Firefox asli dengan proxy, UA, bahasa, zona waktu, dan WebRTC mati.",
+    "notDetectedDesc": "Firefox sistem tidak ditemukan. Unduh versi di bawah: versi itu dipasang di dalam aplikasi, dan profil Firefox akan membuka Firefox asli dengan proxy, UA, bahasa, zona waktu, dan WebRTC mati.",
+    "fetching": "Mengambil katalog rilis Firefox…",
+    "empty": "Tidak ada versi Firefox tersedia (apakah Anda offline?)."
+  },
+  "chromium": {
+    "heading": "Chromium (Chrome for Testing)",
+    "subtitle": "Build asli: UA, Client-Hints, TLS, dan worker benar-benar sesuai versinya.",
+    "fetching": "Mengambil katalog Chrome for Testing…",
+    "empty": "Tidak ada versi tersedia (apakah Anda offline?)."
+  },
+  "row": {
+    "versionLabel": "{{brand}} {{major}}",
+    "ready": "Siap",
+    "paused": "Dijeda",
+    "interrupted": "Terputus",
+    "resume": "Lanjutkan",
+    "download": "Unduh",
+    "retry": "Coba lagi",
+    "downloading": "Mengunduh",
+    "installing": "Memasang…",
+    "installingShort": "Memasang",
+    "queued": "Dalam antrean…",
+    "pauseDownload": "Jeda unduhan",
+    "pausedPercent": "Dijeda · {{percent}}%",
+    "interruptedPercent": "Terputus · {{percent}}%"
+  },
+  "errors": {
+    "catalogUnreachable": "Tidak bisa menjangkau katalog browser. Periksa koneksi internet Anda.",
+    "downloadFailed": "Unduhan gagal.",
+    "pauseFailed": "Gagal menjeda.",
+    "resumeFailed": "Gagal melanjutkan."
+  },
+  "browsers": {
+    "showAll": "Tampilkan semua {{n}} versi",
+    "showLess": "Tampilkan lebih sedikit"
+  }
+}

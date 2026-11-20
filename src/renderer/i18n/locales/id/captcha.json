@@ -1,0 +1,185 @@
+{
+  "badgeTitle": "Risiko CAPTCHA {{score}}/100. Klik untuk melihat alasan dan perbaikannya.",
+  "title": "Skor CAPTCHA",
+  "subtitle": "Seberapa besar kemungkinan situs menantang profil ini, dan apa yang menurunkannya",
+  "outOf100": "dari 100",
+  "level": {
+    "low": "Risiko rendah",
+    "some": "Risiko sedang",
+    "high": "Risiko tinggi",
+    "veryHigh": "Risiko sangat tinggi"
+  },
+  "levelShort": {
+    "low": "Rendah",
+    "some": "Sedang",
+    "high": "Tinggi",
+    "veryHigh": "Sangat tinggi"
+  },
+  "column": "Risiko CAPTCHA",
+  "issues_zero": "Tidak ada masalah",
+  "issues_other": "{{count}} masalah",
+  "fixable_other": "Perbaiki semua menangani {{count}}",
+  "leakTest": "Tes kebocoran",
+  "leakTestTitle": "Buka cek kebocoran lengkap, termasuk tes langsung pada profil yang berjalan",
+  "loadFailed": "Tidak bisa memberi skor profil ini.",
+  "fixAll": "Perbaiki semua",
+  "fixAllTitle": "Terapkan setiap perbaikan yang hanya mengubah pengaturan atau proxy profil ini",
+  "rescore": "Hitung ulang",
+  "done": "Selesai",
+  "runningNote": "Profil ini sedang terbuka. Perubahan berlaku saat dibuka berikutnya.",
+  "adviceOnly": "Ubah ini di editor profil; perbaikan di sini akan mengubah perangkat yang sudah dikenal situs.",
+  "status": {
+    "pass": "OK",
+    "warn": "Risiko",
+    "fail": "Risiko tinggi"
+  },
+  "fix": {
+    "assign-proxy": "Beri proxy cadangan",
+    "swap-proxy": "Ganti ke proxy cadangan",
+    "check-proxy": "Cek proxy sekarang",
+    "tz-auto": "Pakai zona waktu proxy",
+    "lang-auto": "Pakai bahasa proxy",
+    "geo-auto": "Pakai lokasi proxy",
+    "webrtc-safe": "Atur WebRTC ke Teruskan",
+    "allow-3p-cookies": "Izinkan cookie pihak ketiga",
+    "warm-up": "Panaskan profil"
+  },
+  "result": {
+    "swapped": "Sekarang memakai {{name}}.",
+    "checked": "Proxy sudah dicek.",
+    "checkFailed": "Proxy tidak lolos: {{error}}",
+    "warming": "Pemanasan dimulai: profil terbuka dan menjelajahi beberapa situs populer. Pantau di halaman Otomatisasi.",
+    "cookies": "Cookie pihak ketiga sekarang diizinkan untuk semua profil.",
+    "applied": "Selesai."
+  },
+  "label": {
+    "proxy": "Proxy",
+    "proxyHealth": "Kesehatan proxy",
+    "blocklist": "Daftar blokir spam",
+    "freeProxy": "Proxy gratis",
+    "ipType": "Jenis IP",
+    "sharedProxy": "Proxy bersama",
+    "timezone": "Zona waktu",
+    "language": "Bahasa",
+    "geolocation": "Lokasi",
+    "webrtc": "WebRTC",
+    "thirdPartyCookies": "Cookie pihak ketiga",
+    "history": "Riwayat jelajah",
+    "device": "Perangkat",
+    "osMismatch": "Sistem operasi"
+  },
+  "factor": {
+    "proxy": {
+      "pass": "Memakai {{name}}.",
+      "warn": "Tanpa proxy: profil ini memakai koneksi Anda sendiri, yang dipakai bersama semua profil tanpa proxy."
+    },
+    "proxyHealth": {
+      "pass": "Lolos cek terakhir.",
+      "fail": "Gagal di cek terakhir, jadi halaman timeout atau menampilkan kesalahan.",
+      "never": "Belum pernah dicek, jadi kesehatan dan status daftar blokirnya belum diketahui.",
+      "stale": "Terakhir dicek {{days}} hari lalu."
+    },
+    "blocklist": {
+      "pass": "Tidak ada di daftar blokir spam yang dicek.",
+      "warn": "Belum dicek terhadap daftar blokir spam.",
+      "fail": "IP keluar ada di daftar blokir spam. Google dan Cloudflare jauh lebih sering menantang IP yang terdaftar."
+    },
+    "freeProxy": {
+      "fail": "Proxy publik gratis. Sebagian besar sudah ditandai, jadi CAPTCHA akan sering muncul."
+    },
+    "ipType": {
+      "pass": "Jaringan rumah atau seluler{{isp}}.",
+      "warn": "IP datacenter{{isp}}. Situs jauh lebih sering menantang IP perusahaan hosting daripada IP rumahan."
+    },
+    "sharedProxy": {
+      "msg_other": "{{count}} profil lain memakai proxy ini, jadi mereka berbagi satu IP dan bisa dikaitkan."
+    },
+    "timezone": {
+      "pass": "Mengikuti IP proxy.",
+      "warn": "Diatur manual ({{zone}}), jadi mungkin tidak cocok dengan proxy.",
+      "fail": "Memakai zona waktu komputer ini, yang tidak cocok dengan negara proxy."
+    },
+    "language": {
+      "pass": "Cocok dengan negara proxy.",
+      "warn": "Wilayah bahasa {{region}} tidak cocok dengan negara proxy {{country}}.",
+      "unverified": "Diatur manual ({{lang}}); negara proxy belum diketahui, jadi belum bisa dibandingkan."
+    },
+    "geolocation": {
+      "pass": "Mengikuti IP proxy, atau diblokir.",
+      "warn": "Diatur manual, jadi mungkin tidak cocok dengan proxy."
+    },
+    "webrtc": {
+      "pass": "Mode {{mode}} menyembunyikan IP asli Anda.",
+      "realNoProxy": "Asli tanpa proxy: situs sudah melihat IP komputer ini, jadi WebRTC tidak menampilkan hal baru.",
+      "firefoxOff": "WebRTC mati di profil Firefox, hal yang jarang dilakukan browser asli. Tidak ada pengaturan yang mengubah ini.",
+      "warn": "WebRTC dinonaktifkan, hal yang jarang dilakukan browser asli.",
+      "fail": "Diatur ke Asli, yang menampilkan IP asli Anda di balik proxy."
+    },
+    "thirdPartyCookies": {
+      "pass": "Diizinkan, seperti di Chrome biasa.",
+      "warn": "Diblokir untuk semua profil di Pengaturan. reCAPTCHA dan hCaptcha bergantung padanya."
+    },
+    "history": {
+      "pass": "Punya riwayat jelajah dan cookie.",
+      "warn": "Hampir belum ada cookie atau riwayat. Situs lebih percaya profil yang sudah dipakai.",
+      "warmed_other": "Sudah dipanaskan {{count}} kali, jadi punya riwayat jelajah dan cookie asli."
+    },
+    "device": {
+      "warn": "Kartu grafis (WebGL) mungkin tidak cocok dengan perangkat atau sistem ini.",
+      "fail": "Kartu grafis (WebGL) tidak cocok dengan perangkat atau sistem ini."
+    },
+    "osMismatch": {
+      "warn": "Mengaku {{claimed}} tetapi berjalan di {{host}}; font dan detail lain bisa menunjukkan sistem aslinya."
+    }
+  },
+  "prelaunch": {
+    "title_other": "Cek {{count}} profil sebelum dibuka",
+    "subtitle": "Situs bisa melihat ketidakcocokan ini begitu profil dibuka.",
+    "issue": {
+      "uaOs": "User agent menyebut {{ua}}, tetapi profil diatur ke {{os}}.",
+      "gpuOs": "Kartu grafis (WebGL) tidak cocok dengan {{os}}.",
+      "screen": {
+        "mobile": "Ponsel dengan layar {{width}}x{{height}}; layar ponsel sempit dan tegak.",
+        "desktop": "Komputer dengan layar {{width}}x{{height}}; layar komputer minimal 1024x600."
+      },
+      "language": "Wilayah bahasa {{region}} tidak cocok dengan negara proxy {{country}}.",
+      "timezone": "Zona waktu berasal dari komputer ini, bukan dari proxy.",
+      "webrtc": "WebRTC diatur ke Asli, yang menampilkan IP asli Anda di balik proxy.",
+      "proxyDead": "Proxy gagal di cek terakhir.",
+      "socks4Dns": "Memakai proxy SOCKS4 {{proxy}}. Chromium tidak bisa mengirim kueri DNS lewat SOCKS4, jadi setiap situs akan dicari di luar proxy (kebocoran DNS), dan profil tidak akan terbuka. Buka di Firefox, atau beri proxy SOCKS5 atau HTTP."
+    },
+    "os": {
+      "windows": "Windows",
+      "mac": "macOS",
+      "linux": "Linux",
+      "android": "Android",
+      "ios": "iOS"
+    },
+    "editorOnly": "(ubah di editor profil)",
+    "blocking": "(profil ini tidak akan terbuka sampai Anda mengubahnya di editor profil)",
+    "stopAsking": "Jangan cek lagi sebelum membuka (aktifkan lagi di Pengaturan)",
+    "cancel": "Batal",
+    "launchAnyway": "Tetap buka",
+    "fixAndLaunch": "Perbaiki & buka"
+  },
+  "bulk": {
+    "fix": "Perbaiki masalah CAPTCHA",
+    "fixTitle": "Terapkan perbaikan CAPTCHA yang aman ke profil terpilih: zona waktu, bahasa, lokasi, WebRTC, dan proxy cadangan jika menurunkan risiko",
+    "confirm_other": "Perbaiki masalah CAPTCHA pada {{count}} profil? Hanya pengaturan dan proxy yang menurunkan risiko yang diubah.",
+    "done": "{{changed}} dari {{total}} profil diperbaiki; {{swapped}} dipindahkan ke proxy cadangan.",
+    "noBetter": "{{count}} tidak mendapat proxy yang lebih baik."
+  },
+  "filter": {
+    "any": "Semua risiko CAPTCHA",
+    "low": "Risiko rendah",
+    "some": "Ada risiko",
+    "high": "Risiko tinggi",
+    "veryHigh": "Risiko sangat tinggi",
+    "fixable": "Bisa diperbaiki sekali klik"
+  },
+  "sort": {
+    "default": "Urutan bawaan",
+    "riskDesc": "Paling berisiko dulu",
+    "riskAsc": "Paling aman dulu"
+  }
+}

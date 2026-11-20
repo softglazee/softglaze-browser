@@ -170,7 +170,7 @@ export default function CookieManagerModal({ profileId, profileName, onClose, de
           {tab === 'export' ? (
             <>
               <GuardedButton deny={denyExport} wrapperClassName="flex w-full" size="md" variant="primary" disabled={busy} onClick={handleExport} className="w-full">
-                {busy ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Download className="w-4 h-4 mr-2" />}
+                {busy ? <Loader2 className="w-4 h-4 me-2 animate-spin" /> : <Download className="w-4 h-4 me-2" />}
                 {t('cookieManager.exportButton')}
               </GuardedButton>
               {exportContent && (
@@ -183,11 +183,11 @@ export default function CookieManagerModal({ profileId, profileName, onClose, de
                   />
                   <div className="flex gap-3">
                     <Button size="sm" variant="secondary" onClick={handleCopy} className="flex-1">
-                      {copied ? <Check className="w-4 h-4 mr-2 text-emerald-400" /> : <Copy className="w-4 h-4 mr-2" />}
+                      {copied ? <Check className="w-4 h-4 me-2 text-emerald-400" /> : <Copy className="w-4 h-4 me-2" />}
                       {copied ? t('cookieManager.copied') : t('cookieManager.copyClipboard')}
                     </Button>
                     <Button size="sm" variant="secondary" onClick={handleDownload} className="flex-1">
-                      <Download className="w-4 h-4 mr-2" /> {t('cookieManager.download', { ext: format === 'netscape' ? 'txt' : 'json' })}
+                      <Download className="w-4 h-4 me-2" /> {t('cookieManager.download', { ext: format === 'netscape' ? 'txt' : 'json' })}
                     </Button>
                   </div>
                 </div>
@@ -204,15 +204,15 @@ export default function CookieManagerModal({ profileId, profileName, onClose, de
               <div className="flex gap-3">
                 <input ref={fileRef} type="file" accept=".json,.txt" onChange={handleFile} className="hidden" />
                 <Button size="sm" variant="secondary" onClick={() => fileRef.current && fileRef.current.click()} className="flex-1">
-                  <Upload className="w-4 h-4 mr-2" /> {t('cookieManager.loadFile')}
+                  <Upload className="w-4 h-4 me-2" /> {t('cookieManager.loadFile')}
                 </Button>
                 <GuardedButton deny={denyImport} wrapperClassName="flex flex-1" size="sm" variant="primary" disabled={busy || bulkBusy} onClick={handleImport} className="flex-1">
-                  {busy ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : null}
+                  {busy ? <Loader2 className="w-4 h-4 me-2 animate-spin" /> : null}
                   {t('cookieManager.importToProfile')}
                 </GuardedButton>
               </div>
               <GuardedButton deny={denyBulk} wrapperClassName="flex w-full" size="sm" variant="secondary" disabled={busy || bulkBusy} onClick={handleBulkImport} className="w-full">
-                {bulkBusy ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Layers className="w-4 h-4 mr-2" />}
+                {bulkBusy ? <Loader2 className="w-4 h-4 me-2 animate-spin" /> : <Layers className="w-4 h-4 me-2" />}
                 {t('cookieManager.importToAll')}
               </GuardedButton>
 

@@ -1,0 +1,362 @@
+{
+  "common": {
+    "cancel": "إلغاء",
+    "save": "حفظ",
+    "edit": "تعديل",
+    "delete": "حذف"
+  },
+  "header": {
+    "title": "الفوترة والخطط",
+    "description": "أدر اشتراكك، وقارن بين الخطط، وقم بالترقية، كل ذلك في مكان واحد."
+  },
+  "status": {
+    "loading": "جارٍ التحميل…",
+    "sourceOwner": "مالك المصدر",
+    "active": "نشط",
+    "activeRenews": "نشط · يتجدد في {{date}}",
+    "trial": "تجربة",
+    "trialDaysLeft": "تجربة · متبقٍ {{days}} يوم",
+    "graceDaysLeft": "مهلة · متبقٍ {{days}} يوم",
+    "subscriptionEnded": "انتهى الاشتراك",
+    "free": "الخطة المجانية"
+  },
+  "backend": {
+    "licensedVerified": "مرخّص وتم التحقق",
+    "renews": "يتجدد في {{date}}",
+    "noLicense": "الترخيص يعمل، لكن لا يوجد ترخيص مدفوع لهذا التثبيت بعد.",
+    "trialVerified": "تجربة مجانية، تم التحقق منها",
+    "trialEnds": "تنتهي في {{date}}"
+  },
+  "current": {
+    "title": "الخطة الحالية",
+    "sourceOwnerAllFeatures": "مالك المصدر · جميع الميزات",
+    "paid": "مدفوعة",
+    "freeTrial": "تجربة مجانية",
+    "freeForever": "الخطة المجانية · مجانية دائمًا"
+  },
+  "grace": {
+    "message_zero": "انتهت مدة {{kind}} ولم يبقَ أي يوم من المهلة. جدّد أدناه حتى لا تفقد الوصول.",
+    "message_one": "انتهت مدة {{kind}} وبقي يوم واحد من المهلة. جدّد أدناه حتى لا تفقد الوصول.",
+    "message_two": "انتهت مدة {{kind}} وبقي يومان من المهلة. جدّد أدناه حتى لا تفقد الوصول.",
+    "message_few": "انتهت مدة {{kind}} وبقيت {{count}} أيام من المهلة. جدّد أدناه حتى لا تفقد الوصول.",
+    "message_many": "انتهت مدة {{kind}} وبقي {{count}} يومًا من المهلة. جدّد أدناه حتى لا تفقد الوصول.",
+    "message_other": "انتهت مدة {{kind}} وبقي {{count}} يوم من المهلة. جدّد أدناه حتى لا تفقد الوصول.",
+    "kindTrial": "التجربة المجانية",
+    "kindSubscription": "الاشتراك"
+  },
+  "banned": {
+    "message": "انتهى اشتراكك وأصبح تشغيل الملفات مقفلًا. اشترك أو أدخل رمز شراء لاستعادة الوصول."
+  },
+  "trialRemaining": {
+    "message_zero": "تجربة مجانية، لم يبقَ أي يوم.",
+    "message_one": "تجربة مجانية، بقي يوم واحد.",
+    "message_two": "تجربة مجانية، بقي يومان.",
+    "message_few": "تجربة مجانية، بقيت {{count}} أيام.",
+    "message_many": "تجربة مجانية، بقي {{count}} يومًا.",
+    "message_other": "تجربة مجانية، بقي {{count}} يوم."
+  },
+  "seats": {
+    "label": "مقاعد الفريق",
+    "usage": "{{used}} / {{total}} مستخدمة",
+    "upgradeToAddMore": "· قم بالترقية لإضافة المزيد"
+  },
+  "exempt": {
+    "note": "أنت مالك المصدر، لذا أنت معفى من نظام الاشتراك. جميع الميزات مضمّنة."
+  },
+  "checkout": {
+    "waiting": "بانتظار دفعتك…",
+    "waitingForPlan": "بانتظار دفعتك · {{plan}}…",
+    "opened": "فُتحت صفحة دفع في متصفحك. بعد الدفع، يتحدّث هذا تلقائيًا.",
+    "reopen": "إعادة فتح صفحة الدفع"
+  },
+  "plans": {
+    "chooseHeading": "اختر خطة",
+    "bestValue": "أفضل قيمة",
+    "current": "الحالية",
+    "footerNote": "تتم معالجة المدفوعات بالطرق التي فعّلها المسؤول. بعد الدفع في متصفحك، تفعّل هذه الصفحة خطتك تلقائيًا."
+  },
+  "period": {
+    "label": "فترة الفوترة",
+    "monthly": "شهري",
+    "yearly": "سنوي",
+    "billedYearly": "يُدفع سنويًا، نحو {{perMonth}} شهريًا",
+    "monthsFree_zero": "لا أشهر مجانية، توفّر {{saving}}",
+    "monthsFree_one": "شهر مجاني، توفّر {{saving}}",
+    "monthsFree_two": "شهران مجانًا، توفّر {{saving}}",
+    "monthsFree_few": "{{count}} أشهر مجانًا، توفّر {{saving}}",
+    "monthsFree_many": "{{count}} شهرًا مجانًا، توفّر {{saving}}",
+    "monthsFree_other": "{{count}} شهر مجانًا، توفّر {{saving}}",
+    "monthsFreeShort_zero": "لا أشهر مجانية",
+    "monthsFreeShort_one": "شهر مجاني",
+    "monthsFreeShort_two": "شهران مجانًا",
+    "monthsFreeShort_few": "{{count}} أشهر مجانًا",
+    "monthsFreeShort_many": "{{count}} شهرًا مجانًا",
+    "monthsFreeShort_other": "{{count}} شهر مجانًا",
+    "save": "توفّر {{saving}} سنويًا"
+  },
+  "cta": {
+    "included": "مضمّنة",
+    "onPaidPlan": "على خطة مدفوعة",
+    "trialActiveDaysLeft": "التجربة نشطة · متبقٍ {{days}} يوم",
+    "startFreeTrial": "ابدأ التجربة المجانية",
+    "trialUsed": "تم استخدام التجربة المجانية",
+    "currentPlan": "الخطة الحالية",
+    "upgradeEnterprise": "الترقية إلى Enterprise",
+    "downgradePro": "الانتقال إلى Pro",
+    "choosePlan": "اختر {{name}}"
+  },
+  "trial": {
+    "started": "تجربتك المجانية نشطة مع وصول كامل. استمتع!",
+    "startedWithDays": "تجربتك المجانية نشطة: وصول كامل لمدة {{days}} يوم. استمتع!",
+    "errors": {
+      "failed": "تعذّر بدء التجربة."
+    }
+  },
+  "redeem": {
+    "label": "لديك رمز شراء؟",
+    "apply": "تطبيق",
+    "success": "تم تطبيق رمز الشراء، شكرًا لك!",
+    "errors": {
+      "empty": "أدخل رمز الشراء.",
+      "failed": "تعذّر تطبيق هذا الرمز."
+    }
+  },
+  "pay": {
+    "received": "تم استلام الدفعة، وأصبحت خطتك نشطة!",
+    "errors": {
+      "noMethods": "الشراء داخل التطبيق متوقف مؤقتًا بينما نضيف مزوّد دفع جديدًا. راسل support@softglaze.com للشراء بفاتورة، ثم أدخل رمز الشراء أدناه.",
+      "checkoutFailed": "تعذّر بدء عملية الدفع.",
+      "submitFailed": "تعذّر إرسال دفعتك."
+    }
+  },
+  "payModal": {
+    "title": "الدفع مقابل {{name}}",
+    "manualSubmitted": "تم إرسال الدفعة. سيراجعها المسؤول ويفعّل خطتك قريبًا.",
+    "manualBadge": "يدوي",
+    "continueTo": "المتابعة إلى {{method}}",
+    "openPayLink": "فتح رابط الدفع",
+    "referencePlaceholder": "مرجع الدفع / رقم المعاملة",
+    "notePlaceholder": "ملاحظة (اختياري)",
+    "submitForApproval": "دفعتُ، أرسل للموافقة",
+    "manualActivationNote": "تُفعَّل خطتك بعد أن يؤكد المسؤول الدفعة."
+  },
+  "admin": {
+    "configureMethods": "إعداد طرق الدفع في الإعدادات"
+  },
+  "invoices": {
+    "title": "الفواتير",
+    "subtitleAdmin": "جميع المدفوعات لكل المالكين، التلقائية واليدوية.",
+    "subtitleUser": "إيصالات مدفوعاتك.",
+    "add": "إضافة",
+    "empty": "لا توجد فواتير بعد.",
+    "manualSuffix": "يدوي",
+    "confirmDelete": "حذف هذه الفاتورة؟",
+    "cols": {
+      "date": "التاريخ",
+      "owner": "المالك",
+      "amount": "المبلغ",
+      "method": "الطريقة",
+      "status": "الحالة",
+      "reference": "المرجع"
+    },
+    "errors": {
+      "loadFailed": "تعذّر تحميل الفواتير.",
+      "deleteFailed": "تعذّر الحذف."
+    }
+  },
+  "invoiceForm": {
+    "addTitle": "إضافة فاتورة",
+    "editTitle": "تعديل الفاتورة",
+    "ownerMemberId": "معرّف العضو المالك",
+    "optionalPlaceholder": "(اختياري)",
+    "amount": "المبلغ",
+    "currency": "العملة",
+    "method": "الطريقة",
+    "status": "الحالة",
+    "tier": "الفئة",
+    "months": "الأشهر",
+    "reference": "المرجع",
+    "referencePlaceholder": "txn / رمز",
+    "note": "ملاحظة",
+    "errors": {
+      "invalidAmount": "أدخل مبلغًا صالحًا.",
+      "saveFailed": "تعذّر حفظ الفاتورة."
+    }
+  },
+  "planManager": {
+    "title": "الخطط والباقات",
+    "subtitle": "حدّد الأسعار، وعدّل التفاصيل، وأنشئ باقات جديدة. تُطبَّق التغييرات على صفحة الدفع فورًا.",
+    "newPackage": "باقة جديدة",
+    "activeBadge": "نشطة",
+    "hiddenBadge": "مخفية",
+    "termMeta": "مدة {{months}} شهر · {{tier}}",
+    "hide": "إخفاء",
+    "show": "إظهار",
+    "hideTitle": "إخفاء من صفحة الدفع",
+    "showTitle": "إظهار في صفحة الدفع",
+    "deleteTitle": "حذف الخطة",
+    "confirmDelete": "حذف خطة «{{name}}»؟ لن يراها المشترون بعد الآن.",
+    "errors": {
+      "loadFailed": "تعذّر تحميل الخطط.",
+      "updateFailed": "تعذّر تحديث الخطة.",
+      "deleteFailed": "تعذّر حذف الخطة."
+    }
+  },
+  "planForm": {
+    "newTitle": "باقة جديدة",
+    "editTitle": "تعديل {{name}}",
+    "editTitleAria": "تعديل الباقة",
+    "packageName": "اسم الباقة",
+    "planType": "نوع الخطة",
+    "typePaid": "مدفوعة",
+    "typeTrial": "تجربة مجانية",
+    "trialLength": "مدة التجربة (بالأيام)",
+    "price": "السعر",
+    "currency": "العملة",
+    "shownAs": "تُعرض بصيغة",
+    "trialShownValue": "{{days}} يوم · مجانًا",
+    "billedPer": "الفوترة كل",
+    "term": "المدة (الأشهر الممنوحة)",
+    "featureTier": "فئة الميزات",
+    "bestValue": "أفضل قيمة",
+    "active": "نشطة",
+    "tagline": "العبارة التعريفية",
+    "taglinePlaceholder": "كل ما يحتاجه المشغّل الفردي.",
+    "features": "الميزات (ميزة في كل سطر)",
+    "featuresPlaceholder": "ملفات متصفح غير محدودة\nمحرك بصمة كامل\nمجمّع البروكسيات والتدوير",
+    "savePackage": "حفظ الباقة",
+    "errors": {
+      "nameRequired": "أدخل اسمًا للباقة.",
+      "invalidPrice": "أدخل سعرًا صالحًا.",
+      "saveFailed": "تعذّر حفظ الخطة."
+    }
+  },
+  "subscribers": {
+    "title": "المشتركون",
+    "subtitle": "كل حساب، ومتى انضم، وخطته وتاريخ انتهائها. الإجمالي {{count}}.",
+    "assignPlan": "تعيين خطة",
+    "empty": "لا توجد حسابات مالكين بعد.",
+    "trialSuffix": "تجربة",
+    "daysLeftShort": "{{days}} يوم",
+    "assign": "تعيين",
+    "assignTitle": "تعيين / منح خطة",
+    "state": {
+      "ended": "منتهية",
+      "grace": "مهلة",
+      "active": "نشطة",
+      "trial": "تجربة"
+    },
+    "cols": {
+      "account": "الحساب",
+      "joined": "تاريخ الانضمام",
+      "plan": "الخطة",
+      "state": "الحالة",
+      "expires": "تنتهي في",
+      "team": "الفريق"
+    },
+    "errors": {
+      "loadFailed": "تعذّر تحميل المشتركين."
+    }
+  },
+  "assignForm": {
+    "title": "تعيين خطة",
+    "account": "الحساب",
+    "plan": "الخطة",
+    "months": "الأشهر",
+    "monthsWithDefault": "الأشهر (الافتراضي {{default}})",
+    "recordAsPaid": "تسجيل كعملية بيع مدفوعة",
+    "noteOptional": "ملاحظة (اختياري)",
+    "notePlaceholder": "سبب المنح",
+    "grantNote": "يمنح المدة فورًا ويزيل أي قفل على الاشتراك.",
+    "grantNotePaid": "تُسجَّل فاتورة مدفوعة.",
+    "grantNoteFree": "تُسجَّل كمنحة بقيمة $0.",
+    "fallbackAccount": "حساب",
+    "fallbackPlan": "خطة",
+    "success_zero": "تم تعيين {{plan}} إلى {{name}} دون أي شهر.",
+    "success_one": "تم تعيين {{plan}} إلى {{name}} لمدة شهر واحد.",
+    "success_two": "تم تعيين {{plan}} إلى {{name}} لمدة شهرين.",
+    "success_few": "تم تعيين {{plan}} إلى {{name}} لمدة {{count}} أشهر.",
+    "success_many": "تم تعيين {{plan}} إلى {{name}} لمدة {{count}} شهرًا.",
+    "success_other": "تم تعيين {{plan}} إلى {{name}} لمدة {{count}} شهر.",
+    "errors": {
+      "chooseAccount": "اختر حسابًا.",
+      "choosePlan": "اختر خطة.",
+      "assignFailed": "تعذّر تعيين الخطة."
+    }
+  },
+  "planText": {
+    "trialTagline": "جرّب كل ميزة مجانًا، بوصول كامل ودون الحاجة إلى بطاقة.",
+    "trialFullAccess": "وصول كامل إلى كل الميزات",
+    "trialTools": "جميع أدوات البصمة والبروكسي وفحص التسرّب",
+    "trialMacros": "الماكرو، ومُدفّئ الكوكيز، وملفات الجوال",
+    "trialBackupSeats": "نسخ احتياطي مشفّر ومقاعد للفريق",
+    "trialNoCard": "لا حاجة إلى بطاقة ائتمان",
+    "trialUpgrade": "الترقية إلى خطة مدفوعة في أي وقت",
+    "proTagline": "كل ما يحتاجه المشغّل الفردي لتشغيل الملفات على نطاق واسع.",
+    "proProfiles": "ملفات متصفح محلية غير محدودة",
+    "proFingerprint": "محرك بصمة كامل + فحوصات التسرّب",
+    "proProxies": "مجمّع البروكسيات، وسياسة التدوير، والمطابقة الجغرافية التلقائية",
+    "proMacros": "مسجّل الماكرو، والجدولة، والتشغيل المعتمد على البيانات",
+    "proCookieWarmer": "مُدفّئ الكوكيز",
+    "proMobile": "ملفات أجهزة الجوال / Android",
+    "proBackup": "نسخ احتياطي مشفّر لمساحة العمل واستعادتها",
+    "proDbEncryption": "تشفير كامل لقاعدة البيانات أثناء التخزين",
+    "proPalette": "لوحة الأوامر + الإعداد الأولي",
+    "proSeats": "حتى 3 أعضاء في الفريق",
+    "proParallel": "تشغيل متوازٍ لما يصل إلى 3 ملفات في آن واحد، مع شاشة تشغيل مباشرة",
+    "entTagline": "للفرق: حتى 25 عضوًا، و10 ملفات في آن واحد، وتصدير سجل التدقيق.",
+    "entEverythingInPro": "كل ما في Pro، بالإضافة إلى:",
+    "entSeats": "حتى 25 عضوًا في الفريق",
+    "entParallel": "تشغيل متوازٍ لما يصل إلى 10 ملفات في آن واحد، مع شاشة تشغيل مباشرة",
+    "entAuditExport": "تصدير سجل التدقيق (CSV / JSON)",
+    "entSupport": "دعم ذو أولوية عبر البريد الإلكتروني"
+  },
+  "serverErrors": {
+    "SIGNUP_INVALID_EMAIL": "أدخل عنوان بريد إلكتروني صالحًا.",
+    "SIGNUP_DISPOSABLE_EMAIL": "يُرجى استخدام عنوان بريد إلكتروني دائم.",
+    "SIGNUP_NO_MX": "لم نعثر على خادم بريد لهذا العنوان.",
+    "SIGNUP_BAD_CODE": "هذا الرمز غير صحيح أو انتهت صلاحيته. تحقّق من البريد الإلكتروني أو اطلب رمزًا جديدًا.",
+    "SIGNUP_OFFLINE": "اتصل بالإنترنت لإنشاء حسابك.",
+    "SIGNUP_FAILED": "تعذّر علينا التحقق من هذا البريد الإلكتروني الآن. حاول مرة أخرى بعد بضع دقائق.",
+    "RATE_LIMITED": "محاولات كثيرة جدًا، حاول مرة أخرى بعد بضع دقائق.",
+    "TRIAL_USED": "تم استخدام تجربة مجانية بالفعل على هذا الكمبيوتر أو بهذا البريد الإلكتروني. اختر خطة أو أدخل رمز شراء.",
+    "TRIAL_OFFLINE": "اتصل بالإنترنت لبدء التجربة المجانية.",
+    "TRIAL_VERIFY_EMAIL": "أكّد عنوان بريدك الإلكتروني لبدء التجربة المجانية. أرسلنا إليك رمزًا من 6 أرقام.",
+    "TRIAL_NO_EMAIL": "أضف عنوان بريد إلكتروني إلى حساب المالك أولًا، ثم ابدأ التجربة المجانية.",
+    "TRIAL_FAILED": "تعذّر بدء التجربة المجانية الآن. حاول مرة أخرى بعد بضع دقائق.",
+    "SERVER_UNAVAILABLE": "خادم الترخيص لدينا لا يستجيب الآن. حاول مرة أخرى بعد بضع دقائق.",
+    "MACHINE_MISMATCH": "هذا الترخيص مسجّل على كمبيوتر آخر. انقله إلى هذا الكمبيوتر أو اطلب من المسؤول إعادة تعيينه.",
+    "SIGNUP_INVALID_PHONE": "أدخل رقم الهاتف مع + ورمز الدولة، أو اتركه فارغًا.",
+    "SIGNUP_USE_CASE": "اختر الغرض الذي ستستخدم SoftGlaze من أجله.",
+    "SIGNUP_USE_CASE_OTHER": "أخبرنا في بضع كلمات عن الغرض الذي ستستخدم SoftGlaze من أجله.",
+    "CONFIRM_OFFLINE": "اتصل بالإنترنت لتأكيد بريدك الإلكتروني."
+  },
+  "store": {
+    "cardTitle": "اشتراك Microsoft Store",
+    "processedBy": "في هذا الإصدار، Microsoft هي جهة معالجة الدفع: تدفع بحساب Microsoft الخاص بك، وتحصّل Microsoft رسوم الاشتراك كل شهر، أو كل سنة في الخطة السنوية.",
+    "upgradeNote": "الانتقال من Pro إلى Enterprise يبدأ اشتراكًا ثانيًا. ألغِ Pro من حساب Microsoft حتى يتوقف تجديده.",
+    "periodNote": "الانتقال بين الفوترة الشهرية والسنوية يبدأ أيضًا اشتراكًا ثانيًا. ألغِ الاشتراك القديم من حساب Microsoft حتى يتوقف تجديده.",
+    "downgradeNote": "للانتقال من Enterprise إلى Pro، ألغِ Enterprise من حساب Microsoft واشترِ Pro عند انتهائه.",
+    "buyWith": "الشراء عبر Microsoft Store",
+    "buyWithPrice": "الشراء عبر Microsoft Store · {{price}}",
+    "priceFrom": "السعر من Microsoft Store، بعملتك",
+    "restore": "استعادة مشتريات Microsoft Store",
+    "moveHere": "نقله إلى هذا الكمبيوتر",
+    "manage": "الإدارة أو الإلغاء من حساب Microsoft",
+    "result": {
+      "active": "شكرًا لك. خطة {{plan}} نشطة الآن.",
+      "cancelled": "تم إلغاء الشراء. لم يُخصم أي مبلغ.",
+      "pending": "استلمت Microsoft عملية الشراء. نحن نؤكدها الآن، وقد يستغرق ذلك دقيقة.",
+      "pendingLong": "لم يتم تأكيد عملية الشراء بعد. انقر على «استعادة مشتريات Microsoft Store» بعد بضع دقائق، أو راسل support@softglaze.com.",
+      "pendingOffline": "عملية الشراء محفوظة على هذا الكمبيوتر. ستُفعَّل بمجرد أن يتمكن التطبيق من الوصول إلى خادمنا.",
+      "pendingReview": "استلمنا عملية الشراء ونقوم بمراجعتها. ستُفعَّل خطتك بمجرد الموافقة عليها.",
+      "none": "لم يُعثر على اشتراك Microsoft Store نشط لهذا التطبيق في حساب Microsoft هذا.",
+      "inUse": "هذا الاشتراك قيد الاستخدام على كمبيوتر آخر. يمكنك نقله إلى هذا الكمبيوتر.",
+      "moveLimit": "تم نقل هذا الاشتراك إلى كمبيوتر آخر مرتين بالفعل خلال آخر 30 يومًا. راسل support@softglaze.com للمساعدة.",
+      "unavailable": "مشتريات Microsoft Store غير متاحة الآن. يُرجى المحاولة لاحقًا.",
+      "productMissing": "هذه الخطة غير متاحة في Microsoft Store بعد.",
+      "network": "تعذّر الوصول إلى Microsoft Store. تحقّق من اتصالك بالإنترنت وحاول مرة أخرى.",
+      "error": "تعذّر إتمام عملية الشراء: {{message}}"
+    }
+  }
+}

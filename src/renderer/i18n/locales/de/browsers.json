@@ -1,0 +1,70 @@
+{
+  "header": {
+    "eyebrow": "Engines",
+    "title": "Browser",
+    "subtitle": "Laden Sie echte Chrome- und Firefox-Builds bei Bedarf herunter. Sie werden automatisch installiert und sind startbereit.",
+    "refresh": "Aktualisieren"
+  },
+  "stats": {
+    "chromeInstalled": "Chrome installiert",
+    "chromeAvailable": "Chrome verfügbar",
+    "firefoxInstalled": "Firefox installiert",
+    "firefoxAvailable": "Firefox verfügbar"
+  },
+  "counts": {
+    "installedAvailable": "· {{installed}} installiert · {{available}} verfügbar"
+  },
+  "engine": {
+    "heading": "Fingerprint-Engine",
+    "installed": "Installiert",
+    "notInstalled": "Nicht installiert",
+    "description": "fingerprint-chromium setzt Canvas, WebGL, UA, Plattform und Zeitzone nativ, verbirgt webdriver und blockiert das WebRTC-Leck. Aktivieren unter Einstellungen → Browser.",
+    "progressInstalling": "wird installiert",
+    "progressVerifying": "wird geprüft",
+    "installing": "Wird installiert",
+    "verifying": "Wird geprüft",
+    "downloading": "Wird geladen",
+    "download": "Herunterladen (~180 MB)"
+  },
+  "firefox": {
+    "heading": "Firefox",
+    "ready": "Bereit",
+    "notDetected": "Nicht gefunden",
+    "detectedDesc": "Bereit. Gefunden unter {{path}}. Firefox-Profile starten echtes Firefox mit Proxy, UA, Sprache, Zeitzone und deaktiviertem WebRTC.",
+    "notDetectedDesc": "Kein System-Firefox gefunden. Laden Sie unten eine Version herunter. Sie wird in die App installiert, und Firefox-Profile starten echtes Firefox mit Proxy, UA, Sprache, Zeitzone und deaktiviertem WebRTC.",
+    "fetching": "Firefox-Versionskatalog wird geladen…",
+    "empty": "Keine Firefox-Versionen verfügbar (sind Sie offline?)."
+  },
+  "chromium": {
+    "heading": "Chromium (Chrome for Testing)",
+    "subtitle": "Echte Builds: UA, Client Hints, TLS und Worker passen wirklich zur Version.",
+    "fetching": "Chrome-for-Testing-Katalog wird geladen…",
+    "empty": "Keine Versionen verfügbar (sind Sie offline?)."
+  },
+  "row": {
+    "versionLabel": "{{brand}} {{major}}",
+    "ready": "Bereit",
+    "paused": "Pausiert",
+    "interrupted": "Unterbrochen",
+    "resume": "Fortsetzen",
+    "download": "Herunterladen",
+    "retry": "Wiederholen",
+    "downloading": "Wird geladen",
+    "installing": "Wird installiert…",
+    "installingShort": "Installation",
+    "queued": "In Warteschlange…",
+    "pauseDownload": "Download pausieren",
+    "pausedPercent": "Pausiert · {{percent}} %",
+    "interruptedPercent": "Unterbrochen · {{percent}} %"
+  },
+  "errors": {
+    "catalogUnreachable": "Der Browser-Katalog ist nicht erreichbar. Prüfen Sie Ihre Internetverbindung.",
+    "downloadFailed": "Download fehlgeschlagen.",
+    "pauseFailed": "Pausieren fehlgeschlagen.",
+    "resumeFailed": "Fortsetzen fehlgeschlagen."
+  },
+  "browsers": {
+    "showAll": "Alle {{n}} Versionen anzeigen",
+    "showLess": "Weniger anzeigen"
+  }
+}

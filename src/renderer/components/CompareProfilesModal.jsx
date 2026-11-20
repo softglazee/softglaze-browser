@@ -48,7 +48,7 @@ export default function CompareProfilesModal({ profiles = [], onClose }) {
           </button>
         </div>
         <div className="overflow-auto flex-1">
-          <table className="w-full border-collapse text-left text-sm">
+          <table className="w-full border-collapse text-start text-sm">
             <thead className="bg-elevated text-muted-foreground text-[10px] uppercase tracking-wider font-semibold border-b border-border sticky top-0 z-10">
               <tr>
                 <th className="px-4 py-3 w-40">{t('compare.attribute')}</th>

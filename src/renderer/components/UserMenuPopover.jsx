@@ -71,7 +71,7 @@ export default function UserMenuPopover({
   if (!open || !layout) return null;
   const sheet = layout.mode === 'sheet';
 
-  const rowBtn = 'w-full flex items-center gap-2.5 px-2 py-2 rounded-md text-left text-[12.5px] transition-colors';
+  const rowBtn = 'w-full flex items-center gap-2.5 px-2 py-2 rounded-md text-start text-[12.5px] transition-colors';
 
   const panel = (
     <div

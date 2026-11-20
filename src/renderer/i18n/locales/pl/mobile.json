@@ -1,0 +1,116 @@
+{
+  "title": "Telefony",
+  "description": "Używaj aplikacji SoftGlaze na telefon z tym komputerem: przeglądaj profile, uruchamiaj je i zatrzymuj oraz odpowiadaj na prośby AI z telefonu. Cała komunikacja między telefonem a tym komputerem jest szyfrowana end-to-end.",
+  "enable": "Włącz aplikację towarzyszącą na telefon",
+  "loading": "Wczytywanie",
+  "offOwner": "Włącz to, aby sparować telefon. Ten komputer utrzyma wtedy bezpieczne połączenie z przekaźnikiem SoftGlaze, który jedynie przekazuje zaszyfrowane wiadomości.",
+  "offOther": "Właściciel nie włączył aplikacji towarzyszącej na telefon.",
+  "copy": "Kopiuj",
+  "cancel": "Anuluj",
+  "relay": {
+    "connected": "Połączono z przekaźnikiem",
+    "connecting": "Łączenie z przekaźnikiem",
+    "authFailed": "Przekaźnik odrzucił ten komputer. Sprawdź adres przekaźnika w sekcji Zaawansowane."
+  },
+  "pair": {
+    "title": "Sparuj telefon",
+    "help": "Zainstaluj SoftGlaze na telefonie, a potem zeskanuj kod z tego ekranu.",
+    "start": "Sparuj telefon",
+    "qrAlt": "Kod parowania dla aplikacji SoftGlaze na telefon",
+    "scanTitle": "Zeskanuj ten kod w aplikacji SoftGlaze na telefon",
+    "step1": "Otwórz SoftGlaze na telefonie.",
+    "step2": "Przejdź do Ustawienia, Sparuj z komputerem i zeskanuj ten kod.",
+    "step3": "Sprawdź, czy oba ekrany pokazują te same sześć cyfr.",
+    "expiresIn": "Kod działa raz i wygasa za {{time}}.",
+    "textTitle": "Nie możesz zeskanować? Skopiuj kod jako tekst",
+    "attemptFailed": "Telefon użył błędnego lub uszkodzonego kodu. Kod jest nadal aktywny."
+  },
+  "confirm": {
+    "title": "{{name}} chce się sparować",
+    "help": "Kontynuuj tylko wtedy, gdy telefon pokazuje dokładnie te sześć cyfr.",
+    "helpBrowser": "Kontynuuj tylko wtedy, gdy przeglądarka pokazuje dokładnie te sześć cyfr. Przeglądarka może widzieć profile i odpowiadać na prośby AI; zaznacz Uruchamianie i zatrzymywanie profili tylko wtedy, gdy też tego chcesz.",
+    "codeLabel": "Kod {{code}}",
+    "name": "Nazwa telefonu",
+    "member": "Działa jako",
+    "scopes": "Co ten telefon może robić",
+    "match": "Kody zgodne, sparuj",
+    "noMatch": "Kody niezgodne"
+  },
+  "scopes": {
+    "view": {
+      "label": "Podgląd profili i stanu",
+      "help": "Zawsze włączone. Tylko profile widoczne dla członka."
+    },
+    "control_profiles": {
+      "label": "Uruchamianie i zatrzymywanie profili",
+      "help": "Te same zasady co na tym komputerze."
+    },
+    "approve_ai": {
+      "label": "Odpowiadanie na prośby AI",
+      "help": "Zezwalaj na akcje aplikacji AI lub je odrzucaj, dla tokenów, na które ten członek może odpowiadać."
+    },
+    "approve_team": {
+      "label": "Odpowiadanie na prośby zespołu",
+      "help": "Zatwierdzaj prośby o dostęp od członków zespołu."
+    },
+    "totp": {
+      "label": "Pokazywanie kodów 2FA",
+      "help": "Kody dwuetapowe zapisane w profilach."
+    },
+    "phone_profiles_linked": {
+      "label": "Synchronizacja profili",
+      "help": "Profile wybrane poniżej otwierają się też na tym telefonie."
+    }
+  },
+  "roles": {
+    "OWNER": "Właściciel",
+    "ADMIN": "Administrator",
+    "MANAGER": "Menedżer",
+    "OPERATOR": "Operator"
+  },
+  "devices": {
+    "title": "Telefony i przeglądarki",
+    "kindPhone": "Telefon",
+    "kindBrowser": "Przeglądarka",
+    "empty": "Brak telefonów.",
+    "online": "Online",
+    "offline": "Offline",
+    "lastSeen": "Ostatnio widziany {{when}}",
+    "actsAs": "działa jako {{name}}",
+    "edit": "Edytuj {{name}}",
+    "remove": "Usuń {{name}}",
+    "removeConfirm": "Usunąć {{name}}? Od razu przestanie działać z tym komputerem i trzeba będzie sparować go ponownie.",
+    "rename": "Zmień nazwę",
+    "saveScopes": "Zapisz uprawnienia"
+  },
+  "sync": {
+    "title": "Synchronizacja profili",
+    "help": "Wybrane profile otwierają się też w aplikacji na telefon. Ustawienia, strony startowe i pliki cookie podążają za profilem; profil jest otwarty naraz tylko na jednym urządzeniu.",
+    "noPhone": "Żaden telefon nie może jeszcze synchronizować. Nadaj telefonowi powyżej uprawnienie Synchronizacja profili.",
+    "now": "Synchronizuj teraz",
+    "search": "Znajdź profil",
+    "toggle": "Synchronizuj {{name}} z telefonami",
+    "proxyPassword": "Hasło proxy",
+    "offConfirm": "Przestać synchronizować {{name}}? Telefony zachowają swoją kopię.",
+    "removeAll": "Usuń wszystkie zsynchronizowane dane z przekaźnika",
+    "removeAllConfirm": "Usunąć każdy zsynchronizowany profil z przekaźnika? Profile na tym komputerze i na telefonach pozostaną bez zmian.",
+    "lastOk": "Ostatnia synchronizacja {{when}}",
+    "lastError": "Ostatnia synchronizacja nie powiodła się ({{code}}). Ponowna próba co minutę.",
+    "limits": "Pamięć stron, rozszerzenia, zapisane hasła i pobrane pliki nie są synchronizowane. Hasła proxy synchronizują się tylko tam, gdzie na to pozwolisz."
+  },
+  "advanced": {
+    "title": "Zaawansowane",
+    "pcName": "Nazwa tego komputera na telefonach",
+    "relay": "Adres przekaźnika",
+    "relayFromEnv": "Ustawione przez SG_RELAY_URL do testów.",
+    "save": "Zapisz",
+    "reset": "Zresetuj klucze telefonów",
+    "resetConfirm": "Zresetować klucze telefonów tego komputera? Każdy sparowany telefon zostanie usunięty i trzeba będzie sparować go ponownie.",
+    "protocol": "Protokół {{version}}"
+  },
+  "errors": {
+    "load": "Nie udało się wczytać ustawień telefonu.",
+    "generic": "Nie udało się. Spróbuj ponownie.",
+    "unavailable": "Telefony nie są dostępne w tej wersji."
+  }
+}

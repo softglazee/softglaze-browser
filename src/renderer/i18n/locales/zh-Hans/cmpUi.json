@@ -1,0 +1,31 @@
+{
+  "brandSelect": {
+    "presentAs": "将此配置文件呈现为 {{brand}}"
+  },
+  "versionSelect": {
+    "auto": "自动",
+    "loadingVersions": "正在加载版本…",
+    "ready": "就绪",
+    "readyTitle": "已安装，可以使用",
+    "noVersions": "未找到版本。",
+    "offlineError": "离线：无法访问版本目录。",
+    "downloadFailed": "下载失败。",
+    "resumeFailed": "继续下载失败。",
+    "paused": "已暂停",
+    "interrupted": "已中断",
+    "resumeTitle": "{{state}}于 {{percent}}%，点击继续",
+    "statusInstalling": "安装中",
+    "statusQueued": "…",
+    "retryTitle": "重试：{{error}}",
+    "downloadFailedShort": "下载失败",
+    "downloadInstallTitle": "下载并安装此版本"
+  },
+  "pager": {
+    "showing": "显示第 {{from}}-{{to}} 项，共 {{total}} 项",
+    "perPage": "每页",
+    "all": "全部",
+    "prev": "上一页",
+    "next": "下一页",
+    "pageOf": "第 {{page}} / {{total}} 页"
+  }
+}

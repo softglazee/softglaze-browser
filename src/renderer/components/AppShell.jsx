@@ -16,7 +16,10 @@ import UserMenuPopover from '@/components/UserMenuPopover.jsx';
 import { PROVIDERS } from '@/components/ProxyProviders.jsx';
 import { LicenseNoticeBanner, LicenseTrialChip } from '@/components/LicenseNotice.jsx';
 import { pickLicenseNotice } from '@/lib/licenseNotice.mjs';
+import PromoBanner from '@/components/PromoBanner.jsx';
+import { pickPromo, isPromoDismissed, dismissPromo } from '@/lib/promoBanner.mjs';
 import AiApprovalDialog from '@/components/ai/AiApprovalDialog.jsx';
+import { PlanLimitPrompt, FreeWelcomeDialog, ChooseOpenableDialog } from '@/components/FreePlan.jsx';
 import { useAiApprovals } from '@/components/ai/AiApprovalsProvider.jsx';
 import { canManageAi } from '@/lib/aiCore.mjs';
 import { canManageVault } from '@/lib/memberPermissions.mjs';
@@ -30,7 +33,7 @@ function ThemeToggle({ collapsed }) {
       onClick={() => setThemeState(applyThemeChoice(isDark ? 'light' : 'dark'))}
       role="switch"
       aria-checked={isDark}
-      className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg hover:bg-sidebar-accent transition-colors text-left text-[13px] font-medium text-muted-foreground hover:text-foreground"
+      className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg hover:bg-sidebar-accent transition-colors text-start text-[13px] font-medium text-muted-foreground hover:text-foreground"
       title={isDark ? t('shell.switchToLight') : t('shell.switchToDark')}
     >
       <span className="relative w-[18px] h-[18px] grid place-items-center shrink-0">
@@ -42,8 +45,8 @@ function ThemeToggle({ collapsed }) {
           switch off while the dark theme was on). */}
       {!collapsed && <>
         {t('shell.darkMode')}
-        <span className="ml-auto inline-flex items-center h-5 w-9 rounded-full p-0.5 transition-colors" style={{ background: isDark ? 'var(--primary)' : 'var(--switch-background)' }}>
-          <span className={`h-4 w-4 rounded-full bg-white shadow transition-transform ${isDark ? 'translate-x-4' : ''}`} />
+        <span className="ms-auto inline-flex items-center h-5 w-9 rounded-full p-0.5 transition-colors" style={{ background: isDark ? 'var(--primary)' : 'var(--switch-background)' }}>
+          <span className={`h-4 w-4 rounded-full bg-white shadow transition-transform ${isDark ? 'translate-x-4 rtl:-translate-x-4' : ''}`} />
         </span>
       </>}
     </button>
@@ -127,8 +130,9 @@ function NavItem({ path, label, icon: Icon, collapsed, badge, badgeTone, pill, r
           style={isActive ? { background: 'color-mix(in srgb, var(--primary) 12%, transparent)', border: '1px solid color-mix(in srgb, var(--primary) 24%, transparent)' } : { border: '1px solid transparent' }}
         >
           <Icon className={`w-[18px] h-[18px] shrink-0 ${isActive ? 'text-primary' : ''}`} strokeWidth={1.75} />
-          {collapsed && attention && <span className="absolute left-7 top-2 h-2 w-2 rounded-full" style={{ background: 'var(--warning)' }} aria-hidden="true" />}
-          {!collapsed && <span className="flex-1 truncate">{label}</span>}
+          {collapsed && attention && <span className="absolute inset-s-7 top-2 h-2 w-2 rounded-full" style={{ background: 'var(--warning)' }} aria-hidden="true" />}
+          {/* Long labels (ru, de, uk...) wrap to a second line instead of being cut off. */}
+          {!collapsed && <span className="flex-1 min-w-0 leading-tight [overflow-wrap:anywhere]">{label}</span>}
           {/* With requests waiting, the count matters more than the Beta pill (and both do not fit). */}
           {!collapsed && pill && !attention && (
             <span className="text-[9.5px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded-full" style={{ background: 'color-mix(in srgb, var(--chart-2) 14%, transparent)', color: 'color-mix(in srgb, var(--chart-2) 72%, var(--foreground))' }}>{pill}</span>
@@ -167,11 +171,19 @@ export default function AppShell({ children }) {
   const [pw, setPw] = useState('');
   const [err, setErr] = useState('');
   const [counts, setCounts] = useState({ profiles: 0, sessions: 0 });
+  // Free forever plan (1.0.27): the day 8 screen once, and the "choose which profiles open" list.
+  const [freeWelcome, setFreeWelcome] = useState(null);
+  const [chooseOpen, setChooseOpen] = useState(false);
   const ref = useRef(null);
   const userBtnRef = useRef(null);
 
   const closeMenu = () => { setOpen(false); setPinFor(null); setPwFor(null); setErr(''); };
-  const licenseNotice = pickLicenseNotice(license, { dismissed: bannerDismissed, path: location.pathname });
+  const rawLicenseNotice = pickLicenseNotice(license, { dismissed: bannerDismissed, path: location.pathname });
+  // Seasonal offer (lib/promoBanner.mjs): unpaid licences only, inside the offer's UTC window. It takes the
+  // place of the dismissible "trial ends soon" banner (the offer already says how to keep going).
+  const [promoHidden, setPromoHidden] = useState(() => new Set());
+  const promo = pickPromo(license, { t, path: location.pathname, dismissed: (id) => promoHidden.has(id) || isPromoDismissed(id) });
+  const licenseNotice = promo && rawLicenseNotice && rawLicenseNotice.kind === 'trialEnding' ? null : rawLicenseNotice;
 
   useEffect(() => {
     let live = true;
@@ -194,6 +206,12 @@ export default function AppShell({ children }) {
       } catch (e) { /* members API unavailable on older builds */ }
       finally { if (live) setMeLoaded(true); }
     })();
+    return () => { live = false; };
+  }, []);
+
+  useEffect(() => {
+    let live = true;
+    softglazeApi.plan.usage().then((u) => { if (live && u && u.showFreeWelcome) setFreeWelcome(u); }).catch(() => {});
     return () => { live = false; };
   }, []);
 
@@ -273,7 +291,7 @@ export default function AppShell({ children }) {
   return (
     <div className="flex h-screen w-full bg-background text-foreground font-sans overflow-hidden">
       <aside
-        className="bg-sidebar border-r border-sidebar-border flex flex-col shrink-0 transition-[width] duration-300 ease-out"
+        className="bg-sidebar border-e border-sidebar-border flex flex-col shrink-0 transition-[width] duration-300 ease-out"
         style={{ width: collapsed ? 68 : 232 }}
       >
         <div className="flex items-center gap-3 px-4 py-5 shrink-0 overflow-hidden">
@@ -303,7 +321,7 @@ export default function AppShell({ children }) {
             <span className={`text-xs font-medium ${counts.sessions > 0 ? 'text-emerald-500' : 'text-muted-foreground'}`}>
               {counts.sessions > 0 ? t('shell.sessionsActive', { count: counts.sessions }) : t('shell.noActiveSessions')}
             </span>
-            <Activity className="w-3 h-3 text-emerald-500 ml-auto" />
+            <Activity className="w-3 h-3 text-emerald-500 ms-auto" />
           </div>
         )}
 
@@ -347,7 +365,7 @@ export default function AppShell({ children }) {
               aria-haspopup="dialog"
               aria-expanded={open}
               title={collapsed ? `${name} — ${role}` : undefined}
-              className="w-full flex items-center gap-2.5 px-2 py-2 rounded-lg hover:bg-sidebar-accent transition-colors text-left"
+              className="w-full flex items-center gap-2.5 px-2 py-2 rounded-lg hover:bg-sidebar-accent transition-colors text-start"
             >
               <span className="w-8 h-8 rounded-full grid place-items-center font-semibold text-[11px] shrink-0" style={{ background: me?.color ? me.color + '22' : 'color-mix(in srgb, var(--accent) 22%, transparent)', color: me?.color || 'var(--accent)' }}>{initials}</span>
               {!collapsed && <>
@@ -384,11 +402,15 @@ export default function AppShell({ children }) {
         {/* The one licence notice (lib/licenseNotice.mjs picks it by priority). It sits in the
             column flow above the scrolling page, so it never covers page content. */}
         <LicenseNoticeBanner notice={licenseNotice} onAction={() => navigate('/billing')} onDismiss={() => setBannerDismissed(true)} />
+        <PromoBanner promo={promo} onDismiss={() => { dismissPromo(promo.id); setPromoHidden((s) => new Set([...s, promo.id])); }} />
         <div className="flex-1 overflow-y-auto px-4 sm:px-7 py-6">{children}</div>
         {footer.enabled && <FooterBar text={footer.text} />}
       </main>
       <ResilienceToasts />
       <AiApprovalDialog />
+      <PlanLimitPrompt onChooseProfiles={() => setChooseOpen(true)} />
+      {freeWelcome && <FreeWelcomeDialog usage={freeWelcome} onDone={() => setFreeWelcome(null)} />}
+      {chooseOpen && <ChooseOpenableDialog onClose={() => setChooseOpen(false)} />}
       <CommandPalette />
       <OnboardingWizard />
     </div>

@@ -401,10 +401,11 @@ test('17: a footer stored by an older build (its default then) reads in the wind
   const { footerTextFor, LEGACY_DEFAULT_FOOTER_TEXTS, DEFAULT_FOOTER_TEXT } = new Function(`${src}\nreturn { footerTextFor, LEGACY_DEFAULT_FOOTER_TEXTS, DEFAULT_FOOTER_TEXT };`)();
   const es = loc('es', 'common').shell.footerDefault;
   const t = (key, opts) => (key === 'shell.footerDefault' ? es : opts.defaultValue);
-  // The defaults main seeded before 1.0.7, with an em dash (June to September 2026).
+  // The defaults main seeded before 1.0.7, with an em dash (June to September 2026), then a hyphen up to 1.0.26.
   const old = [
     '© {year} SoftGlaze — Built by the SoftGlaze Team (https://softglaze.com) · Developed by Azhar Ali (https://azhar.softglaze.com)',
-    '© {year} SoftGlaze — Built by the [SoftGlaze Team](https://softglaze.com) · Developed by [Azhar Ali](https://azhar.softglaze.com)'
+    '© {year} SoftGlaze — Built by the [SoftGlaze Team](https://softglaze.com) · Developed by [Azhar Ali](https://azhar.softglaze.com)',
+    '© {year} SoftGlaze - Built by the [SoftGlaze Team](https://softglaze.com) · Developed by [Azhar Ali](https://azhar.softglaze.com)'
   ];
   assert.deepEqual([...LEGACY_DEFAULT_FOOTER_TEXTS], old);
   for (const text of [DEFAULT_FOOTER_TEXT, ...old]) assert.equal(footerTextFor(text, t), es, text);

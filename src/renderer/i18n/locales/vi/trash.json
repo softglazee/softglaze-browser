@@ -1,0 +1,54 @@
+{
+  "header": {
+    "eyebrow": "Không gian làm việc",
+    "title": "Thùng rác và khôi phục",
+    "description": "Khôi phục hồ sơ đã xóa hoặc xóa vĩnh viễn khỏi bộ nhớ."
+  },
+  "actions": {
+    "emptyTrash": "Dọn sạch thùng rác",
+    "restore": "Khôi phục",
+    "deleteForever": "Xóa vĩnh viễn",
+    "clear": "Bỏ chọn",
+    "restoreTitle": "Khôi phục hồ sơ",
+    "purgeTitle": "Xóa vĩnh viễn"
+  },
+  "errors": {
+    "loadFailed": "Không tải được thùng rác."
+  },
+  "warning": {
+    "title": "Xóa vĩnh viễn",
+    "body": "Khôi phục sẽ đưa hồ sơ về danh sách, giữ nguyên mọi thứ. Xóa vĩnh viễn sẽ gỡ hồ sơ và xóa toàn bộ dữ liệu trình duyệt của nó (cookie, bộ nhớ đệm, thông tin đăng nhập) khỏi máy tính này."
+  },
+  "toolbar": {
+    "searchPlaceholder": "Tìm hồ sơ đã xóa..."
+  },
+  "bulk": {
+    "selected": "Đã chọn {{count}}"
+  },
+  "table": {
+    "profileName": "Tên hồ sơ",
+    "proxy": "Proxy",
+    "deletedDate": "Ngày xóa",
+    "actions": "Thao tác",
+    "directProxy": "Trực tiếp",
+    "defaultBrowser": "Chrome"
+  },
+  "empty": {
+    "title": "Thùng rác trống",
+    "noMatch": "Không có hồ sơ đã xóa nào khớp với tìm kiếm.",
+    "none": "Bạn không có hồ sơ nào đã xóa. Sạch sẽ gọn gàng!"
+  },
+  "confirm": {
+    "purgeWithData": "Xóa vĩnh viễn \"{{title}}\"? Không thể hoàn tác và dữ liệu trình duyệt cục bộ của nó sẽ bị xóa.",
+    "bulkPurgeWithData_one": "Xóa vĩnh viễn {{count}} hồ sơ? Không thể hoàn tác và dữ liệu trình duyệt cục bộ sẽ bị xóa.",
+    "bulkPurgeWithData_other": "Xóa vĩnh viễn {{count}} hồ sơ? Không thể hoàn tác và dữ liệu trình duyệt cục bộ sẽ bị xóa.",
+    "emptyTrashWithData_one": "Xóa vĩnh viễn TOÀN BỘ {{count}} hồ sơ trong thùng rác? Không thể hoàn tác và dữ liệu trình duyệt cục bộ sẽ bị xóa.",
+    "emptyTrashWithData_other": "Xóa vĩnh viễn TOÀN BỘ {{count}} hồ sơ trong thùng rác? Không thể hoàn tác và dữ liệu trình duyệt cục bộ sẽ bị xóa."
+  },
+  "pager": {
+    "showing": "Hiển thị {{from}}-{{to}} trên {{total}}",
+    "prev": "Trước",
+    "next": "Tiếp"
+  },
+  "bulkSkipped": "Không thay đổi: {{count}} hồ sơ. {{reason}}"
+}

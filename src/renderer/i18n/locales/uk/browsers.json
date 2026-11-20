@@ -1,0 +1,70 @@
+{
+  "header": {
+    "eyebrow": "Рушії",
+    "title": "Браузери",
+    "subtitle": "Завантажуйте справжні збірки Chrome і Firefox на вимогу: вони встановлюються автоматично й одразу готові до запуску.",
+    "refresh": "Оновити"
+  },
+  "stats": {
+    "chromeInstalled": "Chrome встановлено",
+    "chromeAvailable": "Chrome доступно",
+    "firefoxInstalled": "Firefox встановлено",
+    "firefoxAvailable": "Firefox доступно"
+  },
+  "counts": {
+    "installedAvailable": "· встановлено: {{installed}} · доступно: {{available}}"
+  },
+  "engine": {
+    "heading": "Рушій відбитків",
+    "installed": "Встановлено",
+    "notInstalled": "Не встановлено",
+    "description": "fingerprint-chromium задає canvas, WebGL, UA, платформу й часовий пояс на рівні рушія, приховує webdriver і блокує витік WebRTC. Увімкніть його в Налаштування → Браузер.",
+    "progressInstalling": "встановлення",
+    "progressVerifying": "перевірка",
+    "installing": "Встановлення",
+    "verifying": "Перевірка",
+    "downloading": "Завантаження",
+    "download": "Завантажити (~180 МБ)"
+  },
+  "firefox": {
+    "heading": "Firefox",
+    "ready": "Готовий",
+    "notDetected": "Не знайдено",
+    "detectedDesc": "Готовий. Знайдено в {{path}}. Профілі Firefox запускають справжній Firefox із проксі, UA, мовою, часовим поясом і вимкненим WebRTC.",
+    "notDetectedDesc": "Системний Firefox не знайдено. Завантажте версію нижче: вона встановиться в застосунок, і профілі Firefox запускатимуть справжній Firefox із проксі, UA, мовою, часовим поясом і вимкненим WebRTC.",
+    "fetching": "Завантаження каталогу версій Firefox…",
+    "empty": "Немає доступних версій Firefox (немає з'єднання з мережею?)."
+  },
+  "chromium": {
+    "heading": "Chromium (Chrome for Testing)",
+    "subtitle": "Справжні збірки: UA, Client-Hints, TLS і воркери справді відповідають версії.",
+    "fetching": "Завантаження каталогу Chrome for Testing…",
+    "empty": "Немає доступних версій (немає з'єднання з мережею?)."
+  },
+  "row": {
+    "versionLabel": "{{brand}} {{major}}",
+    "ready": "Готово",
+    "paused": "Пауза",
+    "interrupted": "Перервано",
+    "resume": "Продовжити",
+    "download": "Завантажити",
+    "retry": "Повторити",
+    "downloading": "Завантаження",
+    "installing": "Встановлення…",
+    "installingShort": "Встановлення",
+    "queued": "У черзі…",
+    "pauseDownload": "Призупинити завантаження",
+    "pausedPercent": "Пауза · {{percent}}%",
+    "interruptedPercent": "Перервано · {{percent}}%"
+  },
+  "errors": {
+    "catalogUnreachable": "Не вдалося під'єднатися до каталогу браузерів. Перевірте з'єднання з інтернетом.",
+    "downloadFailed": "Не вдалося завантажити.",
+    "pauseFailed": "Не вдалося призупинити.",
+    "resumeFailed": "Не вдалося продовжити."
+  },
+  "browsers": {
+    "showAll": "Показати всі версії ({{n}})",
+    "showLess": "Згорнути"
+  }
+}

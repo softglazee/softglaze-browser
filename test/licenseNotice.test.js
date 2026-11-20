@@ -157,7 +157,9 @@ test('rendered with each licence state, the shell shows at most one notice and n
   }
 
   const grace = renderToStaticMarkup(h(I18nextProvider, { i18n }, h(Shell, { license: STATES.trialGrace })));
-  assert.match(grace, /Your free trial has ended\./);
+  // 1.0.27: a trial ends into Free (only an old grace row still shows this banner), so it no longer threatens a lock.
+  assert.match(grace, /Your Pro trial has ended\./);
+  assert.doesNotMatch(grace, /lock/i);
   assert.match(grace, /2 days of grace left\./);
   assert.match(grace, />Subscribe</);
   assert.match(grace, /role="alert"/);
@@ -166,7 +168,7 @@ test('rendered with each licence state, the shell shows at most one notice and n
   assert.match(renew, /1 day of grace left\./);
   assert.match(renew, />Renew</);
   const ending = renderToStaticMarkup(h(I18nextProvider, { i18n }, h(Shell, { license: STATES.trial1 })));
-  assert.match(ending, /Free trial ends in 1 day\./);
+  assert.match(ending, /Your Pro trial ends in 1 day\. Then you move to the Free plan/);
   assert.match(ending, /aria-label="Dismiss"/);
   const chip = renderToStaticMarkup(h(I18nextProvider, { i18n }, h(Shell, { license: STATES.trial7 })));
   assert.match(chip, /Trial · 7 days left/);
@@ -186,8 +188,9 @@ test('AppShell draws the one notice once, in the column flow above the scrolling
   const shell = read('components', 'AppShell.jsx');
   assert.equal((shell.match(/<LicenseNoticeBanner /g) || []).length, 1);
   assert.equal((shell.match(/<LicenseTrialChip /g) || []).length, 1);
-  assert.match(shell, /const licenseNotice = pickLicenseNotice\(license, \{ dismissed: bannerDismissed, path: location\.pathname \}\);/);
-  assert.match(shell, /<LicenseNoticeBanner notice=\{licenseNotice\}[^\n]*\/>\s*<div className="flex-1 overflow-y-auto/, 'the banner sits right before the scroll container');
+  // The Black Friday offer banner (lib/promoBanner.mjs) may stand in for the dismissible trial-ending one.
+  assert.match(shell, /const rawLicenseNotice = pickLicenseNotice\(license, \{ dismissed: bannerDismissed, path: location\.pathname \}\);/);
+  assert.match(shell, /<LicenseNoticeBanner notice=\{licenseNotice\}[^\n]*\/>\s*(<PromoBanner [^\n]*\/>\s*)?<div className="flex-1 overflow-y-auto/, 'the banner sits right before the scroll container');
   assert.doesNotMatch(shell, /t\('shell\.trialEndingDays'/, 'the old inline banner is gone');
   const comp = read('components', 'LicenseNotice.jsx');
   assert.doesNotMatch(comp, /className="[^"]*\b(fixed|absolute|sticky)\b/, 'nothing in the notice is positioned over the page');

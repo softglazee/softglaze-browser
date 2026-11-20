@@ -67,7 +67,7 @@ export default function AiDevtoolsCard({ defaultOpen = false }) {
           aria-expanded={open}
           aria-controls="ai-devtools-body"
           onClick={toggle}
-          className="flex w-full items-center gap-3 rounded-xl px-5 py-4 text-left transition-colors hover:bg-elevated/40"
+          className="flex w-full items-center gap-3 rounded-xl px-5 py-4 text-start transition-colors hover:bg-elevated/40"
         >
           <span className="grid h-9 w-9 shrink-0 place-items-center rounded-lg" style={{ ...toneSurface('warning', 12, 0), color: AI_TONE.warning }}>
             <Bug className="h-[18px] w-[18px]" strokeWidth={1.75} aria-hidden="true" />

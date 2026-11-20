@@ -13,6 +13,11 @@
 //        server: the code must be unused and unexpired, and the verifier must match the app's S256 challenge;
 //        then the account is linked (src/auth/accounts.js) and a session token is returned.
 //
+// The phone app (client softglaze-mobile) and the web app (client softglaze-web) use the same browser leg
+// through startClientSignIn: their redirect must be on THEIR allow-list (src/auth/tokens.js), the AuthState
+// remembers the client, and the one-time code is traded at /v1/mobile/auth/token or /v1/web/auth/token
+// (takeClientCode: same client, same redirect_uri, PKCE verifier).
+//
 // The provider-side PKCE verifier is derived from the server state with a MASTER_KEY sub-key, so it is never
 // stored and nobody who only sees the state in a URL can compute it. Results are plain objects; the route
 // turns them into responses (src/routes/auth.js).
@@ -25,7 +30,7 @@ const { checkVerification } = require('../account/verify');
 const { applySignIn, resolveCustomer, signIn } = require('./accounts');
 const {
   randomToken, sha256Hex, isChallenge, isVerifier, challengeOf, verifierMatches, isAppState, isOpaqueToken,
-  checkAppRedirect, appRedirectUrl
+  checkAppRedirect, appRedirectUrl, checkClientRedirect, isClientState, MOBILE_CLIENT_ID, WEB_CLIENT_ID
 } = require('./tokens');
 
 const STATE_TTL_MS = 10 * 60000;
@@ -34,6 +39,8 @@ const CODE_TTL_MS = 60000;
 const STARTS_PER_HOUR_PER_IP = 30;
 
 const NONCE_COOKIE_PREFIX = 'sg_auth_';
+// What providers send back when the person cancelled (RFC 6749 access_denied; LinkedIn's own two codes).
+const PROVIDER_CANCELLED = Object.freeze(['access_denied', 'user_cancelled_login', 'user_cancelled_authorize']);
 
 function callbackUrl(providerId) {
   return `${String(publicBaseUrl).replace(/\/+$/, '')}/auth/callback/${providerId}`;
@@ -45,7 +52,34 @@ function providerVerifier(state) {
 
 const nonceCookieName = (authStateId) => `${NONCE_COOKIE_PREFIX}${String(authStateId).replace(/[^A-Za-z0-9]/g, '')}`;
 
-// GET /auth/start. query: { provider, tenant, app_redirect, code_challenge, code_challenge_method, state }.
+// Stores the AuthState of one browser sign-in and builds the provider URL. Shared by the desktop (startSignIn)
+// and the phone and web clients (startClientSignIn). -> { ok: true, location, cookie } or { ok: false, status, error }.
+async function createAuthState(db, tenant, provider, { codeChallenge, appState, appRedirect, clientId = null, ipHash = null, rerequest = false, now = Date.now() }) {
+  if (!provider.configured()) return { ok: false, status: 503, error: 'provider_unavailable' };
+  if (ipHash) {
+    const recent = await db.authState.count({ where: { tenantId: tenant.id, ipHash, createdAt: { gte: new Date(now - 3600000) } } });
+    if (recent >= STARTS_PER_HOUR_PER_IP) return { ok: false, status: 429, error: 'rate_limited' };
+  }
+  const state = randomToken(32);
+  const nonce = randomToken(32);
+  const row = await db.authState.create({
+    data: {
+      tenantId: tenant.id, provider: provider.id, stateHash: sha256Hex(state), nonceHash: sha256Hex(nonce),
+      codeChallenge, appState, appRedirect, clientId, ipHash,
+      expiresAt: new Date(now + STATE_TTL_MS), createdAt: new Date(now)
+    }
+  });
+  const location = provider.authorizeUrl({
+    state, codeChallenge: challengeOf(providerVerifier(state)), redirectUri: callbackUrl(provider.id), nonce, rerequest
+  });
+  return { ok: true, location, cookie: { name: nonceCookieName(row.id), value: nonce, maxAgeSec: STATE_TTL_MS / 1000 } };
+}
+
+// "Allow email access" after a Facebook sign-in without an email: the app starts again with auth_type=rerequest,
+// so Facebook asks for the declined email permission once more. Other providers ignore it.
+const wantsRerequest = (q) => q.auth_type === 'rerequest';
+
+// GET /auth/start. query: { provider, tenant, app_redirect, code_challenge, code_challenge_method, state, auth_type? }.
 // -> { ok: true, location, cookie: { name, value, maxAgeSec } } or { ok: false, status, error }.
 async function startSignIn(db, query, { ipHash = null, now = Date.now() } = {}) {
   const q = query || {};
@@ -59,24 +93,30 @@ async function startSignIn(db, query, { ipHash = null, now = Date.now() } = {}) 
   if (q.code_challenge_method !== 'S256' || !isChallenge(q.code_challenge) || !isAppState(q.state)) {
     return { ok: false, status: 400, error: 'invalid_request' };
   }
-  if (!provider.configured()) return { ok: false, status: 503, error: 'provider_unavailable' };
-  if (ipHash) {
-    const recent = await db.authState.count({ where: { tenantId: tenant.id, ipHash, createdAt: { gte: new Date(now - 3600000) } } });
-    if (recent >= STARTS_PER_HOUR_PER_IP) return { ok: false, status: 429, error: 'rate_limited' };
-  }
-  const state = randomToken(32);
-  const nonce = randomToken(32);
-  const row = await db.authState.create({
-    data: {
-      tenantId: tenant.id, provider: provider.id, stateHash: sha256Hex(state), nonceHash: sha256Hex(nonce),
-      codeChallenge: q.code_challenge, appState: q.state, appRedirect: redirect.uri, ipHash,
-      expiresAt: new Date(now + STATE_TTL_MS), createdAt: new Date(now)
-    }
+  return createAuthState(db, tenant, provider, { codeChallenge: q.code_challenge, appState: q.state, appRedirect: redirect.uri, ipHash, rerequest: wantsRerequest(q), now });
+}
+
+// GET /v1/mobile/auth/authorize and /v1/web/auth/authorize (OAuth 2.0 authorization request of a public
+// client, RFC 6749 4.1.1 + RFC 7636). query: { client_id, redirect_uri, response_type=code, state,
+// code_challenge, code_challenge_method=S256, provider, scope?, auth_type? }. `expectClient` is the client the route serves.
+// -> { ok: true, location, cookie } | { ok: false, status, error, redirect? } where `redirect` (only once the
+// redirect_uri is proven to belong to the client) is where the error may be sent (RFC 6749 4.1.2.1).
+async function startClientSignIn(db, tenant, query, expectClient, { ipHash = null, now = Date.now() } = {}) {
+  const q = query || {};
+  if (q.client_id !== expectClient) return { ok: false, status: 400, error: 'invalid_client' };
+  const redirect = checkClientRedirect(expectClient, q.redirect_uri);
+  if (!redirect) return { ok: false, status: 400, error: 'invalid_redirect' };
+  if (!isClientState(q.state)) return { ok: false, status: 400, error: 'invalid_request' };
+  const back = (error) => ({ ok: false, status: 302, error, redirect: appRedirectUrl(redirect.uri, { error, state: q.state }) });
+  if (!tenant) return back('server_error');
+  if (q.response_type !== 'code' || q.code_challenge_method !== 'S256' || !isChallenge(q.code_challenge)) return back('invalid_request');
+  const provider = getProvider(q.provider);
+  if (!provider) return back(q.provider === 'apple' ? 'provider_not_configured' : 'invalid_request');
+  const r = await createAuthState(db, tenant, provider, {
+    codeChallenge: q.code_challenge, appState: q.state, appRedirect: redirect.uri, clientId: expectClient, ipHash, rerequest: wantsRerequest(q), now
   });
-  const location = provider.authorizeUrl({
-    state, codeChallenge: challengeOf(providerVerifier(state)), redirectUri: callbackUrl(provider.id), nonce
-  });
-  return { ok: true, location, cookie: { name: nonceCookieName(row.id), value: nonce, maxAgeSec: STATE_TTL_MS / 1000 } };
+  if (!r.ok) return back(r.error === 'provider_unavailable' ? 'provider_not_configured' : r.error === 'rate_limited' ? 'rate_limited' : 'server_error');
+  return r;
 }
 
 // GET /auth/callback/:provider. cookies: { name: value } from the request.
@@ -95,11 +135,15 @@ async function finishCallback(db, providerId, query, cookies, { now = Date.now()
   const claim = await db.authState.updateMany({ where: { id: st.id, usedAt: null }, data: { usedAt: new Date(now) } });
   if (claim.count !== 1) return { kind: 'page', status: 400, page: 'expired' };
 
-  const redirect = checkAppRedirect(st.appRedirect);
+  const redirect = st.clientId ? checkClientRedirect(st.clientId, st.appRedirect) : checkAppRedirect(st.appRedirect);
   if (!redirect) return { kind: 'page', status: 400, page: 'expired' };
   const toApp = (params, outcome) => ({ kind: 'app', url: appRedirectUrl(redirect.uri, { ...params, state: st.appState }), redirectKind: redirect.kind, outcome });
 
-  if (typeof q.error === 'string' && q.error) return toApp({ error: q.error === 'access_denied' ? 'cancelled' : 'failed' }, 'cancelled');
+  // The phone and web clients speak OAuth: access_denied is the standard "the person said no". LinkedIn says
+  // user_cancelled_login / user_cancelled_authorize for the same thing.
+  const cancelled = st.clientId ? 'access_denied' : 'cancelled';
+  const said = typeof q.error === 'string' ? q.error : '';
+  if (said) return toApp({ error: PROVIDER_CANCELLED.includes(said) ? cancelled : 'failed' }, 'cancelled');
   const code = typeof q.code === 'string' ? q.code : '';
   if (!code || code.length > 200) return toApp({ error: 'failed' }, 'failed');
 
@@ -111,22 +155,44 @@ async function finishCallback(db, providerId, query, cookies, { now = Date.now()
     if (reason === 'failed') console.warn('[auth] provider sign-in failed:', provider.id, e && (e.detail || e.message));
     return toApp({ error: reason }, reason);
   }
-  const parsed = parseEmail(profile.email);
-  if (!parsed || profile.emailVerified !== true) return toApp({ error: 'email_not_verified' }, 'email_not_verified');
-  const { getSettings } = require('../settings');
-  const settings = await getSettings(db, st.tenantId);
-  if (isDisposableDomain(parsed.domain, { allow: settings.email.domainAllowlist, block: settings.email.domainBlocklist })) {
-    return toApp({ error: 'disposable_email' }, 'disposable_email');
+  // A provider that may send no email (Facebook: a phone-number account, or the email permission declined) signs
+  // in only a person who already linked this provider id; anyone else is told why (email_missing) and offered
+  // to allow email access (auth_type=rerequest), Google or email sign-in. Nothing is created without an email.
+  const noEmail = provider.emailOptional === true && !profile.email;
+  let parsed = null;
+  if (noEmail) {
+    if (!(await linkedIdentity(db, st.tenantId, provider.id, profile.providerUserId))) return toApp({ error: 'email_missing' }, 'email_missing');
+  } else {
+    parsed = parseEmail(profile.email);
+    if (!parsed || profile.emailVerified !== true) return toApp({ error: 'email_not_verified' }, 'email_not_verified');
+    const { getSettings } = require('../settings');
+    const settings = await getSettings(db, st.tenantId);
+    if (isDisposableDomain(parsed.domain, { allow: settings.email.domainAllowlist, block: settings.email.domainBlocklist })) {
+      return toApp({ error: 'disposable_email' }, 'disposable_email');
+    }
   }
   const appCode = randomToken(32);
   await db.authCode.create({
     data: {
       tenantId: st.tenantId, authStateId: st.id, provider: provider.id, codeHash: sha256Hex(appCode),
-      profile: { providerUserId: profile.providerUserId, email: parsed.email, emailVerified: true, name: profile.name || null, login: profile.login || null },
+      profile: {
+        providerUserId: profile.providerUserId, email: parsed ? parsed.email : null, emailVerified: Boolean(parsed),
+        name: profile.name || null, login: profile.login || null
+      },
       expiresAt: new Date(now + CODE_TTL_MS), createdAt: new Date(now)
     }
   });
   return toApp({ code: appCode }, 'signed_in');
+}
+
+// An Identity of this provider id whose customer still exists in the tenant (or null).
+async function linkedIdentity(db, tenantId, provider, providerUserId) {
+  const id = String(providerUserId || '');
+  if (!id) return null;
+  const identity = await db.identity.findUnique({ where: { tenantId_provider_providerUserId: { tenantId, provider, providerUserId: id } } });
+  if (!identity) return null;
+  const c = await db.customer.findUnique({ where: { id: identity.customerId } });
+  return c && c.tenantId === tenantId ? identity : null;
 }
 
 const INVALID_GRANT = { status: 400, body: { error: 'invalid_grant', message: 'This sign-in has expired or was already used. Please sign in again.' } };
@@ -145,6 +211,24 @@ async function exchangeCode(db, tenant, install, input, { ipHash = null, now = D
   if (!st || st.tenantId !== tenant.id || !verifierMatches(b.codeVerifier, st.codeChallenge)) return INVALID_GRANT;
   const profile = row.profile && typeof row.profile === 'object' ? row.profile : {};
   return signIn(db, tenant, install, row.provider, profile, { expectCustomerId: cleanId(b.expectCustomerId), ipHash, now, settings });
+}
+
+// POST /v1/mobile/auth/token and /v1/web/auth/token (grant_type=authorization_code): the one-time code from the
+// client's redirect. Same rules as exchangeCode, plus the code must have been issued to this client for this
+// exact redirect_uri (RFC 6749 4.1.3). -> { ok: true, provider, profile } | INVALID_GRANT.
+async function takeClientCode(db, tenant, input, clientId, { now = Date.now() } = {}) {
+  const b = input || {};
+  if (!tenant || !isOpaqueToken(b.code) || !isVerifier(b.code_verifier)) return INVALID_GRANT;
+  if (b.client_id !== clientId) return INVALID_GRANT;
+  const row = await db.authCode.findUnique({ where: { codeHash: sha256Hex(b.code) } });
+  if (!row || row.tenantId !== tenant.id) return INVALID_GRANT;
+  const claim = await db.authCode.updateMany({ where: { id: row.id, usedAt: null, expiresAt: { gt: new Date(now) } }, data: { usedAt: new Date(now) } });
+  if (claim.count !== 1) return INVALID_GRANT;
+  const st = await db.authState.findUnique({ where: { id: row.authStateId } });
+  if (!st || st.tenantId !== tenant.id || st.clientId !== clientId || st.appRedirect !== b.redirect_uri) return INVALID_GRANT;
+  if (!verifierMatches(b.code_verifier, st.codeChallenge)) return INVALID_GRANT;
+  const profile = row.profile && typeof row.profile === 'object' ? row.profile : {};
+  return { ok: true, provider: row.provider, profile };
 }
 
 function cleanId(v) {
@@ -178,5 +262,6 @@ async function emailSignIn(db, tenant, install, input, { ipHash = null, now = Da
 
 module.exports = {
   STATE_TTL_MS, CODE_TTL_MS, STARTS_PER_HOUR_PER_IP, NONCE_COOKIE_PREFIX, callbackUrl, providerVerifier, nonceCookieName,
-  startSignIn, finishCallback, exchangeCode, emailSignIn, resolveCustomer
+  startSignIn, startClientSignIn, finishCallback, exchangeCode, takeClientCode, emailSignIn, resolveCustomer, INVALID_GRANT,
+  MOBILE_CLIENT_ID, WEB_CLIENT_ID
 };

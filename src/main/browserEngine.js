@@ -4880,6 +4880,31 @@ async function importStoredCookies(opts, cookies) {
   });
 }
 
+// Whole-jar replace for profile sync with phones (src/main/mobile/sync): every cookie of the
+// profile is removed, then the given set is written. Never a merge. Running: null when the
+// profile is not running (the caller then uses replaceStoredCookies on the stopped profile).
+async function replaceSessionCookies(sessionId, cookies) {
+  const id = String(sessionId || '').trim();
+  const session = activeSessions.get(id);
+  if (!session || !session.browser) return null;
+  const client = await sessionCdpSession(session);
+  try {
+    await client.send('Network.clearBrowserCookies');
+    if (Array.isArray(cookies) && cookies.length) await client.send('Network.setCookies', { cookies });
+    return { imported: Array.isArray(cookies) ? cookies.length : 0 };
+  } finally {
+    await client.detach().catch(() => {});
+  }
+}
+
+async function replaceStoredCookies(opts, cookies) {
+  return withOfflineProfile(opts, async (client) => {
+    await client.send('Network.clearBrowserCookies');
+    if (Array.isArray(cookies) && cookies.length) await client.send('Network.setCookies', { cookies });
+    return { imported: Array.isArray(cookies) ? cookies.length : 0 };
+  });
+}
+
 // ---- Macro engine (Pro): runner + visual recorder ----
 // Step shapes live in MACRO_STEP_FIELDS. Element steps accept `timeout` (ms) and `optional`; a failed
 // optional step is logged as skipped. The recorder emits the same shape the runner replays.
@@ -5506,6 +5531,8 @@ module.exports = {
   liveLeakTest,
   exportStoredCookies,
   importStoredCookies,
+  replaceSessionCookies,
+  replaceStoredCookies,
   listAvailableBrowsers,
   resolveBrowserExecutable,
   // Exported for tests, which check the reported major is clamped to the launched binary

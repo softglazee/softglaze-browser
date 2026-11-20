@@ -1,0 +1,25 @@
+{
+  "contextMenu": {
+    "undo": "Geri al",
+    "redo": "Yinele",
+    "cut": "Kes",
+    "copy": "Kopyala",
+    "paste": "Yapıştır",
+    "selectAll": "Tümünü seç",
+    "copyLink": "Bağlantıyı kopyala"
+  },
+  "dialogs": {
+    "exportArchiveTitle": "Şifreli profil arşivini dışa aktar",
+    "archiveFilter": "SoftGlaze şifreli arşivi",
+    "importProfilesTitle": "İçe aktarılacak SoftGlaze profil tablosunu seçin",
+    "spreadsheetFilter": "Tablo dosyaları",
+    "exportProfilesTitle": "SoftGlaze profillerini dışa aktar",
+    "excelFilter": "Excel Çalışma Kitabı",
+    "importIdentitiesTitle": "İçe aktarılacak kimlik tablosunu seçin",
+    "backupTitle": "Çalışma alanını yedekle",
+    "backupFilter": "SoftGlaze çalışma alanı yedeği",
+    "restoreTitle": "Çalışma alanı yedeğini geri yükle",
+    "exportActivityTitle": "Etkinlik günlüğünü dışa aktar",
+    "bindSpreadsheetTitle": "Bu paralel çalıştırmaya bağlanacak tabloyu seçin"
+  }
+}

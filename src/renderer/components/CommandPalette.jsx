@@ -7,14 +7,6 @@ import {
 } from 'lucide-react';
 import { softglazeApi } from '@/lib/softglazeApi.js';
 import { canManageAi } from '@/lib/aiCore.mjs';
-import i18n from '@/i18n/index.js';
-import cmpOverlaysEn from '@/i18n/locales/en/cmpOverlays.json';
-import cmpOverlaysEs from '@/i18n/locales/es/cmpOverlays.json';
-
-// Registers cmpOverlays without touching the central i18n config; the guard keeps it safe across
-// hot reloads and the OnboardingWizard's identical registration.
-if (!i18n.hasResourceBundle('en', 'cmpOverlays')) i18n.addResourceBundle('en', 'cmpOverlays', cmpOverlaysEn);
-if (!i18n.hasResourceBundle('es', 'cmpOverlays')) i18n.addResourceBundle('es', 'cmpOverlays', cmpOverlaysEs);
 
 // Global Ctrl/Cmd-K palette, mounted once in AppShell: jumps to pages and searches profiles,
 // proxies and members. labelKey is translated at render time (module scope cannot call the hook).
@@ -171,7 +163,7 @@ export default function CommandPalette() {
                 aria-selected={i === sel}
                 onMouseEnter={() => setSel(i)}
                 onClick={() => exec(i)}
-                className={`w-full flex items-center gap-3 px-4 py-2.5 text-left text-[13px] ${i === sel ? 'bg-secondary text-foreground' : 'text-muted-foreground hover:text-foreground'}`}
+                className={`w-full flex items-center gap-3 px-4 py-2.5 text-start text-[13px] ${i === sel ? 'bg-secondary text-foreground' : 'text-muted-foreground hover:text-foreground'}`}
               >
                 <Icon className="w-4 h-4 shrink-0" />
                 <span className="flex-1 truncate">{r.label}</span>

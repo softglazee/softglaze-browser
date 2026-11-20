@@ -1,0 +1,80 @@
+{
+  "header": {
+    "eyebrow": "Tự động hóa",
+    "title": "Tạo hồ sơ hàng loạt",
+    "description": "Tạo nhanh nhiều môi trường trình duyệt bằng bảng tính hoặc tạo tuần tự.",
+    "exportProfiles": "Xuất hồ sơ"
+  },
+  "exportNotice_one": "Đã xuất {{count}} hồ sơ vào {{path}}",
+  "exportNotice_other": "Đã xuất {{count}} hồ sơ vào {{path}}",
+  "tabs": {
+    "importFromFile": "Nhập từ tệp",
+    "quickGenerate": "Tạo nhanh"
+  },
+  "step1": {
+    "title": "Tải mẫu",
+    "description": "Để đọc tệp suôn sẻ, hãy dùng mẫu Excel hoặc CSV chuẩn của chúng tôi. Điền tên hồ sơ, proxy và quy tắc dấu vân tay.",
+    "downloadButton": "Tải mẫu .CSV"
+  },
+  "step2": {
+    "title": "Tải lên và xem trước",
+    "description": "Chọn bảng tính đã điền. Chúng tôi sẽ đọc tệp ngay trên máy và kiểm tra lỗi định dạng trước khi lưu.",
+    "selectButton": "Chọn tệp"
+  },
+  "step3": {
+    "title": "Xem trước và lưu dữ liệu"
+  },
+  "awaiting": {
+    "title": "Đang chờ dữ liệu",
+    "description": "Chọn một tệp để xem trước các hồ sơ tại đây."
+  },
+  "preview": {
+    "file": "Tệp:",
+    "validRows": "Dòng hợp lệ:",
+    "errors": "Lỗi:"
+  },
+  "processing": {
+    "importing": "Đang nhập… {{index}}/{{total}}",
+    "backendLog": "Nhật ký xử lý",
+    "connecting": "Đang kết nối bộ máy nhập…"
+  },
+  "table": {
+    "row": "Dòng",
+    "title": "Tên",
+    "group": "Nhóm",
+    "proxyMethod": "Cách dùng proxy",
+    "dataDir": "Thư mục dữ liệu",
+    "auto": "Tự động"
+  },
+  "autoBind": {
+    "label": "Tự gán proxy theo quốc gia",
+    "descPrefix": "- với các dòng chưa có proxy riêng, gán một proxy đã lưu có quốc gia (theo kiểm tra tình trạng) khớp với cột",
+    "descSuffix": "của dòng đó (xoay vòng giữa các proxy khớp).",
+    "sourceLabel": "Gán từ",
+    "sourcePaid": "Proxy của bạn",
+    "sourceFree": "Proxy miễn phí (chỉ proxy hoạt động)",
+    "freeWarn": "Proxy miễn phí do người lạ vận hành: đừng bao giờ đăng nhập tài khoản hay thanh toán với các hồ sơ này."
+  },
+  "commitButton_one": "Lưu {{count}} hồ sơ",
+  "commitButton_other": "Lưu {{count}} hồ sơ",
+  "success": {
+    "title": "Nhập thành công",
+    "importedPrefix": "Đã nhập thành công",
+    "importedMiddle": "hồ sơ và gán",
+    "importedSuffix": "proxy mới",
+    "autoBoundPrefix": "· tự gán",
+    "autoBoundSuffix": "theo quốc gia",
+    "importAnother": "Nhập tệp khác"
+  },
+  "quick": {
+    "engineTitle": "Bộ máy tạo tuần tự",
+    "description": "Tạo ngay nhiều hồ sơ không cần bảng tính: dấu vân tay riêng, tên đánh số liên tiếp, nhóm đích (tạo ngay tại chỗ) và gán proxy từ một nhóm hoặc nhà cung cấp cụ thể. Dùng đúng bộ máy của trang Hồ sơ.",
+    "openButton": "Mở Tạo nhanh"
+  },
+  "errors": {
+    "parse": "Không đọc được tệp. Hãy chắc chắn đó là bảng tính hợp lệ.",
+    "commit": "Không lưu được hồ sơ vào cơ sở dữ liệu.",
+    "importFailed": "Nhập thất bại.",
+    "export": "Không xuất được hồ sơ."
+  }
+}

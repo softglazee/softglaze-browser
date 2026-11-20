@@ -1,0 +1,111 @@
+{
+  "choose": {
+    "title": "Tạo tài khoản miễn phí",
+    "subtitle": "Dùng tài khoản bạn đã có. Không cần mật khẩu mới.",
+    "google": "Tiếp tục với Google",
+    "microsoft": "Tiếp tục với Microsoft",
+    "facebook": "Tiếp tục với Facebook",
+    "linkedin": "Tiếp tục với LinkedIn",
+    "allowEmail": "Cho phép truy cập email và thử lại Facebook",
+    "github": "Tiếp tục với GitHub",
+    "email": "Tiếp tục với email",
+    "moreOptions": "Thiết lập bằng mật khẩu",
+    "moreOptionsHint": "Muốn dùng tên và mật khẩu?",
+    "privacy": "Chúng tôi chỉ nhận tên và địa chỉ email đã xác minh của bạn.",
+    "haveAccount": "Đã có không gian làm việc trên máy tính này?",
+    "logIn": "Đăng nhập bằng mật khẩu",
+    "signInTitle": "Đăng nhập vào SoftGlaze",
+    "signInSubtitle": "Dùng tài khoản bạn đã đăng ký. Nếu gói của bạn đang ở máy tính khác, bạn có thể chuyển gói sang máy này.",
+    "entryLabel": "Mới hoặc đã có tài khoản",
+    "entryNew": "Tài khoản mới",
+    "entryReturning": "Tôi đã có tài khoản"
+  },
+  "unlock": {
+    "title": "Chào mừng trở lại",
+    "titleNamed": "Chào mừng trở lại, {{name}}",
+    "subtitle": "Đăng nhập bằng tài khoản sở hữu không gian làm việc này.",
+    "account": "Tài khoản không gian làm việc: {{email}}",
+    "passwordInstead": "Đăng nhập bằng mật khẩu",
+    "haveInvite": "Tôi có mã mời",
+    "teamSignIn": "Thành viên nhóm đăng nhập"
+  },
+  "link": {
+    "title": "Đăng nhập tài khoản SoftGlaze",
+    "subtitle": "Dùng đăng nhập một chạm ở đây và trên các máy tính khác. Không gian làm việc của bạn vẫn giữ nguyên."
+  },
+  "email": {
+    "title": "Tiếp tục với email",
+    "subtitle": "Chúng tôi sẽ gửi cho bạn mã 6 chữ số qua email. Không cần mật khẩu.",
+    "label": "Địa chỉ email",
+    "placeholder": "you@company.com",
+    "send": "Gửi mã",
+    "codeTitle": "Kiểm tra email của bạn",
+    "codeBody": "Nhập mã 6 chữ số chúng tôi đã gửi đến {{email}}.",
+    "codeLabel": "Mã 6 chữ số",
+    "verify": "Tiếp tục",
+    "resend": "Gửi mã mới",
+    "resendIn": "Gửi mã mới sau {{count}} giây",
+    "checkSpam": "Có thể mất một phút. Hãy kiểm tra thư mục spam nếu bạn không thấy.",
+    "devCode": "Bản dựng này chưa thiết lập máy chủ email, nên đây là mã: {{code}}",
+    "change": "Dùng email khác"
+  },
+  "waiting": {
+    "title": "Hoàn tất trong trình duyệt",
+    "body": "Chúng tôi đã mở {{provider}} trong trình duyệt. Hãy đăng nhập ở đó, rồi quay lại đây.",
+    "status": "Đang chờ {{provider}}...",
+    "reopen": "Mở lại trang",
+    "anotherWay": "Chưa quay lại được? Hãy thử cách khác",
+    "cancel": "Hủy"
+  },
+  "back": "Quay lại",
+  "useCase": {
+    "title": "Bạn sẽ dùng SoftGlaze để làm gì?",
+    "subtitle": "Không bắt buộc. Thông tin này giúp chúng tôi cải thiện SoftGlaze cho bạn.",
+    "continue": "Tiếp tục",
+    "skip": "Bỏ qua"
+  },
+  "move": {
+    "title": "Gói đăng ký của bạn",
+    "moved": "Xong. Gói đăng ký của bạn giờ hoạt động trên máy tính này."
+  },
+  "account": {
+    "title": "Phương thức đăng nhập",
+    "subtitle": "Cách bạn đăng nhập tài khoản SoftGlaze. Đăng nhập trên máy tính mới cũng chuyển giấy phép của bạn sang đó.",
+    "signedInAs": "Đã đăng nhập với {{email}}",
+    "google": "Google",
+    "microsoft": "Microsoft",
+    "facebook": "Facebook",
+    "linkedin": "LinkedIn",
+    "github": "GitHub",
+    "githubLogin": "GitHub (@{{login}})",
+    "email": "Mã qua email",
+    "lastUsed": "Dùng lần cuối {{date}}",
+    "linkedOn": "Liên kết ngày {{date}}",
+    "signOut": "Đăng xuất",
+    "signOutConfirm": "Đăng xuất tài khoản SoftGlaze trên máy tính này? Bạn có thể đăng nhập lại bằng cùng tài khoản bất cứ lúc nào.",
+    "signingOut": "Đang đăng xuất...",
+    "offline": "Ngoại tuyến: đang hiện dữ liệu máy tính này đã lưu.",
+    "notSignedIn": "Đăng nhập tài khoản SoftGlaze để dùng đăng nhập một chạm ở đây và trên các máy tính khác.",
+    "signInWorkspace": "Không gian làm việc này mở bằng thông tin đăng nhập của bạn. Hãy thêm mật khẩu ở trên nếu bạn cũng muốn đăng nhập khi không có internet.",
+    "linked": "Đã đăng nhập. Các phương thức đăng nhập của bạn ở bên dưới.",
+    "loading": "Đang tải phương thức đăng nhập...",
+    "notAvailable": "Đăng nhập một chạm cần máy chủ cấp phép SoftGlaze, nhưng bản dựng này không dùng máy chủ đó."
+  },
+  "errors": {
+    "SIGNIN_OFFLINE": "Hãy kết nối internet để đăng nhập.",
+    "SIGNIN_EXPIRED": "Lần đăng nhập này đã hết hạn hoặc đã được dùng. Vui lòng thử lại.",
+    "SIGNIN_ACCOUNT_MISMATCH": "Không gian làm việc này thuộc về một tài khoản SoftGlaze khác. Hãy đăng nhập bằng tài khoản bạn đã dùng để tạo nó.",
+    "SIGNIN_EMAIL_MISMATCH": "Hãy dùng địa chỉ email của không gian làm việc này.",
+    "SIGNIN_EMAIL_NOT_VERIFIED": "Tài khoản bạn dùng để đăng nhập chưa có địa chỉ email đã xác minh. Hãy xác minh ở đó (trên GitHub: Settings > Emails), hoặc tiếp tục với email.",
+    "SIGNIN_EMAIL_MISSING": "Tài khoản Facebook của bạn không chia sẻ email. Hãy dùng Google hoặc đăng nhập bằng email, hoặc cho phép truy cập email.",
+    "SIGNIN_DISPOSABLE_EMAIL": "Vui lòng dùng địa chỉ email cố định.",
+    "SIGNIN_UNAVAILABLE": "Cách đăng nhập này chưa có. Hãy tiếp tục với email, hoặc dùng Tùy chọn khác.",
+    "SIGNIN_FAILED": "Đăng nhập chưa hoàn tất. Hãy thử lại sau một phút.",
+    "SIGNIN_TIMEOUT": "Đăng nhập mất quá nhiều thời gian. Hãy thử lại.",
+    "SIGNIN_NOT_ALLOWED": "Cách đăng nhập này không dùng được cho không gian làm việc này.",
+    "SIGNIN_KEY_LOST": "Không mở được không gian làm việc này bằng thông tin đăng nhập của bạn trên máy tính này. Hãy đăng nhập bằng mật khẩu.",
+    "SIGNIN_SESSION_ENDED": "Phiên đăng nhập của bạn đã kết thúc. Hãy đăng nhập lại.",
+    "SIGNIN_BAD_INPUT": "Hãy nhập địa chỉ email hợp lệ.",
+    "MOVE_FAILED": "Chưa chuyển được giấy phép lúc này. Hãy thử lại sau một phút."
+  }
+}

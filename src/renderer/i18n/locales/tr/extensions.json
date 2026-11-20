@@ -1,0 +1,52 @@
+{
+  "header": {
+    "eyebrow": "Enterprise Deposu",
+    "title": "Uzantılar",
+    "summary_one": "{{count}} uzantı kurulu · uzantı yükleyen profiller için {{enabled}} etkin",
+    "summary_other": "{{count}} uzantı kurulu · uzantı yükleyen profiller için {{enabled}} etkin"
+  },
+  "stats": {
+    "total": "Toplam uzantı",
+    "injected": "Etkin",
+    "disabled": "Devre dışı"
+  },
+  "caveat": {
+    "before": "Uzantılar her profile eklenmez. Yalnızca profil düzenleyicinin Gelişmiş sekmesinde \"SoftGlaze uzantılarını yükle (Chrome for Testing kullanır)\" işaretli olan Chromium profillerinde yüklenir (varsayılan olarak kapalı). Bu profiller onları başlatırken Chromium'un şu bayrağıyla bağlar:",
+    "middle": "bu nedenle bir değişiklik, böyle bir profilin",
+    "nextLaunch": "bir sonraki başlatılışında",
+    "after": "geçerli olur. Normal Chrome bu bayrağı yok sayar, bu yüzden bu profiller bir Chrome for Testing sürümünde açılır: önce Tarayıcılar sayfasından bir tane indirin, aksi halde profil uzantılar olmadan açılır. Firefox profilleri bunları yüklemez."
+  },
+  "importer": {
+    "title": "Ekibe aktar",
+    "description": "Bir Chrome Web Store URL'si veya 32 karakterlik kimliğini yapıştırın. SoftGlaze gerçek paketi indirip açar.",
+    "inputPlaceholder": "https://chromewebstore.google.com/detail/…  veya  cjpalhdlnbpafiamejdnhcphjbkeiagm",
+    "submit": "Ekibe aktar"
+  },
+  "installPhase": {
+    "downloading": "Paket indiriliyor…",
+    "extracting": "Arşiv açılıyor…",
+    "registering": "Kaydediliyor…"
+  },
+  "permissionNotice": "Ekip uzantılarını yalnızca Yöneticiler ve üstü yönetebilir. Depoyu görüntüleyebilirsiniz.",
+  "searchPlaceholder": "Ada veya kimliğe göre ara…",
+  "empty": {
+    "loadErrorTitle": "Uzantılar yüklenemedi",
+    "noExtTitle": "Henüz uzantı yok",
+    "noMatchTitle": "Aramanızla eşleşen uzantı yok",
+    "noExtDesc": "Ekip deponuza eklemek için yukarıdan bir Chrome Web Store uzantısı aktarın. Gelişmiş sekmesinde \"SoftGlaze uzantılarını yükle\" işaretli profillerde yüklenir.",
+    "noMatchDesc": "Farklı bir ad veya kimlik deneyin."
+  },
+  "card": {
+    "unpacked": "Paketlenmemiş uzantı",
+    "removeTitle": "Ekipten kaldır",
+    "injected": "Etkin",
+    "disabled": "Devre dışı"
+  },
+  "confirmRemove": "\"{{name}}\" ekip deposundan kaldırılsın mı? Yerel dosyaları silinecek.",
+  "errors": {
+    "couldNotLoad": "Uzantılar yüklenemedi.",
+    "installFailed": "Kurulum başarısız oldu.",
+    "couldNotUpdate": "Uzantı güncellenemedi.",
+    "couldNotRemove": "Uzantı kaldırılamadı."
+  }
+}

@@ -59,7 +59,7 @@ export function LicenseTrialChip({ notice, collapsed, onOpen }) {
       data-license-notice={notice.kind}
       title={collapsed ? label : undefined}
       aria-label={label}
-      className="w-full flex items-center gap-3 px-3 py-2 rounded-lg text-[12px] text-muted-foreground hover:bg-sidebar-accent hover:text-foreground transition-colors text-left"
+      className="w-full flex items-center gap-3 px-3 py-2 rounded-lg text-[12px] text-muted-foreground hover:bg-sidebar-accent hover:text-foreground transition-colors text-start"
     >
       <Clock className="w-[18px] h-[18px] shrink-0 text-primary" strokeWidth={1.75} aria-hidden="true" />
       {!collapsed && <span className="truncate">{label}</span>}

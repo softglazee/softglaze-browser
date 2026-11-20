@@ -1,0 +1,41 @@
+{
+  "title": "Papan skor vendor",
+  "note": "Dari pengecekan proxy Anda sendiri dalam {{days}} hari terakhir.",
+  "refresh": "Muat ulang",
+  "show": "Tampilkan papan skor vendor",
+  "hide": "Sembunyikan papan skor vendor",
+  "loading": "Memuat papan skor...",
+  "loadError": "Tidak bisa memuat papan skor: {{message}}",
+  "empty": "Belum ada proxy. Ambil dari penyedia atau tambahkan milik Anda, lalu cek untuk melihat kinerja tiap vendor.",
+  "truncated": "Hanya {{max}} pengecekan terbaru yang dihitung.",
+  "scoreHelp": "Skor dari 100. Yang paling berpengaruh adalah keberhasilan cek, lalu sedikitnya proxy yang masuk daftar blokir, lalu kecepatan, lalu blokir situs per proxy. Baris dengan kurang dari {{min}} pengecekan tidak diberi skor.",
+  "own": "Proxy Anda sendiri",
+  "free": "Proxy gratis",
+  "col": {
+    "vendor": "Vendor",
+    "score": "Skor",
+    "success": "Cek berhasil",
+    "speed": "Kecepatan median",
+    "blocklisted": "Daftar blokir",
+    "datacenter": "Datacenter",
+    "blocks": "Blokir situs",
+    "proxies": "Proxy",
+    "lastChecked": "Terakhir dicek"
+  },
+  "sortBy": "Urutkan menurut {{column}}",
+  "notEnough": "Data belum cukup",
+  "notEnoughTitle_other": "Hanya {{count}} pengecekan dalam {{days}} hari terakhir. Skor perlu {{min}}.",
+  "level": {
+    "good": "Baik",
+    "fair": "Cukup",
+    "poor": "Buruk"
+  },
+  "scoreTitle": "{{level}}: {{score}} dari 100",
+  "checks_other": "{{count}} pengecekan",
+  "ms": "{{ms}} ms",
+  "working": "{{pct}} berfungsi",
+  "noData": "Tidak ada data",
+  "never": "Belum pernah",
+  "openProvider": "Buka {{name}}",
+  "topSites": "Paling banyak memblokir: {{sites}}"
+}

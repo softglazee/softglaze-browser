@@ -20,11 +20,11 @@ const CustomSelect = ({ value, onChange, className = '', children, disabled }) =
       value={value}
       onChange={onChange}
       disabled={disabled}
-      className="w-full appearance-none bg-background border border-border rounded pl-3 pr-8 py-1.5 text-foreground text-xs outline-none focus:border-primary focus:ring-1 focus:ring-primary transition disabled:opacity-50 text-ellipsis overflow-hidden whitespace-nowrap cursor-pointer hover:border-muted-dark shadow-sm"
+      className="w-full appearance-none bg-background border border-border rounded ps-3 pe-8 py-1.5 text-foreground text-xs outline-none focus:border-primary focus:ring-1 focus:ring-primary transition disabled:opacity-50 text-ellipsis overflow-hidden whitespace-nowrap cursor-pointer hover:border-muted-dark shadow-sm"
     >
       {children}
     </select>
-    <div className="absolute right-2.5 pointer-events-none text-muted">
+    <div className="absolute inset-e-2.5 pointer-events-none text-muted">
       <ChevronDown className="w-3.5 h-3.5" />
     </div>
   </div>
@@ -291,7 +291,7 @@ export default function GroupsPage() {
                   <button type="submit" className="text-emerald-400 hover:text-emerald-300"><Check className="w-4 h-4" /></button>
                   <button type="button" onClick={() => setIsAddingGroup(false)} className="text-muted hover:text-red-400"><X className="w-4 h-4" /></button>
                 </div>
-                <div className="flex items-center gap-2 pl-6">
+                <div className="flex items-center gap-2 ps-6">
                   {GROUP_COLORS.map((c) => (
                     <button key={c} type="button" onClick={() => setNewGroupColor(c)} className={`w-3.5 h-3.5 rounded-full transition-transform hover:scale-110 ${newGroupColor === c ? 'ring-2 ring-offset-2 ring-offset-background ring-primary' : ''}`} style={{ backgroundColor: c }} />
                   ))}
@@ -321,7 +321,7 @@ export default function GroupsPage() {
                       <button type="submit" className="text-emerald-400"><Check className="w-4 h-4" /></button>
                       <button type="button" onClick={() => setEditingGroupId(null)} className="text-muted"><X className="w-4 h-4" /></button>
                     </div>
-                    <div className="flex items-center gap-2 pl-6">
+                    <div className="flex items-center gap-2 ps-6">
                       {GROUP_COLORS.map((c) => (
                         <button key={c} type="button" onClick={() => setEditGroupColor(c)} className={`w-3.5 h-3.5 rounded-full transition-transform hover:scale-110 ${editGroupColor === c ? 'ring-2 ring-offset-2 ring-offset-background ring-primary' : ''}`} style={{ backgroundColor: c }} />
                       ))}
@@ -360,7 +360,7 @@ export default function GroupsPage() {
                     <span className={`text-xs px-2 py-0.5 rounded font-mono group-hover:hidden ${isActive ? 'bg-primary/20 text-primary' : 'bg-background border border-border text-muted'}`}>{count}</span>
                   </div>
                   {tags.length > 0 && (
-                    <div className="flex flex-wrap gap-1.5 px-3 pb-3 pl-9">
+                    <div className="flex flex-wrap gap-1.5 px-3 pb-3 ps-9">
                       {tags.slice(0, 4).map((t) => (
                         <span key={t} className="inline-flex items-center gap-1 text-[10px] uppercase font-bold tracking-wider bg-background border border-border text-muted px-1.5 py-0.5 rounded">
                           <TagIcon className="w-2.5 h-2.5" />{t}
@@ -383,20 +383,20 @@ export default function GroupsPage() {
                 <span className="text-xs bg-background border border-border text-muted px-2.5 py-0.5 rounded-full font-mono">{filteredProfiles.length}</span>
               </h2>
               <div className="relative">
-                <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-muted" />
+                <Search className="w-4 h-4 absolute inset-s-3 top-1/2 -translate-y-1/2 text-muted" />
                 <input
                   type="text"
                   placeholder={t('table.searchPlaceholder')}
                   value={search}
                   onChange={(e) => setSearch(e.target.value)}
-                  className="bg-background border border-border rounded pl-9 pr-3 py-2 text-sm text-foreground outline-none focus:border-primary w-full sm:w-64 transition shadow-sm"
+                  className="bg-background border border-border rounded ps-9 pe-3 py-2 text-sm text-foreground outline-none focus:border-primary w-full sm:w-64 transition shadow-sm"
                 />
               </div>
             </div>
 
             {allTags.length > 0 && (
               <div className="flex flex-wrap items-center gap-2 pt-1">
-                <span className="text-xs text-muted font-medium uppercase tracking-wider flex items-center gap-1.5 mr-1"><TagIcon className="w-3 h-3" /> {t('tagFilter.label')}</span>
+                <span className="text-xs text-muted font-medium uppercase tracking-wider flex items-center gap-1.5 me-1"><TagIcon className="w-3 h-3" /> {t('tagFilter.label')}</span>
                 {allTags.map((t) => (
                   <button
                     key={t}
@@ -407,7 +407,7 @@ export default function GroupsPage() {
                   </button>
                 ))}
                 {activeTag && (
-                  <button onClick={() => setActiveTag(null)} className="text-xs text-muted hover:text-foreground flex items-center gap-1 ml-1"><X className="w-3 h-3" /> {t('tagFilter.clear')}</button>
+                  <button onClick={() => setActiveTag(null)} className="text-xs text-muted hover:text-foreground flex items-center gap-1 ms-1"><X className="w-3 h-3" /> {t('tagFilter.clear')}</button>
                 )}
               </div>
             )}
@@ -416,7 +416,7 @@ export default function GroupsPage() {
           {selectedIds.size > 0 && (
             <div className="flex items-center gap-3 px-5 py-3 border-b border-border bg-primary/5 shadow-inner transition-all animate-in fade-in slide-in-from-top-2">
               <span className="text-sm text-primary font-bold">{t('bulk.selected', { count: selectedIds.size })}</span>
-              <div className="flex items-center gap-3 ml-auto">
+              <div className="flex items-center gap-3 ms-auto">
                 <span className="text-xs text-muted font-medium uppercase tracking-wider">{t('bulk.moveTo')}</span>
                 <DenyTip deny={denyEdit}>
                   <CustomSelect
@@ -442,7 +442,7 @@ export default function GroupsPage() {
                 <span className="text-sm font-medium">{t('table.loading')}</span>
               </div>
             ) : (
-              <table className="w-full min-w-[760px] border-collapse text-left text-sm whitespace-nowrap">
+              <table className="w-full min-w-[760px] border-collapse text-start text-sm whitespace-nowrap">
                 <thead className="bg-surface text-muted text-xs uppercase tracking-wider font-semibold sticky top-0 z-10 shadow-sm border-b border-border">
                   <tr>
                     <th className="px-5 py-3.5 w-10 text-center"><Checkbox checked={allSelected} onChange={toggleSelectAll} /></th>

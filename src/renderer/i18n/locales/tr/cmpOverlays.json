@@ -1,0 +1,107 @@
+{
+  "palette": {
+    "dialogLabel": "Komut paleti",
+    "searchPlaceholder": "Sayfa, profil, proxy, üye ara…",
+    "searchAriaLabel": "Sayfalarda, profillerde, proxy'lerde ve üyelerde ara",
+    "resultsLabel": "Sonuçlar",
+    "esc": "Esc",
+    "noMatches": "Eşleşme yok.",
+    "nav": {
+      "dashboard": "Pano",
+      "ai": "SoftGlaze AI",
+      "profiles": "Profiller",
+      "groups": "Gruplar",
+      "proxies": "Proxy havuzu",
+      "freeProxies": "Ücretsiz proxy'ler",
+      "proxyProviders": "Proxy sağlayıcıları",
+      "browsers": "Tarayıcılar",
+      "extensions": "Uzantılar",
+      "batchImport": "Toplu içe aktarma",
+      "trash": "Çöp kutusu",
+      "automation": "Otomasyon",
+      "members": "Üyeler",
+      "account": "Hesap",
+      "settings": "Ayarlar"
+    },
+    "hint": {
+      "page": "Sayfa",
+      "profile": "Profil",
+      "proxy": "Proxy",
+      "member": "Üye",
+      "action": "İşlem"
+    },
+    "fallback": {
+      "profile": "Profil #{{id}}",
+      "proxy": "Proxy #{{id}}",
+      "member": "Üye #{{id}}"
+    },
+    "action": {
+      "stopAi": "Tüm yapay zekâyı durdur"
+    }
+  },
+  "wizard": {
+    "skipTitle": "Kurulumu atla",
+    "back": "Geri",
+    "skip": "Atla",
+    "saveAndContinue": "Kaydet ve devam et",
+    "saveAndFinish": "Kaydet ve bitir",
+    "msg": {
+      "smtpSaved": "SMTP kaydedildi.",
+      "proxySaved": "Proxy kaydedildi."
+    },
+    "err": {
+      "smtpSaveFailed": "SMTP ayarları kaydedilemedi.",
+      "proxySaveFailed": "Proxy kaydedilemedi.",
+      "profileCreateFailed": "Profil oluşturulamadı."
+    },
+    "welcome": {
+      "title": "SoftGlaze'e hoş geldiniz",
+      "subtitle": "3 adımlık hızlı kurulum sizi ilk profilinize götürür. İstediğiniz adımı atlayabilirsiniz.",
+      "subtitleShort_one": "Tek hızlı adım. Atlayabilirsiniz.",
+      "subtitleShort_other": "{{count}} adımlık hızlı kurulum. İstediğiniz adımı atlayabilirsiniz.",
+      "unavailable": "Gri adımlar atlanır: hesabınız bunları yapamaz.",
+      "getStarted": "Başlayın",
+      "stepEmail": "E-posta (SMTP), isteğe bağlı, OTP kodları için",
+      "stepProxy": "İlk proxy'niz (isteğe bağlı)",
+      "stepProfile": "İlk tarayıcı profiliniz"
+    },
+    "smtp": {
+      "title": "E-posta (SMTP)",
+      "subtitle": "İsteğe bağlı. Uygulamanın doğrulama kodları göndermesini sağlar. Bunu daha sonra Ayarlar'dan yapabilirsiniz.",
+      "host": "SMTP sunucusu",
+      "hostPlaceholder": "smtp.example.com",
+      "port": "Port",
+      "portPlaceholder": "587",
+      "username": "Kullanıcı adı",
+      "usernamePlaceholder": "you@example.com",
+      "password": "Parola",
+      "passwordPlaceholder": "••••••••"
+    },
+    "proxy": {
+      "title": "İlk proxy'nizi ekleyin",
+      "subtitle": "İsteğe bağlı. Her kimliğe kendi ağını verin. Daha fazlasını Proxy havuzu'ndan ekleyebilirsiniz.",
+      "type": "Tür",
+      "host": "Sunucu",
+      "hostPlaceholder": "1.2.3.4",
+      "port": "Port",
+      "portPlaceholder": "8080",
+      "user": "Kullanıcı",
+      "userPlaceholder": "isteğe bağlı",
+      "password": "Parola",
+      "passwordPlaceholder": "isteğe bağlı"
+    },
+    "profile": {
+      "title": "İlk profilinizi oluşturun",
+      "subtitle": "Sizin için benzersiz ve kendi içinde tutarlı bir parmak izi oluşturulur.",
+      "createAndFinish": "Oluştur ve bitir",
+      "name": "Profil adı",
+      "namePlaceholder": "İlk profilim",
+      "defaultName": "İlk profilim",
+      "deviceType": "Cihaz türü",
+      "desktop": "Masaüstü",
+      "mobile": "Mobil (Android)",
+      "mobileNote": "Android, masaüstü motorunda taklit edilir: tutarlı UA, dokunma, ekran ve GPU, ancak gerçek bir cihaz değil.",
+      "proxyAttached": "Yeni proxy'niz bu profile bağlanacak."
+    }
+  }
+}

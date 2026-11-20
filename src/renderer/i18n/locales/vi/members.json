@@ -1,0 +1,330 @@
+{
+  "header": {
+    "eyebrow": "Nhóm",
+    "title": "Thành viên",
+    "manageCount_one": "Bạn quản lý {{count}} thành viên",
+    "manageCount_other": "Bạn quản lý {{count}} thành viên",
+    "workspaceStats": "{{profiles}} hồ sơ · {{proxies}} proxy trong không gian làm việc"
+  },
+  "tabs": {
+    "members": "Thành viên",
+    "activity": "Hoạt động",
+    "licenses": "Giấy phép"
+  },
+  "memberCount_one": "{{count}} thành viên",
+  "memberCount_other": "{{count}} thành viên",
+  "roles": {
+    "SUPER_ADMIN": "Super Admin",
+    "OWNER": "Chủ sở hữu",
+    "ADMIN": "Quản trị",
+    "MANAGER": "Quản lý",
+    "OPERATOR": "Nhân viên"
+  },
+  "roleDesc": {
+    "OWNER": "Toàn quyền, gồm cả thành viên và kho.",
+    "ADMIN": "Quản lý hồ sơ, proxy, nhóm và các quản lý/nhân viên do họ tạo.",
+    "MANAGER": "Tạo, sửa và mở hồ sơ, và thêm nhân viên.",
+    "OPERATOR": "Chỉ mở và dùng các hồ sơ được giao."
+  },
+  "actionCategories": {
+    "Profiles": "Hồ sơ",
+    "Proxies": "Proxy",
+    "Automation": "Tự động hóa",
+    "Workspace": "Không gian làm việc",
+    "Team": "Nhóm"
+  },
+  "actionLabels": {
+    "profiles_launch": "Mở hồ sơ",
+    "profiles_create": "Tạo hồ sơ",
+    "profiles_edit": "Sửa hồ sơ",
+    "profiles_export": "Xuất hồ sơ",
+    "profiles_share": "Chia sẻ hồ sơ với thành viên",
+    "profiles_delete": "Xóa hồ sơ (vào thùng rác)",
+    "profiles_purge": "Xóa vĩnh viễn hồ sơ",
+    "proxies_manage": "Thêm / sửa / xóa proxy",
+    "proxies_reveal": "Hiện thông tin đăng nhập proxy gốc",
+    "automation_run": "Chạy tự động hóa / macro",
+    "extensions_manage": "Quản lý tiện ích của nhóm",
+    "settings_manage": "Thay đổi cài đặt không gian làm việc",
+    "vault_manage": "Quản lý Kho danh tính",
+    "members_manage": "Quản lý thành viên nhóm",
+    "members_delete": "Xóa thành viên / đổi vai trò"
+  },
+  "features": {
+    "dashboard": "Bảng điều khiển (chỉ trang)",
+    "profiles": "Hồ sơ",
+    "groups": "Nhóm hồ sơ",
+    "proxies": "Kho proxy",
+    "browsers": "Trình duyệt",
+    "extensions": "Tiện ích",
+    "batchImport": "Nhập hàng loạt",
+    "trash": "Thùng rác",
+    "members": "Thành viên",
+    "settings": "Cài đặt"
+  },
+  "caps": {
+    "maxAdmins": "Quản trị",
+    "maxManagers": "Quản lý",
+    "maxOperators": "Nhân viên"
+  },
+  "labels": {
+    "profiles": "Hồ sơ",
+    "proxies": "Proxy",
+    "browsers": "Trình duyệt"
+  },
+  "status": {
+    "active": "Đang hoạt động",
+    "suspended": "Tạm ngưng",
+    "banned": "Đã chặn"
+  },
+  "actions": {
+    "inviteMember": "Mời thành viên",
+    "inviteTeamMember": "Mời thành viên nhóm",
+    "remove": "Gỡ",
+    "removeMember": "Gỡ thành viên",
+    "assignProfiles": "Giao hồ sơ",
+    "cancel": "Hủy",
+    "close": "Đóng",
+    "clear": "Xóa",
+    "save": "Lưu",
+    "createInvite": "Tạo lời mời",
+    "done": "Xong",
+    "copy": "Sao chép",
+    "copied": "Đã sao chép"
+  },
+  "empty": {
+    "title": "Chưa có thành viên nào",
+    "canCreate": "Mời thành viên nhóm đầu tiên để bắt đầu giao việc.",
+    "noMembers": "Bạn chưa có thành viên nào dưới quyền."
+  },
+  "member": {
+    "you": "Bạn",
+    "noEmail": "Không có email",
+    "invitePending": "Đang chờ chấp nhận lời mời",
+    "loginSet": "Đã có đăng nhập",
+    "subMembers_one": "{{count}} thành viên cấp dưới",
+    "subMembers_other": "{{count}} thành viên cấp dưới"
+  },
+  "time": {
+    "neverActive": "Chưa từng hoạt động",
+    "activeJustNow": "Vừa hoạt động",
+    "activeMinutes": "Hoạt động {{count}} phút trước",
+    "activeHours": "Hoạt động {{count}} giờ trước",
+    "activeDays": "Hoạt động {{count}} ngày trước"
+  },
+  "errors": {
+    "loadMembers": "Không tải được thành viên.",
+    "changeStatus": "Không đổi được trạng thái.",
+    "nameRequired": "Cần nhập tên.",
+    "saveMember": "Không lưu được thành viên.",
+    "resetPerms": "Không đặt lại được quyền.",
+    "removeMember": "Không gỡ được thành viên.",
+    "loadProfiles": "Không tải được hồ sơ.",
+    "reassignProfiles": "Không giao lại được hồ sơ."
+  },
+  "confirm": {
+    "revertPerms": "Đặt lại giới hạn và tính năng của {{name}} về mặc định của vai trò?"
+  },
+  "modal": {
+    "inviteTitle": "Mời thành viên",
+    "editTitle": "Sửa {{name}}",
+    "noCreatableRoles": "Bạn không được phép tạo thành viên cấp dưới nào.",
+    "invitePendingCode": "Đang chờ chấp nhận lời mời, mã"
+  },
+  "fields": {
+    "name": "Tên",
+    "namePlaceholder": "Họ và tên",
+    "email": "Email",
+    "role": "Vai trò",
+    "color": "Màu",
+    "instructions": "Hướng dẫn",
+    "optional": "(không bắt buộc)",
+    "instructionsPlaceholder": "Thành viên này phụ trách việc gì…"
+  },
+  "invite": {
+    "createdTitle": "Đã tạo lời mời",
+    "sharePrefix": "Chia sẻ mã này với ",
+    "shareSuffix": ". Họ mở SoftGlaze Browser → “Có mã mời?”, nhập mã và đặt mật khẩu.",
+    "code": "Mã mời",
+    "link": "Liên kết mời",
+    "emailedTo": "Đã gửi email đến {{email}}.",
+    "emailNotSent": "Chưa gửi email (hãy cấu hình SMTP trong Cài đặt → Email). Hãy chia sẻ mã thủ công."
+  },
+  "alloc": {
+    "heading_one": "Đã phân bổ cho {{count}} thành viên cấp dưới",
+    "heading_other": "Đã phân bổ cho {{count}} thành viên cấp dưới",
+    "allocated": "Đã phân bổ {{allocated}} / {{cap}}",
+    "left": "· còn {{remaining}}"
+  },
+  "perms": {
+    "title": "Quyền và giới hạn",
+    "resourceLimits": "Giới hạn tài nguyên",
+    "subMemberCaps": "Giới hạn thành viên cấp dưới",
+    "visibleFeatures": "Tính năng hiển thị",
+    "actionPermissions": "Quyền thao tác",
+    "actionHint": "Mặc định bật cho vai trò này. Tắt một quyền để thu hồi chỉ với thành viên này.",
+    "revertDefaults": "Về mặc định của vai trò",
+    "max": "(tối đa {{max}})",
+    "canInvite": {
+      "canCreateAdmins": "Được mời quản trị",
+      "canCreateManagers": "Được mời quản lý",
+      "canCreateOperators": "Được mời nhân viên"
+    },
+    "featuresHint": "Tính năng bị tắt sẽ ẩn khỏi thanh bên, và các thao tác của nó bị từ chối ở mọi nơi (ví dụ thêm proxy, khôi phục từ Thùng rác hay tải trình duyệt). Các danh sách mà trang khác cần, như chọn proxy hoặc nhóm trong trình sửa hồ sơ, vẫn tải được."
+  },
+  "accountStatus": {
+    "title": "Trạng thái tài khoản",
+    "reason": "Lý do: {{reason}}",
+    "unban": "Bỏ chặn thành viên",
+    "banHint": "Sửa các trường ở trên vẫn giữ trạng thái chặn. Dùng Bỏ chặn để khôi phục quyền truy cập.",
+    "suspendToggle": "Tạm ngưng thành viên này (không cho đăng nhập)",
+    "ban": "Chặn thành viên"
+  },
+  "delete": {
+    "title": "Gỡ {{name}}",
+    "warnPrefix": "Thao tác này gỡ ",
+    "warnMiddle": " và chuyển các thành viên cấp dưới lên cho bạn. Hãy chọn cách xử lý dữ liệu của họ -",
+    "profilesWord_one": "hồ sơ",
+    "profilesWord_other": "hồ sơ",
+    "proxiesWord_one": "proxy",
+    "proxiesWord_other": "proxy",
+    "options": {
+      "reassignMe": {
+        "label": "Giữ lại và giao cho tôi",
+        "desc": "Bạn trở thành chủ sở hữu hồ sơ và proxy của họ."
+      },
+      "reassignOther": {
+        "label": "Giữ lại và giao cho thành viên khác",
+        "desc": "Chuyển dữ liệu của họ cho một đồng đội cụ thể."
+      },
+      "delete": {
+        "label": "Xóa toàn bộ dữ liệu kèm theo",
+        "desc": "Proxy và nhóm proxy của họ bị xóa; hồ sơ chuyển vào Thùng rác (khôi phục được)."
+      }
+    },
+    "pickTarget": "Chọn thành viên nhận dữ liệu.",
+    "reassignTo": "Giao cho",
+    "noOtherMembers": "Không có thành viên nào khác. Hãy chọn tùy chọn khác."
+  },
+  "assign": {
+    "title": "Giao hồ sơ · {{name}}",
+    "searchPlaceholder": "Tìm hồ sơ",
+    "noProfiles": "Không tìm thấy hồ sơ.",
+    "memberFallback": "thành viên #{{id}}",
+    "updated": "Đã cập nhật: giao {{assigned}}, bỏ giao {{unassigned}}.",
+    "save": "Lưu phân công"
+  },
+  "activity": {
+    "title": "Hoạt động của nhóm",
+    "subtitle": "ai đã làm gì trong không gian làm việc này",
+    "exported": "Đã xuất {{count}} dòng → {{path}}",
+    "exportError": "Không xuất được nhật ký hoạt động.",
+    "filterByMember": "Lọc theo thành viên",
+    "filterByAction": "Lọc theo thao tác",
+    "allMembers": "Tất cả thành viên",
+    "allActions": "Tất cả thao tác",
+    "fromDate": "Từ ngày",
+    "toDate": "Đến ngày",
+    "empty": "Chưa có hoạt động nào.",
+    "noMatch": "Không có hoạt động nào khớp bộ lọc.",
+    "enterpriseFeature": "Tính năng Enterprise",
+    "seeBilling": "Xem Thanh toán",
+    "exportEnterpriseOnly": "Xuất nhật ký kiểm tra (CSV / JSON) là tính năng Enterprise. Hãy nâng cấp ở trang Thanh toán để xuất nhật ký hoạt động."
+  },
+  "activityActions": {
+    "launched": "đã mở",
+    "stopped": "đã dừng",
+    "created": "đã tạo",
+    "edited": "đã sửa",
+    "deleted": "đã xóa",
+    "restored": "đã khôi phục",
+    "imported": "đã nhập",
+    "assigned": "đã giao",
+    "reassigned": "đã giao lại",
+    "parallel_run": "chạy song song",
+    "macro_run": "chạy macro",
+    "member_added": "đã thêm thành viên",
+    "member_edited": "đã sửa thành viên",
+    "member_removed": "đã gỡ thành viên",
+    "permissions_changed": "đã đổi quyền",
+    "status_changed": "đã đổi trạng thái",
+    "signed_in": "đã đăng nhập",
+    "signed_out": "đã đăng xuất",
+    "invite_accepted": "đã chấp nhận lời mời",
+    "proxies_copied_for_extension": "đã sao chép proxy cho tiện ích",
+    "devtools_address_shown": "đã hiện địa chỉ DevTools"
+  },
+  "feedTime": {
+    "justNow": "vừa xong",
+    "minutes": "{{count}} phút trước",
+    "hours": "{{count}} giờ trước",
+    "days": "{{count}} ngày trước"
+  },
+  "license": {
+    "intro": "Trạng thái gói đăng ký của từng không gian làm việc của chủ sở hữu. Ưu tiên cục bộ và chỉ ở mức cố gắng tốt nhất: người dùng cố ý vẫn có thể sửa CSDL cục bộ hoặc đồng hồ; muốn kiểm soát chắc chắn cần máy chủ cấp phép.",
+    "noOwners": "Chưa có không gian làm việc của chủ sở hữu nào.",
+    "editTitle": "Giấy phép · {{name}}",
+    "setState": "Đặt trạng thái",
+    "grantPlan": "Cấp một gói",
+    "lifecycle": "Vòng đời",
+    "state": {
+      "paid": "Đã trả phí",
+      "trialing": "Dùng thử",
+      "grace": "Ân hạn",
+      "banned": "Đã chặn"
+    },
+    "type": {
+      "trial": "dùng thử",
+      "paid": "trả phí"
+    },
+    "tier": {
+      "pro": "pro",
+      "enterprise": "enterprise"
+    },
+    "fields": {
+      "type": "Loại",
+      "tier": "Cấp",
+      "expiry": "Hết hạn",
+      "plan": "Gói",
+      "months": "Số tháng"
+    },
+    "detail": {
+      "trial": "Còn {{count}} ngày dùng thử",
+      "grace": "Ân hạn: còn {{count}} ngày",
+      "paid": "Đã trả phí đến {{date}}",
+      "clockAnomaly": "⚠ đồng hồ bất thường"
+    },
+    "actions": {
+      "grantMonth": "Cấp 1 tháng",
+      "extend7": "+7 ngày",
+      "startTrial": "Bắt đầu dùng thử",
+      "resetTrial": "Đặt lại dùng thử",
+      "edit": "Sửa",
+      "terminate": "Chấm dứt",
+      "unblock": "Bỏ chặn",
+      "block": "Chặn",
+      "saveState": "Lưu trạng thái",
+      "grantPlan": "Cấp gói",
+      "startFreeTrial": "Bắt đầu dùng thử miễn phí",
+      "terminateNow": "Chấm dứt ngay"
+    },
+    "confirm": {
+      "terminate": "Chấm dứt gói đăng ký của {{name}} ngay? Hồ sơ của họ sẽ bị khóa cho đến khi bạn cấp lại quyền.",
+      "terminateModal": "Chấm dứt gói đăng ký này ngay? Hồ sơ bị khóa cho đến khi bạn cấp lại quyền.",
+      "resetTrial": "Đặt lại dùng thử của {{name}}? Thời gian dùng thử bắt đầu lại và mọi trạng thái giấy phép hiện tại sẽ bị thay thế.",
+      "block": "Chặn {{name}}? Họ và mọi thành viên cấp dưới sẽ bị đăng xuất và không dùng được ứng dụng cho đến khi bạn bỏ chặn."
+    },
+    "errors": {
+      "load": "Không tải được giấy phép.",
+      "action": "Thao tác thất bại."
+    }
+  },
+  "seats": {
+    "usage": "{{used}} / {{total}} thành viên",
+    "fullNotice": "Đã dùng hết {{total}} chỗ cho nhóm trong gói của bạn, nên không thêm được người mới. Hãy tạm ngưng một thành viên để trống chỗ, hoặc nâng cấp lên Enterprise để có tối đa {{enterpriseSeats}} thành viên nhóm.",
+    "fullNoticeTop": "Đã dùng hết {{total}} chỗ cho nhóm trong gói của bạn, nên không thêm được người mới. Hãy tạm ngưng một thành viên để trống chỗ.",
+    "overNotice": "Nhóm này có {{used}} thành viên và gói của bạn gồm {{total}}. Mọi người vẫn giữ quyền truy cập; có thể thêm thành viên mới khi nhóm dưới giới hạn.",
+    "seeBilling": "Xem Thanh toán",
+    "limitError": "Đã dùng hết chỗ cho nhóm trong gói của bạn. Hãy tạm ngưng một thành viên để trống chỗ, hoặc xem Thanh toán để biết các lựa chọn gói."
+  }
+}

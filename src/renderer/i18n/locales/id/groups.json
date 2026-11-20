@@ -1,0 +1,50 @@
+{
+  "header": {
+    "eyebrow": "Organisasi",
+    "title": "Grup & Tag",
+    "description": "Atur profil ke dalam grup dan beri tag untuk penyaringan cepat."
+  },
+  "filters": {
+    "allProfiles": "Semua profil",
+    "ungrouped": "Tanpa grup",
+    "group": "Grup"
+  },
+  "sidebar": {
+    "directories": "Direktori",
+    "createGroup": "Buat grup baru",
+    "renameGroup": "Ganti nama grup {{name}}",
+    "deleteGroup": "Hapus grup {{name}}",
+    "groupNamePlaceholder": "Nama grup..."
+  },
+  "table": {
+    "searchPlaceholder": "Cari profil...",
+    "loading": "Memuat grup...",
+    "colProfileName": "Nama profil",
+    "colGroupAssignment": "Grup",
+    "colTags": "Tag"
+  },
+  "tagFilter": {
+    "label": "Filter",
+    "clear": "hapus"
+  },
+  "bulk": {
+    "selected_other": "{{count}} dipilih",
+    "moveTo": "Pindahkan ke:",
+    "chooseGroup": "Pilih grup…",
+    "clear": "Bersihkan"
+  },
+  "empty": {
+    "title": "Tidak ada profil",
+    "noMatch": "Tidak ada profil yang cocok dengan filter Anda.",
+    "groupEmpty": "Grup ini kosong. Pindahkan profil ke sini lewat menu Grup."
+  },
+  "tags": {
+    "add": "Tambah tag",
+    "remove": "Hapus tag",
+    "inputPlaceholder": "tag + Enter"
+  },
+  "deleteConfirm": "Hapus grup \"{{name}}\"? Profilnya akan menjadi Tanpa grup (profilnya sendiri tidak dihapus).",
+  "errors": {
+    "loadFailed": "Gagal memuat grup."
+  }
+}

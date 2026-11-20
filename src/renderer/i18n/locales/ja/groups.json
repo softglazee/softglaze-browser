@@ -1,0 +1,50 @@
+{
+  "header": {
+    "eyebrow": "整理",
+    "title": "グループとタグ",
+    "description": "プロファイルをグループに分け、タグを付けてすばやく絞り込めます。"
+  },
+  "filters": {
+    "allProfiles": "すべてのプロファイル",
+    "ungrouped": "グループなし",
+    "group": "グループ"
+  },
+  "sidebar": {
+    "directories": "ディレクトリ",
+    "createGroup": "グループを新規作成",
+    "renameGroup": "グループ {{name}} の名前を変更",
+    "deleteGroup": "グループ {{name}} を削除",
+    "groupNamePlaceholder": "グループ名..."
+  },
+  "table": {
+    "searchPlaceholder": "プロファイルを検索...",
+    "loading": "グループを読み込み中...",
+    "colProfileName": "プロファイル名",
+    "colGroupAssignment": "所属グループ",
+    "colTags": "タグ"
+  },
+  "tagFilter": {
+    "label": "フィルター",
+    "clear": "クリア"
+  },
+  "bulk": {
+    "selected_other": "{{count}}件を選択中",
+    "moveTo": "移動先:",
+    "chooseGroup": "グループを選択…",
+    "clear": "クリア"
+  },
+  "empty": {
+    "title": "プロファイルが見つかりません",
+    "noMatch": "フィルターに一致するプロファイルはありません。",
+    "groupEmpty": "このグループは空です。「グループ」のドロップダウンでプロファイルをここに移動できます。"
+  },
+  "tags": {
+    "add": "タグを追加",
+    "remove": "タグを削除",
+    "inputPlaceholder": "タグ + Enter"
+  },
+  "deleteConfirm": "グループ「{{name}}」を削除しますか？所属するプロファイルは「グループなし」になります（プロファイル自体は削除されません）。",
+  "errors": {
+    "loadFailed": "グループを読み込めませんでした。"
+  }
+}

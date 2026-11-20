@@ -34,6 +34,7 @@ router.use('/plans', require('./routes/plans'));
 router.use('/email', require('./routes/email'));
 router.use('/metrics', require('./routes/metrics'));
 router.use('/store', require('./routes/store'));
+router.use('/partner-deals', require('./routes/partnerDeals'));
 
 // ---- trials ------------------------------------------------------------------------------------
 router.get('/trials', asyncHandler(async (req, res) => {

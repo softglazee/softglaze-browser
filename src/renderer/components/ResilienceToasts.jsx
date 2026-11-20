@@ -45,7 +45,7 @@ export default function ResilienceToasts() {
   }, []);
   if (!toasts.length) return null;
   return (
-    <div className="fixed bottom-5 right-5 z-50 flex max-w-sm flex-col gap-2" role="status" aria-live="polite">
+    <div className="fixed bottom-5 inset-e-5 z-50 flex max-w-sm flex-col gap-2" role="status" aria-live="polite">
       {toasts.map((t) => (
         <div key={t.id} className="flex items-start gap-2.5 rounded-xl border px-4 py-3 shadow-lg animate-fade-up" style={{ background: 'var(--card)', borderColor: 'color-mix(in srgb, var(--destructive) 35%, transparent)' }}>
           {t.kind === 'crash'

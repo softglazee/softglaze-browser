@@ -1,0 +1,70 @@
+{
+  "header": {
+    "eyebrow": "Bộ máy",
+    "title": "Trình duyệt",
+    "subtitle": "Tải bản Chrome và Firefox thật khi cần. Tự động cài đặt và sẵn sàng khởi chạy.",
+    "refresh": "Làm mới"
+  },
+  "stats": {
+    "chromeInstalled": "Chrome đã cài",
+    "chromeAvailable": "Chrome có sẵn",
+    "firefoxInstalled": "Firefox đã cài",
+    "firefoxAvailable": "Firefox có sẵn"
+  },
+  "counts": {
+    "installedAvailable": "· {{installed}} đã cài · {{available}} có sẵn"
+  },
+  "engine": {
+    "heading": "Bộ máy dấu vân tay",
+    "installed": "Đã cài",
+    "notInstalled": "Chưa cài",
+    "description": "fingerprint-chromium đặt canvas, WebGL, UA, nền tảng và múi giờ ngay trong trình duyệt, ẩn webdriver và chặn rò rỉ WebRTC. Bật trong Cài đặt → Trình duyệt.",
+    "progressInstalling": "đang cài",
+    "progressVerifying": "đang xác minh",
+    "installing": "Đang cài",
+    "verifying": "Đang xác minh",
+    "downloading": "Đang tải",
+    "download": "Tải xuống (~180 MB)"
+  },
+  "firefox": {
+    "heading": "Firefox",
+    "ready": "Sẵn sàng",
+    "notDetected": "Không tìm thấy",
+    "detectedDesc": "Sẵn sàng. Tìm thấy tại {{path}}. Hồ sơ Firefox khởi chạy Firefox thật với proxy, UA, ngôn ngữ, múi giờ và tắt WebRTC.",
+    "notDetectedDesc": "Không tìm thấy Firefox trên hệ thống. Hãy tải một phiên bản bên dưới: nó được cài vào ứng dụng và hồ sơ Firefox sẽ khởi chạy Firefox thật với proxy, UA, ngôn ngữ, múi giờ và tắt WebRTC.",
+    "fetching": "Đang lấy danh mục phiên bản Firefox…",
+    "empty": "Không có phiên bản Firefox nào (bạn đang ngoại tuyến?)."
+  },
+  "chromium": {
+    "heading": "Chromium (Chrome for Testing)",
+    "subtitle": "Bản dựng thật: UA, Client-Hints, TLS và worker đều khớp thật với phiên bản.",
+    "fetching": "Đang lấy danh mục Chrome-for-Testing…",
+    "empty": "Không có phiên bản nào (bạn đang ngoại tuyến?)."
+  },
+  "row": {
+    "versionLabel": "{{brand}} {{major}}",
+    "ready": "Sẵn sàng",
+    "paused": "Đã tạm dừng",
+    "interrupted": "Bị gián đoạn",
+    "resume": "Tiếp tục",
+    "download": "Tải xuống",
+    "retry": "Thử lại",
+    "downloading": "Đang tải",
+    "installing": "Đang cài…",
+    "installingShort": "Đang cài",
+    "queued": "Đang chờ…",
+    "pauseDownload": "Tạm dừng tải",
+    "pausedPercent": "Đã tạm dừng · {{percent}}%",
+    "interruptedPercent": "Bị gián đoạn · {{percent}}%"
+  },
+  "errors": {
+    "catalogUnreachable": "Không kết nối được danh mục trình duyệt. Hãy kiểm tra kết nối internet.",
+    "downloadFailed": "Tải xuống thất bại.",
+    "pauseFailed": "Tạm dừng thất bại.",
+    "resumeFailed": "Tiếp tục thất bại."
+  },
+  "browsers": {
+    "showAll": "Hiện tất cả {{n}} phiên bản",
+    "showLess": "Thu gọn"
+  }
+}

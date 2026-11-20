@@ -1,0 +1,97 @@
+{
+  "upgrade": {
+    "title": {
+      "profiles": "已達到免費方案的 {{limit}} 個設定檔上限",
+      "running": "免費方案同時只能執行 {{limit}} 個設定檔",
+      "openable": "此設定檔不在免費方案可開啟的 {{limit}} 個之列",
+      "seats": "團隊成員屬於 Pro 功能",
+      "ai": "今天的 {{limit}} 次 AI 操作已用完",
+      "sync": "雲同步屬於 Pro 功能",
+      "phone": "從手機開啟設定檔屬於 Pro 功能",
+      "generic": "這是 Pro 功能"
+    },
+    "body": {
+      "profiles": "你的 {{used}} 個設定檔都很安全。升級到 Pro 可建立無限個設定檔，或刪除一個以騰出空間。",
+      "running": "關閉已開啟的設定檔後再啟動另一個，或升級到 Pro 以同時執行 3 個。",
+      "openable": "所有設定檔都會保留。免費方案下由你選擇哪 {{limit}} 個可以開啟；Pro 可開啟全部。",
+      "seats": "免費方案僅供一人使用。Pro 包含 3 位團隊成員，Enterprise 包含 25 位。",
+      "ai": "免費方案每天包含 {{limit}} 次 AI 操作，明天重設。Pro 的 AI 操作不限次數。",
+      "sync": "Pro 會在你的電腦和手機之間同步設定檔。",
+      "phone": "免費方案下，手機和網頁版應用程式可以檢視設定檔並核准 AI 請求。Pro 還可以開啟和停止設定檔。",
+      "generic": "升級到 Pro 即可使用。"
+    },
+    "price": "Pro 每月 {{price}}。",
+    "priceFallback": "Pro 每月 US$5 起。",
+    "upgradeButton": "升級到 Pro",
+    "chooseProfiles": "選擇設定檔",
+    "notNow": "以後再說"
+  },
+  "welcome": {
+    "title": "Pro 試用已結束。你現在使用的是免費方案。",
+    "keepTitle": "你仍可保留",
+    "keep": "所有設定檔（可開啟 {{limit}} 個）、代理和指紋，以及手機和網頁版應用程式。",
+    "proTitle": "Pro 額外提供",
+    "pro": "無限設定檔、同時執行 3 個、團隊席位、雲同步和不限次數的 AI 操作，每月 {{price}}。",
+    "upgrade": "升級到 Pro",
+    "stay": "繼續使用免費方案"
+  },
+  "counter": {
+    "freeBadge": "免費方案",
+    "profiles": "{{used}}/{{limit}} 個設定檔",
+    "running": "{{used}}/{{limit}} 個執行中",
+    "ai": "今日 AI 操作 {{used}}/{{limit}} 次",
+    "upgrade": "升級"
+  },
+  "choose": {
+    "title": "選擇可以開啟的設定檔",
+    "body": "免費方案下，你的 {{total}} 個設定檔中有 {{limit}} 個可以開啟。所有設定檔都會保留；升級到 Pro 即可全部開啟。",
+    "selected": "已選擇 {{count}}/{{limit}} 個",
+    "search": "搜尋設定檔",
+    "save": "儲存",
+    "cancel": "取消",
+    "saved": "已儲存。這些設定檔可在免費方案下開啟。"
+  },
+  "billing": {
+    "currentFree": "免費方案",
+    "currentFreeBody": "永久免費，無需信用卡。隨時升級以獲得更多設定檔、團隊功能和不限次數的 AI 操作。",
+    "currentBadge": "目前方案",
+    "compareTitle": "比較方案",
+    "colFeature": "功能",
+    "colFree": "免費",
+    "colPro": "Pro",
+    "colEnterprise": "Enterprise",
+    "rows": {
+      "profiles": "可儲存的設定檔",
+      "running": "可同時執行的設定檔",
+      "seats": "席位（團隊成員）",
+      "pcs": "每個帳號的電腦數",
+      "fingerprints": "自有代理、全部指紋設定",
+      "ai": "AI 和 MCP 自動化",
+      "phone": "手機和網頁版應用程式",
+      "sync": "電腦間雲同步",
+      "support": "支援"
+    },
+    "values": {
+      "unlimited": "無限",
+      "unlimitedAudit": "無限 + 審計匯出",
+      "yes": "是",
+      "no": "否",
+      "aiPerDay": "每天 {{count}} 次操作",
+      "viewApprove": "檢視並核准 AI 請求",
+      "openStop": "+ 開啟和停止設定檔",
+      "teamApprovals": "+ 團隊核准",
+      "helpCentre": "幫助中心",
+      "email": "郵件",
+      "priorityEmail": "優先郵件支援"
+    }
+  },
+  "deals": {
+    "title": "推薦的代理優惠",
+    "disclosure": "合作伙伴優惠。SoftGlaze 可能會獲得佣金。",
+    "code": "優惠碼 {{code}}",
+    "copyCode": "複製優惠碼",
+    "copied": "已複製",
+    "open": "取得優惠",
+    "hidden": "Pro 和 Enterprise 永遠不會顯示合作伙伴優惠。"
+  }
+}

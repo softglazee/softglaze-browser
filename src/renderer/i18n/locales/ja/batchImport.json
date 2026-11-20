@@ -1,0 +1,78 @@
+{
+  "header": {
+    "eyebrow": "自動化",
+    "title": "プロファイルの一括作成",
+    "description": "スプレッドシートまたは連番生成で、複数のブラウザ環境をすばやく作成します。",
+    "exportProfiles": "プロファイルをエクスポート"
+  },
+  "exportNotice_other": "{{count}}件のプロファイルを{{path}}にエクスポートしました",
+  "tabs": {
+    "importFromFile": "ファイルからインポート",
+    "quickGenerate": "クイック生成"
+  },
+  "step1": {
+    "title": "テンプレートをダウンロード",
+    "description": "正しく読み込むために、標準の Excel または CSV テンプレートをご利用ください。プロファイル名、プロキシ、フィンガープリントのルールを入力します。",
+    "downloadButton": ".CSV テンプレートをダウンロード"
+  },
+  "step2": {
+    "title": "アップロードとプレビュー",
+    "description": "入力済みのスプレッドシートを選択してください。保存前にローカルで読み込み、書式エラーを確認します。",
+    "selectButton": "ファイルを選択"
+  },
+  "step3": {
+    "title": "データのプレビューと確定"
+  },
+  "awaiting": {
+    "title": "データ待ち",
+    "description": "ファイルを選択すると、ここにプロファイルのプレビューが表示されます。"
+  },
+  "preview": {
+    "file": "ファイル:",
+    "validRows": "有効な行:",
+    "errors": "エラー:"
+  },
+  "processing": {
+    "importing": "インポート中… {{index}}/{{total}}",
+    "backendLog": "バックエンド処理ログ",
+    "connecting": "インポートエンジンに接続しています…"
+  },
+  "table": {
+    "row": "行",
+    "title": "タイトル",
+    "group": "グループ",
+    "proxyMethod": "プロキシ方式",
+    "dataDir": "データフォルダ",
+    "auto": "自動"
+  },
+  "autoBind": {
+    "label": "国別にプロキシを自動割り当て",
+    "descPrefix": "- 独自のプロキシがない行には、ヘルスチェックで判定された国が行の",
+    "descSuffix": "列と一致する保存済みプロキシを割り当てます (一致したものを順番に使用)。",
+    "sourceLabel": "割り当て元",
+    "sourcePaid": "自分のプロキシ",
+    "sourceFree": "無料プロキシ (動作中のみ)",
+    "freeWarn": "無料プロキシは第三者が運営しています。これらのプロファイルでアカウントへのログインや支払いは絶対に行わないでください。"
+  },
+  "commitButton_other": "{{count}}件のプロファイルを確定",
+  "success": {
+    "title": "インポート完了",
+    "importedPrefix": "インポート完了: プロファイル",
+    "importedMiddle": "件、新しいプロキシ",
+    "importedSuffix": "件を割り当てました",
+    "autoBoundPrefix": " · 国別に自動割り当て",
+    "autoBoundSuffix": "件",
+    "importAnother": "続けてインポート"
+  },
+  "quick": {
+    "engineTitle": "連番生成エンジン",
+    "description": "スプレッドシートなしで複数のプロファイルをすぐに作成できます。固有のフィンガープリント、連番の名前、対象グループ (その場で作成可能)、特定のグループまたはプロバイダーからのプロキシ割り当てに対応します。プロファイルページとまったく同じエンジンを使用します。",
+    "openButton": "クイック生成を開く"
+  },
+  "errors": {
+    "parse": "ファイルを読み込めませんでした。有効なスプレッドシートか確認してください。",
+    "commit": "プロファイルをデータベースに保存できませんでした。",
+    "importFailed": "インポートに失敗しました。",
+    "export": "プロファイルをエクスポートできませんでした。"
+  }
+}

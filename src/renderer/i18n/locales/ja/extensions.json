@@ -1,0 +1,51 @@
+{
+  "header": {
+    "eyebrow": "Enterprise リポジトリ",
+    "title": "拡張機能",
+    "summary_other": "{{count}}個の拡張機能をインストール済み · 拡張機能を読み込むプロファイルで{{enabled}}個が有効"
+  },
+  "stats": {
+    "total": "拡張機能の合計",
+    "injected": "有効",
+    "disabled": "無効"
+  },
+  "caveat": {
+    "before": "拡張機能はすべてのプロファイルに追加されるわけではありません。読み込まれるのは、プロファイル編集画面の「詳細」タブで「SoftGlaze拡張機能を読み込む（Chrome for Testingを使用）」がオンになっているChromiumプロファイルだけです（既定はオフ）。これらのプロファイルは起動時にChromiumの",
+    "middle": "フラグで拡張機能を読み込むため、変更が反映されるのはそのプロファイルの",
+    "nextLaunch": "次回起動時",
+    "after": "です。通常のChromeはこのフラグを無視するため、これらのプロファイルはChrome for Testingのビルドで開きます。先に「ブラウザ」ページでダウンロードしてください。ダウンロードしていない場合、プロファイルは拡張機能なしで開きます。Firefoxプロファイルでは読み込まれません。"
+  },
+  "importer": {
+    "title": "チームにインポート",
+    "description": "Chrome ウェブストアのURLまたは32文字のIDを貼り付けてください。SoftGlazeが実際のパッケージをダウンロードして展開します。",
+    "inputPlaceholder": "https://chromewebstore.google.com/detail/…  または  cjpalhdlnbpafiamejdnhcphjbkeiagm",
+    "submit": "チームにインポート"
+  },
+  "installPhase": {
+    "downloading": "パッケージをダウンロード中…",
+    "extracting": "アーカイブを展開中…",
+    "registering": "登録中…"
+  },
+  "permissionNotice": "チームの拡張機能を管理できるのは管理者以上のみです。リポジトリの閲覧は可能です。",
+  "searchPlaceholder": "名前またはIDで検索…",
+  "empty": {
+    "loadErrorTitle": "拡張機能を読み込めませんでした",
+    "noExtTitle": "拡張機能はまだありません",
+    "noMatchTitle": "検索に一致する拡張機能はありません",
+    "noExtDesc": "上でChrome ウェブストアの拡張機能をインポートすると、チームのリポジトリに追加されます。「詳細」タブで「SoftGlaze拡張機能を読み込む」がオンのプロファイルで読み込まれます。",
+    "noMatchDesc": "別の名前またはIDをお試しください。"
+  },
+  "card": {
+    "unpacked": "展開済みの拡張機能",
+    "removeTitle": "チームから削除",
+    "injected": "有効",
+    "disabled": "無効"
+  },
+  "confirmRemove": "「{{name}}」をチームのリポジトリから削除しますか？ローカルのファイルも削除されます。",
+  "errors": {
+    "couldNotLoad": "拡張機能を読み込めませんでした。",
+    "installFailed": "インストールに失敗しました。",
+    "couldNotUpdate": "拡張機能を更新できませんでした。",
+    "couldNotRemove": "拡張機能を削除できませんでした。"
+  }
+}

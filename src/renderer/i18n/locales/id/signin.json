@@ -1,0 +1,111 @@
+{
+  "choose": {
+    "title": "Buat akun gratis Anda",
+    "subtitle": "Gunakan akun yang sudah Anda punya. Tanpa kata sandi baru.",
+    "google": "Lanjut dengan Google",
+    "microsoft": "Lanjut dengan Microsoft",
+    "facebook": "Lanjut dengan Facebook",
+    "linkedin": "Lanjut dengan LinkedIn",
+    "allowEmail": "Izinkan akses email dan coba Facebook lagi",
+    "github": "Lanjut dengan GitHub",
+    "email": "Lanjut dengan email",
+    "moreOptions": "Siapkan dengan kata sandi",
+    "moreOptionsHint": "Lebih suka nama dan kata sandi?",
+    "privacy": "Kami hanya menerima nama dan alamat email terverifikasi Anda.",
+    "haveAccount": "Sudah punya ruang kerja di komputer ini?",
+    "logIn": "Masuk dengan kata sandi",
+    "signInTitle": "Masuk ke SoftGlaze",
+    "signInSubtitle": "Gunakan akun yang Anda pakai saat mendaftar. Jika paket Anda ada di komputer lain, Anda bisa memindahkannya ke sini.",
+    "entryLabel": "Baru atau sudah punya akun",
+    "entryNew": "Akun baru",
+    "entryReturning": "Saya sudah punya akun"
+  },
+  "unlock": {
+    "title": "Selamat datang kembali",
+    "titleNamed": "Selamat datang kembali, {{name}}",
+    "subtitle": "Masuk dengan akun pemilik ruang kerja ini.",
+    "account": "Akun ruang kerja: {{email}}",
+    "passwordInstead": "Masuk dengan kata sandi",
+    "haveInvite": "Saya punya kode undangan",
+    "teamSignIn": "Masuk sebagai anggota tim"
+  },
+  "link": {
+    "title": "Masuk ke akun SoftGlaze Anda",
+    "subtitle": "Gunakan masuk sekali klik di sini dan di komputer lain. Ruang kerja Anda tetap seperti semula."
+  },
+  "email": {
+    "title": "Lanjut dengan email",
+    "subtitle": "Kami akan mengirim kode 6 digit ke email Anda. Tanpa kata sandi.",
+    "label": "Alamat email",
+    "placeholder": "anda@perusahaan.com",
+    "send": "Kirim kode",
+    "codeTitle": "Periksa email Anda",
+    "codeBody": "Masukkan kode 6 digit yang kami kirim ke {{email}}.",
+    "codeLabel": "Kode 6 digit",
+    "verify": "Lanjut",
+    "resend": "Kirim kode baru",
+    "resendIn": "Kirim kode baru dalam {{count}} dtk",
+    "checkSpam": "Bisa butuh satu menit. Periksa folder spam jika belum terlihat.",
+    "devCode": "Server email belum diatur di build ini, jadi ini kodenya: {{code}}",
+    "change": "Pakai email lain"
+  },
+  "waiting": {
+    "title": "Selesaikan di browser Anda",
+    "body": "Kami membuka {{provider}} di browser Anda. Masuk di sana, lalu kembali ke sini.",
+    "status": "Menunggu {{provider}}...",
+    "reopen": "Buka halaman lagi",
+    "anotherWay": "Tidak kembali? Coba cara lain",
+    "cancel": "Batal"
+  },
+  "back": "Kembali",
+  "useCase": {
+    "title": "Untuk apa Anda akan memakai SoftGlaze?",
+    "subtitle": "Opsional. Membantu kami meningkatkan SoftGlaze untuk Anda.",
+    "continue": "Lanjut",
+    "skip": "Lewati"
+  },
+  "move": {
+    "title": "Langganan Anda",
+    "moved": "Selesai. Langganan Anda sekarang berlaku di komputer ini."
+  },
+  "account": {
+    "title": "Metode masuk",
+    "subtitle": "Cara Anda masuk ke akun SoftGlaze. Masuk di komputer baru juga memindahkan lisensi Anda ke sana.",
+    "signedInAs": "Masuk sebagai {{email}}",
+    "google": "Google",
+    "microsoft": "Microsoft",
+    "facebook": "Facebook",
+    "linkedin": "LinkedIn",
+    "github": "GitHub",
+    "githubLogin": "GitHub (@{{login}})",
+    "email": "Kode email",
+    "lastUsed": "Terakhir dipakai {{date}}",
+    "linkedOn": "Ditautkan {{date}}",
+    "signOut": "Keluar",
+    "signOutConfirm": "Keluar dari akun SoftGlaze Anda di komputer ini? Anda bisa masuk lagi dengan akun yang sama kapan saja.",
+    "signingOut": "Keluar...",
+    "offline": "Offline: menampilkan yang tersimpan di komputer ini.",
+    "notSignedIn": "Masuk ke akun SoftGlaze Anda untuk memakai masuk sekali klik di sini dan di komputer lain.",
+    "signInWorkspace": "Ruang kerja ini terbuka dengan akun masuk Anda. Tambahkan kata sandi di atas jika Anda juga ingin masuk tanpa internet.",
+    "linked": "Sudah masuk. Metode masuk Anda ada di bawah.",
+    "loading": "Memuat metode masuk...",
+    "notAvailable": "Masuk sekali klik memerlukan server lisensi SoftGlaze, yang tidak dipakai build ini."
+  },
+  "errors": {
+    "SIGNIN_OFFLINE": "Sambungkan ke internet untuk masuk.",
+    "SIGNIN_EXPIRED": "Proses masuk ini sudah kedaluwarsa atau sudah dipakai. Silakan coba lagi.",
+    "SIGNIN_ACCOUNT_MISMATCH": "Ruang kerja ini milik akun SoftGlaze lain. Masuk dengan akun yang Anda pakai saat membuatnya.",
+    "SIGNIN_EMAIL_MISMATCH": "Gunakan alamat email ruang kerja ini.",
+    "SIGNIN_EMAIL_NOT_VERIFIED": "Akun yang Anda pakai untuk masuk tidak punya alamat email terverifikasi. Verifikasi di sana (di GitHub: Settings > Emails), atau lanjut dengan email.",
+    "SIGNIN_EMAIL_MISSING": "Akun Facebook Anda tidak membagikan email. Gunakan Google atau masuk dengan email, atau izinkan akses email.",
+    "SIGNIN_DISPOSABLE_EMAIL": "Silakan gunakan alamat email permanen.",
+    "SIGNIN_UNAVAILABLE": "Metode masuk ini belum tersedia. Lanjut dengan email, atau gunakan Opsi lain.",
+    "SIGNIN_FAILED": "Proses masuk tidak selesai. Coba lagi sebentar lagi.",
+    "SIGNIN_TIMEOUT": "Proses masuk terlalu lama. Coba lagi.",
+    "SIGNIN_NOT_ALLOWED": "Metode masuk ini tidak tersedia untuk ruang kerja ini.",
+    "SIGNIN_KEY_LOST": "Ruang kerja ini tidak bisa dibuka dengan akun masuk Anda di komputer ini. Masuk dengan kata sandi Anda.",
+    "SIGNIN_SESSION_ENDED": "Sesi masuk Anda sudah berakhir. Masuk lagi.",
+    "SIGNIN_BAD_INPUT": "Masukkan alamat email yang valid.",
+    "MOVE_FAILED": "Lisensi belum bisa dipindahkan sekarang. Coba lagi sebentar lagi."
+  }
+}

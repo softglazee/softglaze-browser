@@ -1,0 +1,330 @@
+{
+  "header": {
+    "eyebrow": "ٹیم",
+    "title": "ممبرز",
+    "manageCount_one": "{{count}} ممبر آپ کے تحت",
+    "manageCount_other": "{{count}} ممبرز آپ کے تحت",
+    "workspaceStats": "ورک اسپیس میں {{profiles}} پروفائلز · {{proxies}} پراکسیز"
+  },
+  "tabs": {
+    "members": "ممبرز",
+    "activity": "سرگرمی",
+    "licenses": "لائسنس"
+  },
+  "memberCount_one": "{{count}} ممبر",
+  "memberCount_other": "{{count}} ممبرز",
+  "roles": {
+    "SUPER_ADMIN": "سپر ایڈمن",
+    "OWNER": "مالک",
+    "ADMIN": "ایڈمن",
+    "MANAGER": "مینیجر",
+    "OPERATOR": "آپریٹر"
+  },
+  "roleDesc": {
+    "OWNER": "مکمل کنٹرول، بشمول ممبرز اور تجوری۔",
+    "ADMIN": "پروفائلز، پراکسیز، گروپس اور اپنے بنائے ہوئے مینیجرز/آپریٹرز کو سنبھالیں۔",
+    "MANAGER": "پروفائلز بنائیں، ایڈٹ اور لانچ کریں، اور آپریٹرز شامل کریں۔",
+    "OPERATOR": "صرف دیے گئے پروفائلز لانچ اور استعمال کریں۔"
+  },
+  "actionCategories": {
+    "Profiles": "پروفائلز",
+    "Proxies": "پراکسیز",
+    "Automation": "آٹومیشن",
+    "Workspace": "ورک اسپیس",
+    "Team": "ٹیم"
+  },
+  "actionLabels": {
+    "profiles_launch": "پروفائلز لانچ کریں",
+    "profiles_create": "پروفائلز بنائیں",
+    "profiles_edit": "پروفائلز ایڈٹ کریں",
+    "profiles_export": "پروفائلز ایکسپورٹ کریں",
+    "profiles_share": "ممبرز کے ساتھ پروفائلز شیئر کریں",
+    "profiles_delete": "پروفائلز ڈیلیٹ کریں (ٹریش میں)",
+    "profiles_purge": "پروفائلز ہمیشہ کے لیے ختم کریں",
+    "proxies_manage": "پراکسیز شامل / ایڈٹ / ڈیلیٹ کریں",
+    "proxies_reveal": "پراکسی کی اصل لاگ ان تفصیلات دکھائیں",
+    "automation_run": "آٹومیشن / میکروز چلائیں",
+    "extensions_manage": "ٹیم ایکسٹینشنز سنبھالیں",
+    "settings_manage": "ورک اسپیس سیٹنگز تبدیل کریں",
+    "vault_manage": "پرسونا تجوری سنبھالیں",
+    "members_manage": "ٹیم ممبرز سنبھالیں",
+    "members_delete": "ممبرز ڈیلیٹ کریں / رولز تبدیل کریں"
+  },
+  "features": {
+    "dashboard": "ڈیش بورڈ (صرف صفحہ)",
+    "profiles": "پروفائلز",
+    "groups": "گروپس",
+    "proxies": "پراکسی پول",
+    "browsers": "براؤزرز",
+    "extensions": "ایکسٹینشنز",
+    "batchImport": "بیچ امپورٹ",
+    "trash": "ٹریش",
+    "members": "ممبرز",
+    "settings": "سیٹنگز"
+  },
+  "caps": {
+    "maxAdmins": "ایڈمنز",
+    "maxManagers": "مینیجرز",
+    "maxOperators": "آپریٹرز"
+  },
+  "labels": {
+    "profiles": "پروفائلز",
+    "proxies": "پراکسیز",
+    "browsers": "براؤزرز"
+  },
+  "status": {
+    "active": "فعال",
+    "suspended": "معطل",
+    "banned": "بلاک"
+  },
+  "actions": {
+    "inviteMember": "ممبر کو انوائٹ کریں",
+    "inviteTeamMember": "ٹیم ممبر کو انوائٹ کریں",
+    "remove": "ہٹائیں",
+    "removeMember": "ممبر ہٹائیں",
+    "assignProfiles": "پروفائلز دیں",
+    "cancel": "منسوخ کریں",
+    "close": "بند کریں",
+    "clear": "صاف کریں",
+    "save": "محفوظ کریں",
+    "createInvite": "انوائٹ بنائیں",
+    "done": "ہو گیا",
+    "copy": "کاپی",
+    "copied": "کاپی ہو گیا"
+  },
+  "empty": {
+    "title": "ابھی کوئی ممبر نہیں",
+    "canCreate": "کام بانٹنا شروع کرنے کے لیے اپنے پہلے ٹیم ممبر کو انوائٹ کریں۔",
+    "noMembers": "ابھی آپ کے تحت کوئی ممبر نہیں۔"
+  },
+  "member": {
+    "you": "آپ",
+    "noEmail": "ای میل نہیں",
+    "invitePending": "انوائٹ زیر التوا",
+    "loginSet": "لاگ ان سیٹ ہے",
+    "subMembers_one": "{{count}} سب ممبر",
+    "subMembers_other": "{{count}} سب ممبرز"
+  },
+  "time": {
+    "neverActive": "کبھی فعال نہیں ہوا",
+    "activeJustNow": "ابھی فعال",
+    "activeMinutes": "{{count}} منٹ پہلے فعال",
+    "activeHours": "{{count}} گھنٹے پہلے فعال",
+    "activeDays": "{{count}} دن پہلے فعال"
+  },
+  "errors": {
+    "loadMembers": "ممبرز لوڈ نہیں ہو سکے۔",
+    "changeStatus": "اسٹیٹس تبدیل نہیں ہو سکا۔",
+    "nameRequired": "نام ضروری ہے۔",
+    "saveMember": "ممبر محفوظ نہیں ہو سکا۔",
+    "resetPerms": "اجازتیں ری سیٹ نہیں ہو سکیں۔",
+    "removeMember": "ممبر ہٹایا نہیں جا سکا۔",
+    "loadProfiles": "پروفائلز لوڈ نہیں ہو سکے۔",
+    "reassignProfiles": "پروفائلز دوبارہ نہیں دیے جا سکے۔"
+  },
+  "confirm": {
+    "revertPerms": "{{name}} کی حدیں اور فیچرز ان کے رول کے ڈیفالٹ پر ری سیٹ کریں؟"
+  },
+  "modal": {
+    "inviteTitle": "ممبر کو انوائٹ کریں",
+    "editTitle": "{{name}} ایڈٹ کریں",
+    "noCreatableRoles": "آپ کو کوئی سب ممبر بنانے کی اجازت نہیں ہے۔",
+    "invitePendingCode": "انوائٹ زیر التوا، کوڈ"
+  },
+  "fields": {
+    "name": "نام",
+    "namePlaceholder": "پورا نام",
+    "email": "ای میل",
+    "role": "رول",
+    "color": "رنگ",
+    "instructions": "ہدایات",
+    "optional": "(اختیاری)",
+    "instructionsPlaceholder": "یہ ممبر کس کام کا ذمہ دار ہے…"
+  },
+  "invite": {
+    "createdTitle": "انوائٹ بن گیا",
+    "sharePrefix": "یہ کوڈ ",
+    "shareSuffix": " کے ساتھ شیئر کریں۔ وہ SoftGlaze Browser کھولیں ← “انوائٹ کوڈ ہے؟”، کوڈ درج کریں اور اپنا پاس ورڈ سیٹ کریں۔",
+    "code": "انوائٹ کوڈ",
+    "link": "انوائٹ لنک",
+    "emailedTo": "{{email}} پر ای میل کر دیا گیا۔",
+    "emailNotSent": "ای میل نہیں بھیجی گئی (سیٹنگز ← ای میل میں SMTP سیٹ کریں)۔ کوڈ خود شیئر کریں۔"
+  },
+  "alloc": {
+    "heading_one": "{{count}} سب ممبر کو دیا گیا",
+    "heading_other": "{{count}} سب ممبرز کو دیا گیا",
+    "allocated": "{{cap}} میں سے {{allocated}} دیے گئے",
+    "left": "· {{remaining}} باقی"
+  },
+  "perms": {
+    "title": "اجازتیں اور حدیں",
+    "resourceLimits": "وسائل کی حدیں",
+    "subMemberCaps": "سب ممبرز کی حدیں",
+    "visibleFeatures": "نظر آنے والے فیچرز",
+    "actionPermissions": "کاموں کی اجازتیں",
+    "actionHint": "اس رول کے لیے ڈیفالٹ طور پر آن۔ صرف اس ممبر کے لیے واپس لینے کو اسے آف کریں۔",
+    "revertDefaults": "رول کے ڈیفالٹ پر واپس جائیں",
+    "max": "(زیادہ سے زیادہ {{max}})",
+    "canInvite": {
+      "canCreateAdmins": "ایڈمنز کو انوائٹ کر سکتا ہے",
+      "canCreateManagers": "مینیجرز کو انوائٹ کر سکتا ہے",
+      "canCreateOperators": "آپریٹرز کو انوائٹ کر سکتا ہے"
+    },
+    "featuresHint": "آف کیا گیا فیچر سائیڈ بار سے چھپ جاتا ہے، اور اس کے کام ہر جگہ رد ہو جاتے ہیں (مثلاً پراکسیز شامل کرنا، ٹریش سے بحال کرنا یا براؤزرز ڈاؤن لوڈ کرنا)۔ دوسرے صفحات کو جن فہرستوں کی ضرورت ہوتی ہے، جیسے پروفائل ایڈیٹر میں پراکسی یا گروپ چننا، وہ پھر بھی لوڈ ہوتی ہیں۔"
+  },
+  "accountStatus": {
+    "title": "اکاؤنٹ اسٹیٹس",
+    "reason": "وجہ: {{reason}}",
+    "unban": "ممبر ان بلاک کریں",
+    "banHint": "اوپر کی فیلڈز ایڈٹ کرنے سے بلاک برقرار رہتا ہے۔ رسائی بحال کرنے کے لیے ان بلاک کریں استعمال کریں۔",
+    "suspendToggle": "اس ممبر کو معطل کریں (سائن ان روک دیتا ہے)",
+    "ban": "ممبر بلاک کریں"
+  },
+  "delete": {
+    "title": "{{name}} کو ہٹائیں",
+    "warnPrefix": "اس سے ",
+    "warnMiddle": " ہٹ جائے گا اور اس کے تمام سب ممبرز آپ کے تحت آ جائیں گے۔ منتخب کریں کہ اس کے ڈیٹا کا کیا ہو:",
+    "profilesWord_one": "پروفائل",
+    "profilesWord_other": "پروفائلز",
+    "proxiesWord_one": "پراکسی",
+    "proxiesWord_other": "پراکسیز",
+    "options": {
+      "reassignMe": {
+        "label": "رکھیں اور مجھے دے دیں",
+        "desc": "اس کے پروفائلز اور پراکسیز کے مالک آپ بن جائیں گے۔"
+      },
+      "reassignOther": {
+        "label": "رکھیں اور کسی دوسرے ممبر کو دیں",
+        "desc": "اس کا ڈیٹا کسی مخصوص ساتھی کے حوالے کریں۔"
+      },
+      "delete": {
+        "label": "منسلک تمام ڈیٹا ڈیلیٹ کریں",
+        "desc": "اس کی پراکسیز اور پراکسی گروپس ڈیلیٹ ہو جائیں گے؛ پروفائلز ٹریش میں چلے جائیں گے (واپس لائے جا سکتے ہیں)۔"
+      }
+    },
+    "pickTarget": "ڈیٹا لینے کے لیے ایک ممبر منتخب کریں۔",
+    "reassignTo": "کس کو دیں",
+    "noOtherMembers": "کوئی دوسرا ممبر دستیاب نہیں، کوئی اور آپشن منتخب کریں۔"
+  },
+  "assign": {
+    "title": "پروفائلز دیں · {{name}}",
+    "searchPlaceholder": "پروفائلز تلاش کریں",
+    "noProfiles": "کوئی پروفائل نہیں ملا۔",
+    "memberFallback": "ممبر #{{id}}",
+    "updated": "اپ ڈیٹ ہو گیا: {{assigned}} دیے گئے، {{unassigned}} واپس لیے گئے۔",
+    "save": "تقسیم محفوظ کریں"
+  },
+  "activity": {
+    "title": "ٹیم کی سرگرمی",
+    "subtitle": "اس ورک اسپیس پر کس نے کیا کیا",
+    "exported": "{{count}} قطاریں ایکسپورٹ ہو گئیں ← {{path}}",
+    "exportError": "سرگرمی کا لاگ ایکسپورٹ نہیں ہو سکا۔",
+    "filterByMember": "ممبر کے حساب سے فلٹر کریں",
+    "filterByAction": "کام کے حساب سے فلٹر کریں",
+    "allMembers": "تمام ممبرز",
+    "allActions": "تمام کام",
+    "fromDate": "تاریخ سے",
+    "toDate": "تاریخ تک",
+    "empty": "ابھی کوئی سرگرمی درج نہیں ہوئی۔",
+    "noMatch": "ان فلٹرز سے کوئی سرگرمی میل نہیں کھاتی۔",
+    "enterpriseFeature": "Enterprise فیچر",
+    "seeBilling": "بلنگ دیکھیں",
+    "exportEnterpriseOnly": "آڈٹ لاگ ایکسپورٹ (CSV / JSON) ایک Enterprise فیچر ہے۔ سرگرمی کا لاگ ایکسپورٹ کرنے کے لیے بلنگ صفحے پر اپ گریڈ کریں۔"
+  },
+  "activityActions": {
+    "launched": "لانچ کیا",
+    "stopped": "روکا",
+    "created": "بنایا",
+    "edited": "ایڈٹ کیا",
+    "deleted": "ڈیلیٹ کیا",
+    "restored": "بحال کیا",
+    "imported": "امپورٹ کیا",
+    "assigned": "دیا",
+    "reassigned": "دوبارہ دیا",
+    "parallel_run": "پیرالل رن",
+    "macro_run": "میکرو رن",
+    "member_added": "ممبر شامل کیا",
+    "member_edited": "ممبر ایڈٹ کیا",
+    "member_removed": "ممبر ہٹایا",
+    "permissions_changed": "اجازتیں تبدیل کیں",
+    "status_changed": "اسٹیٹس تبدیل کیا",
+    "signed_in": "سائن ان کیا",
+    "signed_out": "سائن آؤٹ کیا",
+    "invite_accepted": "انوائٹ قبول کیا",
+    "proxies_copied_for_extension": "ایکسٹینشن کے لیے پراکسیز کاپی کیں",
+    "devtools_address_shown": "DevTools ایڈریس دکھایا گیا"
+  },
+  "feedTime": {
+    "justNow": "ابھی ابھی",
+    "minutes": "{{count}} منٹ پہلے",
+    "hours": "{{count}} گھنٹے پہلے",
+    "days": "{{count}} دن پہلے"
+  },
+  "license": {
+    "intro": "ہر مالک ورک اسپیس کی سبسکرپشن کی حالت۔ یہ لوکل فرسٹ اور بہترین کوشش پر مبنی ہے: کوئی پکا ارادہ رکھنے والا صارف پھر بھی لوکل DB یا گھڑی بدل سکتا ہے؛ پائیدار نفاذ کے لیے لائسنسنگ بیک اینڈ ضروری ہے۔",
+    "noOwners": "ابھی کوئی مالک ورک اسپیس نہیں۔",
+    "editTitle": "لائسنس · {{name}}",
+    "setState": "حالت سیٹ کریں",
+    "grantPlan": "پلان دیں",
+    "lifecycle": "لائف سائیکل",
+    "state": {
+      "paid": "پیڈ",
+      "trialing": "ٹرائل",
+      "grace": "رعایتی مدت",
+      "banned": "بلاک"
+    },
+    "type": {
+      "trial": "ٹرائل",
+      "paid": "پیڈ"
+    },
+    "tier": {
+      "pro": "pro",
+      "enterprise": "enterprise"
+    },
+    "fields": {
+      "type": "قسم",
+      "tier": "ٹیئر",
+      "expiry": "میعاد",
+      "plan": "پلان",
+      "months": "مہینے"
+    },
+    "detail": {
+      "trial": "ٹرائل کے {{count}} دن باقی",
+      "grace": "رعایتی مدت: {{count}} دن باقی",
+      "paid": "{{date}} تک پیڈ",
+      "clockAnomaly": "⚠ گھڑی میں گڑبڑ"
+    },
+    "actions": {
+      "grantMonth": "1 ماہ دیں",
+      "extend7": "+7 دن",
+      "startTrial": "ٹرائل شروع کریں",
+      "resetTrial": "ٹرائل ری سیٹ کریں",
+      "edit": "ایڈٹ کریں",
+      "terminate": "ختم کریں",
+      "unblock": "ان بلاک کریں",
+      "block": "بلاک کریں",
+      "saveState": "حالت محفوظ کریں",
+      "grantPlan": "پلان دیں",
+      "startFreeTrial": "مفت ٹرائل شروع کریں",
+      "terminateNow": "ابھی ختم کریں"
+    },
+    "confirm": {
+      "terminate": "{{name}} کی سبسکرپشن ابھی ختم کریں؟ جب تک آپ دوبارہ رسائی نہ دیں، ان کے پروفائلز لاک رہیں گے۔",
+      "terminateModal": "یہ سبسکرپشن ابھی ختم کریں؟ جب تک آپ دوبارہ رسائی نہ دیں، پروفائلز لاک رہیں گے۔",
+      "resetTrial": "{{name}} کا ٹرائل ری سیٹ کریں؟ ان کے ٹرائل کی گھڑی نئے سرے سے شروع ہو گی اور موجودہ لائسنس کی حالت بدل جائے گی۔",
+      "block": "{{name}} کو بلاک کریں؟ وہ اور ان کے تمام سب ممبرز سائن آؤٹ ہو جائیں گے اور جب تک آپ ان بلاک نہ کریں، ایپ استعمال نہیں کر سکیں گے۔"
+    },
+    "errors": {
+      "load": "لائسنس لوڈ نہیں ہو سکے۔",
+      "action": "کام ناکام ہو گیا۔"
+    }
+  },
+  "seats": {
+    "usage": "{{total}} میں سے {{used}} ممبرز",
+    "fullNotice": "آپ کے پلان کی تمام {{total}} ٹیم سیٹیں استعمال میں ہیں، اس لیے کوئی نیا ممبر شامل نہیں ہو سکتا۔ سیٹ خالی کرنے کے لیے کسی ممبر کو معطل کریں، یا {{enterpriseSeats}} ٹیم ممبرز تک کے لیے Enterprise پر اپ گریڈ کریں۔",
+    "fullNoticeTop": "آپ کے پلان کی تمام {{total}} ٹیم سیٹیں استعمال میں ہیں، اس لیے کوئی نیا ممبر شامل نہیں ہو سکتا۔ سیٹ خالی کرنے کے لیے کسی ممبر کو معطل کریں۔",
+    "overNotice": "اس ٹیم میں {{used}} ممبرز ہیں اور آپ کے پلان میں {{total}} شامل ہیں۔ سب کی رسائی برقرار رہے گی؛ ٹیم حد سے کم ہونے پر نئے ممبرز شامل کیے جا سکیں گے۔",
+    "seeBilling": "بلنگ دیکھیں",
+    "limitError": "آپ کے پلان کی تمام ٹیم سیٹیں استعمال میں ہیں۔ سیٹ خالی کرنے کے لیے کسی ممبر کو معطل کریں، یا پلان کے آپشنز کے لیے بلنگ دیکھیں۔"
+  }
+}

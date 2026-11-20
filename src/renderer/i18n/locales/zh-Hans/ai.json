@@ -1,0 +1,635 @@
+{
+  "title": "SoftGlaze AI",
+  "beta": "Beta",
+  "description": "让 Claude、Cursor 和 ChatGPT 等 AI 应用操作你的配置文件。由你决定更改需要批准的频率，所有操作都有记录。",
+  "loading": "正在加载 SoftGlaze AI…",
+  "refresh": "刷新",
+  "retry": "重试",
+  "learnMore": "阅读指南",
+  "opensInBrowser": "（在浏览器中打开）",
+  "copy": "复制",
+  "copied": "已复制",
+  "copyFailed": "无法复制。请选中文本后手动复制。",
+  "cancel": "取消",
+  "close": "关闭",
+  "save": "保存",
+  "saving": "正在保存…",
+  "saved": "已保存",
+  "saveFailed": "未保存",
+  "never": "从未",
+  "unknown": "未知",
+  "roles": {
+    "OWNER": "所有者",
+    "ADMIN": "管理员",
+    "MANAGER": "经理",
+    "OPERATOR": "操作员",
+    "SUPER_ADMIN": "超级管理员"
+  },
+  "states": {
+    "unavailableTitle": "此版本不提供 SoftGlaze AI",
+    "unavailableBody": "此版本的 SoftGlaze Browser 尚未包含 AI 服务器，它将随更新提供。你的工作区一切正常。",
+    "forbiddenTitle": "只有所有者或管理员可以管理 SoftGlaze AI",
+    "forbiddenBody": "请向工作区所有者申请访问权限。当 AI 应用使用以你的身份操作的令牌时，其请求仍会在任意页面弹出，由你允许或拒绝。",
+    "errorTitle": "SoftGlaze AI 无法加载"
+  },
+  "header": {
+    "switchLabel": "SoftGlaze AI 服务器",
+    "switchShort": "AI 服务器",
+    "on": "开",
+    "off": "关",
+    "turningOn": "正在开启…",
+    "turningOff": "正在关闭…",
+    "stopAll": "停止所有 AI",
+    "toggleError": "无法更改 AI 服务器状态：{{message}}"
+  },
+  "status": {
+    "server": "AI 服务器",
+    "running": "运行中",
+    "error": "未运行",
+    "off": "关闭",
+    "offHint": "开启后 AI 应用才能连接。",
+    "errorHint": "已开启但未运行：{{message}}",
+    "errorHintNoMessage": "已开启但未运行。端口可能已被占用，请在“设置”中更改。",
+    "apps": "已连接的应用",
+    "appsNone": "还没有已连接的应用",
+    "appSeen": "{{name}} · {{when}}",
+    "appsMore_one": "以及另外 {{count}} 个",
+    "appsMore_other": "以及另外 {{count}} 个",
+    "waiting": "等待你处理",
+    "waitingNone": "没有待处理的请求",
+    "waitingSome_one": "{{count}} 个请求待处理",
+    "waitingSome_other": "{{count}} 个请求待处理",
+    "openApprovals": "打开“审批”",
+    "sessions": "运行中的 AI 会话",
+    "sessionsHint": "由 AI 应用启动"
+  },
+  "tabs": {
+    "label": "SoftGlaze AI 分区",
+    "connect": "连接",
+    "tokens": "令牌",
+    "approvals": "审批",
+    "activity": "活动",
+    "memory": "记忆",
+    "prompts": "提示词",
+    "settings": "设置",
+    "waiting": "待处理"
+  },
+  "stop": {
+    "title": "停止所有 AI？",
+    "body": "当 AI 应用正在执行你意料之外的操作时，请使用此功能。",
+    "point1": "AI 应用启动的所有运行和配置文件都会立即停止。",
+    "point2": "所有已连接的 AI 应用都会断开连接，正在进行的调用会被取消。",
+    "point3": "所有等待你处理的请求都会被拒绝。",
+    "point4": "SoftGlaze AI 会被关闭。令牌仍然有效；准备好后可以重新开启。",
+    "confirm": "停止所有 AI",
+    "error": "无法全部停止：{{message}}",
+    "result": "完成。已停止的运行：{{runs}}。已停止的配置文件：{{profiles}}。已取消的调用：{{calls}}。已结束的会话：{{sessions}}。已拒绝的请求：{{approvals}}。",
+    "nowOff": "SoftGlaze AI 已关闭。在你重新开启之前，AI 应用无法连接。",
+    "turnOn": "开启"
+  },
+  "start": {
+    "title": "三步即可开始",
+    "step1": "开启 AI 服务器",
+    "step2": "为你的 AI 应用创建令牌",
+    "step3": "连接你的 AI 应用",
+    "done": "完成",
+    "turnOn": "开启"
+  },
+  "connect": {
+    "loadError": "无法加载 AI 应用的设置：{{message}}",
+    "empty": "暂无可显示的设置",
+    "emptyOn": "AI 服务器未返回任何设置。请尝试刷新。",
+    "emptyBody": "开启 AI 服务器后即可查看如何连接各个应用。",
+    "appsLabel": "AI 应用",
+    "guide": "完整指南",
+    "appDocs": "应用自己的文档",
+    "where": "填写位置",
+    "steps": "连接方法",
+    "kind": {
+      "command": "命令",
+      "json": "JSON",
+      "toml": "TOML",
+      "n8n": "工作流"
+    },
+    "snippet": "{{app}} 的设置",
+    "placeholderHint": "<YOUR_TOKEN> 处填写你的令牌。令牌只在创建时显示一次。",
+    "noSnippet": "此应用没有现成的设置，请按照上方步骤操作。",
+    "createToken": "为此应用创建令牌",
+    "createTokenHint": "为每个应用单独创建令牌。这样你可以看到每个应用的操作，并单独关闭某一个而不影响其他应用。",
+    "installGuide": "安装指南",
+    "mcpb": {
+      "title": "在 Claude Desktop 中安装：下载 softglaze-browser.mcpb",
+      "download": "下载 softglaze-browser.mcpb",
+      "body": "双击该文件，或在 Claude Desktop 中打开 Settings > Extensions > Advanced settings > Install Extension。Claude Desktop 会询问你的令牌和端口；请使用此页面上显示的端口。Claude Desktop 聊天和 Cowork 都会使用它。"
+    },
+    "claudeCode": {
+      "pluginTitle": "安装 SoftGlaze 插件（推荐）",
+      "pluginBody": "在 Claude Code 中逐条运行这些命令。softglaze-browser 会添加技能；softglaze-browser-connector 会添加 SoftGlaze 工具，并询问你的令牌和端口。连接器需要 Node.js 18 或更高版本。",
+      "desktopNote": "Claude Desktop 聊天和 Cowork 改用 softglaze-browser.mcpb（参见 Claude Desktop）。",
+      "manualTitle": "或者自行添加服务器（无需 Node.js）"
+    },
+    "envVar": {
+      "title": "为 Codex 保存令牌",
+      "body": "Codex 从名为 SOFTGLAZE_TOKEN 的环境变量中读取令牌。使用你的令牌运行一次此命令，然后打开新的终端。",
+      "windows": "Windows（命令提示符或 PowerShell）",
+      "unix": "macOS 或 Linux（添加到你的 shell 配置文件中）"
+    },
+    "bridge": {
+      "title": "适用于启动本地程序的应用的桥接程序",
+      "body": "有些应用无法连接网址，它们会改为启动 SoftGlaze 桥接程序，由桥接程序将所有内容转发给这台电脑上的 AI 服务器。使用相同的令牌和相同的审批。",
+      "unavailable": "此版本不包含桥接程序。",
+      "mcpb": "Claude Desktop 的一键安装文件",
+      "command": "命令",
+      "args": "参数",
+      "env": "环境变量"
+    },
+    "clients": {
+      "claude-desktop": {
+        "where": "Settings > Developer > Edit Config（claude_desktop_config.json），然后重启 Claude Desktop。Claude Desktop 通过 stdio 运行本地服务器，因此这会启动 SoftGlaze 桥接程序。更简单的方法：安装 softglaze-browser.mcpb（{{mcpb}}），它会询问你的令牌和端口，并同样适用于 Cowork。",
+        "title": "Claude Desktop",
+        "step1": "使用下方按钮为 Claude Desktop 创建令牌。",
+        "step2": "最简单的方法：使用下方按钮下载 softglaze-browser.mcpb，双击后在 Claude Desktop 询问时粘贴你的令牌。或者打开 Settings > Developer > Edit Config，将设置粘贴到 claude_desktop_config.json 中，并用你的令牌替换 <YOUR_TOKEN>。",
+        "step2NoMcpb": "打开 Settings > Developer > Edit Config，将设置粘贴到 claude_desktop_config.json 中，并用你的令牌替换 <YOUR_TOKEN>。由于 Claude Desktop 运行本地服务器，这会启动 SoftGlaze 桥接程序。",
+        "step3": "如果你编辑了配置文件，请退出并重新打开 Claude Desktop。SoftGlaze 会显示在聊天框下方 + 按钮的 Connectors 中。"
+      },
+      "claude-code": {
+        "where": "不使用插件时：在终端中运行。添加 --scope user 即可在所有项目中使用 SoftGlaze。请使用插件或此命令，不要两者都用。",
+        "title": "Claude Code",
+        "step1": "使用下方按钮为 Claude Code 创建令牌。",
+        "step2": "使用下方命令安装 SoftGlaze 插件，并在 Claude Code 询问时粘贴你的令牌。或者运行更下方的命令，并用你的令牌替换 <YOUR_TOKEN>。只用其中一种方式，不要两者都用。",
+        "step3": "在 Claude Code 中输入 /mcp。SoftGlaze 应显示为已连接（使用插件时为 plugin:softglaze-browser-connector:softglaze）。"
+      },
+      "cursor": {
+        "where": "~/.cursor/mcp.json（所有项目）或项目中的 .cursor/mcp.json。如需避免将令牌写入文件，请使用 \"Bearer ${env:SOFTGLAZE_TOKEN}\"。",
+        "title": "Cursor",
+        "step1": "使用下方按钮为 Cursor 创建令牌。",
+        "step2": "打开 ~/.cursor/mcp.json（或某个项目中的 .cursor/mcp.json），粘贴设置，并用你的令牌替换 <YOUR_TOKEN>。",
+        "step3": "在 Cursor 的设置中，确认 SoftGlaze 已列出并已开启。然后让聊天列出你的 SoftGlaze 配置文件。"
+      },
+      "vscode": {
+        "where": "工作区中的 .vscode/mcp.json，或运行 \"MCP: Open User Configuration\"。VS Code 会询问一次令牌并安全存储，因此令牌永远不会写在文件中。",
+        "title": "VS Code（Copilot）",
+        "step1": "使用下方按钮为 VS Code 创建令牌。",
+        "step2": "将设置添加到工作区的 .vscode/mcp.json 中（或运行 MCP: Open User Configuration）。SoftGlaze 首次启动时，VS Code 会询问你的令牌并安全存储，因此令牌永远不会写在文件中。",
+        "step3": "打开 Copilot Chat，让它列出你的 SoftGlaze 配置文件。VS Code 询问时允许使用该工具。"
+      },
+      "gemini-cli": {
+        "where": "~/.gemini/settings.json（合并到文件中），或运行：gemini mcp add --transport http -s user --header \"Authorization: Bearer <YOUR_TOKEN>\" softglaze {{mcp}}",
+        "title": "Gemini CLI",
+        "step1": "使用下方按钮为 Gemini CLI 创建令牌。",
+        "step2": "将设置添加到 ~/.gemini/settings.json 的 \"mcpServers\" 中，并用你的令牌替换 <YOUR_TOKEN>。保持 \"trust\" 关闭：SoftGlaze 无论如何都会在每次更改前询问你。",
+        "step3": "启动 gemini 并输入 /mcp。应能看到 SoftGlaze 及其工具。"
+      },
+      "codex": {
+        "where": "~/.codex/config.toml（由 ChatGPT 桌面应用、Codex CLI 和 IDE 扩展共用）。请先将环境变量 SOFTGLAZE_TOKEN 设置为你的令牌（Windows：setx SOFTGLAZE_TOKEN \"<YOUR_TOKEN>\"），然后重启应用。",
+        "title": "ChatGPT 桌面版 / Codex",
+        "step1": "使用下方按钮为 Codex 创建令牌，然后将其保存到 SOFTGLAZE_TOKEN 环境变量中（命令见下方）。",
+        "step2": "将设置添加到 ~/.codex/config.toml 中。Codex 从 SOFTGLAZE_TOKEN 读取令牌，因此文件中永远不会保存令牌。",
+        "step3": "打开新的终端，启动 Codex 并输入 /mcp。应能看到 SoftGlaze。"
+      },
+      "windsurf": {
+        "where": "~/.codeium/windsurf/mcp_config.json，然后刷新 MCP 服务器。Devin Desktop（Windsurf 的新名称）使用 ~/.config/devin/mcp_config.json，并以 \"url\" 和 \"transport\": \"http\" 代替 \"serverUrl\"。",
+        "title": "Windsurf",
+        "step1": "使用下方按钮为 Windsurf 创建令牌。",
+        "step2": "将设置粘贴到 Windsurf 的 MCP 配置文件中（参见“填写位置”），并用你的令牌替换 <YOUR_TOKEN>。",
+        "step3": "在 Windsurf 中刷新 MCP 服务器，并确认已列出 SoftGlaze。"
+      },
+      "cline": {
+        "where": "Cline：MCP Servers > Configure（cline_mcp_settings.json）。",
+        "title": "Cline",
+        "step1": "使用下方按钮为 Cline 创建令牌。",
+        "step2": "在 Cline 中打开 MCP Servers > Configure，将设置粘贴到 cline_mcp_settings.json 中，并用你的令牌替换 <YOUR_TOKEN>。",
+        "step3": "确认 SoftGlaze 在 Cline 的 MCP Servers 列表中显示为已连接。"
+      },
+      "n8n": {
+        "where": "在 MCP Client Tool 节点中：SSE Endpoint 按下方填写，Authentication 选择“Bearer”，并将你的令牌作为凭据。如果 n8n 运行在 Docker Desktop 中，请使用 host.docker.internal 代替 127.0.0.1，并在 SoftGlaze AI 设置的“额外允许的主机名”中添加 host.docker.internal。对于无人值守的工作流，请使用自动化令牌（预先批准的工具，仅限指定分组）。",
+        "title": "n8n"
+      },
+      "other": {
+        "where": "任何支持带请求头的 Streamable HTTP 的 MCP 客户端。只支持旧版 HTTP+SSE 传输的客户端请使用 SSE URL。只能运行本地命令的客户端请使用 SoftGlaze 桥接程序（参见 Claude Desktop）。",
+        "title": "其他应用",
+        "step1": "使用下方按钮为该应用创建令牌。",
+        "step2": "打开应用的 MCP 设置，添加一个服务器，填写此地址和 Authorization 请求头：Bearer、一个空格，然后是你的令牌。",
+        "step3": "如果该应用只能启动本地程序（stdio），请使用下方的 SoftGlaze 桥接程序，而不是此地址。"
+      },
+      "custom": {
+        "step1": "使用下方按钮为此应用创建令牌。",
+        "step2": "将设置粘贴到应用保存 MCP 服务器的位置，并用你的令牌替换 <YOUR_TOKEN>。",
+        "step3": "重启应用，并确认 SoftGlaze 已列在其 MCP 或工具设置中。"
+      }
+    },
+    "n8n": {
+      "subtitle": "在这台电脑上通过 n8n 工作流运行 SoftGlaze。",
+      "selfHosted": "n8n 必须在这台电脑上运行（npx 或 Docker）。n8n Cloud 目前还无法访问你的电脑。",
+      "noPort": "开启 AI 服务器后即可查看 n8n 地址。",
+      "a": {
+        "title": "让 n8n AI Agent 使用 SoftGlaze",
+        "step1": "添加一个 AI Agent 节点，然后添加一个 MCP Client Tool 节点作为它的工具之一。",
+        "step2": "将 SSE Endpoint 设置为下方地址。如果 n8n 运行在 Docker 中，请使用 Docker 地址。",
+        "step3": "将 Authentication 设置为 Bearer 并粘贴你的令牌。在 Tools to Include 下选择 All，或只选择你需要的工具。",
+        "sse": "SSE 端点（n8n 在这台电脑上）",
+        "sseDocker": "SSE 端点（n8n 在 Docker 中）",
+        "dockerNote": "使用 Docker 时，还需在“设置”标签页的“额外允许的主机名”中添加 host.docker.internal。"
+      },
+      "b": {
+        "title": "使用 HTTP Request 节点执行固定步骤",
+        "body": "对于永远不变的步骤（例如在 9:00 启动某个配置文件），HTTP Request 节点可以直接调用 Local API。请在 Authorization 请求头中发送令牌。",
+        "kind": "HTTP Request"
+      },
+      "c": {
+        "title": "为计划工作流使用自动化令牌",
+        "body": "按计划运行的工作流没有人点击“允许”。自动化令牌只预先批准你选择的工具，仅限你选择的分组，并有每次调用和每小时的上限。其他所有操作仍会询问。",
+        "create": "创建自动化令牌",
+        "ownerOnly": "只有所有者可以创建自动化令牌。"
+      }
+    },
+    "devtools": {
+      "title": "通过 Playwright MCP 或 Chrome DevTools MCP 使用配置文件（高级）",
+      "subtitle": "将运行中的 Chromium 配置文件交给外部 DevTools 客户端。",
+      "ownerOnly": "仅限所有者",
+      "warning": "网站可以检测到外部调试器。Playwright MCP 和 Chrome DevTools MCP 会作为第二个 DevTools 客户端连接并发送自己的命令，反机器人脚本可能会注意到这一点。配置文件可能会被标记或拦截。SoftGlaze 自己的页面工具不会这样做。在配置文件运行期间，这台电脑上任何拥有下方地址的人都可以控制该配置文件。",
+      "intro": "用于 SoftGlaze 页面工具无法完成的工作，例如在你自己的网站上进行性能跟踪或查看网络和控制台日志，并请使用测试配置文件。这是你在应用中的操作，与决定 AI 应用可以请求什么的专家模式无关。",
+      "profile": "运行中的配置文件",
+      "loading": "正在加载运行中的配置文件…",
+      "loadError": "无法加载运行中的配置文件：{{message}}",
+      "choose": "选择一个运行中的配置文件",
+      "option": "{{name}}（#{{id}}）· Chromium",
+      "optionFirefox": "{{name}}（#{{id}}）· Firefox：Firefox 配置文件没有 DevTools 端点",
+      "empty": "请先启动一个 Chromium 配置文件。",
+      "openProfiles": "打开“配置文件”",
+      "stopped": "此配置文件（{{name}}）已停止，其地址已失效。",
+      "address": "DevTools 地址",
+      "hiddenLabel": "DevTools 地址，点击“显示”前处于隐藏状态",
+      "show": "显示",
+      "showLabel": "显示 {{name}} 的 DevTools 地址",
+      "hide": "隐藏",
+      "addressNote": "每次启动配置文件时都会更新。仅在配置文件运行期间、在这台电脑上有效。",
+      "noAddress": "SoftGlaze 未获得此配置文件的 DevTools 地址。请停止并重新启动它，然后重试。",
+      "setup": "设置",
+      "toolsLabel": "MCP 服务器",
+      "clientsLabel": "AI 应用",
+      "where": {
+        "claude-code": "在项目文件夹的终端中运行。地址在每次配置文件启动时都会变化，因此请先运行 claude mcp remove {{name}}，然后再次运行此命令。",
+        "claude-desktop": "Settings > Developer > Edit Config（claude_desktop_config.json）：将此内容添加到 \"mcpServers\" 下，然后退出并重新打开 Claude Desktop。每次启动后请更新地址。",
+        "cursor": "~/.cursor/mcp.json（所有项目）或某个项目中的 .cursor/mcp.json。每次启动后请更新地址。",
+        "vscode": "工作区中的 .vscode/mcp.json，或运行 MCP: Open User Configuration。每次启动后请更新地址。"
+      },
+      "snippet": "{{app}} 的 {{tool}} 设置",
+      "pressShow": "点击“显示”以查看包含此配置文件地址的设置。",
+      "usageStats": "关闭 Chrome DevTools MCP 使用情况统计",
+      "usageStatsHint": "添加 --no-usage-statistics。否则 Chrome DevTools MCP 会向 Google 发送使用情况统计。",
+      "footer": "完成后，先关闭 MCP 服务器，再停止配置文件。",
+      "guide": "指南：Playwright MCP 和 Chrome DevTools MCP"
+    }
+  },
+  "scope": {
+    "read": {
+      "title": "只读",
+      "body": "可以查看配置文件、代理、分组和活动。无法更改或启动任何内容。"
+    },
+    "operate": {
+      "title": "操作",
+      "body": "还可以创建和启动配置文件、运行宏以及在页面内操作。更改仍会按“设置”中的规定先询问你。请慎重选择。"
+    },
+    "full": {
+      "title": "完全",
+      "body": "包含“操作”的全部权限，开启专家模式时还可使用专家工具。仅适用于你完全信任的应用。"
+    }
+  },
+  "create": {
+    "title": "创建令牌",
+    "titleFor": "为 {{app}} 创建令牌",
+    "description": "一个令牌供一个 AI 应用连接。它以团队成员的身份操作，只能执行该成员有权执行的操作。",
+    "revealTitle": "你的新令牌",
+    "revealDescription": "请立即将其复制到你的 AI 应用中。",
+    "name": "名称",
+    "nameHint": "注明是哪个应用和哪台电脑，便于日后识别。",
+    "namePlaceholder": "我电脑上的 Claude Desktop",
+    "member": "身份",
+    "memberHint": "AI 以该成员的身份工作，拥有该成员的权限和配置文件。",
+    "you": "你",
+    "scope": "可执行的操作",
+    "expiry": "有效期",
+    "expiryNever": "永不过期",
+    "expiryDays_one": "{{count}} 天",
+    "expiryDays_other": "{{count}} 天",
+    "expiryNeverWarn": "永不过期的令牌在你撤销之前一直有效。",
+    "profiles": "可使用的配置文件",
+    "profilesAll": "全部",
+    "profilesSome": "仅部分分组",
+    "profilesAllHint": "该成员可以打开的所有配置文件。",
+    "profilesSomeHint": "仅限你勾选的分组中的配置文件。",
+    "noGroups": "还没有分组。请先在“分组”页面创建一个。",
+    "pickGroups": "分组",
+    "submit": "创建令牌",
+    "onceWarning": "请立即复制此令牌。SoftGlaze 只显示这一次。如果丢失，请撤销它并创建新的令牌。",
+    "yourToken": "令牌",
+    "filledSetup": "{{app}} 的设置（已填入你的令牌）",
+    "n8nHint": "在 n8n 中，将 Authentication 设置为 Bearer 并粘贴此令牌。",
+    "claudeCodeHint": "正在安装 SoftGlaze 插件？在安装 softglaze-browser-connector 过程中 Claude Code 询问时粘贴此令牌。上方的命令是不使用插件时的方法。",
+    "claudeDesktopHint": "正在安装 softglaze-browser.mcpb？在 Claude Desktop 询问时粘贴此令牌。上方的设置是不使用扩展时的方法。",
+    "acknowledge": "我已将此令牌保存在安全的地方",
+    "closeWarning": "请先复制令牌或勾选此框。你将无法再次查看此令牌。",
+    "done": "完成"
+  },
+  "errors": {
+    "nameRequired": "请输入名称。",
+    "nameTooLong": "名称不能超过 {{max}} 个字符。",
+    "memberRequired": "请选择一位成员。",
+    "scopeRequired": "请选择令牌可执行的操作。",
+    "expiryRequired": "请选择有效期。",
+    "groupsRequired": "请至少勾选一个分组，或选择“全部”。",
+    "groupsRequiredAutomation": "自动化令牌必须限定于分组。请至少勾选一个分组。",
+    "toolNotAllowed": "其中一个工具无法预先批准。",
+    "limitRange": "请输入 {{min}} 到 {{max}} 之间的整数。",
+    "create": "令牌未创建。",
+    "noToken": "AI 服务器没有返回令牌，请重试。",
+    "createFailed": "令牌未创建：{{message}}"
+  },
+  "automation": {
+    "title": "自动化令牌（用于 n8n、计划任务和脚本）",
+    "ownerOnly": "仅限所有者",
+    "count_one": "{{count}} 个已预先批准",
+    "count_other": "{{count}} 个已预先批准",
+    "intro": "对于无需你在场的工作流，请选择可以不经询问直接运行的工具。",
+    "needsOperate": "请在上方选择“操作”或“完全”以预先批准工具。",
+    "warning": "这些工具将在不询问你的情况下运行。它们仍仅限于所选分组，会被记录，并且会被“停止所有 AI”停止。",
+    "tools": "无需询问即可运行的工具",
+    "destructive": "无法撤销",
+    "groups": {
+      "profiles": "配置文件",
+      "sessions": "启动和停止",
+      "proxies": "代理",
+      "groups": "分组",
+      "automation": "自动化",
+      "page": "页面内",
+      "other": "其他"
+    },
+    "maxProfiles": "每次调用的最多配置文件数",
+    "maxProfilesHint": "默认 5，最多 50。",
+    "maxCalls": "每小时最多调用次数",
+    "maxCallsHint": "默认 60，最多 1000。",
+    "groupsNote": "预先批准的工具只对“可使用的配置文件”下勾选的分组有效。其他所有工具仍会询问你。"
+  },
+  "tools": {
+    "create_profile": "创建配置文件",
+    "update_profile": "更改配置文件（名称、分组、标签、备注、起始页、代理）",
+    "batch_generate_profiles": "一次创建多个配置文件",
+    "start_profile": "启动配置文件",
+    "stop_profile": "停止配置文件",
+    "assign_proxy": "为配置文件分配代理",
+    "rotate_proxy_ip": "从代理获取新 IP",
+    "find_free_proxies": "查找并测试免费代理",
+    "create_group": "创建分组",
+    "move_profiles_to_group": "将配置文件移到分组",
+    "save_macro": "保存宏",
+    "run_macro": "运行宏",
+    "stop_run": "停止运行",
+    "start_warmer": "开始预热",
+    "page_navigate": "打开网页",
+    "page_snapshot": "读取页面布局",
+    "page_click": "在页面上点击",
+    "page_type": "在页面上输入",
+    "page_press_key": "在页面上按键",
+    "page_scroll": "滚动页面",
+    "page_screenshot": "截图",
+    "page_extract_text": "从页面复制文本",
+    "page_wait_for": "等待页面上的内容"
+  },
+  "tokens": {
+    "search": "搜索令牌",
+    "showRevoked": "显示已撤销的令牌",
+    "showRevokedCount_one": "显示 {{count}} 个已撤销的令牌",
+    "showRevokedCount_other": "显示 {{count}} 个已撤销的令牌",
+    "create": "创建令牌",
+    "intro": "每个 AI 应用使用自己的令牌连接。一个令牌以一位成员的身份操作，并可以限定于部分分组。撤销令牌即可立即切断该应用的访问。",
+    "loadError": "无法加载令牌：{{message}}",
+    "emptyTitle": "还没有令牌",
+    "emptyBody": "创建一个令牌，然后将其粘贴到你的 AI 应用中。“连接”标签页会显示填写位置。",
+    "caption": "AI 令牌",
+    "colName": "名称",
+    "colMember": "身份",
+    "colScope": "访问权限",
+    "colGroups": "配置文件",
+    "colExpires": "到期时间",
+    "colLastUsed": "上次使用",
+    "colActions": "操作",
+    "state": {
+      "revoked": "已撤销",
+      "expired": "已过期",
+      "expiring": "即将过期"
+    },
+    "automation_one": "自动化 · {{count}} 个已预先批准",
+    "automation_other": "自动化 · {{count}} 个已预先批准",
+    "allProfiles": "所有配置文件",
+    "groupsMore_one": "{{names}} 以及另外 {{count}} 个",
+    "groupsMore_other": "{{names}} 以及另外 {{count}} 个",
+    "neverUsed": "尚未使用",
+    "revoke": "撤销",
+    "revokeAria": "撤销 {{name}}",
+    "noMatch": "没有匹配的令牌。",
+    "revokeTitle": "撤销“{{name}}”？",
+    "revokeBody": "使用此令牌的 AI 应用将立即失去访问权限。此操作无法撤销。",
+    "revokeError": "无法撤销令牌：{{message}}"
+  },
+  "approval": {
+    "eyebrow": "AI 请求",
+    "eyebrowMany": "AI 请求 {{position}}/{{total}}",
+    "title": "{{app}} 正在请求权限",
+    "tokenOnly": "令牌：{{token}}",
+    "tokenAndMember": "令牌：{{token}} · 身份为 {{member}}",
+    "noSummary": "运行工具 {{tool}}",
+    "unknownApp": "某个 AI 应用",
+    "timeLeft": "内需作答。如未作答，请求将被拒绝。",
+    "timeLeftHint": "请求被拒绝前的剩余时间",
+    "timeLeftSr": "请求将在 {{time}} 后被拒绝",
+    "secondsLeftAnnounce": "还剩 {{seconds}} 秒回应 AI 请求",
+    "showDetails": "显示详情",
+    "hideDetails": "隐藏详情",
+    "tool": "工具",
+    "token": "令牌",
+    "argsLabel": "请求详情",
+    "noArgs": "此请求没有其他详情。",
+    "redactedNote": "密码和其他机密信息在此处已隐藏。",
+    "deny": "拒绝",
+    "allowHour": "允许 1 小时",
+    "allowHourHint": "在接下来的一小时内，{{token}} 的此类操作不再询问。",
+    "allowOnce": "允许一次",
+    "footnote": "无论 AI 应用自身的设置如何，SoftGlaze 都会在应用内询问。每次回应都会记录在“活动”中。",
+    "later": "稍后决定（超时后将被拒绝）",
+    "respondError": "你的回应未保存：{{message}}",
+    "waitingChip_one": "{{count}} 个 AI 请求待处理",
+    "waitingChip_other": "{{count}} 个 AI 请求待处理",
+    "timedOut": "来自 {{app}} 的请求已超时并被拒绝。",
+    "gone": "该请求已被回应或已取消。"
+  },
+  "approvals": {
+    "intro": "每个会更改内容的操作都会在这里等待你回应。未回应的请求会在 2 分钟后被拒绝。同一请求也会在任意页面弹出。",
+    "changeRules": "更改 SoftGlaze 询问的时机",
+    "emptyTitle": "没有待处理的请求",
+    "emptyBody": "当 AI 应用想要更改内容时，请求会显示在这里，并在任意页面以弹窗形式出现。",
+    "listLabel": "待你处理的请求",
+    "meta": "{{app}} · 令牌 {{token}} · {{when}}",
+    "actsAs": "身份为 {{member}}"
+  },
+  "activity": {
+    "search": "搜索工具、请求或令牌",
+    "outcome": "结果",
+    "all": "全部",
+    "outcomes": {
+      "ok": "成功",
+      "denied": "已拒绝",
+      "error": "错误",
+      "pending": "等待中"
+    },
+    "app": "应用",
+    "allApps": "所有应用",
+    "loadError": "无法加载活动：{{message}}",
+    "noMatchTitle": "没有符合这些筛选条件的内容",
+    "noMatchBody": "请尝试其他结果、应用或搜索词。",
+    "emptyTitle": "还没有 AI 活动",
+    "emptyBody": "AI 应用通过 SoftGlaze 执行的所有操作都会列在这里：它请求了什么、你的回应以及执行结果。",
+    "caption": "AI 活动",
+    "colTime": "时间",
+    "colApp": "应用和令牌",
+    "colTool": "工具",
+    "colSummary": "发生了什么",
+    "colOutcome": "结果",
+    "colDuration": "耗时",
+    "approval": {
+      "none": "无需批准",
+      "asked": "已询问你",
+      "pre-approved": "已预先批准",
+      "allow-once": "已允许一次",
+      "allow-hour": "你已允许 1 小时",
+      "hour-grant": "已允许 1 小时",
+      "deny": "已被你拒绝",
+      "timeout": "2 分钟内未回应",
+      "cancelled": "已被“停止所有 AI”停止",
+      "started-by-this-token": "此应用启动的配置文件",
+      "developer-token": "开发者 API 令牌"
+    },
+    "pageEmpty": "没有更多条目。",
+    "runId": "运行",
+    "pageInfo": "第 {{page}} 页 · 每页 {{size}} 条",
+    "newer": "较新",
+    "older": "较早"
+  },
+  "memory": {
+    "title": "工作区记忆",
+    "description": "每个 AI 应用开始工作前都会阅读的备注：你的命名方式、每个分组的用途、代理规则、工作时间以及绝不能做的事情。纯 Markdown 格式。",
+    "updated": "保存于 {{when}}",
+    "loadError": "无法加载记忆：{{message}}",
+    "editorLabel": "工作区记忆（Markdown）",
+    "placeholder": "在这里用 Markdown 为 AI 应用撰写备注。",
+    "usage": "{{used}} KB / {{limit}} KB · {{chars}} 个字符",
+    "over": "已超出上限。请缩短后再保存。",
+    "discard": "放弃更改",
+    "reset": "恢复默认",
+    "unsaved": "未保存的更改",
+    "tip": "提示：按 Ctrl+S 保存。请保持简短具体：AI 应用每次都会读取全部内容。",
+    "guidesTitle": "内置指南",
+    "guidesDescription": "SoftGlaze 也会向每个 AI 应用提供这些指南。它们是只读的。",
+    "resetTitle": "将记忆恢复为默认内容？",
+    "resetBody": "你的备注将被替换为 SoftGlaze 模板。此操作无法撤销。",
+    "guides": {
+      "howItWorks": {
+        "title": "SoftGlaze 的工作原理",
+        "body": "配置文件、指纹、代理、分组、会话、宏和套餐限额，以及如何用好这些工具。"
+      },
+      "acceptableUse": {
+        "title": "可接受的使用",
+        "body": "SoftGlaze 可以和不可以用于哪些用途。AI 应用会被告知拒绝任何被禁止的操作。"
+      }
+    },
+    "readGuide": "阅读指南",
+    "hideGuide": "隐藏",
+    "guideReadOnly": "只读。由 SoftGlaze 保持更新。"
+  },
+  "prompts": {
+    "loadError": "无法加载提示词：{{message}}",
+    "emptyTitle": "还没有提示词",
+    "emptyBody": "AI 服务器可用时，现成的提示词会显示在这里。",
+    "search": "搜索提示词",
+    "listLabel": "提示词",
+    "noMatch": "没有匹配的提示词。",
+    "inClaudeCode": "在 Claude Code 中：",
+    "arguments": "需要你填写的详情",
+    "noArguments": "此提示词无需填写任何详情。",
+    "argName": "名称",
+    "argRequired": "是否需要",
+    "argDescription": "说明",
+    "required": "必填",
+    "optional": "可选",
+    "text": "提示词文本",
+    "howTitle": "如何使用提示词",
+    "howIntro": "提示词是现成的任务。你的 AI 应用会填写详情，并通过 SoftGlaze 执行这些任务。",
+    "howClaudeCode": "输入 / 并选择一个 softglaze 提示词。",
+    "howClaudeDesktop": "点击聊天框下方的 +，找到 SoftGlaze。",
+    "howVsCode": "在 Copilot Chat 中输入 / 并选择一个 SoftGlaze 提示词。",
+    "howCursor": "如果没有列出提示词，请复制下方文本。",
+    "howOther": "任何应用：复制提示词文本，粘贴到聊天中并填写详情。"
+  },
+  "settings": {
+    "loadError": "无法加载设置：{{message}}",
+    "ownerOnly": "仅限所有者",
+    "ownerOnlyHint": "只有工作区所有者可以更改此项。",
+    "remove": "移除 {{value}}",
+    "approvals": {
+      "title": "SoftGlaze 何时询问你",
+      "description": "无论 AI 应用自身的设置如何，SoftGlaze 都会在 AI 应用执行操作前在应用内询问。",
+      "read": {
+        "title": "只读工具",
+        "body": "查看配置文件、代理、分组和活动。"
+      },
+      "operate": {
+        "title": "操作工具",
+        "body": "创建和启动配置文件、运行宏、在页面内操作。"
+      },
+      "full": {
+        "title": "完全工具",
+        "body": "专家工具，仅在开启专家模式时可用。"
+      },
+      "alwaysAsk": "有些操作每次都会询问，例如一次启动或停止多个配置文件，以及专家工具。"
+    },
+    "modes": {
+      "never": "从不询问",
+      "ask-hour": "每小时询问一次",
+      "ask-always": "每次都询问"
+    },
+    "domains": {
+      "title": "AI 可以操作的网站",
+      "description": "页面工具（打开页面、点击、输入、读取文本）只在此列表中的网站及其子域名上生效。",
+      "placeholder": "example.com",
+      "invalid": "请输入网站名称，例如 example.com。",
+      "empty": "还没有网站。页面工具可以打开任何网站，但仍会先询问你。",
+      "add": "添加网站"
+    },
+    "hosts": {
+      "title": "额外允许的主机名",
+      "description": "AI 服务器只响应发往 127.0.0.1 的请求。对于在 Docker 中运行的 n8n 或其他工具，请添加 host.docker.internal。",
+      "invalid": "请输入主机名，例如 host.docker.internal，不要包含端口或路径。",
+      "empty": "无。仅允许 127.0.0.1。",
+      "add": "添加主机"
+    },
+    "expert": {
+      "title": "专家模式",
+      "description": "允许 AI 应用使用 Playwright、Puppeteer 或 Chrome DevTools 接管运行中的配置文件。",
+      "warning": "可被检测到。外部工具控制浏览器的方式能被网站发现，因此配置文件可能会被标记或拦截。默认关闭。仅限所有者。",
+      "switch": "专家模式",
+      "isOn": "已开启。拥有“完全”令牌的 AI 应用可以请求接管运行中的配置文件，每次都会询问你。",
+      "isOff": "已关闭。任何 AI 应用都无法接管运行中的配置文件。",
+      "confirmTitle": "开启专家模式？",
+      "confirmBody": "之后，拥有“完全”令牌的 AI 应用可以请求直接控制运行中的配置文件。网站可以检测到这一点，这些配置文件中的账号可能会被标记。",
+      "confirm": "开启",
+      "ack": "我了解这可能会被检测到，并可能导致配置文件被标记。"
+    },
+    "port": {
+      "title": "服务器端口",
+      "description": "AI 应用通过此端口连接到 http://127.0.0.1。",
+      "label": "端口",
+      "invalid": "请使用 {{min}} 到 {{max}} 之间的数字。",
+      "hint": "更改后，请更新每个已连接 AI 应用中的地址。“连接”标签页会显示新的设置。"
+    }
+  }
+}

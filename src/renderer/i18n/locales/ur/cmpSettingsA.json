@@ -1,0 +1,159 @@
+{
+  "billing": {
+    "status": {
+      "loading": "لوڈ ہو رہا ہے…",
+      "sourceOwner": "سورس کا مالک",
+      "active": "فعال",
+      "activeUntil": "فعال · {{date}} تک",
+      "trialDaysLeft_one": "ٹرائل · {{count}} دن باقی",
+      "trialDaysLeft_other": "ٹرائل · {{count}} دن باقی",
+      "graceDaysLeft_one": "رعایتی مدت · {{count}} دن باقی",
+      "graceDaysLeft_other": "رعایتی مدت · {{count}} دن باقی",
+      "subscriptionEnded": "سبسکرپشن ختم ہو گئی"
+    },
+    "subscription": {
+      "title": "سبسکرپشن",
+      "planLine": "SoftGlaze Browser · {{tier}} پلان",
+      "manageButton": "سبسکرپشن اور پلانز مینیج کریں"
+    },
+    "seats": {
+      "label": "ٹیم سیٹیں",
+      "usage": "{{total}} میں سے {{used}} استعمال شدہ"
+    },
+    "gateway": {
+      "title": "ادائیگی کے طریقے",
+      "description": "صرف سپر ایڈمن کے لیے۔ وہ طریقے فعال کریں جو مالکان کو چیک آؤٹ پر دکھائے جائیں، اور ہر پرووائیڈر کی کیز محفوظ کریں۔",
+      "loadError": "ادائیگی کی سیٹنگز لوڈ نہیں ہو سکیں۔",
+      "footnote": "کیز اس مشین پر انکرپٹ ہو کر محفوظ رہتی ہیں اور کبھی باہر نہیں جاتیں۔ چیک آؤٹ پولنگ پر چلتا ہے (کوئی webhook نہیں)، اس لیے دوسری انسٹالیشنز پر پابندی کے لیے اب بھی لائسنسنگ بیک اینڈ درکار ہے۔ Wise اور مینوئل ادائیگیاں آپ نیچے “زیرِ التوا ادائیگیاں” میں منظور کرتے ہیں۔",
+      "retry": "دوبارہ کوشش کریں"
+    },
+    "provider": {
+      "kindManual": "مینوئل",
+      "kindAutomated": "خودکار",
+      "on": "آن",
+      "enabled": "فعال",
+      "disabled": "غیر فعال",
+      "enableAria": "{{provider}} فعال کریں",
+      "documentation": "ڈاکیومنٹیشن",
+      "secretStoredPlaceholder": "•••••••• (موجودہ رکھنے کے لیے خالی چھوڑیں)",
+      "secretPlaceholder": "کی پیسٹ کریں",
+      "save": "محفوظ کریں",
+      "testConnection": "کنکشن ٹیسٹ کریں",
+      "enabledMsg": "فعال ہو گیا۔",
+      "disabledMsg": "غیر فعال ہو گیا۔",
+      "updateError": "اپ ڈیٹ نہیں ہو سکا۔",
+      "savedMsg": "محفوظ ہو گیا۔",
+      "saveError": "محفوظ نہیں ہو سکا۔",
+      "connectionOk": "کنکشن ٹھیک لگ رہا ہے ✓",
+      "validationFailedKeys": "تصدیق ناکام۔ کیز چیک کریں۔",
+      "validationFailed": "تصدیق ناکام۔"
+    },
+    "manual": {
+      "title": "زیرِ التوا ادائیگیاں",
+      "description": "مینوئل (Wise / بینک ٹرانسفر) ادائیگیاں جو آپ کی منظوری کی منتظر ہیں۔",
+      "loadError": "مینوئل ادائیگیاں لوڈ نہیں ہو سکیں۔",
+      "resolveError": "یہ ادائیگی اپ ڈیٹ نہیں ہو سکی۔",
+      "ownerFallback": "مالک #{{id}}",
+      "refPrefix": "حوالہ:",
+      "approve": "منظور کریں",
+      "reject": "مسترد کریں",
+      "statusLabel": {
+        "pending": "زیرِ التوا",
+        "approved": "منظور شدہ",
+        "rejected": "مسترد"
+      }
+    }
+  },
+  "monetization": {
+    "heading": "آمدنی",
+    "affiliate": {
+      "title": "ایفیلیئٹ اور ریفرل لنکس",
+      "ownerOnly": "صرف مالک",
+      "description": "پراکسی مارکیٹ پلیس کے “خریدیں” بٹنز کے لیے آپ کے پارٹنر URLs۔ Softglaze کا ڈیفالٹ استعمال کرنے کے لیے خالی چھوڑیں۔",
+      "loadError": "ایفیلیئٹ لنکس لوڈ نہیں ہو سکے۔",
+      "saveError": "ایفیلیئٹ لنکس محفوظ نہیں ہو سکے۔",
+      "savedMsg": "محفوظ ہو گیا۔ مارکیٹ پلیس کے بٹن اب آپ کے لنکس استعمال کرتے ہیں۔",
+      "customLink": "کسٹم لنک",
+      "defaultLink": "ڈیفالٹ لنک",
+      "openLinkTitle": "{{provider}} کا لنک کھولیں",
+      "saving": "محفوظ ہو رہا ہے…",
+      "saveButton": "لنکس محفوظ کریں",
+      "footnote": "یہ لنکس پراکسی پول ← پرووائیڈرز ٹیب پر “… سے خریدیں” / “ڈیش بورڈ کھولیں” بٹنز چلاتے ہیں۔ یہ صرف پبلک ریفرل URLs ہیں، پراکسی ٹوکنز اور کریڈنشلز پر کوئی اثر نہیں پڑتا۔"
+    }
+  },
+  "developerApi": {
+    "title": "ڈیولپر API رسائی",
+    "description": "API کیز بنائیں اور Softglaze کو پروگرام کے ذریعے کنٹرول کرنے کے لیے لوکل REST سرور چلائیں۔",
+    "copy": "کاپی",
+    "errors": {
+      "load": "ڈیولپر API سیٹنگز لوڈ نہیں ہو سکیں۔",
+      "nameRequired": "کی کا نام دیں (مثلاً \"CI server\")۔",
+      "generate": "API کی نہیں بن سکی۔",
+      "revoke": "کی منسوخ نہیں ہو سکی۔",
+      "toggleServer": "لوکل سرور کی حالت تبدیل نہیں ہو سکی۔"
+    },
+    "keys": {
+      "title": "API کیز",
+      "namePlaceholder": "کی کا نام (مثلاً CI server)",
+      "generate": "نئی API کی بنائیں",
+      "copyOnce": "یہ کی ابھی کاپی کر لیں، یہ صرف ایک بار دکھائی جاتی ہے اور دوبارہ حاصل نہیں ہو سکتی۔",
+      "empty": "ابھی کوئی API کی نہیں۔",
+      "lastUsed": "آخری استعمال {{when}}",
+      "neverUsed": "کبھی استعمال نہیں ہوئی",
+      "never": "کبھی نہیں",
+      "revoke": "منسوخ کریں",
+      "revokeConfirm": "API کی \"{{name}}\" منسوخ کریں؟ اسے استعمال کرنے والی ہر اسکرپٹ فوراً کام کرنا بند کر دے گی۔ یہ واپس نہیں ہو سکتا۔"
+    },
+    "server": {
+      "title": "لوکل REST API",
+      "runningAt": "یہاں چل رہا ہے",
+      "stoppedPrefix": "رکا ہوا · اس پر بائنڈ ہو گا",
+      "loopbackOnly": "(صرف loopback)",
+      "disableTitle": "لوکل API بند کریں",
+      "enableTitle": "لوکل API فعال کریں",
+      "curlExample": "مثال: cURL سے پروفائل لانچ کریں",
+      "footnote": "سرور صرف اسی مشین سے درخواستیں قبول کرتا ہے اور درست Bearer کی مانگتا ہے۔"
+    }
+  },
+  "migration": {
+    "title": "پروفائلز منتقل کریں",
+    "ownerOnly": "صرف مالک",
+    "description": "کسی دوسرے ملٹی پروفائل براؤزر سے اس کی API کے ذریعے اپنے موجودہ پروفائلز امپورٹ کریں۔",
+    "sourcePlatform": "سورس پلیٹ فارم",
+    "noteLabel": "نوٹ:",
+    "instructions": "ہدایات",
+    "tokenSectionTitle": "{{platform}} API ٹوکن",
+    "transferring": "منتقل ہو رہا ہے…",
+    "startTransfer": "منتقلی شروع کریں",
+    "tokenFootnote": "آپ کا ٹوکن صرف اس منتقلی کے لیے ایک بار استعمال ہوتا ہے اور کبھی محفوظ نہیں کیا جاتا۔ لوکل پلیٹ فارمز (AdsPower، ixBrowser) چل رہے ہونے چاہییں اور ان کی Local API فعال ہونی چاہیے۔",
+    "errors": {
+      "tokenRequired": "اپنا {{platform}} {{placeholder}} درج کریں۔",
+      "transferFailed": "منتقلی ناکام ہو گئی۔"
+    },
+    "log": {
+      "title": "منتقلی کا لاگ",
+      "imported": "{{total}} میں سے {{created}} امپورٹ ہوئے",
+      "errors_one": "{{count}} خرابی",
+      "errors_other": "{{count}} خرابیاں",
+      "waiting": "پلیٹ فارم کے جواب کا انتظار ہے…"
+    },
+    "platforms": {
+      "dolphin": {
+        "placeholder": "Dolphin_Token",
+        "warning": "اگر آپ Dolphin کے مفت پلان سے منتقل کر رہے ہیں تو کوکیز منتقل نہیں ہوں گی۔"
+      },
+      "gologin": {
+        "placeholder": "GoLogin API ٹوکن"
+      },
+      "multilogin": {
+        "placeholder": "Multilogin آٹومیشن ٹوکن"
+      },
+      "adspower": {
+        "placeholder": "AdsPower Local API Key"
+      },
+      "ixbrowser": {
+        "placeholder": "ixBrowser Local API Key"
+      }
+    }
+  }
+}

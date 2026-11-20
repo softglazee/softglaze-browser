@@ -37,11 +37,34 @@ function host() {
   return state.host;
 }
 
+// Other listeners of the approval events (the phone companion forwards approvals to paired phones).
+const approvalListeners = new Set();
+
+// Approval events for main-process listeners only (never sent to windows).
+const MAIN_ONLY_EVENTS = new Set(['ai:approval-resolved']);
+const APPROVAL_EVENTS = new Set(['ai:approval-requested', 'ai:approvals-changed', 'ai:approval-resolved']);
+
 function emit(channel, data) {
-  try { if (state.host && typeof state.host.emit === 'function') state.host.emit(channel, data); } catch (e) { /* renderer gone */ }
+  if (!MAIN_ONLY_EVENTS.has(channel)) {
+    try { if (state.host && typeof state.host.emit === 'function') state.host.emit(channel, data); } catch (e) { /* renderer gone */ }
+  }
+  if (APPROVAL_EVENTS.has(channel)) {
+    for (const fn of approvalListeners) { try { fn(channel, data); } catch (e) { /* one listener must not break the rest */ } }
+  }
 }
 
-function configure({ toolDeps, host: h, inlineWaitMs, approvalTimeoutMs }) {
+// fn(channel, data) for 'ai:approval-requested' (publicView, args already redacted),
+// 'ai:approvals-changed' ({ pending }) and 'ai:approval-resolved' ({ id, decision: allow-once |
+// allow-hour | deny | timeout | cancelled }). Returns an unsubscribe function.
+function onApprovalEvent(fn) {
+  approvalListeners.add(fn);
+  return () => approvalListeners.delete(fn);
+}
+
+// Pending approvals, for listeners that are not the window (no member filter here: callers filter).
+function approvalsManager() { return state.approvals; }
+
+function configure({ toolDeps, host: h, inlineWaitMs, approvalTimeoutMs, quota = null }) {
   state.host = h;
   state.toolDeps = toolDeps;
   state.approvals = new ApprovalManager({ emit, timeoutMs: approvalTimeoutMs });
@@ -61,7 +84,9 @@ function configure({ toolDeps, host: h, inlineWaitMs, approvalTimeoutMs }) {
       memory: state.memory,
       tracker: state.tracker,
       jobs: state.jobs,
-      limiter: state.limiter
+      limiter: state.limiter,
+      // The plan's AI actions a day (Free: 25), counted in main: { take() -> { ok, error? } }. None = unlimited.
+      quota
     }
   });
   state.mcp = new McpHttpHandler({
@@ -408,6 +433,8 @@ module.exports = {
   listApprovals,
   getApproval,
   respondApproval,
+  onApprovalEvent,
+  approvalsManager,
   listAudit,
   memoryGet,
   memorySet,

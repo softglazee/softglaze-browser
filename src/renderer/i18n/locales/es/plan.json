@@ -1,0 +1,97 @@
+{
+  "upgrade": {
+    "title": {
+      "profiles": "Has llegado a los {{limit}} perfiles del plan Gratis",
+      "running": "El plan Gratis abre {{limit}} perfil a la vez",
+      "openable": "Este perfil no está entre tus {{limit}} del plan Gratis",
+      "seats": "Los miembros del equipo son parte de Pro",
+      "ai": "Ya usaste las {{limit}} acciones de IA de hoy",
+      "sync": "La sincronización en la nube es parte de Pro",
+      "phone": "Abrir perfiles desde el teléfono es parte de Pro",
+      "generic": "Esto es parte de Pro"
+    },
+    "body": {
+      "profiles": "Tus {{used}} perfiles están a salvo. Mejora a Pro para tener perfiles ilimitados, o elimina uno para hacer espacio.",
+      "running": "Cierra el perfil abierto para iniciar otro, o mejora a Pro para abrir 3 a la vez.",
+      "openable": "Se conservan todos los perfiles. En el plan Gratis eliges cuáles {{limit}} se pueden abrir; Pro los abre todos.",
+      "seats": "El plan Gratis es para una persona. Pro incluye 3 miembros del equipo y Enterprise 25.",
+      "ai": "El plan Gratis incluye {{limit}} acciones de IA al día; se renuevan mañana. Pro tiene acciones de IA ilimitadas.",
+      "sync": "Pro mantiene tus perfiles sincronizados entre tus ordenadores y tu teléfono.",
+      "phone": "En el plan Gratis tu teléfono y la aplicación web pueden ver perfiles y aprobar solicitudes de IA. Pro también los abre y los detiene.",
+      "generic": "Mejora a Pro para usarlo."
+    },
+    "price": "Pro cuesta {{price}} al mes.",
+    "priceFallback": "Pro empieza en US$5 al mes.",
+    "upgradeButton": "Mejorar a Pro",
+    "chooseProfiles": "Elegir perfiles",
+    "notNow": "Ahora no"
+  },
+  "welcome": {
+    "title": "Tu prueba de Pro ha terminado. Ahora estás en el plan Gratis.",
+    "keepTitle": "Conservas",
+    "keep": "Todos tus perfiles (se pueden abrir {{limit}}), tus proxies y huellas digitales, la aplicación del teléfono y la web.",
+    "proTitle": "Pro añade",
+    "pro": "Perfiles ilimitados, 3 abiertos a la vez, puestos de equipo, sincronización en la nube y acciones de IA ilimitadas, por {{price}} al mes.",
+    "upgrade": "Mejorar a Pro",
+    "stay": "Seguir con el plan Gratis"
+  },
+  "counter": {
+    "freeBadge": "Plan Gratis",
+    "profiles": "{{used}} de {{limit}} perfiles",
+    "running": "{{used}} de {{limit}} abiertos",
+    "ai": "{{used}} de {{limit}} acciones de IA hoy",
+    "upgrade": "Mejorar"
+  },
+  "choose": {
+    "title": "Elige qué perfiles se pueden abrir",
+    "body": "En el plan Gratis se pueden abrir {{limit}} de tus {{total}} perfiles. Se conservan todos; mejora a Pro para abrirlos todos.",
+    "selected": "{{count}} de {{limit}} elegidos",
+    "search": "Buscar perfiles",
+    "save": "Guardar",
+    "cancel": "Cancelar",
+    "saved": "Guardado. Estos perfiles se pueden abrir en el plan Gratis."
+  },
+  "billing": {
+    "currentFree": "Plan Gratis",
+    "currentFreeBody": "Gratis para siempre, sin tarjeta. Mejora cuando quieras para tener más perfiles, equipos y acciones de IA ilimitadas.",
+    "currentBadge": "Plan actual",
+    "compareTitle": "Comparar planes",
+    "colFeature": "Función",
+    "colFree": "Gratis",
+    "colPro": "Pro",
+    "colEnterprise": "Enterprise",
+    "rows": {
+      "profiles": "Perfiles guardados",
+      "running": "Perfiles abiertos a la vez",
+      "seats": "Puestos (miembros del equipo)",
+      "pcs": "Ordenadores por cuenta",
+      "fingerprints": "Tus propios proxies y toda la configuración de huella digital",
+      "ai": "Automatización con IA y MCP",
+      "phone": "Aplicación del teléfono y web",
+      "sync": "Sincronización en la nube entre ordenadores",
+      "support": "Soporte"
+    },
+    "values": {
+      "unlimited": "Ilimitado",
+      "unlimitedAudit": "Ilimitado + exportación de auditoría",
+      "yes": "Sí",
+      "no": "No",
+      "aiPerDay": "{{count}} acciones al día",
+      "viewApprove": "Ver + aprobar solicitudes de IA",
+      "openStop": "+ abrir y detener perfiles",
+      "teamApprovals": "+ aprobaciones del equipo",
+      "helpCentre": "Centro de ayuda",
+      "email": "Correo electrónico",
+      "priorityEmail": "Correo prioritario"
+    }
+  },
+  "deals": {
+    "title": "Ofertas de proxies recomendadas",
+    "disclosure": "Oferta de un socio. SoftGlaze puede recibir una comisión.",
+    "code": "Código {{code}}",
+    "copyCode": "Copiar código",
+    "copied": "Copiado",
+    "open": "Ver oferta",
+    "hidden": "Pro y Enterprise nunca muestran ofertas de socios."
+  }
+}
