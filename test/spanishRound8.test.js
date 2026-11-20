@@ -371,6 +371,7 @@ test('14: a workspace restore runs the pass for links imported before 1.0.26 on 
     getPrisma: () => db, readSetting, writeSetting, logAudit: async () => {}, require,
     rotationLinksAdoptedThisRun: false,
     requireOwnerOrSuper: async () => {},
+    i18nMain: require('../src/main/i18nMain.js'),
     dialog: { showOpenDialog: async () => ({ canceled: false, filePaths: ['C:/backups/ws.sgzw'] }) },
     profileArchive: { restoreWorkspaceArchive: async () => ({ db: Buffer.from('SQLite format 3\0'), exportedAt: '2026-10-02' }) },
     getRuntimeConfig: () => ({ dbPath: 'C:/data/softglaze.db' }),

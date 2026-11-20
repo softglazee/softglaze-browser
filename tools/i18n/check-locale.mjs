@@ -31,6 +31,9 @@ const PLURAL_SUFFIXES = ['zero', 'one', 'two', 'few', 'many', 'other'];
 const PLURAL_RE = new RegExp(`^(.+)_(${PLURAL_SUFFIXES.join('|')})$`);
 // 'many' in these languages only triggers for exact millions (1 000 000); missing is a warning.
 const SOFT_MANY = new Set(['es', 'fr', 'pt-BR', 'pt', 'it', 'ca']);
+// Namespaces added after the first translation pass (see D:\SoftGlaze-Browser-Languages\DELTA-KEYS.md):
+// a missing file is a warning (English is used) until the delta pass translates it.
+const DELTA_FILES = new Set(['main.json']);
 
 // Banned terms. Latin words match on word boundaries (\p{L}-aware); `prefix` entries match the
 // start of a word (so "anonym" catches anonymous, anonyme, anonim...). Non-Latin entries match
@@ -370,7 +373,10 @@ export function checkLocale(code, { root = DEFAULT_ROOT, partial = false } = {})
     const rel = `${code}/${f}`;
     const enData = readJson(path.join(enDir, f), makeProblems(), `en/${f}`);
     if (!fs.existsSync(path.join(dir, f))) {
-      if (code !== 'en') (partial ? problems.warn : problems.error)(rel, 'file missing');
+      if (code !== 'en') {
+        if (DELTA_FILES.has(f)) problems.warn(rel, 'file missing (delta pass pending; English is used)');
+        else (partial ? problems.warn : problems.error)(rel, 'file missing');
+      }
       continue;
     }
     const data = readJson(path.join(dir, f), problems, rel);

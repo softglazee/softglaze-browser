@@ -82,14 +82,20 @@ export async function switchLanguage(code) {
   return next;
 }
 
+function tellMainProcess(code) {
+  try { window.softglaze?.ui?.setLanguage?.(code); } catch (e) { /* preview / tests */ }
+}
+
 i18n.on('languageChanged', (code) => {
   applyDocumentLang(code);
   setIntlLanguage(code);
+  tellMainProcess(code);
 });
 
 const initialLang = readStoredLang();
 applyDocumentLang(initialLang);
 setIntlLanguage(initialLang);
+tellMainProcess(initialLang);
 
 i18n.use(initReactI18next).init({
   resources: { en: enResources },

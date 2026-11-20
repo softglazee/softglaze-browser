@@ -364,6 +364,8 @@ for (const channel of Object.values(MOBILE_CHANNELS)) ALLOWED_CHANNELS.add(chann
 // One-way message, not an invoke(): main re-focuses the window after a native
 // alert()/confirm()/prompt() closes. Must match REFOCUS_CHANNEL in src/main/dialogFocus.js.
 const DIALOG_REFOCUS_CHANNEL = 'window:refocus-after-dialog';
+// Same value as i18nMain.LANGUAGE_CHANNEL (the preload is sandboxed, so no require of main code).
+const LANGUAGE_CHANNEL = 'i18n:language';
 
 async function invoke(channel, payload = undefined) {
   if (!ALLOWED_CHANNELS.has(channel)) throw new Error(`Blocked IPC channel: ${channel}`);
@@ -400,7 +402,9 @@ const api = Object.freeze({
   hostOs: { win32: 'Windows', darwin: 'macOS', linux: 'Linux' }[process.platform] || 'Windows',
 
   ui: Object.freeze({
-    refocusAfterDialog: () => ipcRenderer.send(DIALOG_REFOCUS_CHANNEL)
+    refocusAfterDialog: () => ipcRenderer.send(DIALOG_REFOCUS_CHANNEL),
+    // The app language, so native menus and file dialogs match it.
+    setLanguage: (code) => ipcRenderer.send(LANGUAGE_CHANNEL, String(code || ''))
   }),
 
   system: Object.freeze({
