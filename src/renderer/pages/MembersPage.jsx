@@ -327,6 +327,7 @@ export default function MembersPage() {
 // Super-Admin license console per owner tree (grant, extend, reset, block); main re-enforces each.
 const LIC_TONE = {
   paid: { c: '#10b981', label: 'Paid' },
+  free: { c: '#3b82f6', label: 'Free plan' },
   trialing: { c: '#3b82f6', label: 'Trial' },
   grace: { c: '#f59e0b', label: 'Grace' },
   banned: { c: '#ef4444', label: 'Banned' }
@@ -396,7 +397,7 @@ function SuperAdminLicensePanel() {
                 <div className="flex items-center gap-2">
                   <Crown className="w-4 h-4 text-amber-400 shrink-0" />
                   <span className="text-sm font-semibold text-foreground truncate">{r.ownerName}</span>
-                  <span className="inline-flex items-center gap-1.5 rounded-full px-2 py-0.5 text-[11px] font-semibold" style={{ background: `color-mix(in srgb, ${tone.c} 14%, transparent)`, color: tone.c, border: `1px solid color-mix(in srgb, ${tone.c} 28%, transparent)` }}>{t(`license.state.${LIC_TONE[lic.state] ? lic.state : 'trialing'}`)}</span>
+                  <span className="inline-flex items-center gap-1.5 rounded-full px-2 py-0.5 text-[11px] font-semibold" style={{ background: `color-mix(in srgb, ${tone.c} 14%, transparent)`, color: tone.c, border: `1px solid color-mix(in srgb, ${tone.c} 28%, transparent)` }}>{lic.state === 'free' ? t('status.free', { ns: 'billing' }) : t(`license.state.${LIC_TONE[lic.state] ? lic.state : 'trialing'}`)}</span>
                   {lic.tier && <span className="text-[10px] uppercase tracking-wider text-muted-foreground">{lic.tier}</span>}
                 </div>
                 <div className="text-[11.5px] text-muted-foreground mt-0.5">{r.ownerEmail || t('member.noEmail')}</div>

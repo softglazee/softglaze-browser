@@ -7,19 +7,7 @@ import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { softglazeApi } from '@/lib/softglazeApi.js';
 import Switch from '@/components/ui/Switch.jsx';
-import { fmtDate } from '@/lib/intl.mjs';
-
-function statusTone(license, t) {
-  if (!license) return { color: '#9ca3af', label: t('billing.status.loading') };
-  if (license.isExempt) return { color: '#10b981', label: t('billing.status.sourceOwner') };
-  switch (license.state) {
-    case 'paid': return { color: '#10b981', label: license.endsAt ? t('billing.status.activeUntil', { date: fmtDate(license.endsAt) }) : t('billing.status.active') };
-    case 'trialing': return { color: '#3b82f6', label: t('billing.status.trialDaysLeft', { count: license.daysLeftTrial }) };
-    case 'grace': return { color: '#f59e0b', label: t('billing.status.graceDaysLeft', { count: license.daysLeftGrace }) };
-    case 'banned': return { color: '#ef4444', label: t('billing.status.subscriptionEnded') };
-    default: return { color: license.isPaid ? '#10b981' : '#f59e0b', label: license.isPaid ? t('billing.status.active') : t('billing.status.trialDaysLeft', { count: license.daysLeft }) };
-  }
-}
+import { settingsStatusTone } from '@/lib/licenseStatus.mjs';
 
 export default function BillingSettings() {
   const [me, setMe] = useState(null);
@@ -60,7 +48,7 @@ export default function BillingSettings() {
 function SubscriptionCard({ license, seats }) {
   const navigate = useNavigate();
   const { t } = useTranslation('cmpSettingsA');
-  const tone = statusTone(license, t);
+  const tone = settingsStatusTone(license, t);
 
   return (
     <div className="rounded-xl bg-card border border-border p-5">
@@ -72,7 +60,7 @@ function SubscriptionCard({ license, seats }) {
             <p className="text-xs text-muted-foreground capitalize">{t('billing.subscription.planLine', { tier: license?.tier || 'pro' })}</p>
           </div>
         </div>
-        <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-semibold shrink-0" style={{ background: `color-mix(in srgb, ${tone.color} 14%, transparent)`, color: tone.color, border: `1px solid color-mix(in srgb, ${tone.color} 26%, transparent)` }}>
+        <span data-license-status={tone.kind} className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-semibold shrink-0" style={{ background: `color-mix(in srgb, ${tone.color} 14%, transparent)`, color: tone.color, border: `1px solid color-mix(in srgb, ${tone.color} 26%, transparent)` }}>
           <span className="w-1.5 h-1.5 rounded-full" style={{ background: tone.color }} />{tone.label}
         </span>
       </div>
