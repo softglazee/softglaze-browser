@@ -1,0 +1,52 @@
+{
+  "header": {
+    "eyebrow": "Organização",
+    "title": "Grupos e tags",
+    "description": "Organize perfis em grupos e marque-os com tags para filtrar rápido."
+  },
+  "filters": {
+    "allProfiles": "Todos os perfis",
+    "ungrouped": "Sem grupo",
+    "group": "Grupo"
+  },
+  "sidebar": {
+    "directories": "Diretórios",
+    "createGroup": "Criar novo grupo",
+    "renameGroup": "Renomear grupo {{name}}",
+    "deleteGroup": "Excluir grupo {{name}}",
+    "groupNamePlaceholder": "Nome do grupo..."
+  },
+  "table": {
+    "searchPlaceholder": "Buscar perfis...",
+    "loading": "Carregando grupos...",
+    "colProfileName": "Nome do perfil",
+    "colGroupAssignment": "Grupo",
+    "colTags": "Tags"
+  },
+  "tagFilter": {
+    "label": "Filtros",
+    "clear": "limpar"
+  },
+  "bulk": {
+    "selected_one": "{{count}} selecionado",
+    "selected_many": "{{count}} selecionados",
+    "selected_other": "{{count}} selecionados",
+    "moveTo": "Mover para:",
+    "chooseGroup": "Escolher grupo…",
+    "clear": "Limpar"
+  },
+  "empty": {
+    "title": "Nenhum perfil encontrado",
+    "noMatch": "Nenhum perfil corresponde aos seus filtros.",
+    "groupEmpty": "Este grupo está vazio. Mova perfis para cá pelo menu Grupo."
+  },
+  "tags": {
+    "add": "Adicionar tag",
+    "remove": "Remover tag",
+    "inputPlaceholder": "tag + Enter"
+  },
+  "deleteConfirm": "Excluir o grupo \"{{name}}\"? Os perfis dele ficarão Sem grupo (os perfis em si não são excluídos).",
+  "errors": {
+    "loadFailed": "Falha ao carregar os grupos."
+  }
+}

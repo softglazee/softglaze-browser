@@ -1,0 +1,418 @@
+{
+  "header": {
+    "eyebrow": "Fonctionnalités Softglaze Pro",
+    "title": "Automatisation",
+    "description": "Macros sans code, préchauffage automatique des cookies et journal de chaque tâche d'arrière-plan."
+  },
+  "tabs": {
+    "macros": "Mes macros",
+    "parallel": "Exécutions parallèles",
+    "warmer": "Préchauffage des cookies",
+    "history": "Historique des tâches"
+  },
+  "clickLabels": {
+    "none": "Naviguer seulement",
+    "random": "Clics aléatoires",
+    "links": "Parcourir les liens"
+  },
+  "stepTypes": {
+    "goto": "Aller à l'URL",
+    "click": "Cliquer",
+    "type": "Saisir du texte",
+    "keypress": "Appuyer sur une touche",
+    "scroll": "Faire défiler",
+    "wait": "Attendre",
+    "move": "Déplacer la souris",
+    "hover": "Survoler",
+    "select": "Choisir une option de liste",
+    "waitFor": "Attendre un élément",
+    "submit": "Envoyer le formulaire",
+    "check": "Cocher / décocher",
+    "clear": "Vider le champ"
+  },
+  "stepFields": {
+    "goto": {
+      "url": "URL",
+      "urlPlaceholder": "https://example.com"
+    },
+    "click": {
+      "selector": "Sélecteur CSS",
+      "selectorPlaceholder": "#submit, .btn"
+    },
+    "type": {
+      "selector": "Sélecteur",
+      "selectorPlaceholder": "input[name=\"email\"]",
+      "value": "Texte à saisir"
+    },
+    "keypress": {
+      "key": "Touche",
+      "keyPlaceholder": "Enter"
+    },
+    "scroll": {
+      "steps": "Défilement",
+      "stepsPlaceholder": "4"
+    },
+    "wait": {
+      "ms": "Millisecondes",
+      "msPlaceholder": "1000"
+    },
+    "move": {
+      "selector": "Sélecteur (ou X/Y)",
+      "selectorPlaceholder": ".target",
+      "x": "X",
+      "y": "Y"
+    },
+    "hover": {
+      "selector": "Sélecteur",
+      "selectorPlaceholder": ".menu",
+      "ms": "Durée de survol (ms)",
+      "msPlaceholder": "800"
+    },
+    "select": {
+      "selector": "Sélecteur",
+      "selectorPlaceholder": "select[name=\"focus\"]",
+      "value": "Option (valeur, libellé ou index)",
+      "valuePlaceholder": "Plomberie",
+      "by": "Correspondance par"
+    },
+    "waitFor": {
+      "selector": "Sélecteur",
+      "selectorPlaceholder": ".dashboard",
+      "state": "État",
+      "timeout": "Délai max. (ms)",
+      "timeoutPlaceholder": "30000"
+    },
+    "submit": {
+      "selector": "Sélecteur du formulaire ou du champ",
+      "selectorPlaceholder": "form#signup"
+    },
+    "check": {
+      "selector": "Sélecteur",
+      "selectorPlaceholder": "input[name=\"terms\"]",
+      "state": "État"
+    },
+    "clear": {
+      "selector": "Sélecteur",
+      "selectorPlaceholder": "input[name=\"email\"]"
+    }
+  },
+  "stepSummary": {
+    "noUrl": "(aucune URL)",
+    "noSelector": "(aucun sélecteur)",
+    "selectorFallback": "(sélecteur)",
+    "target": "(cible)"
+  },
+  "macros": {
+    "intro": "Enregistrez ou créez des workflows sans code réutilisables, puis exécutez-les dans un profil (naviguer, cliquer, saisir, attendre), manuellement ou selon un planning.",
+    "profileSelectTitle": "Profil utilisé par Exécuter / Enregistrer",
+    "noProfiles": "Aucun profil",
+    "profileFallback": "Profil {{id}}",
+    "stopAndSave": "Arrêter et enregistrer",
+    "record": "Enregistrer",
+    "schedule": "Planifier",
+    "createMacro": "Créer une macro",
+    "stepsBadge_one": "{{count}} étape",
+    "stepsBadge_other": "{{count}} étapes",
+    "stepsBadge_many": "{{count}} étapes",
+    "updated": "Mise à jour le {{date}}",
+    "run": "Exécuter",
+    "edit": "Modifier",
+    "editSteps": "Modifier les étapes",
+    "delete": "Supprimer",
+    "runTitleNoSteps": "Cette macro n'a pas encore d'étapes : modifiez-la d'abord",
+    "runTitleReady": "Exécuter sur le profil sélectionné",
+    "emptyTitle": "Aucune macro pour l'instant",
+    "emptyHint": "Enregistrez un workflow ou créez-en un pour commencer.",
+    "errors": {
+      "loadMacros": "Impossible de charger les macros.",
+      "deleteMacro": "Impossible de supprimer la macro.",
+      "chooseProfile": "Choisissez d'abord un profil cible.",
+      "noSteps": "Cette macro n'a pas encore d'étapes : modifiez-la d'abord.",
+      "chooseProfileRecord": "Choisissez un profil cible dans lequel enregistrer.",
+      "recordingFailed": "L'action d'enregistrement a échoué."
+    },
+    "recordingStarted": "Enregistrement… Interagissez avec le navigateur lancé, puis appuyez sur Arrêter pour enregistrer.",
+    "savedNotice": "\"{{name}}\" enregistrée avec {{count}} étape(s).",
+    "stoppedNotice": "Enregistrement arrêté : {{count}} étape(s) capturée(s) (non enregistrées).",
+    "deleteConfirm": "Supprimer la macro \"{{name}}\" et toutes ses étapes ? Cette action est irréversible."
+  },
+  "saveRecording": {
+    "ariaLabel": "Enregistrer la macro enregistrée",
+    "title": "Enregistrer la macro capturée",
+    "subtitle": "Donnez-lui un nom pour garder les étapes capturées, ou supprimez-les. Le navigateur reste ouvert.",
+    "placeholder": "Macro enregistrée",
+    "discard": "Supprimer",
+    "cancel": "Annuler",
+    "save": "Enregistrer"
+  },
+  "scheduleModal": {
+    "ariaLabel": "Planning de la macro",
+    "title": "Planning de la macro",
+    "subtitle": "Exécuter une macro automatiquement à intervalle régulier · Softglaze Pro",
+    "enable": "Activer les exécutions planifiées",
+    "macroLabel": "Macro",
+    "selectMacro": "Sélectionner une macro…",
+    "everyMinutes": "Toutes les (minutes)",
+    "targetProfiles": "Profils cibles",
+    "noProfiles": "Aucun profil disponible.",
+    "profileFallback": "Profil {{id}}",
+    "cancel": "Annuler",
+    "save": "Enregistrer le planning",
+    "errors": {
+      "save": "Impossible d'enregistrer le planning."
+    }
+  },
+  "editorModal": {
+    "ariaEdit": "Modifier la macro",
+    "ariaCreate": "Créer une macro",
+    "titleEdit": "Modifier la macro",
+    "titleCreate": "Créer une macro",
+    "subtitle": "Créez un flux sans code : faites glisser la poignée pour réorganiser.",
+    "nameLabel": "Nom de la macro",
+    "namePlaceholder": "par ex. Connexion quotidienne",
+    "descriptionLabel": "Description",
+    "descriptionPlaceholder": "Que fait-elle ?",
+    "stepsLabel": "Étapes ({{count}})",
+    "addStep": "Ajouter une étape",
+    "noSteps": "Aucune étape pour l'instant : choisissez un type et ajoutez-en une.",
+    "dragToReorder": "Glisser pour réorganiser",
+    "removeStep": "Retirer l'étape",
+    "cancel": "Annuler",
+    "save": "Enregistrer la macro",
+    "errors": {
+      "name": "Donnez un nom à la macro.",
+      "save": "Impossible d'enregistrer la macro."
+    },
+    "optional": "Facultative",
+    "optionalHint": "Si cette étape échoue, la consigner et continuer au lieu de faire échouer l'exécution."
+  },
+  "runModal": {
+    "ariaLabel": "Exécution de la macro : {{name}}",
+    "runningOn": "En cours sur {{profile}}",
+    "starting": "Démarrage…",
+    "logStarted": "\"{{name}}\" démarrée · {{total}} étape(s) sur {{profile}}",
+    "logStepRunning": "▶ {{label}} : {{summary}}",
+    "logStepError": "✕ {{label}} - {{error}}",
+    "logStepFailed": "échec",
+    "logStopped": "Arrêtée.",
+    "logFinished": "Terminée : {{ran}}/{{total}} étape(s).",
+    "stopped": "Arrêtée.",
+    "finished": "Terminée.",
+    "summaryCompleted": "{{ran}}/{{total}} étape(s) terminée(s).",
+    "summaryRan": "{{ran}}/{{total}} étape(s) exécutée(s).",
+    "paused": "En pause",
+    "running": "En cours…",
+    "resume": "Reprendre",
+    "pause": "Pause",
+    "stop": "Arrêter",
+    "close": "Fermer",
+    "errors": {
+      "run": "Impossible d'exécuter la macro."
+    },
+    "logStepSkipped": "{{label}} ignorée (facultative) : {{error}}"
+  },
+  "parallel": {
+    "states": {
+      "queued": "En file d'attente",
+      "launching": "Lancement",
+      "running": "En cours",
+      "passed": "Réussi",
+      "failed": "Échec"
+    },
+    "title": "Exécution parallèle de macros",
+    "subtitle": "Exécutez une macro sur de nombreux profils à la fois, avec un suivi d'état en direct.",
+    "macroLabel": "Macro",
+    "noMacros": "Aucune macro pour l'instant",
+    "macroOption": "{{name}} · {{count}} étapes",
+    "concurrency": "Simultanéité",
+    "concurrencyCap": "Votre forfait exécute jusqu'à {{max}} profils à la fois.",
+    "concurrencyCapUpgrade": "Votre forfait exécute jusqu'à {{max}} profils à la fois. Enterprise en exécute jusqu'à {{enterpriseMax}}.",
+    "dataBound_one": "{{fileName}} · {{count}} ligne",
+    "dataBound_other": "{{fileName}} · {{count}} lignes",
+    "dataBound_many": "{{fileName}} · {{count}} lignes",
+    "dataHint": "Facultatif : associer un tableur (ligne → profil, dans l'ordre)",
+    "clearDataBinding": "Retirer l'association de données",
+    "bindData": "Associer des données",
+    "columnsPrefix": "Colonnes : {{columns}}. Utilisez",
+    "columnsSuffix": "dans les étapes de la macro.",
+    "profilesLabel": "Profils ({{count}} sélectionnés)",
+    "selectAll": "Tout sélectionner",
+    "clear": "Effacer",
+    "searchPlaceholder": "Rechercher",
+    "noProfiles": "Aucun profil trouvé.",
+    "rowMismatch": "{{rows}} ligne(s) de données pour {{profiles}} profil(s) : les éléments en trop s'exécutent sans variables.",
+    "running": "En cours…",
+    "runOn_one": "Exécuter sur {{count}} profil",
+    "runOn_other": "Exécuter sur {{count}} profils",
+    "runOn_many": "Exécuter sur {{count}} profils",
+    "runStatus": "État de l'exécution",
+    "summaryPassed": "réussis",
+    "summaryFailed": "en échec",
+    "summaryTotal": "{{total}} au total",
+    "watchHint": "Sélectionnez des profils et une macro, puis lancez l'exécution pour suivre la progression en direct.",
+    "steps": "{{ran}}/{{total}} étapes",
+    "profileFallback": "Profil {{id}}",
+    "runConsole": "Console d'exécution",
+    "live": "en direct",
+    "consoleIdle": "[ inactif ] Aucune exécution pour l'instant : la progression s'affichera ici (aucun cookie ni identifiant n'y figure jamais).",
+    "logRunFinished": "Exécution terminée : {{passed}}/{{total}} réussis",
+    "logRunFinishedError": "Exécution terminée : {{passed}}/{{total}} réussis ({{error}})",
+    "errors": {
+      "readSpreadsheet": "Impossible de lire le tableur.",
+      "chooseMacro": "Choisissez une macro à exécuter.",
+      "selectProfile": "Sélectionnez au moins un profil.",
+      "startRun": "Impossible de démarrer l'exécution parallèle."
+    }
+  },
+  "warmer": {
+    "title": "Préchauffage des cookies",
+    "subtitle": "Crée des cookies et un historique naturels en visitant de vrais sites.",
+    "sitesLabel": "Sites à visiter ({{count}})",
+    "addSuggested": "Ajouter un site suggéré…",
+    "add": "Ajouter",
+    "customPlaceholder": "Ou collez une URL personnalisée (par ex. example.com)",
+    "bulkAdd": "Ajout en lot",
+    "importFile": "Importer .txt/.csv",
+    "clearAll": "Tout effacer",
+    "bulkPlaceholder": "Collez une URL par ligne, par ex.\nexample.com\nhttps://news.site\nshop.site, 45, links",
+    "addList": "Ajouter la liste",
+    "bulkHint": "Une URL par ligne. Colonnes CSV facultatives : url, seconds, behaviour (none/random/links).",
+    "addSecondsTitle": "Secondes par défaut pour les liens ajoutés",
+    "addBehaviorTitle": "Comportement par défaut pour les liens ajoutés",
+    "saveList": "Enregistrer la liste",
+    "saveListPrompt": "Nommez cette liste de liens (pour la réutiliser plus tard) :",
+    "loadListTitle": "Charger cette liste enregistrée",
+    "deleteListTitle": "Supprimer cette liste enregistrée",
+    "selectRows": "Sélectionner des lignes",
+    "nSelected": "{{count}} sélectionnés",
+    "bulkSetSeconds": "Définir les secondes pour les lignes sélectionnées",
+    "bulkSetBehavior": "Définir le comportement pour les lignes sélectionnées",
+    "setBehavior": "Définir le comportement…",
+    "deleteSelected": "Supprimer",
+    "noSites": "Aucun site pour l'instant : ajoutez-en un ci-dessus.",
+    "secondsTitle": "Secondes à passer sur ce site",
+    "secondsUnit": "s",
+    "behaviourTitle": "Que faire sur ce site",
+    "remove": "Retirer",
+    "loopUntilStopped": "Boucler jusqu'à l'arrêt",
+    "keepOpen": "Garder les sessions ouvertes après",
+    "hidden": "Exécuter en masqué (sans fenêtres)",
+    "hiddenTitle": "Préchauffer en mode headless : aucune fenêtre de navigateur ne s'ouvre. Les cookies et le cache sont quand même enregistrés dans chaque profil.",
+    "cookieNote": "Les cookies et le cache sont enregistrés automatiquement dans chaque profil : la console indique combien de cookies et quelle quantité de cache ont été écrits sur le disque. Un lancement normal ultérieur les réutilise.",
+    "startWarmup": "Démarrer le préchauffage",
+    "warming": "Préchauffage…",
+    "stop": "Arrêter",
+    "forceStop": "Forcer l'arrêt",
+    "profilesLabel": "Profils ({{count}} sélectionnés)",
+    "searchPlaceholder": "Rechercher",
+    "selectAll": "Tous",
+    "selectNone": "Aucun",
+    "invert": "Inverser",
+    "addGroup": "Ajouter un groupe…",
+    "addTag": "Ajouter un tag…",
+    "pasteIdsPlaceholder": "Collez des ID ou noms de profils (séparés par des virgules / espaces)",
+    "selectPaste": "Sélectionner",
+    "noProfiles": "Aucun profil trouvé.",
+    "profileFallback": "Profil {{id}}",
+    "warmupConsole": "Console de préchauffage",
+    "live": "en direct",
+    "progressTitle": "Progression du préchauffage",
+    "modeQueue": "File · un à la fois",
+    "modeBulk": "En lot · {{n}} à la fois",
+    "consoleIdle": "[ inactif ] Sélectionnez des profils, définissez une durée et démarrez le préchauffage pour suivre la progression en direct.",
+    "errors": {
+      "selectProfile": "Sélectionnez au moins un profil à préchauffer.",
+      "addSite": "Ajoutez au moins un site à visiter.",
+      "startWarmup": "Impossible de démarrer le préchauffage.",
+      "stopWarmup": "Impossible d'arrêter le préchauffage.",
+      "importFile": "Impossible de lire ce fichier."
+    },
+    "queueTitle": "Préchauffer un profil à la fois (file stricte) : lancer un navigateur, le laisser terminer et se fermer, puis passer au suivant. Évite d'ouvrir tous les navigateurs sélectionnés en même temps, ce qui peut épuiser la RAM/le CPU et faire planter l'application.",
+    "queueMode": "Un à la fois (file d'attente)",
+    "parallelTitle": "Nombre de profils à préchauffer simultanément. Plus c'est élevé, plus c'est rapide, mais plus la RAM/le CPU sont sollicités.",
+    "parallelLabel": "À la fois :"
+  },
+  "counter": {
+    "total": "total",
+    "running": "en cours",
+    "done": "terminés",
+    "queued": "en attente"
+  },
+  "console": {
+    "copy": "Copier",
+    "copied": "Copié",
+    "export": "Exporter",
+    "clear": "Effacer"
+  },
+  "history": {
+    "emptyTitle": "Aucune tâche exécutée pour l'instant",
+    "emptyHint": "Les exécutions de préchauffage, de macros et parallèles apparaîtront ici.",
+    "columns": {
+      "task": "Tâche",
+      "profiles": "Profils",
+      "detail": "Détail",
+      "status": "Statut",
+      "when": "Quand"
+    },
+    "emptyDetail": "-",
+    "parallelRun": "Exécution parallèle",
+    "macroRun": "Exécution de macro",
+    "cookieWarmup": "Préchauffage des cookies",
+    "minutes": "{{count}} min",
+    "sites_one": "{{count}} site",
+    "sites_other": "{{count}} sites",
+    "sites_many": "{{count}} sites"
+  },
+  "stepFieldOptions": {
+    "auto": "Auto",
+    "value": "Valeur",
+    "label": "Libellé",
+    "index": "Index",
+    "visible": "Visible",
+    "hidden": "Masqué",
+    "checked": "Coché",
+    "unchecked": "Décoché"
+  },
+  "autopilot": {
+    "title": "Pilote automatique de préchauffage",
+    "subtitle": "Préchauffe les profils avec quelques sites chaque jour, pour qu'ils se constituent un vrai historique de navigation.",
+    "toggle": "Activer ou désactiver le pilote automatique de préchauffage",
+    "target": "Profils",
+    "targetAll": "Tous les profils",
+    "targetGroup": "Un groupe",
+    "group": "Groupe",
+    "runsPerDay": "Exécutions par jour",
+    "runsPerDayTitle": "Nombre de préchauffages par jour pour chaque profil",
+    "sitesPerRun": "Sites par exécution",
+    "sitesPerRunTitle": "Sites aléatoires de la liste suggérée, 20 à 45 secondes chacun",
+    "activeHours": "Heures d'activité",
+    "startHour": "Heure de début",
+    "endHour": "Heure de fin",
+    "hoursTo": "à",
+    "atATime": "À la fois",
+    "atATimeTitle": "Profils préchauffés en même temps. Plus il y en a, plus c'est rapide, mais plus la mémoire est sollicitée.",
+    "hidden": "Exécuter en masqué (sans fenêtres)",
+    "hint": "Un profil est préchauffé lorsque son dernier préchauffage date de plus de 24 heures divisées par le nombre d'exécutions par jour. Les profils ouverts, verrouillés ou occupés sont ignorés.",
+    "ownedByOther": "Un autre membre a activé cette option. Seul lui ou un supérieur peut la modifier.",
+    "status": {
+      "off": "Désactivé",
+      "nextSoon": "Prochaine exécution dans moins d'une minute",
+      "nextAt": "Prochaine exécution {{time}}",
+      "nothingDue": "Aucun profil à préchauffer",
+      "warmedToday": "{{done}} sur {{total}} préchauffés aujourd'hui",
+      "warmingNow": "{{n}} en préchauffage",
+      "lastError": "Dernière erreur, {{time}} : {{error}}"
+    },
+    "errors": {
+      "load": "Impossible de charger les paramètres du pilote automatique.",
+      "save": "Impossible d'enregistrer les paramètres du pilote automatique.",
+      "noGroups": "Aucun groupe pour l'instant. Créez-en un d'abord sur la page Profils.",
+      "owner-missing": "Le membre qui a activé le pilote automatique n'existe plus. Le Propriétaire de l'espace de travail peut le désactiver puis le réactiver pour en prendre le contrôle.",
+      "owner-inactive": "Le membre qui a activé le pilote automatique est suspendu ou bloqué.",
+      "owner-no-permission": "Le membre qui a activé le pilote automatique ne peut plus exécuter d'automatisation.",
+      "warm-failed": "{{profile}} : {{error}}",
+      "warmFailedHidden": "Un profil que vous ne pouvez pas voir n'a pas pu être préchauffé.",
+      "tick-failed": "{{error}}"
+    }
+  }
+}

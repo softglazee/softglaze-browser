@@ -1,0 +1,25 @@
+{
+  "contextMenu": {
+    "undo": "Rückgängig",
+    "redo": "Wiederholen",
+    "cut": "Ausschneiden",
+    "copy": "Kopieren",
+    "paste": "Einfügen",
+    "selectAll": "Alles auswählen",
+    "copyLink": "Link kopieren"
+  },
+  "dialogs": {
+    "exportArchiveTitle": "Verschlüsseltes Profilarchiv exportieren",
+    "archiveFilter": "Verschlüsseltes SoftGlaze-Archiv",
+    "importProfilesTitle": "SoftGlaze-Profiltabelle zum Importieren wählen",
+    "spreadsheetFilter": "Tabellendateien",
+    "exportProfilesTitle": "SoftGlaze-Profile exportieren",
+    "excelFilter": "Excel-Arbeitsmappe",
+    "importIdentitiesTitle": "Tabelle mit Identitäten zum Importieren wählen",
+    "backupTitle": "Arbeitsbereich sichern",
+    "backupFilter": "SoftGlaze-Arbeitsbereich-Backup",
+    "restoreTitle": "Arbeitsbereich-Backup wiederherstellen",
+    "exportActivityTitle": "Aktivitätsprotokoll exportieren",
+    "bindSpreadsheetTitle": "Tabelle für diesen parallelen Lauf wählen"
+  }
+}

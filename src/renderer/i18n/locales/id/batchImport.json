@@ -1,0 +1,78 @@
+{
+  "header": {
+    "eyebrow": "Otomatisasi",
+    "title": "Pembuatan profil massal",
+    "description": "Buat banyak lingkungan browser dengan cepat lewat spreadsheet atau pembuatan berurutan.",
+    "exportProfiles": "Ekspor profil"
+  },
+  "exportNotice_other": "{{count}} profil diekspor ke {{path}}",
+  "tabs": {
+    "importFromFile": "Impor dari file",
+    "quickGenerate": "Buat cepat"
+  },
+  "step1": {
+    "title": "Unduh template",
+    "description": "Agar terbaca dengan lancar, gunakan template Excel atau CSV standar kami. Isi nama profil, proxy, dan aturan fingerprint Anda.",
+    "downloadButton": "Unduh template .CSV"
+  },
+  "step2": {
+    "title": "Unggah & pratinjau",
+    "description": "Pilih spreadsheet yang sudah diisi. Kami membacanya secara lokal dan memeriksa kesalahan format sebelum menyimpan.",
+    "selectButton": "Pilih file"
+  },
+  "step3": {
+    "title": "Pratinjau & simpan data"
+  },
+  "awaiting": {
+    "title": "Menunggu data",
+    "description": "Pilih file untuk melihat pratinjau profil Anda di sini."
+  },
+  "preview": {
+    "file": "File:",
+    "validRows": "Baris valid:",
+    "errors": "Kesalahan:"
+  },
+  "processing": {
+    "importing": "Mengimpor… {{index}}/{{total}}",
+    "backendLog": "Log pemrosesan",
+    "connecting": "Menghubungkan ke mesin impor…"
+  },
+  "table": {
+    "row": "Baris",
+    "title": "Judul",
+    "group": "Grup",
+    "proxyMethod": "Metode proxy",
+    "dataDir": "Folder data",
+    "auto": "Otomatis"
+  },
+  "autoBind": {
+    "label": "Hubungkan proxy otomatis menurut negara",
+    "descPrefix": "- untuk baris tanpa proxy sendiri, pasang proxy tersimpan yang negaranya (hasil cek) cocok dengan kolom",
+    "descSuffix": "di baris itu (bergiliran di antara yang cocok).",
+    "sourceLabel": "Ambil dari",
+    "sourcePaid": "Proxy Anda",
+    "sourceFree": "Proxy gratis (yang berfungsi saja)",
+    "freeWarn": "Proxy gratis dijalankan orang asing: jangan pernah masuk ke akun atau membayar dengan profil ini."
+  },
+  "commitButton_other": "Simpan {{count}} profil",
+  "success": {
+    "title": "Impor berhasil",
+    "importedPrefix": "Berhasil mengimpor",
+    "importedMiddle": "profil dan memetakan",
+    "importedSuffix": "proxy baru",
+    "autoBoundPrefix": "· otomatis dihubungkan",
+    "autoBoundSuffix": "menurut negara",
+    "importAnother": "Impor lagi"
+  },
+  "quick": {
+    "engineTitle": "Mesin pembuatan berurutan",
+    "description": "Buat banyak profil seketika tanpa spreadsheet: fingerprint unik, nama berurutan, grup tujuan (bisa dibuat langsung), dan pemasangan proxy dari grup atau penyedia tertentu. Memakai mesin yang sama persis dengan halaman Profil.",
+    "openButton": "Buka Buat cepat"
+  },
+  "errors": {
+    "parse": "Gagal membaca file. Pastikan file itu spreadsheet yang valid.",
+    "commit": "Gagal menyimpan profil ke database.",
+    "importFailed": "Impor gagal.",
+    "export": "Gagal mengekspor profil."
+  }
+}

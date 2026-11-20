@@ -1,0 +1,159 @@
+{
+  "billing": {
+    "status": {
+      "loading": "लोड हो रहा है…",
+      "sourceOwner": "सोर्स मालिक",
+      "active": "चालू",
+      "activeUntil": "चालू · {{date}} तक",
+      "trialDaysLeft_one": "ट्रायल · {{count}} दिन बाकी",
+      "trialDaysLeft_other": "ट्रायल · {{count}} दिन बाकी",
+      "graceDaysLeft_one": "ग्रेस · {{count}} दिन बाकी",
+      "graceDaysLeft_other": "ग्रेस · {{count}} दिन बाकी",
+      "subscriptionEnded": "सदस्यता खत्म"
+    },
+    "subscription": {
+      "title": "सदस्यता",
+      "planLine": "SoftGlaze Browser · {{tier}} प्लान",
+      "manageButton": "सदस्यता और प्लान मैनेज करें"
+    },
+    "seats": {
+      "label": "टीम सीटें",
+      "usage": "{{total}} में से {{used}} इस्तेमाल"
+    },
+    "gateway": {
+      "title": "भुगतान के तरीके",
+      "description": "सिर्फ़ सुपर एडमिन। चेकआउट पर मालिकों को दिखने वाले तरीके चालू करें और हर प्रोवाइडर की की स्टोर करें।",
+      "loadError": "भुगतान सेटिंग्स लोड नहीं हो सकीं।",
+      "footnote": "की इस मशीन पर एन्क्रिप्ट करके रखी जाती हैं और कभी बाहर नहीं जातीं। चेकआउट पोलिंग से चलता है (कोई वेबहुक नहीं), इसलिए अलग-अलग इंस्टॉल पर नियंत्रण के लिए अब भी लाइसेंसिंग बैकएंड चाहिए। Wise और मैनुअल भुगतान आप नीचे “लंबित भुगतान” में मंज़ूर करते हैं।",
+      "retry": "फिर से कोशिश करें"
+    },
+    "provider": {
+      "kindManual": "मैनुअल",
+      "kindAutomated": "ऑटोमैटिक",
+      "on": "चालू",
+      "enabled": "चालू",
+      "disabled": "बंद",
+      "enableAria": "{{provider}} चालू करें",
+      "documentation": "डॉक्यूमेंटेशन",
+      "secretStoredPlaceholder": "•••••••• (मौजूदा रखने के लिए खाली छोड़ें)",
+      "secretPlaceholder": "की पेस्ट करें",
+      "save": "सेव करें",
+      "testConnection": "कनेक्शन जांचें",
+      "enabledMsg": "चालू हो गया।",
+      "disabledMsg": "बंद हो गया।",
+      "updateError": "अपडेट नहीं हो सका।",
+      "savedMsg": "सेव हो गया।",
+      "saveError": "सेव नहीं हो सका।",
+      "connectionOk": "कनेक्शन ठीक है ✓",
+      "validationFailedKeys": "जांच फ़ेल - की जांचें।",
+      "validationFailed": "जांच फ़ेल।"
+    },
+    "manual": {
+      "title": "लंबित भुगतान",
+      "description": "मैनुअल (Wise / बैंक ट्रांसफ़र) भुगतान जो आपकी मंज़ूरी का इंतज़ार कर रहे हैं।",
+      "loadError": "मैनुअल भुगतान लोड नहीं हो सके।",
+      "resolveError": "यह भुगतान अपडेट नहीं हो सका।",
+      "ownerFallback": "मालिक #{{id}}",
+      "refPrefix": "रेफ़:",
+      "approve": "मंज़ूर करें",
+      "reject": "अस्वीकार करें",
+      "statusLabel": {
+        "pending": "लंबित",
+        "approved": "मंज़ूर",
+        "rejected": "अस्वीकार"
+      }
+    }
+  },
+  "monetization": {
+    "heading": "कमाई",
+    "affiliate": {
+      "title": "एफ़िलिएट और रेफ़रल लिंक",
+      "ownerOnly": "सिर्फ़ मालिक",
+      "description": "प्रॉक्सी मार्केटप्लेस के “खरीदें” बटन के लिए आपके पार्टनर URL। Softglaze डिफ़ॉल्ट इस्तेमाल करने के लिए खाली छोड़ें।",
+      "loadError": "एफ़िलिएट लिंक लोड नहीं हो सके।",
+      "saveError": "एफ़िलिएट लिंक सेव नहीं हो सके।",
+      "savedMsg": "सेव हो गया। मार्केटप्लेस बटन अब आपके लिंक इस्तेमाल करते हैं।",
+      "customLink": "कस्टम लिंक",
+      "defaultLink": "डिफ़ॉल्ट लिंक",
+      "openLinkTitle": "{{provider}} लिंक खोलें",
+      "saving": "सेव हो रहा है…",
+      "saveButton": "लिंक सेव करें",
+      "footnote": "ये लिंक प्रॉक्सी पूल → प्रोवाइडर टैब के “यहां खरीदें…” / “डैशबोर्ड खोलें” बटन में इस्तेमाल होते हैं। ये सिर्फ़ सार्वजनिक रेफ़रल URL हैं - प्रॉक्सी टोकन और क्रेडेंशियल पर कभी असर नहीं पड़ता।"
+    }
+  },
+  "developerApi": {
+    "title": "डेवलपर API एक्सेस",
+    "description": "Softglaze को कोड से कंट्रोल करने के लिए API की बनाएं और लोकल REST सर्वर चलाएं।",
+    "copy": "कॉपी करें",
+    "errors": {
+      "load": "डेवलपर API सेटिंग्स लोड नहीं हो सकीं।",
+      "nameRequired": "की को नाम दें (जैसे \"CI server\")।",
+      "generate": "API की नहीं बन सकी।",
+      "revoke": "की रद्द नहीं हो सकी।",
+      "toggleServer": "लोकल सर्वर की स्थिति नहीं बदली जा सकी।"
+    },
+    "keys": {
+      "title": "API की",
+      "namePlaceholder": "की का नाम (जैसे CI server)",
+      "generate": "नई API की बनाएं",
+      "copyOnce": "यह की अभी कॉपी करें - यह सिर्फ़ एक बार दिखती है और वापस नहीं मिल सकती।",
+      "empty": "अभी कोई API की नहीं।",
+      "lastUsed": "आखिरी इस्तेमाल {{when}}",
+      "neverUsed": "कभी इस्तेमाल नहीं",
+      "never": "कभी नहीं",
+      "revoke": "रद्द करें",
+      "revokeConfirm": "API की \"{{name}}\" रद्द करें? इसे इस्तेमाल करने वाली हर स्क्रिप्ट तुरंत काम करना बंद कर देगी। यह वापस नहीं होगा।"
+    },
+    "server": {
+      "title": "लोकल REST API",
+      "runningAt": "यहां चल रहा है",
+      "stoppedPrefix": "रुका हुआ · यहां जुड़ेगा",
+      "loopbackOnly": "(सिर्फ़ loopback)",
+      "disableTitle": "लोकल API बंद करें",
+      "enableTitle": "लोकल API चालू करें",
+      "curlExample": "उदाहरण: cURL से प्रोफ़ाइल लॉन्च करें",
+      "footnote": "सर्वर सिर्फ़ इसी मशीन से अनुरोध लेता है और सही Bearer की मांगता है।"
+    }
+  },
+  "migration": {
+    "title": "प्रोफ़ाइल ट्रांसफ़र करें",
+    "ownerOnly": "सिर्फ़ मालिक",
+    "description": "किसी दूसरे मल्टी-प्रोफ़ाइल ब्राउज़र से उसकी API के ज़रिए अपनी मौजूदा प्रोफ़ाइल इंपोर्ट करें।",
+    "sourcePlatform": "स्रोत प्लेटफ़ॉर्म",
+    "noteLabel": "ध्यान दें:",
+    "instructions": "निर्देश",
+    "tokenSectionTitle": "{{platform}} API टोकन",
+    "transferring": "ट्रांसफ़र हो रहा है…",
+    "startTransfer": "ट्रांसफ़र शुरू करें",
+    "tokenFootnote": "आपका टोकन सिर्फ़ इस ट्रांसफ़र के लिए एक बार इस्तेमाल होता है और कभी सेव नहीं होता। लोकल प्लेटफ़ॉर्म (AdsPower, ixBrowser) चालू होने चाहिए और उनका Local API चालू होना चाहिए।",
+    "errors": {
+      "tokenRequired": "अपना {{platform}} {{placeholder}} डालें।",
+      "transferFailed": "ट्रांसफ़र नहीं हो सका।"
+    },
+    "log": {
+      "title": "माइग्रेशन लॉग",
+      "imported": "{{created}}/{{total}} इंपोर्ट हुईं",
+      "errors_one": "{{count}} गड़बड़ी",
+      "errors_other": "{{count}} गड़बड़ियां",
+      "waiting": "प्लेटफ़ॉर्म के जवाब का इंतज़ार…"
+    },
+    "platforms": {
+      "dolphin": {
+        "placeholder": "Dolphin_Token",
+        "warning": "अगर आप Dolphin के मुफ़्त प्लान से ट्रांसफ़र कर रहे हैं, तो कुकीज़ ट्रांसफ़र नहीं होंगी।"
+      },
+      "gologin": {
+        "placeholder": "GoLogin API टोकन"
+      },
+      "multilogin": {
+        "placeholder": "Multilogin ऑटोमेशन टोकन"
+      },
+      "adspower": {
+        "placeholder": "AdsPower Local API की"
+      },
+      "ixbrowser": {
+        "placeholder": "ixBrowser Local API की"
+      }
+    }
+  }
+}

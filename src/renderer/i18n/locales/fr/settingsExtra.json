@@ -1,0 +1,411 @@
+{
+  "actions": {
+    "refresh": "Actualiser"
+  },
+  "groups": {
+    "general": "Général",
+    "browser": "Navigateur",
+    "runtime": "Exécution",
+    "security": "Sécurité et équipe",
+    "account": "Compte et données"
+  },
+  "nav": {
+    "billing": "Facturation",
+    "monetization": "Forfait et utilisation",
+    "migration": "Import et migration",
+    "workspaceSync": "Synchro de l'espace",
+    "branding": "Image de marque",
+    "dbEncryption": "Chiffrement de la base",
+    "workspaceBackup": "Sauvegarde de l'espace",
+    "developerApi": "API développeur",
+    "phones": "Téléphones"
+  },
+  "fingerprint": {
+    "title": "Empreinte et identité",
+    "description": "Appliqué à chaque profil au lancement, sauf si le profil le remplace."
+  },
+  "behaviour": {
+    "title": "Comportement du navigateur",
+    "description": "Comment le navigateur lancé se comporte au quotidien."
+  },
+  "ui": {
+    "searchPlaceholder": "Rechercher dans les paramètres",
+    "jumpTo": "Aller à la section",
+    "noResultsTitle": "Aucun paramètre ne correspond à « {{term}} »",
+    "noResultsDesc": "Essayez un mot plus court, par exemple proxy, caméra ou connexion.",
+    "experimental": "Expérimental",
+    "savedIdle": "Toutes les modifications sont enregistrées",
+    "saving": "Enregistrement des modifications…",
+    "saveError": "Impossible d'enregistrer les modifications"
+  },
+  "localRuntime": {
+    "title": "Exécution locale",
+    "description": "Les chemins sont résolus dans le processus principal d'Electron.",
+    "loading": "Chargement des infos système...",
+    "sqliteDb": "Base SQLite",
+    "profileRoot": "Racine des profils",
+    "databaseUrl": "URL de la base de données",
+    "configured": "Configurée",
+    "notConfigured": "Non configurée"
+  },
+  "sessions": {
+    "title": "Sessions actives",
+    "description": "Sessions actuellement lancées qui consomment des ressources.",
+    "loading": "Chargement des sessions...",
+    "emptyTitle": "Aucune session active",
+    "emptyDescription": "Lancez un profil pour le voir ici.",
+    "running": "En cours",
+    "created": "Créée le {{date}}",
+    "close": "Fermer"
+  },
+  "scheduler": {
+    "title": "Planificateur de vérification des proxys",
+    "description": "Revérifie régulièrement en arrière-plan chaque proxy enregistré et stocke son état.",
+    "enabled": "Activé",
+    "disabled": "Désactivé",
+    "runSweepEvery": "Lancer une vérification toutes les",
+    "every15min": "15 min",
+    "every30min": "30 min",
+    "every1hour": "1 heure",
+    "every2hours": "2 heures",
+    "serviceRunning": "Service en cours",
+    "idle": "Inactif",
+    "noteLabel": "Remarque :",
+    "noteBody": "Cette tâche d'arrière-plan s'exécute dans le processus principal d'Electron : les vérifications continuent donc sans interruption même si l'application est réduite ou si vous changez de page. Les résultats s'affichent directement sous forme de badges d'état dans le pool de proxys."
+  },
+  "toggleRow": {
+    "appliedAtLaunch": "Appliqué au lancement"
+  },
+  "globalPreferences": {
+    "heading": "Préférences globales",
+    "loading": "Chargement des paramètres globaux…",
+    "saving": "Enregistrement…"
+  },
+  "security": {
+    "title": "Sécurité du compte",
+    "description": "Protection de la connexion et règles de vérification.",
+    "remoteLogin": {
+      "title": "Rappel de connexion à distance",
+      "desc": "Un e-mail de rappel est envoyé lorsque votre compte se connecte depuis une nouvelle adresse IP autre que les 3 IP habituelles."
+    },
+    "failedLogin": {
+      "title": "Alerte d'échec de connexion",
+      "desc": "Si la connexion échoue plus de 3 fois, un e-mail de rappel est envoyé à l'adresse du Propriétaire."
+    },
+    "ipAllowlist": {
+      "title": "Liste d'IP autorisées pour la connexion",
+      "desc": "Une fois définie, la connexion des membres est limitée par IP (le Propriétaire n'est pas concerné)."
+    },
+    "twoStep": {
+      "title": "Vérification en deux étapes",
+      "desc": "Les actions sensibles nécessitent une vérification par application d'authentification, e-mail ou SMS.",
+      "methodLabel": "Méthode",
+      "methodApp": "Application d'authentification",
+      "methodEmail": "E-mail",
+      "methodSms": "SMS",
+      "levelLabel": "Niveau d'authentification",
+      "levelLow": "Bas : nouvel appareil ou 90 jours ou plus depuis la dernière 2FA",
+      "levelMedium": "Moyen (recommandé) : nouvel appareil ou 30 jours ou plus",
+      "levelHigh": "Élevé : 2FA requise à chaque connexion"
+    }
+  },
+  "multiDevice": {
+    "title": "Mode multi-appareils",
+    "description": "Indiquez si plusieurs membres peuvent accéder au même profil en même temps.",
+    "modeOff": "Désactivé : un seul membre par profil",
+    "modeFull": "Complet : tous les profils acceptent l'accès simultané",
+    "modeSpecified": "Défini : seulement les profils sélectionnés",
+    "hintBefore": "Une fois activé, plusieurs membres peuvent accéder au même profil en même temps. En mode « ",
+    "hintSpecified": "Défini",
+    "hintAfter": " », choisissez les profils éligibles depuis la page Profils."
+  },
+  "website": {
+    "title": "Gestion des sites web",
+    "description": "Règles d'accès aux URL et chargement des ressources.",
+    "blockAccess": {
+      "title": "Bloquer l'accès",
+      "desc": "Utilisez la liste de blocage et la liste d'autorisation pour gérer les URL.",
+      "blocklist": "Liste de blocage",
+      "allowlist": "Liste d'autorisation"
+    },
+    "fbStatic": {
+      "title": "Ressources statiques FB",
+      "desc": "Une fois activé, les ressources statiques de Facebook se chargent via le réseau local."
+    },
+    "localNetwork": {
+      "title": "Accès au réseau local",
+      "desc": "Une fois activé, certaines URL peuvent être ouvertes sur le réseau local."
+    }
+  },
+  "platform": {
+    "title": "Plateforme",
+    "description": "Personnalisez l'affichage de la liste des profils.",
+    "customIcon": {
+      "title": "Icône personnalisée",
+      "desc": "Afficher une icône personnalisée pour les profils de la liste."
+    },
+    "displayCustomNo": {
+      "title": "Afficher le n° personnalisé",
+      "desc": "Afficher le numéro de série personnalisé complet (par ex. \"123456\")."
+    },
+    "displayLast4": {
+      "title": "Afficher les 4 derniers chiffres du n° personnalisé",
+      "desc": "Afficher seulement les 4 derniers chiffres du numéro de série."
+    }
+  },
+  "ipSetting": {
+    "title": "Réglage IP",
+    "description": "Priorité de configuration automatique du proxy et vérificateur d'IP.",
+    "priorityPrefix": "Priorité de recherche :",
+    "priorityChain": "Dernière IP utilisée > ASN > Ville > Région > Pays/Région",
+    "prioritySuffix": "Les options non cochées sont ignorées.",
+    "lastUsedIp": "Dernière IP utilisée",
+    "asn": "ASN",
+    "asnDesc": "Disponible uniquement pour Bright auto.",
+    "city": "Ville",
+    "region": "Région",
+    "country": "Pays/Région",
+    "ipCheckerLabel": "Vérificateur d'IP"
+  },
+  "dataSync": {
+    "title": "Synchronisation des données",
+    "description": "Sélectionnez les données à synchroniser entre les appareils.",
+    "cookie": "Cookie",
+    "passwords": "Mots de passe enregistrés",
+    "bookmarks": "Favoris",
+    "localStorage": "Stockage local",
+    "indexedDb": "IndexedDB",
+    "extensionData": "Données des extensions",
+    "history": "Historique"
+  },
+  "browser": {
+    "title": "Paramètres du navigateur",
+    "description": "Comportement du navigateur lancé. Les éléments marqués « Appliqué au lancement » prennent effet au prochain lancement du profil.",
+    "geoMatch": {
+      "title": "Correspondance géo automatique (fuseau horaire · langue · WebRTC)",
+      "desc": "Déduit le fuseau horaire, la langue et l'IP de sortie WebRTC de chaque profil à partir de l'emplacement de son proxy au lancement. Désactivez pour n'utiliser que les valeurs manuelles de chaque profil. Appliqué au lancement."
+    },
+    "realtimeTimezone": {
+      "title": "Correspondance du fuseau horaire en temps réel au changement d'IP dynamique",
+      "desc": "Fait correspondre le fuseau horaire et l'emplacement lorsque l'IP dynamique change."
+    },
+    "chromeSignin": {
+      "title": "Autoriser la connexion à Chrome",
+      "desc": "Si désactivé, vous pouvez vous connecter à des sites Google comme Gmail sans vous connecter à Chrome lui-même."
+    },
+    "offerTranslate": {
+      "title": "Proposer de traduire les pages",
+      "desc": "Proposer de traduire les pages qui ne sont pas dans une langue que vous lisez."
+    },
+    "disableDevtools": {
+      "title": "Désactiver les outils de développement",
+      "desc": "Dans les profils basés sur Chrome, toute fenêtre ou tout panneau des outils de développement (F12, Ctrl+Shift+I, Inspecter) est fermé dès son ouverture. S'applique aux profils lancés après la modification. Votre propre Chrome sur cet ordinateur n'est pas concerné."
+    },
+    "minimizeCdpFootprint": {
+      "title": "Réduire l'empreinte CDP (expérimental, contre les CAPTCHA)",
+      "shortTitle": "Réduire l'empreinte CDP",
+      "desc": "Supprime le Runtime.enable CDP permanent, le principal signal d'automatisation détecté par Cloudflare/Turnstile. CONTREPARTIE quand c'est activé : le remplissage automatique des personas, les liens de vérification de la page de démarrage et la recopie des sessions synchronisées ne fonctionnent plus (ils ont besoin de la liaison CDP). Désactivé par défaut ; activez-le pour tester s'il réduit les CAPTCHA, puis relancez les profils."
+    },
+    "blockThirdPartyCookies": {
+      "title": "Bloquer les cookies tiers",
+      "desc": "Désactivé (recommandé) : les profils gardent et envoient les cookies tiers comme une fenêtre Chrome normale, ce que reCAPTCHA, hCaptcha et Cloudflare utilisent pour faire confiance à un visiteur ; les CAPTCHA sont donc plus faciles. Activé : les profils basés sur Chrome les bloquent. S'applique aux profils lancés après la modification."
+    },
+    "checkBeforeLaunch": {
+      "title": "Vérifier les profils avant leur ouverture",
+      "desc": "Avant l'ouverture d'un profil depuis la page Profils, lister les incohérences évidentes (système, carte graphique, écran, langue, fuseau horaire, WebRTC, proxy hors service) et proposer de les corriger d'abord."
+    },
+    "switchProxyOnBlock": {
+      "title": "Changer de proxy quand un site bloque un profil",
+      "desc": "Quand un site maintient un profil basé sur Chrome sur une page de blocage ou de CAPTCHA, obtenir une nouvelle IP via le lien de rotation du proxy, ou passer le profil sur un meilleur proxy de réserve, puis rouvrir la page. Au maximum deux fois par heure et par profil, et jamais pendant que l'automatisation ou l'API locale l'utilise. Chaque blocage est consigné avec le proxy en échec.",
+      "toast": {
+        "blocked": "{{site}} a bloqué {{profile}} ({{kind}}).",
+        "rotated": "Nouvelle IP obtenue pour {{proxy}} et page rechargée.",
+        "switched": "Passé sur {{proxy}} et page rouverte.",
+        "notReopened": "Passé sur {{proxy}}, mais le profil ne s'est pas rouvert.",
+        "none": {
+          "disabled": "Le changement de proxy est désactivé dans les Paramètres, rien n'a donc été modifié.",
+          "noProxy": "Le profil fonctionne sans proxy enregistré, rien n'a donc été modifié.",
+          "busy": "L'automatisation ou l'API locale utilise ce profil, rien n'a donc été modifié.",
+          "limit": "Ce profil a déjà changé {{limit}} fois au cours de la dernière heure, rien n'a donc été modifié.",
+          "proxyPool": "Le profil utilise un pool de rotation, rien n'a donc été modifié.",
+          "noSpare": "Aucun proxy de réserve ne ferait mieux, rien n'a donc été modifié.",
+          "noPermission": "Votre rôle ne permet pas de changer le proxy de ce profil, rien n'a donc été modifié.",
+          "signedOut": "Personne n'est connecté, rien n'a donc été modifié.",
+          "inProgress": "Un changement est déjà en cours pour ce profil.",
+          "failed": "Le changement a échoué, rien n'a donc été modifié."
+        },
+        "kind": {
+          "googleSorry": "page de trafic inhabituel de Google",
+          "rateLimit": "trop de requêtes",
+          "cloudflare": "vérification Cloudflare",
+          "datadome": "blocage DataDome",
+          "accessDenied": "page Accès refusé",
+          "perimeterx": "blocage PerimeterX",
+          "unknown": "page de blocage"
+        }
+      }
+    },
+    "lockExtensions": {
+      "title": "Désactiver l'installation/la suppression d'extensions",
+      "desc": "Dans les profils basés sur Chrome, la page Extensions et le Chrome Web Store sont fermés dès leur ouverture : les extensions ne peuvent donc pas être ajoutées, supprimées ou désactivées. Les extensions installées depuis la page Extensions de SoftGlaze se chargent toujours. S'applique aux profils lancés après la modification."
+    },
+    "virtualCamera": {
+      "title": "Caméra virtuelle",
+      "desc": "Simule une vidéo locale comme flux de caméra en direct. Valable uniquement pour Chrome 140 et versions ultérieures."
+    },
+    "mobileSimulation": {
+      "title": "Optimisation de la simulation mobile",
+      "desc": "Rapproche l'interface de l'expérience d'un vrai appareil mobile. Valable uniquement pour Chrome 143 et versions ultérieures."
+    },
+    "secureAccess": {
+      "title": "Accès sécurisé (HTTPS)",
+      "desc": "Utiliser HTTPS dès que possible et être averti avant de charger des sites non HTTPS."
+    },
+    "disableVideos": {
+      "title": "Désactiver le chargement des vidéos",
+      "desc": "Bloque le téléchargement des médias pour économiser le trafic proxy."
+    },
+    "disableImages": {
+      "title": "Désactiver le chargement des images",
+      "desc": "Bloque le chargement des images pour économiser le trafic. Remarque : le chargement des images est entièrement désactivé ; le seuil en Ko ci-dessous est conservé pour un futur filtrage par requête.",
+      "skipUnder": "Ignorer les images de moins de",
+      "kb": "Ko"
+    },
+    "antidetectEngine": {
+      "title": "Moteur d'empreinte natif (fingerprint-chromium)",
+      "desc": "Lance les profils Chrome sur fingerprint-chromium, un Chromium modifié au niveau du code source qui applique les paramètres d'empreinte de chaque profil (canvas, WebGL, audio, UA, plateforme, fuseau horaire) au niveau du binaire, masque navigator.webdriver et l'UA HeadlessChrome, et bloque nativement la fuite de l'IP réelle via WebRTC, sans course d'injection JS que les sites pourraient repérer. Nécessite le binaire fingerprint-chromium ; sinon, Chrome standard est utilisé. Ce moteur supprime la liaison CDP sur laquelle reposait le pont entre la page et l'application : SoftGlaze fait donc passer ces appels par un canal sans liaison. Le remplissage automatique du coffre de données, l'enregistreur de macros, les liens de la page de démarrage et la recopie de session fonctionnent tous avec lui. Désactivé par défaut : activez-le et relancez les profils."
+    }
+  },
+  "performance": {
+    "title": "Performances",
+    "description": "Réglages pour lancer de nombreux profils à la fois, appliqués aux lancements en lot et au plafond de sessions en cours.",
+    "parallelLimit": {
+      "title": "Limite de lancements parallèles",
+      "desc": "Nombre de profils démarrés en même temps lors d'un lancement en lot. Plus c'est élevé, plus c'est rapide, mais plus la RAM est sollicitée. Recommandé : 3 à 8."
+    },
+    "maxRunning": {
+      "title": "Profils en cours max.",
+      "desc": "Plafond strict du nombre de profils en cours simultanément (sécurité mémoire). Laissez 0 pour illimité ; les lancements au-delà de la limite sont bloqués avec un message clair."
+    }
+  },
+  "reliability": {
+    "title": "Fiabilité",
+    "description": "Restaurez votre dernière session, récupérez les profils plantés et protégez-vous contre l'épuisement de la mémoire lorsque de nombreux profils tournent à la fois.",
+    "restoreSession": {
+      "title": "Restaurer la dernière session au démarrage",
+      "desc": "Quand SoftGlaze se rouvre, proposer de relancer les profils qui étaient en cours lors de sa dernière fermeture ou de son dernier plantage."
+    },
+    "autoRestart": {
+      "title": "Redémarrage auto des profils plantés",
+      "desc": "Si le navigateur d'un profil plante tout seul, le relancer automatiquement. Limité par profil pour qu'un profil qui plante sans cesse ne tourne pas en boucle.",
+      "maxRetries": "Tentatives max. par profil"
+    },
+    "memoryGuard": {
+      "title": "Protection mémoire",
+      "desc": "Quand la mémoire système devient insuffisante, fermer automatiquement les profils en cours les plus anciens jusqu'à ce que la mémoire se rétablisse. Désactivé par défaut : aucun profil n'est jamais fermé tant que ce n'est pas activé.",
+      "triggerBelow": "Déclencher quand la RAM libre est sous",
+      "stopWhenReaches": "arrêter quand la RAM libre atteint"
+    }
+  },
+  "smartAutofill": {
+    "title": "Remplissage automatique intelligent",
+    "description": "Le widget du coffre de données d'identité qui détecte les formulaires d'inscription dans les profils lancés et les remplit à partir de vos personas enregistrées.",
+    "enable": {
+      "title": "Activer le remplissage automatique intelligent",
+      "desc": "Injecte le widget de remplissage automatique dans les profils lancés. Sur Chromium, il utilise le pont intégré à la page ; désactiver cette option supprime toute injection."
+    },
+    "firefox": {
+      "title": "Remplissage automatique Firefox",
+      "desc": "Installe aussi la WebExtension de remplissage automatique dans les profils Firefox (Firefox n'a pas de pont intégré à la page). Se charge sans signature sur Firefox Developer Edition / Nightly ; la version stable de Firefox nécessite la build signée par Mozilla fournie avec l'installateur."
+    },
+    "members": {
+      "title": "Les membres de l'équipe peuvent utiliser le coffre de données dans le remplissage automatique",
+      "desc": "Désactivé (par défaut) : le bouton de remplissage automatique des profils lancés ne propose les identités du coffre de données que lorsque le Propriétaire est connecté. Activé : les Admins, Managers et Opérateurs y ont aussi accès, sans pouvoir ouvrir la page du coffre de données. Seul le Propriétaire peut modifier ce réglage."
+    }
+  },
+  "audit": {
+    "title": "Journal d'audit",
+    "description": "Durée de conservation de l'activité de l'équipe et des événements de sécurité (changements de membres, connexions, modifications des autorisations) avant leur suppression au démarrage.",
+    "retentionTitle": "Durée de conservation",
+    "retentionDesc": "L'activité plus ancienne est supprimée au démarrage de SoftGlaze. Mettez 0 pour conserver tout l'historique indéfiniment.",
+    "days": "jours"
+  },
+  "updates": {
+    "title": "Mises à jour",
+    "description": "Recherchez et installez les mises à jour de l'application. Leur signature est vérifiée avant l'installation.",
+    "checkDefault": "Vérifier si une version plus récente de SoftGlaze Browser est disponible.",
+    "notEnabled": "Les mises à jour automatiques ne sont pas activées dans cette build.",
+    "checking": "Recherche de mises à jour…",
+    "available": "Mise à jour {{version}} disponible : téléchargement en arrière-plan…",
+    "downloading": "Téléchargement de {{version}}… {{percent}} %",
+    "ready": "La mise à jour {{version}} est prête à être installée.",
+    "errorWithReason": "Impossible de rechercher les mises à jour : {{reason}}",
+    "errorNoReason": "Impossible de rechercher les mises à jour.",
+    "upToDate": "Vous avez la dernière version.",
+    "installRestart": "Installer et redémarrer",
+    "checkForUpdates": "Rechercher des mises à jour"
+  },
+  "onStartup": {
+    "title": "Au démarrage",
+    "description": "Ce qui se passe au lancement d'un profil.",
+    "startPageLabel": "Page de démarrage",
+    "modeDetection": "Afficher la page de détection proxy/empreinte",
+    "modeLast": "Reprendre sur la dernière page ouverte",
+    "modeBlank": "Ne pas ouvrir la page de détection du proxy (vide)",
+    "onlyWithProxy": {
+      "title": "Ouvrir seulement avec un proxy disponible",
+      "desc": "Si aucun proxy n'est trouvé, le navigateur ne s'ouvre pas. (Sinon, les éléments d'empreinte basés sur l'IP ne correspondraient pas.)"
+    },
+    "onlyWhenExtensionLoaded": {
+      "title": "Ouvrir seulement quand les données d'extension sont chargées",
+      "desc": "Ouvrir le navigateur seulement quand les données d'extension ont bien été chargées."
+    },
+    "blockIfCountryChanged": {
+      "title": "Bloquer si le pays/la région a changé",
+      "desc": "Ne pas ouvrir le profil si le pays/la région diffère de la dernière ouverture."
+    }
+  },
+  "captcha": {
+    "title": "Résolution automatique des CAPTCHA",
+    "description": "Résout automatiquement reCAPTCHA v2 et hCaptcha pendant la navigation via un service tiers payant. Ceci est distinct des empreintes : une empreinte propre réduit la fréquence des CAPTCHA, mais leur résolution nécessite un service payant facturé à chaque résolution par le fournisseur (pas par SoftGlaze).",
+    "enable": {
+      "title": "Activer la résolution automatique des CAPTCHA",
+      "desc": "Si activé, les profils lancés détectent les CAPTCHA pris en charge et les envoient automatiquement à votre service de résolution."
+    },
+    "providerLabel": "Service de résolution",
+    "apiKeyLabel": "Clé API",
+    "apiKeyPlaceholderAnticaptcha": "Anti-Captcha clientKey",
+    "apiKeyPlaceholder2captcha": "Clé API 2captcha",
+    "billedAnticaptcha": "Stockée localement dans la base de vos paramètres. Anti-Captcha vous facture chaque résolution.",
+    "billed2captcha": "Stockée localement dans la base de vos paramètres. 2captcha vous facture chaque résolution.",
+    "solveRecaptchaV2": "Résoudre reCAPTCHA v2",
+    "solveHcaptcha": "Résoudre hCaptcha"
+  },
+  "email": {
+    "title": "E-mail (codes de vérification)",
+    "configured": "Configuré",
+    "offlineMode": "Mode hors ligne",
+    "description": "SMTP pour l'envoi des codes OTP à l'inscription. Laissez vide pour fonctionner hors ligne : le code s'affiche alors dans l'application au lieu d'être envoyé par e-mail.",
+    "smtpHost": "Hôte SMTP",
+    "port": "Port",
+    "encryption": "Chiffrement",
+    "username": "Nom d'utilisateur",
+    "password": "Mot de passe",
+    "passwordSavedHint": "(enregistré : laissez vide pour le conserver)",
+    "fromName": "Nom de l'expéditeur",
+    "saved": "Paramètres e-mail enregistrés.",
+    "saveFailed": "Impossible d'enregistrer les paramètres e-mail.",
+    "noSmtpYet": "Aucun SMTP configuré : enregistrez d'abord vos paramètres.",
+    "testSent": "E-mail de test envoyé à {{to}}.",
+    "testFailed": "Échec du test : vérifiez vos paramètres.",
+    "saveButton": "Enregistrer les paramètres e-mail",
+    "test": "Tester"
+  },
+  "errors": {
+    "loadSettings": "Échec du chargement des paramètres.",
+    "closeSession": "Échec de la fermeture de la session.",
+    "updateScheduler": "Échec de la mise à jour du planificateur.",
+    "loadGlobal": "Échec du chargement des paramètres globaux.",
+    "saveSetting": "Échec de l'enregistrement du paramètre."
+  }
+}

@@ -1,0 +1,51 @@
+{
+  "header": {
+    "eyebrow": "Organisation",
+    "title": "Gruppen & Tags",
+    "description": "Ordnen Sie Profile in Gruppen und versehen Sie sie mit Tags zum schnellen Filtern."
+  },
+  "filters": {
+    "allProfiles": "Alle Profile",
+    "ungrouped": "Ohne Gruppe",
+    "group": "Gruppe"
+  },
+  "sidebar": {
+    "directories": "Verzeichnisse",
+    "createGroup": "Neue Gruppe erstellen",
+    "renameGroup": "Gruppe {{name}} umbenennen",
+    "deleteGroup": "Gruppe {{name}} löschen",
+    "groupNamePlaceholder": "Gruppenname..."
+  },
+  "table": {
+    "searchPlaceholder": "Profile suchen...",
+    "loading": "Gruppen werden geladen...",
+    "colProfileName": "Profilname",
+    "colGroupAssignment": "Gruppenzuordnung",
+    "colTags": "Tags"
+  },
+  "tagFilter": {
+    "label": "Filter",
+    "clear": "leeren"
+  },
+  "bulk": {
+    "selected_one": "{{count}} ausgewählt",
+    "selected_other": "{{count}} ausgewählt",
+    "moveTo": "Verschieben nach:",
+    "chooseGroup": "Gruppe wählen…",
+    "clear": "Leeren"
+  },
+  "empty": {
+    "title": "Keine Profile gefunden",
+    "noMatch": "Keine Profile passen zu Ihren Filtern.",
+    "groupEmpty": "Diese Gruppe ist leer. Verschieben Sie Profile über das Gruppen-Menü hierher."
+  },
+  "tags": {
+    "add": "Tag hinzufügen",
+    "remove": "Tag entfernen",
+    "inputPlaceholder": "Tag + Enter"
+  },
+  "deleteConfirm": "Gruppe „{{name}}“ löschen? Ihre Profile werden zu „Ohne Gruppe“ (die Profile selbst werden nicht gelöscht).",
+  "errors": {
+    "loadFailed": "Gruppen konnten nicht geladen werden."
+  }
+}

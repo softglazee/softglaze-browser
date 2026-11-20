@@ -1,0 +1,281 @@
+{
+  "common": {
+    "back": "戻る",
+    "redeem": "引き換え",
+    "go": "実行"
+  },
+  "remember": {
+    "label": "このデバイスでログインしたままにする",
+    "unavailable": "このデバイスではログイン情報を安全に保存できません（OSの暗号化が利用できません）。次回の起動時に再度サインインが必要です。"
+  },
+  "brand": {
+    "tagline": "マルチプロファイル",
+    "bullets": {
+      "fingerprints": "プロファイルごとに一貫した固有のフィンガープリント",
+      "proxy": "アイデンティティごとに専用のプロキシ",
+      "localFirst": "ローカルファースト：ワークスペースはこのデバイスに保存されます"
+    },
+    "heroLine1": "何百ものアイデンティティを運用。",
+    "heroLine2": "それぞれを完全に分離。",
+    "heroBody": "チーム向けのローカルファーストなマルチプロファイルブラウザです。各プロファイルが独自のCookie、ストレージ、プロキシ、フィンガープリント設定を保持します。",
+    "footer": "© {{year}} SoftGlaze · ローカルワークスペース",
+    "trust": {
+      "local": "ローカルファースト",
+      "encrypted": "ワークスペースロック",
+      "private": "テレメトリなし"
+    },
+    "slides": {
+      "security": {
+        "title": "堅牢なデータセキュリティ",
+        "body": "プロファイル、Cookie、閲覧データはこのデバイスに保存され、2FAシードとプロバイダーのキーはシステムのキーチェーンで保護されます。"
+      },
+      "fingerprint": {
+        "title": "一貫したフィンガープリント",
+        "body": "すべてのプロファイルに、Canvas、WebGL、フォント、オーディオ、ハードウェアの一貫した固有のフィンガープリントが付与されます。"
+      },
+      "proxy": {
+        "title": "アイデンティティごとにプロキシ",
+        "body": "各プロファイルに専用のネットワークIDを割り当て、安心してローテーションできます。"
+      },
+      "automation": {
+        "title": "時間を節約する自動化",
+        "body": "Cookieのウォームアップ、プロファイルの一括生成、すべてを大規模に統合管理できます。"
+      }
+    }
+  },
+  "license": {
+    "machineMismatch": "このライセンスは別のコンピューターに登録されています。このPCに移行するか、管理者にリセットを依頼してください。"
+  },
+  "pay": {
+    "noMethods": "新しい決済プロバイダーの追加中のため、アプリ内での購入を一時停止しています。請求書での購入は support@softglaze.com までメールでご連絡のうえ、購入コードを入力してください。",
+    "submitted": "お支払い情報を送信しました。管理者が確認後、まもなくプランが有効になります。",
+    "manualBadge": "手動",
+    "continueTo": "{{label}}に進む",
+    "openPaymentLink": "支払いリンクを開く",
+    "referencePlaceholder": "支払い参照番号 / 取引ID",
+    "submitForApproval": "支払い済み：承認を申請"
+  },
+  "banned": {
+    "blockedHeading": "アカウントがブロックされています",
+    "endedHeading": "サブスクリプションが終了しました",
+    "blockedBodyNamed": "{{name}}さん、あなたのアカウントは管理者によってブロックされました。アクセスを復元するには管理者に連絡してください。データは安全です。",
+    "blockedBody": "あなたのアカウントは管理者によってブロックされました。アクセスを復元するには管理者に連絡してください。データは安全です。",
+    "endedBodyNamed": "{{name}}さん、このライセンスは有効ではなくなりました（返金済み、取り消し済み、または別のコンピューターに登録済み）。ワークスペースのロックを解除するにはプランを選択してください。プロファイルとデータは安全に保管されています。",
+    "endedBody": "このライセンスは有効ではなくなりました（返金済み、取り消し済み、または別のコンピューターに登録済み）。ワークスペースのロックを解除するにはプランを選択してください。プロファイルとデータは安全に保管されています。",
+    "haveCode": "購入コードをお持ちですか？",
+    "needHelp": "お困りですか？管理者に連絡してください。",
+    "signOut": "サインアウト"
+  },
+  "register": {
+    "title": "アカウントを作成",
+    "subtitle": "これはマスターアカウント（ワークスペースのオーナー）です。",
+    "firstName": "名",
+    "lastName": "姓",
+    "email": "メールアドレス",
+    "emailPlaceholder": "you@workspace.com",
+    "phone": "電話番号",
+    "phonePlaceholder": "+31 6 12345678",
+    "password": "パスワード",
+    "passwordPlaceholder": "8文字以上",
+    "confirm": "確認",
+    "confirmPlaceholder": "再入力",
+    "continue": "続行",
+    "storedLocally": "このデバイスに暗号化して保存されます",
+    "haveAccount": "すでにアカウントをお持ちですか？",
+    "logIn": "ログイン",
+    "consent": "製品ニュースやヒントをメールで受け取る",
+    "consentNote": "コード、トライアルのリマインダー、アカウント関連のメールは常に送信されます。製品ニュースはチェックを入れた場合のみ送信されます。",
+    "checkedByServer": "このアドレスを確認するためのコードをメールでお送りします。プロファイルとデータはこのデバイスに保存されたままです。",
+    "phoneOptional": "電話番号（任意）",
+    "phoneIntlPlaceholder": "+44 20 7946 0958",
+    "phoneHint": "+ と国番号から入力してください。"
+  },
+  "verify": {
+    "title": "メールアドレスの確認",
+    "subtitlePrefix": "6桁のコードを入力してください。送信先：",
+    "subtitleSuffix": "。",
+    "devModePrefix": "開発モード：メールはまだ実際には送信されません。コード：",
+    "devModeSuffix": "。",
+    "verifyCreate": "確認してアカウントを作成",
+    "resendIn": "{{count}}秒後にコードを再送信",
+    "resend": "コードを再送信",
+    "checkSpam": "コードの到着には1分ほどかかる場合があります。届かない場合は迷惑メールフォルダーを確認してください。"
+  },
+  "lead": {
+    "useCase": "SoftGlazeを何に使いますか？",
+    "useCasePlaceholder": "1つ選択",
+    "useCases": {
+      "ecommerce": "ECストアとマーケットプレイス",
+      "social_media": "SNSアカウント",
+      "affiliate_marketing": "アフィリエイトマーケティングとメディアバイイング",
+      "agency": "クライアント向けの代理店業務",
+      "web_research": "Webリサーチと品質保証",
+      "other": "その他"
+    },
+    "useCaseOther": "簡単に教えてください",
+    "useCaseOtherPlaceholder": "例：国別の価格チェック",
+    "company": "会社名またはWebサイト（任意）",
+    "companyPlaceholder": "Acme株式会社 または acme.com"
+  },
+  "confirm": {
+    "title": "メールアドレスの確認",
+    "subtitle": "すべてのSoftGlazeワークスペースで、確認済みのメールアドレスが必要になりました。詳細を確認すると、6桁のコードをメールでお送りします。",
+    "sendCode": "コードを送信",
+    "codeTitle": "コードを入力",
+    "codeBody": "{{email}} に6桁のコードを送信しました。入力して、このワークスペースのメールアドレスを確認してください。",
+    "confirmContinue": "確認して続行",
+    "changeDetails": "詳細を変更",
+    "dataNote": "プロファイルとデータはこのコンピューターに保存されたままです。これらの詳細はアカウントの管理のために保持されます。",
+    "later": "今は続行",
+    "laterNote": "サーバーに接続できませんでした。アプリは今すぐ使用でき、次回の起動時に再度確認します。",
+    "memberTitle": "オーナーによるワークスペースの確認が必要です",
+    "memberBody": "このワークスペースを使用する前に、オーナーがメールアドレスを確認する必要があります。オーナーにサインインして確認するよう依頼するか、オーナーとしてサインインしてください。",
+    "signInAsOwner": "オーナーとしてサインイン"
+  },
+  "plan": {
+    "title": "準備が整いました",
+    "subtitlePrefix": "アカウントの準備ができました：",
+    "trialHighlight": "7日間の無料トライアル",
+    "subtitleSuffix": "付き。今すぐ始めるか、有料プランを有効にしてください。",
+    "startTrialTitle": "7日間の無料トライアルを開始",
+    "startTrialSubtitle": "今は支払い不要。すべての機能をお試しください。",
+    "activatePaid": "今すぐ有料プランを有効にする",
+    "haveCode": "購入コードをお持ちですか？",
+    "skip": "スキップしてトライアルを開始",
+    "tenantTitle": "アカウントの準備ができました",
+    "tenantSubtitle": "無料トライアルを開始するか、プランを選択してください。",
+    "tenantTrialSubtitle": "フルアクセス、支払い不要。無料トライアルはコンピューターとメールアドレスごとに1回です。",
+    "choosePlan": "またはプランを選択",
+    "verifyTitle": "メールアドレスの確認",
+    "verifyBody": "{{email}} に6桁のコードを送信しました。入力して無料トライアルを開始してください。",
+    "verifyStart": "確認してトライアルを開始",
+    "continueFreeTitle": "無料プランで続行",
+    "continueFreeSubtitle": "ずっと無料：25プロファイル、同時起動は1つ。いつでもアップグレードできます。",
+    "trialUsedFree": "このコンピューターまたはメールアドレスでは、無料トライアルをすでに使用済みです。無料プランで引き続きご利用いただけます。"
+  },
+  "login": {
+    "welcomeBackNamed": "おかえりなさい、{{name}}さん",
+    "welcomeBack": "おかえりなさい",
+    "subtitle": "サインインしてワークスペースのロックを解除します。",
+    "email": "メールアドレス",
+    "password": "パスワード",
+    "forgot": "お忘れですか？",
+    "passwordPlaceholder": "マスターパスワード",
+    "forgotBody": "ローカルインストールでは、マスターパスワードを復元できません（このデバイスの外に出ることはありません）。紛失した場合は、設定からワークスペースをリセットする必要があります。",
+    "signIn": "サインイン",
+    "noAccount": "アカウントをお持ちでないですか？",
+    "newHere": "SoftGlazeは初めてですか？",
+    "createOne": "アカウントを作成",
+    "haveInvite": "招待コードをお持ちですか？",
+    "teamSignIn": "チームメンバーのサインイン"
+  },
+  "invite": {
+    "title": "招待を引き換える",
+    "subtitle": "受け取ったコードを入力し、アカウントのパスワードを設定してください。",
+    "code": "招待コード",
+    "codePlaceholder": "SG-XXXX-XXXX",
+    "yourName": "お名前",
+    "optional": "（任意）",
+    "namePlaceholder": "氏名",
+    "setPassword": "パスワードを設定",
+    "passwordPlaceholder": "6文字以上",
+    "join": "ワークスペースに参加"
+  },
+  "member": {
+    "title": "チームメンバーのサインイン",
+    "subtitle": "招待の引き換え時に設定したメールアドレス/名前とパスワードを使用してください。",
+    "identifier": "メールアドレスまたは名前",
+    "identifierPlaceholder": "you@workspace.com",
+    "password": "パスワード",
+    "passwordPlaceholder": "パスワード",
+    "signIn": "サインイン",
+    "haveInviteInstead": "招待コードをお持ちですか？",
+    "redeemIt": "引き換える"
+  },
+  "super": {
+    "title": "スーパー管理者",
+    "access": "スーパー管理者アクセス",
+    "setupSubtitlePrefix": "初回セットアップ。次のスーパー管理者の認証情報を作成します：",
+    "setupSubtitleHighlight": "このインストール",
+    "setupSubtitleSuffix": "。このデバイスにハッシュ化して保存され、唯一のアクセス手段となるため、大切に保管してください。",
+    "username": "ユーザー名",
+    "usernamePlaceholder": "superadmin",
+    "password": "パスワード",
+    "setupPasswordPlaceholder": "8文字以上",
+    "confirmPassword": "パスワードの確認",
+    "confirmPasswordPlaceholder": "パスワードを再入力",
+    "createCredentials": "認証情報を作成",
+    "loginSubtitle": "ソースオーナー用のアクセス。登録をスキップし、ワークスペース全体のロックを解除します。",
+    "usernameOrEmail": "ユーザー名またはメールアドレス",
+    "loginPasswordPlaceholder": "パスワード",
+    "enterWorkspace": "ワークスペースに入る"
+  },
+  "pick": {
+    "title": "作業するのは誰ですか？",
+    "subtitle": "続行するにはメンバープロファイルを選択してください。",
+    "pin": "PIN",
+    "suspended": "停止中",
+    "pinPlaceholder": "PINを入力",
+    "haveInvite": "招待コードをお持ちですか？",
+    "teamSignIn": "チームメンバーのサインイン"
+  },
+  "db": {
+    "title": "データベースのロック解除",
+    "subtitle": "このワークスペースのデータベースは暗号化されています。ワークスペースのパスワードを入力して復号し、開いてください。",
+    "workspacePassword": "ワークスペースのパスワード",
+    "passwordPlaceholder": "ワークスペースのパスワード",
+    "unlock": "ロック解除",
+    "corrupted": "パスワードが正しいことが確実な場合、データベースファイルが破損している可能性があります。再インストールしてワークスペースのバックアップを復元すれば回復できます（設定 → ワークスペースのバックアップと復元）。パスワードのリセットはできません。データは正しいパスワードでのみ開けます。"
+  },
+  "errors": {
+    "enterFirstLast": "姓と名を入力してください。",
+    "validEmail": "有効なメールアドレスを入力してください。",
+    "validPhone": "有効な電話番号を入力してください。",
+    "password8": "パスワードは8文字以上にしてください。",
+    "passwordsNoMatch": "パスワードが一致しません。",
+    "couldNotSendCode": "確認コードを送信できませんでした。",
+    "couldNotResendCode": "コードを再送信できませんでした。",
+    "enter6Digit": "6桁のコードを入力してください。",
+    "verificationFailed": "確認に失敗しました。",
+    "incorrectPassword": "パスワードが正しくありません。",
+    "couldNotSignIn": "サインインできませんでした。",
+    "superSetupRequired": "スーパー管理者の認証情報がまだ設定されていません。下で作成してください。",
+    "invalidSuperCredentials": "スーパー管理者の認証情報が無効です。",
+    "couldNotCreateSuper": "スーパー管理者の認証情報を作成できませんでした。",
+    "enterInviteCode": "招待コードを入力してください。",
+    "password6": "パスワードは6文字以上にしてください。",
+    "couldNotRedeemInvite": "この招待コードを引き換えられませんでした。",
+    "enterEmailNamePassword": "メールアドレス/名前とパスワードを入力してください。",
+    "enterPurchaseCode": "購入コードを入力してください。",
+    "invalidPurchaseCode": "この購入コードは無効です。",
+    "noPaymentMethod": "利用できる支払い方法がまだありません。",
+    "paymentNotStarted": "お支払いを開始できませんでした。",
+    "couldNotSubmitPayment": "お支払い情報を送信できませんでした。",
+    "enterWorkspacePassword": "ワークスペースのパスワードを入力してください。",
+    "dbStillLocked": "データベースはまだロックされています。もう一度お試しください。",
+    "dbMissing": "暗号化されたデータベースファイルが見つかりません。ワークスペースのバックアップから復元してください。",
+    "dbUnlockFailed": "パスワードが正しくないか、ファイルが破損しています。",
+    "couldNotUnlockDb": "データベースのロックを解除できませんでした。",
+    "trialFailed": "無料トライアルを開始できませんでした。"
+  },
+  "serverErrors": {
+    "SIGNUP_INVALID_EMAIL": "有効なメールアドレスを入力してください。",
+    "SIGNUP_DISPOSABLE_EMAIL": "恒久的に使えるメールアドレスを使用してください。",
+    "SIGNUP_NO_MX": "このアドレスのメールサーバーが見つかりませんでした。",
+    "SIGNUP_BAD_CODE": "コードが正しくないか、期限切れです。メールを確認するか、新しいコードをリクエストしてください。",
+    "SIGNUP_OFFLINE": "アカウントを作成するにはインターネットに接続してください。",
+    "SIGNUP_FAILED": "現在このメールアドレスを確認できません。数分後にもう一度お試しください。",
+    "RATE_LIMITED": "試行回数が多すぎます。数分後にもう一度お試しください。",
+    "TRIAL_USED": "このコンピューターまたはメールアドレスでは、無料トライアルをすでに使用済みです。プランを選択するか、購入コードを入力してください。",
+    "TRIAL_OFFLINE": "無料トライアルを開始するにはインターネットに接続してください。",
+    "TRIAL_VERIFY_EMAIL": "無料トライアルを開始するには、メールアドレスを確認してください。6桁のコードをお送りしました。",
+    "TRIAL_NO_EMAIL": "まずオーナーアカウントにメールアドレスを追加してから、無料トライアルを開始してください。",
+    "TRIAL_FAILED": "現在無料トライアルを開始できません。数分後にもう一度お試しください。",
+    "SERVER_UNAVAILABLE": "ライセンスサーバーが現在応答していません。数分後にもう一度お試しください。",
+    "MACHINE_MISMATCH": "このライセンスは別のコンピューターに登録されています。このPCに移行するか、管理者にリセットを依頼してください。",
+    "SIGNUP_INVALID_PHONE": "電話番号は + と国番号を付けて入力するか、空欄のままにしてください。",
+    "SIGNUP_USE_CASE": "SoftGlazeの用途を選択してください。",
+    "SIGNUP_USE_CASE_OTHER": "SoftGlazeの用途を簡単に教えてください。",
+    "CONFIRM_OFFLINE": "メールアドレスを確認するにはインターネットに接続してください。"
+  }
+}

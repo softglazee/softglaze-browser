@@ -1,0 +1,62 @@
+{
+  "header": {
+    "eyebrow": "あなたのアカウント",
+    "title": "アカウント設定",
+    "description": "プロフィール画像、名前、メールアドレス、パスワードを管理します。"
+  },
+  "notice": {
+    "superAdmin": "これはスーパー管理者 / ソース所有者のセッションです。ここで変更できるメンバー情報はありません。"
+  },
+  "fields": {
+    "fullName": "氏名",
+    "fullNamePlaceholder": "お名前",
+    "email": "メールアドレス",
+    "newPassword": "新しいパスワード",
+    "newPasswordPlaceholder": "変更しない場合は空欄のまま",
+    "confirmPassword": "新しいパスワード（確認）",
+    "confirmPasswordPlaceholder": "新しいパスワードを再入力",
+    "verificationRequired": "確認が必要です"
+  },
+  "avatar": {
+    "alt": "アバター",
+    "changeTitle": "画像を変更",
+    "newSelected": "新しい画像を選択しました。保存すると反映されます。",
+    "notImage": "画像ファイルを選択してください。",
+    "tooLarge": "画像が2 MBを超えています。小さい画像を選んでください。",
+    "readFailed": "画像を読み込めませんでした。"
+  },
+  "verification": {
+    "banner": "メールアドレスまたはパスワードを変更するには、現在のメールアドレスに送信される6桁のコードが必要です"
+  },
+  "actions": {
+    "save": "変更を保存",
+    "saving": "保存中…",
+    "verifyAndSave": "確認して保存",
+    "discard": "破棄"
+  },
+  "validation": {
+    "nameEmpty": "名前を入力してください。",
+    "emailInvalid": "有効なメールアドレスを入力してください。",
+    "passwordTooShort": "新しいパスワードは8文字以上にしてください。",
+    "passwordMismatch": "パスワードが一致しません。"
+  },
+  "messages": {
+    "profileUpdated": "プロフィールを更新しました。",
+    "accountUpdated": "アカウントを更新しました。"
+  },
+  "errors": {
+    "loadFailed": "アカウントを読み込めませんでした。",
+    "saveFailed": "変更を保存できませんでした。"
+  },
+  "verify": {
+    "title": "本人確認",
+    "codeSentTo": "{{email}} にコードを送信しました",
+    "codeLabel": "6桁のコード",
+    "devMode": "開発モード: メールが設定されていません。あなたのコードは",
+    "apply": "確認して適用",
+    "resend": "再送信",
+    "enterCode": "6桁のコードを入力してください。",
+    "failed": "確認に失敗しました。",
+    "resendFailed": "コードを再送信できませんでした。"
+  }
+}

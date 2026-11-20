@@ -1,0 +1,51 @@
+{
+  "header": {
+    "eyebrow": "Repositori Enterprise",
+    "title": "Ekstensi",
+    "summary_other": "{{count}} ekstensi terpasang · {{enabled}} aktif untuk profil yang memuat ekstensi"
+  },
+  "stats": {
+    "total": "Total ekstensi",
+    "injected": "Aktif",
+    "disabled": "Nonaktif"
+  },
+  "caveat": {
+    "before": "Ekstensi tidak ditambahkan ke setiap profil. Ekstensi hanya dimuat di profil Chromium yang mencentang \"Muat ekstensi SoftGlaze (memakai Chrome for Testing)\" di tab Lanjutan editor profil (mati secara default). Profil itu memasangnya dengan flag Chromium",
+    "middle": "saat dibuka, jadi perubahan berlaku pada",
+    "nextLaunch": "pembukaan berikutnya",
+    "after": "profil tersebut. Chrome biasa mengabaikan flag itu, jadi profil ini dibuka dengan build Chrome for Testing: unduh dulu di halaman Browser, atau profil terbuka tanpa ekstensi. Profil Firefox tidak memuatnya."
+  },
+  "importer": {
+    "title": "Impor ke tim",
+    "description": "Tempel URL Chrome Web Store atau ID 32 karakternya: Softglaze mengunduh dan membongkar paket aslinya.",
+    "inputPlaceholder": "https://chromewebstore.google.com/detail/…  atau  cjpalhdlnbpafiamejdnhcphjbkeiagm",
+    "submit": "Impor ke tim"
+  },
+  "installPhase": {
+    "downloading": "Mengunduh paket…",
+    "extracting": "Mengekstrak arsip…",
+    "registering": "Mendaftarkan…"
+  },
+  "permissionNotice": "Hanya Admin ke atas yang bisa mengelola ekstensi tim. Anda bisa melihat repositori.",
+  "searchPlaceholder": "Cari nama atau ID…",
+  "empty": {
+    "loadErrorTitle": "Tidak bisa memuat ekstensi",
+    "noExtTitle": "Belum ada ekstensi",
+    "noMatchTitle": "Tidak ada ekstensi yang cocok",
+    "noExtDesc": "Impor ekstensi Chrome Web Store di atas untuk menambahkannya ke repositori tim. Ekstensi dimuat di profil yang mencentang \"Muat ekstensi SoftGlaze\" di tab Lanjutan.",
+    "noMatchDesc": "Coba nama atau ID lain."
+  },
+  "card": {
+    "unpacked": "Ekstensi terbongkar",
+    "removeTitle": "Hapus dari tim",
+    "injected": "Aktif",
+    "disabled": "Nonaktif"
+  },
+  "confirmRemove": "Hapus \"{{name}}\" dari repositori tim? File lokalnya akan dihapus.",
+  "errors": {
+    "couldNotLoad": "Tidak bisa memuat ekstensi.",
+    "installFailed": "Pemasangan gagal.",
+    "couldNotUpdate": "Tidak bisa memperbarui ekstensi.",
+    "couldNotRemove": "Tidak bisa menghapus ekstensi."
+  }
+}

@@ -1,0 +1,516 @@
+{
+  "header": {
+    "eyebrow": "网络",
+    "title": "代理池",
+    "description": "在本地存储可复用的 HTTP 和 SOCKS5 代理，或直接从集成的服务商同步已购买的代理池。"
+  },
+  "rotation": {
+    "label": "轮换：",
+    "tooltip": "启动时如何应用配置文件的轮换代理池",
+    "eachLaunch": "每次启动时轮换",
+    "sticky": "粘性（固定代理）",
+    "failover": "故障时切换到健康代理",
+    "latencyOptimized": "最快（延迟）",
+    "failoverMaxTooltip": "跳过慢于此毫秒数的代理（0 = 不限制；如果没有符合条件的代理，则回退到整个代理池）",
+    "maxMsPlaceholder": "最大毫秒",
+    "topNTooltip": "在最快的 N 个代理之间轮询",
+    "topNPlaceholder": "前 N 个"
+  },
+  "actions": {
+    "testAll": "全部测试",
+    "testAllTooltip": "并发测试每个代理的健康状况",
+    "testAllSummary": "{{ok}}/{{total}} 正常",
+    "checkAll": "全部检测",
+    "refresh": "刷新",
+    "batchAdd": "批量添加",
+    "newProxy": "新建代理",
+    "checkNew": "检测新代理",
+    "checkNewTooltip": "仅检测新添加且从未检测过的代理。"
+  },
+  "free": {
+    "button": "免费代理",
+    "buttonTooltip": "在单独的页面中查找、测试和保存免费公共代理，与你的付费代理分开",
+    "title": "免费公共代理",
+    "description": "SoftGlaze 会下载免费代理项目发布的公开列表，测试每个代理，并只保留可用的代理，它们显示在此页面上，与你的付费代理分开。",
+    "warn": {
+      "strangers": "免费代理由身份不明的人运营。请勿用它们登录账号、输入密码或付款：代理的所有者可以看到未加密的流量。",
+      "quality": "它们速度慢，经常在几小时内失效，而且很多都在黑名单上，因此出现的验证码会比付费代理更多。如需进行真正的账号操作，请使用代理服务商。",
+      "legal": "请仅在允许的情况下使用。除非你将“免费代理”选为代理来源，否则快速生成绝不会选用免费代理。"
+    },
+    "checks": "每个代理都会经过实时测试，会将你的真实 IP 传递给网站的 HTTP 代理会被拒绝。",
+    "protocol": "协议",
+    "country": "国家/地区（可选）",
+    "countryPlaceholder": "例如 US",
+    "limit": "要添加的数量",
+    "start": "查找免费代理",
+    "again": "查找更多",
+    "cancel": "停止",
+    "close": "关闭",
+    "done": "完成",
+    "progress": {
+      "fetching": "正在下载公开列表…",
+      "checking": "已测试 {{checked}}/{{total}} 个 · {{found}} 个可用"
+    },
+    "result": {
+      "added": "已添加 {{added}} 个（请求 {{requested}} 个）。",
+      "checked": "已测试 {{checked}}/{{total}} 个候选代理",
+      "rejected": "{{dead}} 个不可用，{{leak}} 个泄露了你的 IP，{{country}} 个国家/地区不符",
+      "planLimit": "已达到你套餐的代理数量上限，因此部分可用代理未被添加。"
+    },
+    "stopped": {
+      "limit": "已停止：已达到你要求的数量。",
+      "time": "3 分钟后已停止。再次运行可查找更多。",
+      "cancelled": "已由你停止。",
+      "exhausted": "列表中的所有候选代理都已测试。"
+    },
+    "errors": {
+      "country": "请使用两个字母的国家/地区代码，例如 US 或 DE。",
+      "failed": "无法完成搜索。"
+    }
+  },
+  "freePage": {
+    "eyebrow": "代理",
+    "title": "免费代理",
+    "description": "免费公共代理存放在这里，与你的付费代理分开。它们绝不会出现在代理池、其统计数量或分组中，只有在你选择时配置文件才会使用。",
+    "openPool": "代理池",
+    "refresh": "刷新",
+    "warnTitle": "使用免费代理前请先阅读",
+    "searchTitle": "查找免费代理",
+    "busy": "免费代理搜索已在运行中。",
+    "stopIt": "停止",
+    "listTitle": "已保存的免费代理",
+    "listCount": "{{shown}}/{{total}}",
+    "filters": {
+      "protocol": "协议",
+      "protocolAll": "任意协议",
+      "country": "国家/地区",
+      "countryAll": "任意国家/地区",
+      "countryUnknown": "国家/地区未知",
+      "status": "状态",
+      "statusAll": "任意状态",
+      "reset": "重置筛选"
+    },
+    "status": {
+      "working": "可用",
+      "dead": "不可用",
+      "unchecked": "未检测",
+      "checking": "正在检测…"
+    },
+    "table": {
+      "address": "地址",
+      "protocol": "协议",
+      "country": "国家/地区",
+      "speed": "速度",
+      "lastCheck": "上次检测",
+      "status": "状态",
+      "usedBy": "使用者",
+      "actions": "操作",
+      "selectAll": "选择所有显示的项",
+      "selectRow": "选择 {{address}}",
+      "loading": "正在加载免费代理…",
+      "never": "从未",
+      "notUsed": "无配置文件",
+      "usedByCount_one": "{{count}} 个配置文件",
+      "usedByCount_other": "{{count}} 个配置文件"
+    },
+    "actions": {
+      "check": "立即检测",
+      "checkAria": "立即检测 {{address}}",
+      "delete": "删除",
+      "deleteAria": "删除 {{address}}",
+      "checkAll": "检测所有显示的项",
+      "deleteDead": "删除不可用的代理",
+      "checkSelected": "检测所选",
+      "deleteSelected": "删除所选",
+      "clear": "清除",
+      "selected": "已选择 {{count}} 个"
+    },
+    "confirm": {
+      "delete": "删除免费代理 {{address}}？",
+      "deleteUsed_one": "删除免费代理 {{address}}？有 {{count}} 个配置文件正在使用它，删除后将失去代理。",
+      "deleteUsed_other": "删除免费代理 {{address}}？有 {{count}} 个配置文件正在使用它，删除后将失去代理。",
+      "deleteSelected_one": "删除所选的 {{count}} 个免费代理？",
+      "deleteSelected_other": "删除所选的 {{count}} 个免费代理？",
+      "deleteDead_one": "删除未通过上次检测的 {{count}} 个免费代理？",
+      "deleteDead_other": "删除未通过上次检测的 {{count}} 个免费代理？"
+    },
+    "checkRun": {
+      "running": "正在检测 {{done}}/{{total}} · {{ok}} 个可用，{{fail}} 个不可用",
+      "done": "已检测 {{total}} 个 · {{ok}} 个可用，{{fail}} 个不可用",
+      "stop": "停止"
+    },
+    "empty": {
+      "title": "还没有免费代理",
+      "description": "使用上方的搜索查找、测试并保存免费公共代理。只会保留可用且能隐藏你 IP 的代理。"
+    },
+    "noMatch": {
+      "title": "没有符合这些筛选条件的免费代理",
+      "description": "更改或重置筛选条件以查看其他代理。"
+    },
+    "errors": {
+      "load": "无法加载免费代理。",
+      "delete": "无法删除免费代理。",
+      "check": "检测免费代理失败。"
+    }
+  },
+  "tabs": {
+    "custom": "自定义代理",
+    "providers": "代理服务商",
+    "integrated": "已集成",
+    "history": "检测历史",
+    "groups": "分组和国家/地区"
+  },
+  "stats": {
+    "totalProxies": "代理总数",
+    "totalTip": "显示整个代理池",
+    "splitSub": "{{verified}} 个已验证 · {{unchecked}} 个未检测",
+    "proxyTypes": "代理类型",
+    "verified": "已验证",
+    "verifiedTip": "筛选出已验证的代理",
+    "pctOfPool": "占代理池的 {{pct}}%",
+    "failed": "失败",
+    "failedTip": "筛选出失败的代理",
+    "uncheckedSub": "{{count}} 个尚未检测",
+    "nonVerified": "未验证",
+    "protocols": "HTTP / SOCKS",
+    "protocolsTip": "代理池中的协议构成",
+    "protocolsSub": "{{http}} 个 HTTP · {{socks}} 个 SOCKS",
+    "countries": "国家/地区",
+    "countriesTip": "打开按国家/地区的分布",
+    "topCountry": "{{country}} 最多 · {{count}} 个",
+    "countriesEmpty": "运行一次检测以识别位置",
+    "lastCheck": "上次检测",
+    "lastCheckTip": "打开自动健康检查",
+    "autoEvery": "每 {{n}} 分钟自动检测",
+    "autoOff": "自动检测已关闭",
+    "justNow": "刚刚",
+    "minAgo": "{{n}} 分钟前",
+    "hrAgo": "{{n}} 小时前",
+    "dayAgo": "{{n}} 天前",
+    "filtering": "筛选中",
+    "noProxies": "没有代理",
+    "total": "总计"
+  },
+  "search": {
+    "placeholder": "按代理名称、主机或用户名搜索..."
+  },
+  "deleteFiltered": {
+    "tooltip": "删除符合当前筛选条件的所有代理",
+    "button": "删除{{scope}}代理（{{count}}）",
+    "confirm_one": "确定删除{{scope}}代理，共 {{count}} 个？此操作无法撤销：使用它的配置文件将失去代理，在你为其分配其他代理之前无法启动。",
+    "confirm_other": "确定删除{{scope}}代理，共 {{count}} 个？此操作无法撤销：使用它们的配置文件将失去代理，在你为其分配其他代理之前无法启动。",
+    "scope": {
+      "all": "全部",
+      "filtered": "筛选出的",
+      "matching": "匹配的",
+      "verified": "已验证的",
+      "failed": "失败的"
+    }
+  },
+  "filters": {
+    "all": "全部",
+    "ungrouped": "未分组",
+    "byProvider": "按服务商"
+  },
+  "groups": {
+    "chipTooltip": "点击以筛选 · 将代理拖到这里即可添加",
+    "renameRecolor": "重命名/更改颜色",
+    "deleteGroup": "删除分组",
+    "newGroup": "新建分组",
+    "deleteConfirm": "删除分组“{{name}}”？代理仍会保留在代理池中，只是变为未分组。"
+  },
+  "autoGroup": {
+    "granularityTooltip": "自动分组粒度",
+    "country": "国家/地区",
+    "state": "州/省",
+    "city": "城市",
+    "buttonTooltip": "根据每个代理经验证的国家/地区、州/省或城市创建分组。请先运行“全部测试”，让代理获得检测到的位置。",
+    "button": "自动分组",
+    "result_one": "+{{count}} 个分组 · 已分配 {{assigned}} 个",
+    "result_other": "+{{count}} 个分组 · 已分配 {{assigned}} 个"
+  },
+  "sort": {
+    "tooltip": "按延迟排序",
+    "default": "排序：默认",
+    "fastest": "最快优先",
+    "slowest": "最慢优先"
+  },
+  "geo": {
+    "toggleTooltip": "显示/隐藏地理分布",
+    "button": "地理",
+    "byCountry": "按国家/地区划分的代理",
+    "summary": "{{countries}} 个国家/地区 · {{proxies}} 个代理",
+    "unknown": "未知"
+  },
+  "scheduler": {
+    "tooltip": "按计划自动重新测试每个代理",
+    "autoCheckEvery": "自动检测间隔",
+    "min": "分钟"
+  },
+  "selection": {
+    "count": "已选择 {{count}} 个",
+    "checkSelected": "检测所选",
+    "moveToGroup": "移到分组",
+    "noGroupsYet": "还没有分组，请先创建一个。",
+    "removeFromGroup": "从分组中移除",
+    "deleteSelected": "删除所选",
+    "clear": "清除",
+    "clearTooltip": "清除选择",
+    "copyForExtension": "为 SoftGlaze Proxy 复制",
+    "copyForExtensionTooltip": "复制所选代理，用于 SoftGlaze Proxy 浏览器扩展程序的批量导入"
+  },
+  "copyForExtension": {
+    "title": "为 SoftGlaze Proxy 复制",
+    "description": "将所选代理复制为 SoftGlaze Proxy 浏览器扩展程序批量导入框可读取的行。每行都注明其类型（http、https、socks5 或 socks4），因此 SOCKS5 代理绝不会被识别为 HTTP。",
+    "loading": "正在统计所选代理…",
+    "count": "要复制的代理：{{count}} 个",
+    "skipped": "已排除：{{count}} 个（扩展程序无法读取的类型、地址或端口）。",
+    "includeCredentials": "包含用户名和密码",
+    "credsNoRole": "你的角色无法查看代理用户名和密码。请联系所有者或管理员。",
+    "credsNone": "所选代理均没有用户名或密码。",
+    "socks5Note": "需要登录的 SOCKS5 代理：{{count}} 个。Chrome 和 Edge 无法登录 SOCKS5 代理，因此扩展程序在这些浏览器中不会接受这些行。Firefox 可以使用它们。",
+    "socks4Note": "需要登录的 SOCKS4 代理：{{count}} 个。复制时会去除登录信息，因为 SOCKS4 没有密码，扩展程序也不接受密码。",
+    "clipboardWarning": "这台电脑上的其他程序可以读取剪贴板。如果剪贴板中仍保留此列表，应用会在 2 分钟后将其清除。",
+    "copy": "复制",
+    "copying": "正在复制…",
+    "cancel": "取消",
+    "close": "关闭",
+    "copied": "已复制 {{count}} 个代理，不含用户名和密码。在扩展程序中打开“代理”，选择“批量导入”并粘贴。",
+    "copiedWithCredentials": "已复制 {{count}} 个代理，包含用户名和密码。在扩展程序中打开“代理”，选择“批量导入”并粘贴。",
+    "getExtension": "获取 SoftGlaze Proxy 扩展程序",
+    "loadError": "无法读取所选代理。",
+    "copyError": "无法复制代理。"
+  },
+  "table": {
+    "loading": "正在加载代理...",
+    "emptyTitle": "未找到代理",
+    "emptyDescription": "手动添加代理，或粘贴一批代理字符串。",
+    "selectAll": "选择所有代理",
+    "selectRow": "选择 {{name}}",
+    "colName": "名称",
+    "colType": "类型",
+    "colEndpoint": "端点",
+    "colUsername": "用户名",
+    "colGroup": "分组",
+    "colProfiles": "配置文件",
+    "colCreated": "创建时间",
+    "colSpeed": "速度",
+    "colBlocklist": "黑名单",
+    "colStatus": "状态",
+    "colActions": "操作",
+    "profileCount_one": "{{count}} 个配置文件",
+    "profileCount_other": "{{count}} 个配置文件",
+    "defaultProxyName": "代理"
+  },
+  "rowActions": {
+    "testProxy": "测试代理",
+    "healthHistory": "健康历史",
+    "editProxy": "编辑代理",
+    "deleteProxy": "删除代理",
+    "copyEndpoint": "复制 host:port",
+    "check": "检测",
+    "rotateIp": "轮换 IP",
+    "rotateIpTitle": "为此代理获取新的出口 IP"
+  },
+  "status": {
+    "checking": "正在检测…",
+    "failed": "失败",
+    "ok": "正常"
+  },
+  "checker": {
+    "running": "正在检测代理…",
+    "done": "检测完成",
+    "healthy": "{{n}} 个正常",
+    "failed": "{{n}} 个失败",
+    "eta": "预计剩余",
+    "stop": "停止",
+    "dismiss": "关闭",
+    "idle": "等待开始…",
+    "health": "健康状况",
+    "blacklisted": "已列入黑名单：",
+    "blacklistShort": "已列入黑名单",
+    "notBlacklisted": "不在任何已检查的黑名单上",
+    "clean": "未列入",
+    "residential": "住宅 IP 段",
+    "residentialTip": "住宅 IP 段（Spamhaus PBL），不是垃圾信息名单。这对住宅和移动代理来说是正常的，不会降低健康评分。",
+    "hideLog": "隐藏日志",
+    "showLog": "显示日志",
+    "speed": {
+      "fast": "快",
+      "good": "良好",
+      "ok": "一般",
+      "slow": "慢"
+    }
+  },
+  "blacklistFilter": {
+    "all": "全部",
+    "clean": "未列入",
+    "blacklisted": "已列入黑名单",
+    "cleanTip": "仅显示不在任何已检查黑名单上的代理",
+    "blacklistedTip": "仅显示被 DNS 黑名单标记的代理"
+  },
+  "speedFilter": {
+    "all": "全部",
+    "fast": "快",
+    "slow": "慢",
+    "fastTip": "仅显示测得速度为 2 秒或更快的代理",
+    "slowTip": "仅显示测得速度慢于 2 秒的代理"
+  },
+  "bulkDelete": {
+    "confirm_one": "删除所选的 {{count}} 个代理？使用它的配置文件将失去代理，在你为其分配其他代理之前无法启动。",
+    "confirm_other": "删除所选的 {{count}} 个代理？使用它们的配置文件将失去代理，在你为其分配其他代理之前无法启动。"
+  },
+  "delete": {
+    "confirm": "删除代理“{{name}}”？",
+    "profilesNeedProxy": "曾使用已删除代理的配置文件：{{count}} 个。它们现在没有代理，在你为其分配代理之前无法启动（可在配置文件编辑器中，或通过“配置文件”页面上的“代理”分配）。",
+    "dismissNotice": "关闭"
+  },
+  "history": {
+    "dialogTitle": "代理健康历史",
+    "title": "健康历史",
+    "empty": "还没有历史记录。运行健康检查（或启用自动检测）后，延迟/状态时间线会显示在这里。",
+    "latencyOverTime": "延迟变化（毫秒）",
+    "ok": "正常",
+    "fail": "失败",
+    "checks_one": "{{count}} 次检测",
+    "checks_other": "{{count}} 次检测",
+    "close": "关闭"
+  },
+  "historyCards": {
+    "title": "最近的检测历史",
+    "openDetail": "打开完整历史",
+    "regressed": "之前已验证，之后失败",
+    "regressedCount_one": "{{count}} 个先验证后失败",
+    "regressedCount_other": "{{count}} 个先验证后失败",
+    "empty": "还没有检测记录。在“代理”页面运行“全部检测”或“全部测试”，结果就会显示在这里。"
+  },
+  "form": {
+    "dialogTitleEdit": "编辑代理",
+    "dialogTitleCreate": "创建代理",
+    "titleEdit": "编辑代理",
+    "titleCreate": "创建代理",
+    "descriptionEdit": "更新现有代理。保持密码掩码不变即可保留当前值。",
+    "descriptionCreate": "向本地 SQLite 代理池添加一个结构化代理。",
+    "tipPrefix": "提示：将你的代理",
+    "tipSuffix": "粘贴到“主机”字段中，即可自动填写所有字段。",
+    "proxyName": "代理名称",
+    "proxyNamePlaceholder": "美国住宅 01",
+    "type": "类型",
+    "host": "主机",
+    "port": "端口",
+    "username": "用户名",
+    "password": "密码",
+    "optional": "可选",
+    "cancel": "取消",
+    "saving": "正在保存...",
+    "saveChanges": "保存更改",
+    "createProxy": "创建代理",
+    "socks4Note": "SOCKS4 可在 Firefox 配置文件中使用。Chromium 配置文件无法使用它打开：Chromium 无法通过 SOCKS4 发送 DNS 查询，因此每个网站的域名都会在代理之外解析。Chromium 配置文件请使用 SOCKS5 或 HTTP。"
+  },
+  "batch": {
+    "dialogTitle": "批量添加代理",
+    "title": "批量添加代理",
+    "descriptionPrefix": "每行粘贴一个代理。支持的格式：",
+    "defaultType": "默认类型",
+    "providerLabel": "服务商（可选）",
+    "providerNone": "无",
+    "providerHint": "为这些代理标记其来源服务商，使它们在这里归入该服务商下，并计入“代理服务商”页面。",
+    "proxyLines": "代理行",
+    "resultTitle": "批量结果",
+    "total": "总计",
+    "created": "已创建",
+    "skipped": "已跳过",
+    "errors": "错误",
+    "lineError": "第 {{line}} 行：{{message}}",
+    "close": "关闭",
+    "importing": "正在导入...",
+    "addProxies": "添加代理"
+  },
+  "groupModal": {
+    "dialogTitleEdit": "编辑分组",
+    "dialogTitleNew": "新建分组",
+    "titleEdit": "编辑代理分组",
+    "titleNew": "新建代理分组",
+    "description": "按国家/地区或用途对代理分组（例如美国、英国、日本）。批量创建配置文件时可以指定分组。",
+    "groupName": "分组名称",
+    "groupNamePlaceholder": "美国代理",
+    "color": "颜色",
+    "colorLabel": "颜色 {{color}}",
+    "cancel": "取消",
+    "saveChanges": "保存更改",
+    "createGroup": "创建分组"
+  },
+  "errors": {
+    "deleteProxies": "无法删除代理。",
+    "loadProxies": "无法加载代理。",
+    "copyClipboard": "无法复制到剪贴板。",
+    "deleteSelected": "无法删除所选代理。",
+    "saveProxy": "无法保存代理。",
+    "batchAdd": "无法批量添加代理。",
+    "bulkTest": "批量测试失败。",
+    "savePolicy": "无法保存代理策略。",
+    "saveSchedule": "无法保存计划。",
+    "enterGroupName": "请输入分组名称。",
+    "saveGroup": "无法保存分组。",
+    "deleteGroup": "无法删除分组。",
+    "moveProxies": "无法移动代理。",
+    "autoGroup": "自动分组失败。请先运行“全部测试”，让代理获得检测到的国家/地区。",
+    "deleteProxy": "无法删除代理。请先移除关联的配置文件或更改其代理分配。",
+    "rotate": "无法轮换 IP。",
+    "rotateStatus": "轮换请求返回了 HTTP {{status}}。"
+  },
+  "groupsPage": {
+    "groupsTitle": "分组和国家/地区",
+    "openGroup": "显示这些代理",
+    "noGeo": "在“代理”页面运行“全部检测”，以识别每个代理的国家/地区。",
+    "noProviders": "还没有服务商代理。请从“代理服务商”拉取一些。",
+    "scheduleTitle": "自动健康检查"
+  },
+  "filterBar": {
+    "statusTip": "检测状态",
+    "statusAll": "任意状态",
+    "blocklistAll": "任意黑名单状态",
+    "speedAll": "任意速度",
+    "groupTip": "分组或国家/地区",
+    "groupAll": "所有分组",
+    "providerAll": "所有服务商",
+    "reset": "重置筛选"
+  },
+  "providerAccount": {
+    "title": "账户",
+    "check": "检查账户",
+    "checkedAt": "检查于 {{time}}",
+    "notChecked": "尚未检查。“检查账户”会使用为此服务商保存的密钥读取套餐、到期时间、流量和余额。",
+    "notSupported": "此服务商的 API 不提供账户详情。",
+    "openDashboard": "打开控制台",
+    "status": "状态",
+    "statusActive": "有效",
+    "statusExpired": "已过期",
+    "statusSuspended": "已暂停",
+    "statusUnknown": "未知",
+    "plan": "套餐",
+    "expires": "到期时间",
+    "daysLeft_one": "剩余 {{count}} 天",
+    "daysLeft_other": "剩余 {{count}} 天",
+    "endsToday": "今天到期",
+    "endedAgo_one": "已于 {{count}} 天前到期",
+    "endedAgo_other": "已于 {{count}} 天前到期",
+    "traffic": "流量",
+    "trafficLeft": "剩余 {{left}}",
+    "trafficUsedOf": "已使用 {{used}}，共 {{total}}",
+    "trafficUsed": "已使用 {{used}}",
+    "trafficTotal": "套餐总量 {{total}}",
+    "balance": "余额",
+    "noDetails": "服务商已响应，但未提供套餐、到期时间、流量或余额信息。",
+    "error": "无法检查账户：{{message}}",
+    "note": {
+      "firstToExpire": "显示的到期时间是你的代理或套餐中最早到期的那个。",
+      "summedPlans": "这些数字是你所有有效套餐的总和。",
+      "noActivePlans": "此账户没有有效套餐。",
+      "noActiveProxies": "此账户没有有效代理。",
+      "planSizeOnly": "API 只提供套餐总量，不提供剩余流量。",
+      "firstPageOnly": "根据你的前 1000 个代理计算得出。",
+      "usedLast7Days": "过去 7 天使用的流量；API 不提供剩余流量。"
+    }
+  }
+}

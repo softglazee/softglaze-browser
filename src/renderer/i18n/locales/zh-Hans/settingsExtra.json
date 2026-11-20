@@ -1,0 +1,411 @@
+{
+  "actions": {
+    "refresh": "刷新"
+  },
+  "groups": {
+    "general": "常规",
+    "browser": "浏览器",
+    "runtime": "运行时",
+    "security": "安全和团队",
+    "account": "账号和数据"
+  },
+  "nav": {
+    "billing": "账单",
+    "monetization": "套餐和用量",
+    "migration": "导入和迁移",
+    "workspaceSync": "工作区同步",
+    "branding": "品牌",
+    "dbEncryption": "数据库加密",
+    "workspaceBackup": "工作区备份",
+    "developerApi": "开发者 API",
+    "phones": "手机"
+  },
+  "fingerprint": {
+    "title": "指纹和身份",
+    "description": "启动时应用于每个配置文件，除非配置文件自行覆盖。"
+  },
+  "behaviour": {
+    "title": "浏览器行为",
+    "description": "已启动浏览器的日常行为方式。"
+  },
+  "ui": {
+    "searchPlaceholder": "搜索设置",
+    "jumpTo": "跳转到部分",
+    "noResultsTitle": "没有与“{{term}}”匹配的设置",
+    "noResultsDesc": "请尝试更短的词，例如“代理”“摄像头”或“登录”。",
+    "experimental": "实验性",
+    "savedIdle": "所有更改已保存",
+    "saving": "正在保存更改…",
+    "saveError": "无法保存更改"
+  },
+  "localRuntime": {
+    "title": "本地运行时",
+    "description": "路径在 Electron 主进程中解析。",
+    "loading": "正在加载系统信息...",
+    "sqliteDb": "SQLite 数据库",
+    "profileRoot": "配置文件根目录",
+    "databaseUrl": "数据库 URL",
+    "configured": "已配置",
+    "notConfigured": "未配置"
+  },
+  "sessions": {
+    "title": "运行中的会话",
+    "description": "当前已启动并占用资源的会话。",
+    "loading": "正在加载会话...",
+    "emptyTitle": "没有运行中的会话",
+    "emptyDescription": "启动一个配置文件即可在这里看到。",
+    "running": "运行中",
+    "created": "创建于 {{date}}",
+    "close": "关闭"
+  },
+  "scheduler": {
+    "title": "代理健康检查计划",
+    "description": "在后台定期重新检测每个已保存的代理，并存储其健康状态。",
+    "enabled": "已启用",
+    "disabled": "已停用",
+    "runSweepEvery": "检测间隔",
+    "every15min": "15 分钟",
+    "every30min": "30 分钟",
+    "every1hour": "1 小时",
+    "every2hours": "2 小时",
+    "serviceRunning": "服务运行中",
+    "idle": "空闲",
+    "noteLabel": "注意：",
+    "noteBody": "此后台任务在 Electron 主进程中运行，因此即使应用最小化或你在页面间切换，检测也会持续进行。健康结果会直接以状态标记的形式显示在代理池中。"
+  },
+  "toggleRow": {
+    "appliedAtLaunch": "启动时应用"
+  },
+  "globalPreferences": {
+    "heading": "全局偏好设置",
+    "loading": "正在加载全局设置…",
+    "saving": "正在保存…"
+  },
+  "security": {
+    "title": "账号安全",
+    "description": "登录保护和验证策略。",
+    "remoteLogin": {
+      "title": "异地登录提醒",
+      "desc": "当你的账号从常用的 3 个 IP 之外的新 IP 地址登录时，会发送提醒邮件。"
+    },
+    "failedLogin": {
+      "title": "登录失败提醒",
+      "desc": "如果登录失败超过 3 次，会向所有者的邮箱发送提醒邮件。"
+    },
+    "ipAllowlist": {
+      "title": "登录 IP 允许列表",
+      "desc": "设置后，成员登录将受 IP 限制（不影响所有者）。"
+    },
+    "twoStep": {
+      "title": "两步验证",
+      "desc": "敏感操作需要通过身份验证器应用、邮件或短信进行验证。",
+      "methodLabel": "方式",
+      "methodApp": "身份验证器应用",
+      "methodEmail": "邮件",
+      "methodSms": "短信",
+      "levelLabel": "验证级别",
+      "levelLow": "低：新设备或距上次双重验证超过 90 天",
+      "levelMedium": "中（推荐）：新设备或超过 30 天",
+      "levelHigh": "高：每次登录都需要双重验证"
+    }
+  },
+  "multiDevice": {
+    "title": "多设备模式",
+    "description": "控制多个成员是否可以同时访问同一个配置文件。",
+    "modeOff": "关闭：每个配置文件只允许一位成员",
+    "modeFull": "全部：所有配置文件都支持同时访问",
+    "modeSpecified": "指定：仅限所选配置文件",
+    "hintBefore": "启用后，多个成员可以同时访问同一个配置文件。在",
+    "hintSpecified": "指定",
+    "hintAfter": "模式下，请在“配置文件”页面选择符合条件的配置文件。"
+  },
+  "website": {
+    "title": "网站管理",
+    "description": "URL 访问规则和资源加载。",
+    "blockAccess": {
+      "title": "阻止访问",
+      "desc": "使用阻止列表和允许列表管理 URL。",
+      "blocklist": "阻止列表",
+      "allowlist": "允许列表"
+    },
+    "fbStatic": {
+      "title": "FB 静态资源",
+      "desc": "启用后，Facebook 静态资源将使用本地网络加载。"
+    },
+    "localNetwork": {
+      "title": "本地网络访问",
+      "desc": "启用后，可以在本地网络上访问特定 URL。"
+    }
+  },
+  "platform": {
+    "title": "平台",
+    "description": "自定义配置文件列表的显示方式。",
+    "customIcon": {
+      "title": "自定义图标",
+      "desc": "在列表中为配置文件显示自定义图标。"
+    },
+    "displayCustomNo": {
+      "title": "显示自定义编号",
+      "desc": "显示完整的自定义序列号（例如“123456”）。"
+    },
+    "displayLast4": {
+      "title": "显示自定义编号后 4 位",
+      "desc": "仅显示序列号的最后 4 位。"
+    }
+  },
+  "ipSetting": {
+    "title": "IP 设置",
+    "description": "代理自动配置优先级和 IP 检测工具。",
+    "priorityPrefix": "查找优先级：",
+    "priorityChain": "上次使用的 IP > ASN > 城市 > 地区 > 国家/地区",
+    "prioritySuffix": "未勾选的选项会被跳过。",
+    "lastUsedIp": "上次使用的 IP",
+    "asn": "ASN",
+    "asnDesc": "仅适用于 Bright 自动模式。",
+    "city": "城市",
+    "region": "地区",
+    "country": "国家/地区",
+    "ipCheckerLabel": "IP 检测工具"
+  },
+  "dataSync": {
+    "title": "数据同步",
+    "description": "选择要在设备间同步的数据。",
+    "cookie": "Cookie",
+    "passwords": "已保存的密码",
+    "bookmarks": "书签",
+    "localStorage": "本地存储",
+    "indexedDb": "IndexedDB",
+    "extensionData": "扩展程序数据",
+    "history": "历史记录"
+  },
+  "browser": {
+    "title": "浏览器设置",
+    "description": "已启动浏览器的行为。标有“启动时应用”的项目会在下次启动配置文件时生效。",
+    "geoMatch": {
+      "title": "地理位置自动匹配（时区 · 语言区域 · WebRTC）",
+      "desc": "启动时根据代理的位置推导每个配置文件的时区、语言和 WebRTC 出口 IP。关闭后仅使用每个配置文件的手动设置值。启动时应用。"
+    },
+    "realtimeTimezone": {
+      "title": "动态 IP 变化时实时匹配时区",
+      "desc": "动态 IP 变化时，匹配相应的时区和位置。"
+    },
+    "chromeSignin": {
+      "title": "允许登录 Chrome",
+      "desc": "关闭时，你可以登录 Gmail 等 Google 网站，而无需登录 Chrome 本身。"
+    },
+    "offerTranslate": {
+      "title": "提供网页翻译",
+      "desc": "对于不是你所用语言的网页，提供翻译。"
+    },
+    "disableDevtools": {
+      "title": "停用浏览器开发者工具",
+      "desc": "在基于 Chrome 的配置文件中，任何开发者工具窗口或面板（F12、Ctrl+Shift+I、检查）一打开就会被关闭。适用于更改后启动的配置文件。不影响这台电脑上你自己的 Chrome。"
+    },
+    "minimizeCdpFootprint": {
+      "title": "最小化 CDP 痕迹（实验性，减少验证码）",
+      "shortTitle": "最小化 CDP 痕迹",
+      "desc": "去除持久的 CDP Runtime.enable，这是 Cloudflare/Turnstile 检测到的首要自动化信号。开启时的代价：人设自动填充、起始页检测链接和同步会话镜像将停止工作（它们需要 CDP 绑定）。默认关闭；可开启后进行 A/B 测试，看是否能减少验证码，然后重新启动配置文件。"
+    },
+    "blockThirdPartyCookies": {
+      "title": "阻止第三方 Cookie",
+      "desc": "关闭（推荐）：配置文件会像普通 Chrome 窗口一样保留并发送第三方 Cookie，reCAPTCHA、hCaptcha 和 Cloudflare 会借此信任访问者，因此验证码更容易通过。开启：基于 Chrome 的配置文件会阻止它们。适用于更改后启动的配置文件。"
+    },
+    "checkBeforeLaunch": {
+      "title": "打开前检查配置文件",
+      "desc": "从“配置文件”页面打开配置文件之前，列出明显的不一致之处（系统、显卡、屏幕、语言、时区、WebRTC、失效的代理），并提供先行修复。"
+    },
+    "switchProxyOnBlock": {
+      "title": "网站拦截配置文件时切换代理",
+      "desc": "当网站让基于 Chrome 的配置文件停留在拦截或验证码页面时，通过代理的轮换链接获取新 IP，或将配置文件切换到更好的备用代理，然后重新打开页面。每个配置文件每小时最多两次，并且在自动化或 Local API 使用它时绝不执行。每次拦截都会连同失败的代理一起记录。",
+      "toast": {
+        "blocked": "{{site}} 拦截了 {{profile}}（{{kind}}）。",
+        "rotated": "已为 {{proxy}} 获取新 IP 并重新加载页面。",
+        "switched": "已切换到 {{proxy}} 并重新打开页面。",
+        "notReopened": "已切换到 {{proxy}}，但配置文件未能重新打开。",
+        "none": {
+          "disabled": "“设置”中已关闭代理切换，因此未做任何更改。",
+          "noProxy": "此配置文件未使用已保存的代理，因此未做任何更改。",
+          "busy": "自动化或 Local API 正在使用此配置文件，因此未做任何更改。",
+          "limit": "此配置文件在过去一小时内已切换 {{limit}} 次，因此未做任何更改。",
+          "proxyPool": "此配置文件使用轮换代理池，因此未做任何更改。",
+          "noSpare": "没有表现更好的备用代理，因此未做任何更改。",
+          "noPermission": "你的角色无法更改此配置文件的代理，因此未做任何更改。",
+          "signedOut": "当前没有人登录，因此未做任何更改。",
+          "inProgress": "此配置文件的切换已在进行中。",
+          "failed": "切换失败，因此未做任何更改。"
+        },
+        "kind": {
+          "googleSorry": "Google 异常流量页面",
+          "rateLimit": "请求过多",
+          "cloudflare": "Cloudflare 验证",
+          "datadome": "DataDome 拦截",
+          "accessDenied": "拒绝访问页面",
+          "perimeterx": "PerimeterX 拦截",
+          "unknown": "拦截页面"
+        }
+      }
+    },
+    "lockExtensions": {
+      "title": "禁止安装/移除扩展程序",
+      "desc": "在基于 Chrome 的配置文件中，扩展程序页面和 Chrome 应用商店一打开就会被关闭，因此无法添加、移除或关闭扩展程序。你从 SoftGlaze 的“扩展程序”页面安装的扩展程序仍会加载。适用于更改后启动的配置文件。"
+    },
+    "virtualCamera": {
+      "title": "虚拟摄像头",
+      "desc": "将本地视频模拟为实时摄像头画面。仅适用于 Chrome 140 及以上版本。"
+    },
+    "mobileSimulation": {
+      "title": "移动设备模拟优化",
+      "desc": "使界面更接近真实移动设备的体验。仅适用于 Chrome 143 及以上版本。"
+    },
+    "secureAccess": {
+      "title": "安全访问（HTTPS）",
+      "desc": "尽可能使用 HTTPS，并在加载非 HTTPS 网站前发出警告。"
+    },
+    "disableVideos": {
+      "title": "停用视频加载",
+      "desc": "阻止媒体下载以节省代理流量。"
+    },
+    "disableImages": {
+      "title": "停用图片加载",
+      "desc": "阻止图片加载以节省流量。注意：图片加载会被完全停用；下方的 KB 阈值会被保存，供将来按请求过滤时使用。",
+      "skipUnder": "跳过小于以下大小的图片",
+      "kb": "KB"
+    },
+    "antidetectEngine": {
+      "title": "原生指纹引擎（fingerprint-chromium）",
+      "desc": "在 fingerprint-chromium 上启动 Chrome 配置文件。这是一个修改了源代码的 Chromium，会在二进制层面应用每个配置文件的指纹设置（canvas、WebGL、音频、UA、平台、时区），隐藏 navigator.webdriver 和 HeadlessChrome UA，并原生阻止 WebRTC 真实 IP 泄露，不存在可被网站察觉的 JS 注入时序问题。需要 fingerprint-chromium 二进制文件；如果不存在，则回退到标准 Chrome。此引擎去除了页面到应用桥接过去所依赖的 CDP 绑定，因此 SoftGlaze 改为通过无绑定通道传递这些调用：数据保险库自动填充、宏录制器、起始页链接和会话镜像都能在其上正常工作。默认关闭；开启后请重新启动配置文件。"
+    }
+  },
+  "performance": {
+    "title": "性能",
+    "description": "用于同时启动大量配置文件的控制项，适用于批量启动和运行会话上限。",
+    "parallelLimit": {
+      "title": "并行启动上限",
+      "desc": "批量启动时同时启动的配置文件数量。数值越高速度越快，但占用内存越多。推荐 3-8。"
+    },
+    "maxRunning": {
+      "title": "最多运行的配置文件",
+      "desc": "同时运行的配置文件的硬性上限（内存安全）。设为 0 表示不限制；超过上限的启动会被阻止，并显示明确提示。"
+    }
+  },
+  "reliability": {
+    "title": "可靠性",
+    "description": "恢复上次的会话、恢复崩溃的配置文件，并在大量配置文件同时运行时防止内存耗尽。",
+    "restoreSession": {
+      "title": "启动时恢复上次的会话",
+      "desc": "SoftGlaze 重新打开时，提示重新启动上次关闭或崩溃时正在运行的配置文件。"
+    },
+    "autoRestart": {
+      "title": "自动重启崩溃的配置文件",
+      "desc": "如果配置文件的浏览器自行崩溃，会自动重新启动。每个配置文件都有次数上限，避免反复崩溃的配置文件陷入循环。",
+      "maxRetries": "每个配置文件的最大重试次数"
+    },
+    "memoryGuard": {
+      "title": "内存保护",
+      "desc": "当系统内存不足时，自动关闭最早运行的配置文件，直到内存恢复。默认关闭：除非启用，否则绝不会关闭配置文件。",
+      "triggerBelow": "可用内存低于以下值时触发",
+      "stopWhenReaches": "可用内存达到以下值时停止"
+    }
+  },
+  "smartAutofill": {
+    "title": "智能自动填充",
+    "description": "身份数据保险库小组件，可在已启动的配置文件中检测注册表单，并使用你保存的人设进行填充。",
+    "enable": {
+      "title": "启用智能自动填充",
+      "desc": "将自动填充小组件注入已启动的配置文件。在 Chromium 上使用页内桥接；关闭后将完全跳过注入。"
+    },
+    "firefox": {
+      "title": "Firefox 自动填充",
+      "desc": "同时将自动填充 WebExtension 安装到 Firefox 配置文件中（Firefox 没有页内桥接）。在 Firefox Developer Edition/Nightly 上以未签名方式加载；正式版 Firefox 需要安装程序附带的 Mozilla 签名版本。"
+    },
+    "members": {
+      "title": "团队成员可在自动填充中使用数据保险库",
+      "desc": "关闭（默认）：已启动配置文件中的自动填充按钮仅在所有者登录时提供数据保险库中的身份。开启：管理员、经理和操作员也可以使用这些身份，但无法打开数据保险库页面。只有所有者可以更改此项。"
+    }
+  },
+  "audit": {
+    "title": "审计日志",
+    "description": "团队活动和安全事件（成员变更、登录、权限编辑）在启动时被清理前的保留时长。",
+    "retentionTitle": "保留期限",
+    "retentionDesc": "SoftGlaze 启动时会删除早于此期限的活动。设为 0 则永久保留全部历史。",
+    "days": "天"
+  },
+  "updates": {
+    "title": "更新",
+    "description": "检查并安装应用更新。更新在安装前会验证签名。",
+    "checkDefault": "检查是否有更新版本的 SoftGlaze Browser。",
+    "notEnabled": "此版本未启用自动更新。",
+    "checking": "正在检查更新…",
+    "available": "有可用更新 {{version}}，正在后台下载…",
+    "downloading": "正在下载 {{version}}… {{percent}}%",
+    "ready": "更新 {{version}} 已准备好安装。",
+    "errorWithReason": "无法检查更新：{{reason}}",
+    "errorNoReason": "无法检查更新。",
+    "upToDate": "你使用的已是最新版本。",
+    "installRestart": "安装并重启",
+    "checkForUpdates": "检查更新"
+  },
+  "onStartup": {
+    "title": "启动时",
+    "description": "启动配置文件时执行的操作。",
+    "startPageLabel": "起始页",
+    "modeDetection": "显示代理/指纹检测页面",
+    "modeLast": "继续浏览上次打开的页面",
+    "modeBlank": "不启动代理检测页面（空白页）",
+    "onlyWithProxy": {
+      "title": "仅在代理可用时打开",
+      "desc": "如果找不到代理，浏览器将不会打开。（否则基于 IP 的指纹项将无法匹配。）"
+    },
+    "onlyWhenExtensionLoaded": {
+      "title": "仅在扩展程序数据加载后打开",
+      "desc": "只有在扩展程序数据成功加载后才打开浏览器。"
+    },
+    "blockIfCountryChanged": {
+      "title": "国家/地区变化时阻止打开",
+      "desc": "如果国家/地区与上次打开时不同，则不打开配置文件。"
+    }
+  },
+  "captcha": {
+    "title": "验证码自动识别",
+    "description": "在浏览过程中使用付费的第三方识别服务，自动完成 reCAPTCHA v2 和 hCaptcha。这与指纹无关：干净的指纹可以减少验证码出现的频率，但要识别验证码，需要使用按次计费的付费服务（由服务商计费，而非 SoftGlaze）。",
+    "enable": {
+      "title": "启用验证码自动识别",
+      "desc": "开启后，已启动的配置文件会检测受支持的验证码，并自动提交给你的识别服务。"
+    },
+    "providerLabel": "识别服务商",
+    "apiKeyLabel": "API 密钥",
+    "apiKeyPlaceholderAnticaptcha": "Anti-Captcha clientKey",
+    "apiKeyPlaceholder2captcha": "2captcha API 密钥",
+    "billedAnticaptcha": "本地存储在你的设置数据库中。Anti-Captcha 会按识别次数向你收费。",
+    "billed2captcha": "本地存储在你的设置数据库中。2captcha 会按识别次数向你收费。",
+    "solveRecaptchaV2": "识别 reCAPTCHA v2",
+    "solveHcaptcha": "识别 hCaptcha"
+  },
+  "email": {
+    "title": "邮件（验证码）",
+    "configured": "已配置",
+    "offlineMode": "离线模式",
+    "description": "用于在注册时发送一次性验证码的 SMTP。留空则以离线模式运行，验证码将在应用内显示，而不是通过邮件发送。",
+    "smtpHost": "SMTP 主机",
+    "port": "端口",
+    "encryption": "加密",
+    "username": "用户名",
+    "password": "密码",
+    "passwordSavedHint": "（已保存，留空则保持不变）",
+    "fromName": "发件人名称",
+    "saved": "邮件设置已保存。",
+    "saveFailed": "无法保存邮件设置。",
+    "noSmtpYet": "尚未配置 SMTP，请先保存设置。",
+    "testSent": "测试邮件已发送至 {{to}}。",
+    "testFailed": "测试失败，请检查设置。",
+    "saveButton": "保存邮件设置",
+    "test": "测试"
+  },
+  "errors": {
+    "loadSettings": "无法加载设置。",
+    "closeSession": "无法关闭会话。",
+    "updateScheduler": "无法更新计划。",
+    "loadGlobal": "无法加载全局设置。",
+    "saveSetting": "无法保存设置。"
+  }
+}

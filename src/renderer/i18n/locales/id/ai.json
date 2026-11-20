@@ -1,0 +1,627 @@
+{
+  "title": "SoftGlaze AI",
+  "beta": "Beta",
+  "description": "Biarkan aplikasi AI seperti Claude, Cursor, dan ChatGPT bekerja dengan profil Anda. Anda yang menentukan seberapa sering perubahan perlu persetujuan, dan semuanya dicatat.",
+  "loading": "Memuat SoftGlaze AI…",
+  "refresh": "Muat ulang",
+  "retry": "Coba lagi",
+  "learnMore": "Baca panduan",
+  "opensInBrowser": "(terbuka di browser Anda)",
+  "copy": "Salin",
+  "copied": "Disalin",
+  "copyFailed": "Tidak bisa menyalin. Pilih teksnya dan salin secara manual.",
+  "cancel": "Batal",
+  "close": "Tutup",
+  "save": "Simpan",
+  "saving": "Menyimpan…",
+  "saved": "Tersimpan",
+  "saveFailed": "Tidak tersimpan",
+  "never": "Belum pernah",
+  "unknown": "Tidak diketahui",
+  "roles": {
+    "OWNER": "Pemilik",
+    "ADMIN": "Admin",
+    "MANAGER": "Manajer",
+    "OPERATOR": "Operator",
+    "SUPER_ADMIN": "Super Admin"
+  },
+  "states": {
+    "unavailableTitle": "SoftGlaze AI tidak tersedia di build ini",
+    "unavailableBody": "Versi SoftGlaze Browser ini belum menyertakan server AI. Server AI hadir lewat pembaruan. Tidak ada masalah dengan ruang kerja Anda.",
+    "forbiddenTitle": "Hanya Pemilik atau Admin yang bisa mengelola SoftGlaze AI",
+    "forbiddenBody": "Minta akses ke Pemilik ruang kerja. Saat aplikasi AI memakai token yang bertindak sebagai Anda, permintaannya tetap muncul untuk Anda izinkan atau tolak, di halaman mana pun.",
+    "errorTitle": "SoftGlaze AI tidak bisa dimuat"
+  },
+  "header": {
+    "switchLabel": "Server SoftGlaze AI",
+    "switchShort": "Server AI",
+    "on": "Aktif",
+    "off": "Mati",
+    "turningOn": "Mengaktifkan…",
+    "turningOff": "Mematikan…",
+    "stopAll": "Hentikan semua AI",
+    "toggleError": "Tidak bisa mengubah server AI: {{message}}"
+  },
+  "status": {
+    "server": "Server AI",
+    "running": "Berjalan",
+    "error": "Tidak berjalan",
+    "off": "Mati",
+    "offHint": "Aktifkan agar aplikasi AI bisa terhubung.",
+    "errorHint": "Aktif tetapi tidak berjalan: {{message}}",
+    "errorHintNoMessage": "Aktif tetapi tidak berjalan. Port mungkin sedang dipakai; ubah di Pengaturan.",
+    "apps": "Aplikasi terhubung",
+    "appsNone": "Belum ada aplikasi yang terhubung",
+    "appSeen": "{{name}} · {{when}}",
+    "appsMore_other": "dan {{count}} lagi",
+    "waiting": "Menunggu Anda",
+    "waitingNone": "Tidak ada yang perlu dijawab",
+    "waitingSome_other": "{{count}} permintaan perlu dijawab",
+    "openApprovals": "buka Persetujuan",
+    "sessions": "Sesi AI berjalan",
+    "sessionsHint": "Dimulai oleh aplikasi AI"
+  },
+  "tabs": {
+    "label": "Bagian SoftGlaze AI",
+    "connect": "Hubungkan",
+    "tokens": "Token",
+    "approvals": "Persetujuan",
+    "activity": "Aktivitas",
+    "memory": "Memori",
+    "prompts": "Prompt",
+    "settings": "Pengaturan",
+    "waiting": "menunggu"
+  },
+  "stop": {
+    "title": "Hentikan semua AI?",
+    "body": "Gunakan ini jika aplikasi AI melakukan sesuatu yang tidak Anda harapkan.",
+    "point1": "Setiap proses dan profil yang dimulai aplikasi AI langsung berhenti.",
+    "point2": "Setiap aplikasi AI yang terhubung diputus, dan panggilan yang sedang berjalan dibatalkan.",
+    "point3": "Setiap permintaan yang menunggu jawaban Anda ditolak.",
+    "point4": "SoftGlaze AI dimatikan. Token tetap berlaku; aktifkan lagi saat Anda siap.",
+    "confirm": "Hentikan semua AI",
+    "error": "Tidak bisa menghentikan semuanya: {{message}}",
+    "result": "Selesai. Proses dihentikan: {{runs}}. Profil dihentikan: {{profiles}}. Panggilan dibatalkan: {{calls}}. Sesi diakhiri: {{sessions}}. Permintaan ditolak: {{approvals}}.",
+    "nowOff": "SoftGlaze AI mati. Aplikasi AI tidak bisa terhubung sampai Anda mengaktifkannya.",
+    "turnOn": "Aktifkan"
+  },
+  "start": {
+    "title": "Mulai dalam tiga langkah",
+    "step1": "Aktifkan server AI",
+    "step2": "Buat token untuk aplikasi AI Anda",
+    "step3": "Hubungkan aplikasi AI Anda",
+    "done": "Selesai",
+    "turnOn": "Aktifkan"
+  },
+  "connect": {
+    "loadError": "Tidak bisa memuat pengaturan untuk aplikasi AI: {{message}}",
+    "empty": "Belum ada pengaturan untuk ditampilkan",
+    "emptyOn": "Server AI tidak mengirim pengaturan. Coba Muat ulang.",
+    "emptyBody": "Aktifkan server AI untuk melihat cara menghubungkan tiap aplikasi.",
+    "appsLabel": "Aplikasi AI",
+    "guide": "Panduan lengkap",
+    "appDocs": "Dokumentasi aplikasi",
+    "where": "Letaknya",
+    "steps": "Cara menghubungkan",
+    "kind": {
+      "command": "Perintah",
+      "json": "JSON",
+      "toml": "TOML",
+      "n8n": "Workflow"
+    },
+    "snippet": "Pengaturan untuk {{app}}",
+    "placeholderHint": "<YOUR_TOKEN> adalah tempat token Anda. Token hanya terlihat sekali, saat Anda membuatnya.",
+    "noSnippet": "Aplikasi ini tidak punya pengaturan siap pakai. Ikuti langkah di atas.",
+    "createToken": "Buat token untuk aplikasi ini",
+    "createTokenHint": "Beri setiap aplikasi token sendiri. Dengan begitu Anda bisa melihat apa yang dilakukan tiap aplikasi dan mematikan satu tanpa menyentuh yang lain.",
+    "installGuide": "Panduan pemasangan",
+    "mcpb": {
+      "title": "Pasang di Claude Desktop: unduh softglaze-browser.mcpb",
+      "download": "Unduh softglaze-browser.mcpb",
+      "body": "Klik dua kali file itu, atau di Claude Desktop buka Settings > Extensions > Advanced settings > Install Extension. Claude Desktop meminta token dan port Anda; pakai port yang tertera di halaman ini. Chat Claude Desktop dan Cowork sama-sama memakainya."
+    },
+    "claudeCode": {
+      "pluginTitle": "Pasang plugin SoftGlaze (disarankan)",
+      "pluginBody": "Jalankan satu per satu di dalam Claude Code. softglaze-browser menambahkan skill; softglaze-browser-connector menambahkan alat SoftGlaze serta meminta token dan port Anda. Konektor memerlukan Node.js 18 atau lebih baru.",
+      "desktopNote": "Chat Claude Desktop dan Cowork memakai softglaze-browser.mcpb (lihat Claude Desktop).",
+      "manualTitle": "Atau tambahkan server sendiri (tanpa Node.js)"
+    },
+    "envVar": {
+      "title": "Simpan token untuk Codex",
+      "body": "Codex membaca token dari variabel lingkungan bernama SOFTGLAZE_TOKEN. Jalankan ini sekali dengan token Anda, lalu buka terminal baru.",
+      "windows": "Windows (Command Prompt atau PowerShell)",
+      "unix": "macOS atau Linux (tambahkan ke profil shell Anda)"
+    },
+    "bridge": {
+      "title": "Jembatan untuk aplikasi yang menjalankan program lokal",
+      "body": "Beberapa aplikasi tidak bisa terhubung ke alamat web. Aplikasi itu menjalankan jembatan SoftGlaze, dan jembatan meneruskan semuanya ke server AI di PC ini. Token sama, persetujuan sama.",
+      "unavailable": "Jembatan tidak disertakan di build ini.",
+      "mcpb": "File pasang sekali klik untuk Claude Desktop",
+      "command": "Perintah",
+      "args": "Argumen",
+      "env": "Variabel lingkungan"
+    },
+    "clients": {
+      "claude-desktop": {
+        "where": "Settings > Developer > Edit Config (claude_desktop_config.json), lalu mulai ulang Claude Desktop. Claude Desktop menjalankan server lokal lewat stdio, jadi ini menjalankan jembatan SoftGlaze. Lebih mudah: pasang softglaze-browser.mcpb ({{mcpb}}), yang meminta token dan port Anda dan juga melayani Cowork.",
+        "title": "Claude Desktop",
+        "step1": "Buat token untuk Claude Desktop dengan tombol di bawah.",
+        "step2": "Paling mudah: unduh softglaze-browser.mcpb dengan tombol di bawah, klik dua kali, lalu tempel token Anda saat Claude Desktop memintanya. Atau buka Settings > Developer > Edit Config dan tempel pengaturan ke claude_desktop_config.json, dengan token Anda menggantikan <YOUR_TOKEN>.",
+        "step2NoMcpb": "Buka Settings > Developer > Edit Config dan tempel pengaturan ke claude_desktop_config.json, dengan token Anda menggantikan <YOUR_TOKEN>. Pengaturan ini menjalankan jembatan SoftGlaze, karena Claude Desktop menjalankan server lokal.",
+        "step3": "Jika Anda mengedit file konfigurasi, tutup lalu buka lagi Claude Desktop. SoftGlaze muncul di tombol + di bawah kotak chat, di Connectors."
+      },
+      "claude-code": {
+        "where": "Tanpa plugin: jalankan di terminal. Tambahkan --scope user untuk memakai SoftGlaze di semua proyek. Pakai plugin atau perintah ini, jangan keduanya.",
+        "title": "Claude Code",
+        "step1": "Buat token untuk Claude Code dengan tombol di bawah.",
+        "step2": "Pasang plugin SoftGlaze dengan perintah di bawah dan tempel token Anda saat Claude Code memintanya. Atau jalankan perintah lebih bawah, dengan token Anda menggantikan <YOUR_TOKEN>. Pakai satu cara, jangan keduanya.",
+        "step3": "Ketik /mcp di Claude Code. SoftGlaze seharusnya tampil terhubung (plugin:softglaze-browser-connector:softglaze bila memakai plugin)."
+      },
+      "cursor": {
+        "where": "~/.cursor/mcp.json (semua proyek) atau .cursor/mcp.json di sebuah proyek. Agar token tidak ada di file, gunakan \"Bearer ${env:SOFTGLAZE_TOKEN}\".",
+        "title": "Cursor",
+        "step1": "Buat token untuk Cursor dengan tombol di bawah.",
+        "step2": "Buka ~/.cursor/mcp.json (atau .cursor/mcp.json di satu proyek) dan tempel pengaturan, dengan token Anda menggantikan <YOUR_TOKEN>.",
+        "step3": "Di pengaturan Cursor, pastikan SoftGlaze tercantum dan aktif. Lalu minta chat menampilkan daftar profil SoftGlaze Anda."
+      },
+      "vscode": {
+        "where": ".vscode/mcp.json di workspace Anda, atau jalankan \"MCP: Open User Configuration\". VS Code meminta token sekali dan menyimpannya dengan aman, jadi token tidak pernah ada di file.",
+        "title": "VS Code (Copilot)",
+        "step1": "Buat token untuk VS Code dengan tombol di bawah.",
+        "step2": "Tambahkan pengaturan ke .vscode/mcp.json di workspace Anda (atau jalankan MCP: Open User Configuration). Saat SoftGlaze pertama kali berjalan, VS Code meminta token Anda dan menyimpannya dengan aman, jadi token tidak pernah ada di file.",
+        "step3": "Buka Copilot Chat dan minta menampilkan daftar profil SoftGlaze Anda. Izinkan alatnya saat VS Code bertanya."
+      },
+      "gemini-cli": {
+        "where": "~/.gemini/settings.json (gabungkan ke file), atau jalankan: gemini mcp add --transport http -s user --header \"Authorization: Bearer <YOUR_TOKEN>\" softglaze {{mcp}}",
+        "title": "Gemini CLI",
+        "step1": "Buat token untuk Gemini CLI dengan tombol di bawah.",
+        "step2": "Tambahkan pengaturan di dalam \"mcpServers\" di ~/.gemini/settings.json, dengan token Anda menggantikan <YOUR_TOKEN>. Biarkan \"trust\" mati: SoftGlaze tetap bertanya sebelum setiap perubahan.",
+        "step3": "Jalankan gemini dan ketik /mcp. SoftGlaze dan alat-alatnya seharusnya tercantum."
+      },
+      "codex": {
+        "where": "~/.codex/config.toml (dipakai bersama aplikasi desktop ChatGPT, Codex CLI, dan ekstensi IDE). Atur dulu variabel lingkungan SOFTGLAZE_TOKEN ke token Anda (Windows: setx SOFTGLAZE_TOKEN \"<YOUR_TOKEN>\"), lalu mulai ulang aplikasi.",
+        "title": "ChatGPT desktop / Codex",
+        "step1": "Buat token untuk Codex dengan tombol di bawah, lalu simpan di variabel lingkungan SOFTGLAZE_TOKEN (perintah di bawah).",
+        "step2": "Tambahkan pengaturan ke ~/.codex/config.toml. Codex membaca token dari SOFTGLAZE_TOKEN, jadi file tidak pernah menyimpannya.",
+        "step3": "Buka terminal baru, jalankan Codex, dan ketik /mcp. SoftGlaze seharusnya tercantum."
+      },
+      "windsurf": {
+        "where": "~/.codeium/windsurf/mcp_config.json, lalu muat ulang server MCP. Devin Desktop (nama baru Windsurf) memakai ~/.config/devin/mcp_config.json dengan \"url\" dan \"transport\": \"http\" sebagai ganti \"serverUrl\".",
+        "title": "Windsurf",
+        "step1": "Buat token untuk Windsurf dengan tombol di bawah.",
+        "step2": "Tempel pengaturan ke file konfigurasi MCP Windsurf (lihat Letaknya), dengan token Anda menggantikan <YOUR_TOKEN>.",
+        "step3": "Muat ulang server MCP di Windsurf dan pastikan SoftGlaze tercantum."
+      },
+      "cline": {
+        "where": "Cline: MCP Servers > Configure (cline_mcp_settings.json).",
+        "title": "Cline",
+        "step1": "Buat token untuk Cline dengan tombol di bawah.",
+        "step2": "Di Cline, buka MCP Servers > Configure dan tempel pengaturan ke cline_mcp_settings.json, dengan token Anda menggantikan <YOUR_TOKEN>.",
+        "step3": "Pastikan SoftGlaze tampil terhubung di daftar MCP Servers Cline."
+      },
+      "n8n": {
+        "where": "Di node MCP Client Tool: SSE Endpoint seperti di bawah, Authentication \"Bearer\", dan token Anda sebagai kredensial. Jika n8n berjalan di Docker Desktop, gunakan host.docker.internal sebagai ganti 127.0.0.1 dan tambahkan host.docker.internal ke Nama host tambahan yang diizinkan di pengaturan SoftGlaze AI. Untuk workflow tanpa pengawasan, gunakan token otomatisasi (alat yang disetujui dulu, dibatasi ke grup).",
+        "title": "n8n"
+      },
+      "other": {
+        "where": "Klien MCP apa pun yang mendukung Streamable HTTP dengan header. Klien yang hanya mendukung transport HTTP+SSE lama memakai URL SSE. Klien yang hanya menjalankan perintah lokal memakai jembatan SoftGlaze (lihat Claude Desktop).",
+        "title": "Aplikasi lain",
+        "step1": "Buat token untuk aplikasi itu dengan tombol di bawah.",
+        "step2": "Buka pengaturan MCP aplikasi dan tambahkan server dengan alamat ini dan header Authorization: Bearer, spasi, lalu token Anda.",
+        "step3": "Jika aplikasi hanya bisa menjalankan program lokal (stdio), gunakan jembatan SoftGlaze di bawah sebagai ganti alamat."
+      },
+      "custom": {
+        "step1": "Buat token untuk aplikasi ini dengan tombol di bawah.",
+        "step2": "Tempel pengaturan di tempat aplikasi menyimpan server MCP-nya, dengan token Anda menggantikan <YOUR_TOKEN>.",
+        "step3": "Mulai ulang aplikasi dan pastikan SoftGlaze tercantum di pengaturan MCP atau alatnya."
+      }
+    },
+    "n8n": {
+      "subtitle": "Jalankan SoftGlaze dari workflow n8n di PC ini.",
+      "selfHosted": "n8n harus berjalan di PC ini (npx atau Docker). n8n Cloud belum bisa menjangkau PC Anda.",
+      "noPort": "Aktifkan server AI untuk melihat alamat n8n.",
+      "a": {
+        "title": "Biarkan AI Agent n8n memakai SoftGlaze",
+        "step1": "Tambahkan node AI Agent, lalu tambahkan node MCP Client Tool sebagai salah satu alatnya.",
+        "step2": "Atur SSE Endpoint ke alamat di bawah. Jika n8n berjalan di Docker, gunakan alamat Docker.",
+        "step3": "Atur Authentication ke Bearer dan tempel token Anda. Di Tools to Include, pilih All atau hanya alat yang Anda butuhkan.",
+        "sse": "Endpoint SSE (n8n di PC ini)",
+        "sseDocker": "Endpoint SSE (n8n di Docker)",
+        "dockerNote": "Untuk Docker, tambahkan juga host.docker.internal di Nama host tambahan yang diizinkan di tab Pengaturan."
+      },
+      "b": {
+        "title": "Langkah tetap dengan node HTTP Request",
+        "body": "Untuk langkah yang tidak pernah berubah, seperti membuka satu profil pukul 9:00, node HTTP Request bisa memanggil Local API secara langsung. Kirim token di header Authorization.",
+        "kind": "HTTP Request"
+      },
+      "c": {
+        "title": "Gunakan token Otomatisasi untuk workflow terjadwal",
+        "body": "Workflow yang berjalan terjadwal tidak punya siapa pun untuk mengklik Izinkan. Token Otomatisasi menyetujui lebih dulu hanya alat yang Anda pilih, hanya untuk grup yang Anda pilih, dengan batas per panggilan dan per jam. Selebihnya tetap bertanya.",
+        "create": "Buat token Otomatisasi",
+        "ownerOnly": "Hanya Pemilik yang bisa membuat token Otomatisasi."
+      }
+    },
+    "devtools": {
+      "title": "Pakai profil dengan Playwright MCP atau Chrome DevTools MCP (lanjutan)",
+      "subtitle": "Serahkan profil Chromium yang berjalan ke klien DevTools dari luar.",
+      "ownerOnly": "Khusus pemilik",
+      "warning": "Situs web bisa mendeteksi debugger dari luar. Playwright MCP dan Chrome DevTools MCP terhubung sebagai klien DevTools kedua dan mengirim perintah sendiri, yang bisa disadari skrip anti-bot. Profil bisa ditandai atau diblokir. Alat halaman milik SoftGlaze sendiri tidak melakukan ini. Siapa pun di komputer ini yang punya alamat di bawah bisa mengendalikan profil selama berjalan.",
+      "intro": "Gunakan ini untuk hal yang tidak dilakukan alat halaman SoftGlaze, seperti trace performa atau log jaringan dan konsol di situs Anda sendiri, dan gunakan profil uji. Ini Anda yang bertindak di aplikasi, terpisah dari mode Ahli, yang menentukan apa yang boleh diminta aplikasi AI.",
+      "profile": "Profil yang berjalan",
+      "loading": "Memuat profil yang berjalan…",
+      "loadError": "Tidak bisa memuat profil yang berjalan: {{message}}",
+      "choose": "Pilih profil yang berjalan",
+      "option": "{{name}} (#{{id}}) · Chromium",
+      "optionFirefox": "{{name}} (#{{id}}) · Firefox: profil Firefox tidak punya endpoint DevTools",
+      "empty": "Buka profil Chromium dulu.",
+      "openProfiles": "Buka Profil",
+      "stopped": "Profil ini ({{name}}) berhenti. Alamatnya tidak berlaku lagi.",
+      "address": "Alamat DevTools",
+      "hiddenLabel": "Alamat DevTools, tersembunyi sampai Anda menekan Tampilkan",
+      "show": "Tampilkan",
+      "showLabel": "Tampilkan alamat DevTools {{name}}",
+      "hide": "Sembunyikan",
+      "addressNote": "Baru setiap kali profil dibuka. Hanya berlaku di komputer ini selama profil berjalan.",
+      "noAddress": "SoftGlaze tidak mendapat alamat DevTools untuk profil ini. Hentikan dan buka lagi, lalu coba lagi.",
+      "setup": "Pengaturan",
+      "toolsLabel": "Server MCP",
+      "clientsLabel": "Aplikasi AI",
+      "where": {
+        "claude-code": "Jalankan di terminal di folder proyek Anda. Alamat berubah setiap kali profil dibuka, jadi jalankan dulu claude mcp remove {{name}}, lalu perintah ini lagi.",
+        "claude-desktop": "Settings > Developer > Edit Config (claude_desktop_config.json): tambahkan ini di bawah \"mcpServers\", lalu tutup dan buka lagi Claude Desktop. Perbarui alamat setiap kali dibuka.",
+        "cursor": "~/.cursor/mcp.json (semua proyek) atau .cursor/mcp.json di satu proyek. Perbarui alamat setiap kali dibuka.",
+        "vscode": ".vscode/mcp.json di workspace Anda, atau jalankan MCP: Open User Configuration. Perbarui alamat setiap kali dibuka."
+      },
+      "snippet": "Pengaturan {{tool}} untuk {{app}}",
+      "pressShow": "Tekan Tampilkan untuk melihat pengaturan dengan alamat profil ini.",
+      "usageStats": "Matikan statistik pemakaian Chrome DevTools MCP",
+      "usageStatsHint": "Menambahkan --no-usage-statistics. Tanpanya, Chrome DevTools MCP mengirim statistik pemakaian ke Google.",
+      "footer": "Setelah selesai, tutup server MCP, lalu hentikan profil.",
+      "guide": "Panduan: Playwright MCP dan Chrome DevTools MCP"
+    }
+  },
+  "scope": {
+    "read": {
+      "title": "Hanya baca",
+      "body": "Bisa melihat profil, proxy, grup, dan aktivitas. Tidak bisa mengubah atau memulai apa pun."
+    },
+    "operate": {
+      "title": "Operasikan",
+      "body": "Juga bisa membuat dan membuka profil, menjalankan makro, dan bekerja di dalam halaman. Perubahan tetap meminta persetujuan Anda dulu, sesuai Pengaturan. Pilih ini dengan sengaja."
+    },
+    "full": {
+      "title": "Penuh",
+      "body": "Semua yang ada di Operasikan, plus alat ahli saat mode Ahli aktif. Hanya untuk aplikasi yang benar-benar Anda percayai."
+    }
+  },
+  "create": {
+    "title": "Buat token",
+    "titleFor": "Buat token untuk {{app}}",
+    "description": "Token memungkinkan satu aplikasi AI terhubung. Token bertindak sebagai anggota tim Anda dan hanya bisa melakukan apa yang boleh dilakukan anggota itu.",
+    "revealTitle": "Token baru Anda",
+    "revealDescription": "Salin ke aplikasi AI Anda sekarang.",
+    "name": "Nama",
+    "nameHint": "Sebutkan aplikasi dan komputernya, agar mudah dikenali nanti.",
+    "namePlaceholder": "Claude Desktop di PC saya",
+    "member": "Bertindak sebagai",
+    "memberHint": "AI bekerja sebagai anggota ini, dengan izin dan profil anggota ini.",
+    "you": "Anda",
+    "scope": "Yang boleh dilakukan",
+    "expiry": "Berakhir setelah",
+    "expiryNever": "Tidak pernah",
+    "expiryDays_other": "{{count}} hari",
+    "expiryNeverWarn": "Token yang tidak pernah berakhir tetap berlaku sampai Anda mencabutnya.",
+    "profiles": "Profil yang boleh dipakai",
+    "profilesAll": "Semua",
+    "profilesSome": "Hanya beberapa grup",
+    "profilesAllHint": "Semua profil yang bisa dibuka anggota.",
+    "profilesSomeHint": "Hanya profil di grup yang Anda centang.",
+    "noGroups": "Belum ada grup. Buat dulu di halaman Grup.",
+    "pickGroups": "Grup",
+    "submit": "Buat token",
+    "onceWarning": "Salin token ini sekarang. SoftGlaze hanya menampilkannya kali ini. Jika hilang, cabut lalu buat yang baru.",
+    "yourToken": "Token",
+    "filledSetup": "Pengaturan untuk {{app}}, dengan token Anda sudah terisi",
+    "n8nHint": "Di n8n, atur Authentication ke Bearer dan tempel token ini.",
+    "claudeCodeHint": "Memasang plugin SoftGlaze? Tempel token ini saat Claude Code memintanya ketika memasang softglaze-browser-connector. Perintah di atas adalah cara tanpa plugin.",
+    "claudeDesktopHint": "Memasang softglaze-browser.mcpb? Tempel token ini saat Claude Desktop memintanya. Pengaturan di atas adalah cara tanpa ekstensi.",
+    "acknowledge": "Saya sudah menyimpan token ini di tempat aman",
+    "closeWarning": "Salin token atau centang kotaknya dulu. Anda tidak bisa melihat token ini lagi.",
+    "done": "Selesai"
+  },
+  "errors": {
+    "nameRequired": "Masukkan nama.",
+    "nameTooLong": "Nama maksimal {{max}} karakter.",
+    "memberRequired": "Pilih anggota.",
+    "scopeRequired": "Pilih yang boleh dilakukan token.",
+    "expiryRequired": "Pilih kapan berakhir.",
+    "groupsRequired": "Centang setidaknya satu grup, atau pilih Semua.",
+    "groupsRequiredAutomation": "Token Otomatisasi harus dibatasi ke grup. Centang setidaknya satu grup.",
+    "toolNotAllowed": "Salah satu alat tidak bisa disetujui lebih dulu.",
+    "limitRange": "Masukkan bilangan bulat dari {{min}} sampai {{max}}.",
+    "create": "Token tidak dibuat.",
+    "noToken": "Server AI tidak mengembalikan token. Coba lagi.",
+    "createFailed": "Token tidak dibuat: {{message}}"
+  },
+  "automation": {
+    "title": "Token otomatisasi (untuk n8n, jadwal, dan skrip)",
+    "ownerOnly": "Khusus pemilik",
+    "count_other": "{{count}} disetujui lebih dulu",
+    "intro": "Untuk workflow yang berjalan tanpa Anda, pilih alat yang boleh berjalan tanpa bertanya.",
+    "needsOperate": "Pilih Operasikan atau Penuh di atas untuk menyetujui alat lebih dulu.",
+    "warning": "Alat ini akan berjalan tanpa bertanya kepada Anda. Alat tetap dibatasi ke grup yang dipilih, dicatat, dan berhenti dengan Hentikan semua AI.",
+    "tools": "Alat yang berjalan tanpa bertanya",
+    "destructive": "Tidak bisa dibatalkan",
+    "groups": {
+      "profiles": "Profil",
+      "sessions": "Buka dan hentikan",
+      "proxies": "Proxy",
+      "groups": "Grup",
+      "automation": "Otomatisasi",
+      "page": "Di dalam halaman",
+      "other": "Lainnya"
+    },
+    "maxProfiles": "Maks profil per panggilan",
+    "maxProfilesHint": "Bawaan 5, hingga 50.",
+    "maxCalls": "Maks panggilan per jam",
+    "maxCallsHint": "Bawaan 60, hingga 1000.",
+    "groupsNote": "Alat yang disetujui lebih dulu hanya berlaku di grup yang dicentang di Profil yang boleh dipakai. Alat lain tetap bertanya kepada Anda."
+  },
+  "tools": {
+    "create_profile": "Buat profil",
+    "update_profile": "Ubah profil (nama, grup, tag, catatan, halaman awal, proxy)",
+    "batch_generate_profiles": "Buat banyak profil sekaligus",
+    "start_profile": "Buka profil",
+    "stop_profile": "Hentikan profil",
+    "assign_proxy": "Pasang proxy ke profil",
+    "rotate_proxy_ip": "Ambil IP baru dari proxy",
+    "find_free_proxies": "Cari dan uji proxy gratis",
+    "create_group": "Buat grup",
+    "move_profiles_to_group": "Pindahkan profil ke grup",
+    "save_macro": "Simpan makro",
+    "run_macro": "Jalankan makro",
+    "stop_run": "Hentikan proses",
+    "start_warmer": "Mulai pemanasan",
+    "page_navigate": "Buka halaman web",
+    "page_snapshot": "Baca struktur halaman",
+    "page_click": "Klik di halaman",
+    "page_type": "Ketik di halaman",
+    "page_press_key": "Tekan tombol di halaman",
+    "page_scroll": "Gulir halaman",
+    "page_screenshot": "Ambil tangkapan layar",
+    "page_extract_text": "Salin teks dari halaman",
+    "page_wait_for": "Tunggu sesuatu di halaman"
+  },
+  "tokens": {
+    "search": "Cari token",
+    "showRevoked": "Tampilkan token yang dicabut",
+    "showRevokedCount_other": "Tampilkan {{count}} yang dicabut",
+    "create": "Buat token",
+    "intro": "Setiap aplikasi AI terhubung dengan tokennya sendiri. Token bertindak sebagai satu anggota dan bisa dibatasi ke beberapa grup. Cabut token untuk langsung memutus aplikasi itu.",
+    "loadError": "Tidak bisa memuat token: {{message}}",
+    "emptyTitle": "Belum ada token",
+    "emptyBody": "Buat token, lalu tempel ke aplikasi AI Anda. Tab Hubungkan menunjukkan letaknya.",
+    "caption": "Token AI",
+    "colName": "Nama",
+    "colMember": "Bertindak sebagai",
+    "colScope": "Akses",
+    "colGroups": "Profil",
+    "colExpires": "Berakhir",
+    "colLastUsed": "Terakhir dipakai",
+    "colActions": "Aksi",
+    "state": {
+      "revoked": "Dicabut",
+      "expired": "Kedaluwarsa",
+      "expiring": "Segera berakhir"
+    },
+    "automation_other": "Otomatisasi · {{count}} disetujui lebih dulu",
+    "allProfiles": "Semua profil",
+    "groupsMore_other": "{{names}} dan {{count}} lagi",
+    "neverUsed": "Belum dipakai",
+    "revoke": "Cabut",
+    "revokeAria": "Cabut {{name}}",
+    "noMatch": "Tidak ada token yang cocok.",
+    "revokeTitle": "Cabut “{{name}}”?",
+    "revokeBody": "Aplikasi AI yang memakai token ini langsung kehilangan akses. Ini tidak bisa dibatalkan.",
+    "revokeError": "Tidak bisa mencabut token: {{message}}"
+  },
+  "approval": {
+    "eyebrow": "Permintaan AI",
+    "eyebrowMany": "Permintaan AI {{position}} dari {{total}}",
+    "title": "{{app}} meminta izin",
+    "tokenOnly": "Token: {{token}}",
+    "tokenAndMember": "Token: {{token}} · bertindak sebagai {{member}}",
+    "noSummary": "Jalankan alat {{tool}}",
+    "unknownApp": "Sebuah aplikasi AI",
+    "timeLeft": "tersisa untuk menjawab. Tanpa jawaban, permintaan ditolak.",
+    "timeLeftHint": "Sisa waktu sebelum permintaan ditolak",
+    "timeLeftSr": "{{time}} tersisa sebelum permintaan ditolak",
+    "secondsLeftAnnounce": "{{seconds}} detik tersisa untuk menjawab permintaan AI",
+    "showDetails": "Tampilkan detail",
+    "hideDetails": "Sembunyikan detail",
+    "tool": "Alat",
+    "token": "Token",
+    "argsLabel": "Detail permintaan",
+    "noArgs": "Permintaan ini tidak punya detail tambahan.",
+    "redactedNote": "Kata sandi dan rahasia lain disembunyikan di sini.",
+    "deny": "Tolak",
+    "allowHour": "Izinkan 1 jam",
+    "allowHourHint": "Jangan tanya lagi untuk jenis aksi ini dari {{token}} selama satu jam ke depan.",
+    "allowOnce": "Izinkan sekali",
+    "footnote": "SoftGlaze bertanya di dalam aplikasi, apa pun pengaturan aplikasi AI itu sendiri. Setiap jawaban dicatat di Aktivitas.",
+    "later": "Putuskan nanti (ditolak saat waktu habis)",
+    "respondError": "Jawaban Anda tidak tersimpan: {{message}}",
+    "waitingChip_other": "{{count}} permintaan AI menunggu",
+    "timedOut": "Permintaan dari {{app}} kehabisan waktu dan ditolak.",
+    "gone": "Permintaan itu sudah dijawab atau dibatalkan."
+  },
+  "approvals": {
+    "intro": "Setiap aksi yang mengubah sesuatu menunggu di sini sampai Anda menjawab. Permintaan tanpa jawaban ditolak setelah 2 menit. Permintaan yang sama juga muncul di halaman mana pun.",
+    "changeRules": "Ubah kapan SoftGlaze bertanya",
+    "emptyTitle": "Tidak ada yang menunggu Anda",
+    "emptyBody": "Saat aplikasi AI ingin mengubah sesuatu, permintaannya muncul di sini dan sebagai pop-up di halaman mana pun.",
+    "listLabel": "Permintaan yang menunggu Anda",
+    "meta": "{{app}} · token {{token}} · {{when}}",
+    "actsAs": "bertindak sebagai {{member}}"
+  },
+  "activity": {
+    "search": "Cari alat, permintaan, atau token",
+    "outcome": "Hasil",
+    "all": "Semua",
+    "outcomes": {
+      "ok": "OK",
+      "denied": "Ditolak",
+      "error": "Kesalahan",
+      "pending": "Menunggu"
+    },
+    "app": "Aplikasi",
+    "allApps": "Semua aplikasi",
+    "loadError": "Tidak bisa memuat aktivitas: {{message}}",
+    "noMatchTitle": "Tidak ada yang cocok dengan filter ini",
+    "noMatchBody": "Coba hasil, aplikasi, atau pencarian lain.",
+    "emptyTitle": "Belum ada aktivitas AI",
+    "emptyBody": "Semua yang dilakukan aplikasi AI lewat SoftGlaze tercantum di sini: apa yang diminta, jawaban Anda, dan hasilnya.",
+    "caption": "Aktivitas AI",
+    "colTime": "Waktu",
+    "colApp": "Aplikasi dan token",
+    "colTool": "Alat",
+    "colSummary": "Yang terjadi",
+    "colOutcome": "Hasil",
+    "colDuration": "Durasi",
+    "approval": {
+      "none": "Tidak perlu persetujuan",
+      "asked": "Bertanya kepada Anda",
+      "pre-approved": "Disetujui lebih dulu",
+      "allow-once": "Diizinkan sekali",
+      "allow-hour": "Anda izinkan 1 jam",
+      "hour-grant": "Diizinkan 1 jam",
+      "deny": "Ditolak oleh Anda",
+      "timeout": "Tidak dijawab dalam 2 menit",
+      "cancelled": "Dihentikan oleh Hentikan semua AI",
+      "started-by-this-token": "Profil yang dibuka aplikasi ini",
+      "developer-token": "Token API developer"
+    },
+    "pageEmpty": "Tidak ada entri lagi.",
+    "runId": "Proses",
+    "pageInfo": "Halaman {{page}} · {{size}} per halaman",
+    "newer": "Lebih baru",
+    "older": "Lebih lama"
+  },
+  "memory": {
+    "title": "Memori ruang kerja",
+    "description": "Catatan yang dibaca setiap aplikasi AI sebelum mulai: cara Anda menamai sesuatu, fungsi tiap grup, aturan proxy, jam kerja, dan hal yang tidak boleh dilakukan. Markdown biasa.",
+    "updated": "Tersimpan {{when}}",
+    "loadError": "Tidak bisa memuat memori: {{message}}",
+    "editorLabel": "Memori ruang kerja (Markdown)",
+    "placeholder": "Tulis catatan untuk aplikasi AI di sini, dalam Markdown.",
+    "usage": "{{used}} KB dari {{limit}} KB · {{chars}} karakter",
+    "over": "Melebihi batas. Persingkat untuk menyimpan.",
+    "discard": "Buang perubahan",
+    "reset": "Kembalikan bawaan",
+    "unsaved": "Perubahan belum disimpan",
+    "tip": "Tips: tekan Ctrl+S untuk menyimpan. Buat singkat dan spesifik: aplikasi AI membaca semuanya setiap kali.",
+    "guidesTitle": "Panduan bawaan",
+    "guidesDescription": "SoftGlaze juga memberi setiap aplikasi AI panduan ini. Panduan ini hanya baca.",
+    "resetTitle": "Kembalikan memori ke bawaan?",
+    "resetBody": "Catatan Anda diganti dengan template SoftGlaze. Ini tidak bisa dibatalkan.",
+    "guides": {
+      "howItWorks": {
+        "title": "Cara kerja SoftGlaze",
+        "body": "Profil, fingerprint, proxy, grup, sesi, makro, dan batas paket, serta cara memakai alat dengan baik."
+      },
+      "acceptableUse": {
+        "title": "Penggunaan yang diizinkan",
+        "body": "Untuk apa SoftGlaze boleh dan tidak boleh dipakai. Aplikasi AI diminta menolak apa pun yang dilarang."
+      }
+    },
+    "readGuide": "Baca panduan",
+    "hideGuide": "Sembunyikan",
+    "guideReadOnly": "Hanya baca. Selalu diperbarui oleh SoftGlaze."
+  },
+  "prompts": {
+    "loadError": "Tidak bisa memuat prompt: {{message}}",
+    "emptyTitle": "Belum ada prompt",
+    "emptyBody": "Prompt siap pakai muncul di sini saat server AI tersedia.",
+    "search": "Cari prompt",
+    "listLabel": "Prompt",
+    "noMatch": "Tidak ada prompt yang cocok.",
+    "inClaudeCode": "Di Claude Code:",
+    "arguments": "Detail yang Anda isi",
+    "noArguments": "Prompt ini tidak perlu detail.",
+    "argName": "Nama",
+    "argRequired": "Diperlukan",
+    "argDescription": "Artinya",
+    "required": "Wajib",
+    "optional": "Opsional",
+    "text": "Teks prompt",
+    "howTitle": "Cara memakai prompt",
+    "howIntro": "Prompt adalah tugas siap pakai. Aplikasi AI Anda mengisi detailnya dan menjalankannya dengan SoftGlaze.",
+    "howClaudeCode": "ketik / lalu pilih prompt softglaze.",
+    "howClaudeDesktop": "klik + di bawah kotak chat dan cari SoftGlaze.",
+    "howVsCode": "ketik / di Copilot Chat lalu pilih prompt SoftGlaze.",
+    "howCursor": "jika prompt tidak tercantum, salin teks di bawah.",
+    "howOther": "Aplikasi apa pun: salin teks prompt, tempel ke chat, lalu isi detailnya."
+  },
+  "settings": {
+    "loadError": "Tidak bisa memuat pengaturan: {{message}}",
+    "ownerOnly": "Khusus pemilik",
+    "ownerOnlyHint": "Hanya Pemilik ruang kerja yang bisa mengubah ini.",
+    "remove": "Hapus {{value}}",
+    "approvals": {
+      "title": "Kapan SoftGlaze bertanya kepada Anda",
+      "description": "SoftGlaze bertanya di dalam aplikasi sebelum aplikasi AI melakukan sesuatu, apa pun pengaturan aplikasi AI itu sendiri.",
+      "read": {
+        "title": "Alat hanya baca",
+        "body": "Melihat profil, proxy, grup, dan aktivitas."
+      },
+      "operate": {
+        "title": "Alat operasi",
+        "body": "Membuat dan membuka profil, menjalankan makro, bekerja di dalam halaman."
+      },
+      "full": {
+        "title": "Alat penuh",
+        "body": "Alat ahli, hanya saat mode Ahli aktif."
+      },
+      "alwaysAsk": "Beberapa aksi selalu bertanya setiap kali, seperti membuka atau menghentikan banyak profil sekaligus, dan alat ahli."
+    },
+    "modes": {
+      "never": "Jangan pernah tanya",
+      "ask-hour": "Tanya sekali per jam",
+      "ask-always": "Selalu tanya"
+    },
+    "domains": {
+      "title": "Situs yang boleh dikerjakan AI",
+      "description": "Alat halaman (membuka halaman, klik, ketik, membaca teks) hanya bekerja di situs dalam daftar ini dan subdomainnya.",
+      "placeholder": "example.com",
+      "invalid": "Masukkan nama situs seperti example.com.",
+      "empty": "Belum ada situs. Alat halaman boleh membuka situs apa pun, dan Anda tetap ditanya lebih dulu.",
+      "add": "Tambah situs"
+    },
+    "hosts": {
+      "title": "Nama host tambahan yang diizinkan",
+      "description": "Server AI hanya menjawab permintaan yang ditujukan ke 127.0.0.1. Untuk n8n atau alat lain yang berjalan di Docker, tambahkan host.docker.internal.",
+      "invalid": "Masukkan nama host seperti host.docker.internal, tanpa port atau path.",
+      "empty": "Tidak ada. Hanya 127.0.0.1 yang diizinkan.",
+      "add": "Tambah host"
+    },
+    "expert": {
+      "title": "Mode Ahli",
+      "description": "Memungkinkan aplikasi AI mengambil alih profil yang berjalan dengan Playwright, Puppeteer, atau Chrome DevTools.",
+      "warning": "Bisa terdeteksi. Alat dari luar mengendalikan browser dengan cara yang bisa dikenali situs web, jadi profil bisa ditandai atau diblokir. Mati secara default. Khusus pemilik.",
+      "switch": "Mode Ahli",
+      "isOn": "Aktif. Aplikasi AI dengan token Penuh bisa meminta mengambil alih profil yang berjalan. Setiap kali selalu bertanya kepada Anda.",
+      "isOff": "Mati. Tidak ada aplikasi AI yang bisa mengambil alih profil yang berjalan.",
+      "confirmTitle": "Aktifkan mode Ahli?",
+      "confirmBody": "Aplikasi AI dengan token Penuh lalu bisa meminta mengendalikan profil yang berjalan secara langsung. Situs web bisa mendeteksi ini, dan akun di profil itu bisa ditandai.",
+      "confirm": "Aktifkan",
+      "ack": "Saya mengerti bahwa ini bisa terdeteksi dan profil bisa ditandai."
+    },
+    "port": {
+      "title": "Port server",
+      "description": "Aplikasi AI terhubung ke http://127.0.0.1 di port ini.",
+      "label": "Port",
+      "invalid": "Gunakan angka dari {{min}} sampai {{max}}.",
+      "hint": "Setelah mengubahnya, perbarui alamat di setiap aplikasi AI yang terhubung. Tab Hubungkan menampilkan pengaturan yang baru."
+    }
+  }
+}

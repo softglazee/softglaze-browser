@@ -1,0 +1,107 @@
+{
+  "palette": {
+    "dialogLabel": "کمانڈ پیلیٹ",
+    "searchPlaceholder": "پیجز، پروفائلز، پراکسیز، ممبرز تلاش کریں…",
+    "searchAriaLabel": "پیجز، پروفائلز، پراکسیز اور ممبرز تلاش کریں",
+    "resultsLabel": "نتائج",
+    "esc": "Esc",
+    "noMatches": "کچھ نہیں ملا۔",
+    "nav": {
+      "dashboard": "ڈیش بورڈ",
+      "ai": "SoftGlaze AI",
+      "profiles": "پروفائلز",
+      "groups": "گروپس",
+      "proxies": "پراکسی پول",
+      "freeProxies": "مفت پراکسیز",
+      "proxyProviders": "پراکسی پرووائیڈرز",
+      "browsers": "براؤزرز",
+      "extensions": "ایکسٹینشنز",
+      "batchImport": "بیچ امپورٹ",
+      "trash": "ٹریش",
+      "automation": "آٹومیشن",
+      "members": "ممبرز",
+      "account": "اکاؤنٹ",
+      "settings": "سیٹنگز"
+    },
+    "hint": {
+      "page": "پیج",
+      "profile": "پروفائل",
+      "proxy": "پراکسی",
+      "member": "ممبر",
+      "action": "ایکشن"
+    },
+    "fallback": {
+      "profile": "پروفائل #{{id}}",
+      "proxy": "پراکسی #{{id}}",
+      "member": "ممبر #{{id}}"
+    },
+    "action": {
+      "stopAi": "تمام AI روکیں"
+    }
+  },
+  "wizard": {
+    "skipTitle": "سیٹ اپ چھوڑیں",
+    "back": "واپس",
+    "skip": "چھوڑیں",
+    "saveAndContinue": "محفوظ کر کے آگے بڑھیں",
+    "saveAndFinish": "محفوظ کر کے ختم کریں",
+    "msg": {
+      "smtpSaved": "SMTP محفوظ ہو گیا۔",
+      "proxySaved": "پراکسی محفوظ ہو گئی۔"
+    },
+    "err": {
+      "smtpSaveFailed": "SMTP سیٹنگز محفوظ نہیں ہو سکیں۔",
+      "proxySaveFailed": "پراکسی محفوظ نہیں ہو سکی۔",
+      "profileCreateFailed": "پروفائل نہیں بن سکا۔"
+    },
+    "welcome": {
+      "title": "SoftGlaze میں خوش آمدید",
+      "subtitle": "3 آسان مراحل کا سیٹ اپ آپ کو پہلے پروفائل تک لے جاتا ہے۔ آپ کوئی بھی مرحلہ چھوڑ سکتے ہیں۔",
+      "subtitleShort_one": "بس ایک آسان مرحلہ۔ آپ اسے چھوڑ سکتے ہیں۔",
+      "subtitleShort_other": "{{count}} آسان مراحل کا سیٹ اپ۔ آپ کوئی بھی مرحلہ چھوڑ سکتے ہیں۔",
+      "unavailable": "ہلکے رنگ والے مراحل چھوڑ دیے جائیں گے: آپ کا اکاؤنٹ انہیں نہیں کر سکتا۔",
+      "getStarted": "شروع کریں",
+      "stepEmail": "ای میل (SMTP) - اختیاری، OTP کوڈز کے لیے",
+      "stepProxy": "آپ کی پہلی پراکسی - اختیاری",
+      "stepProfile": "آپ کا پہلا براؤزر پروفائل"
+    },
+    "smtp": {
+      "title": "ای میل (SMTP)",
+      "subtitle": "اختیاری - ایپ کو تصدیقی کوڈز بھیجنے دیتا ہے۔ آپ اسے بعد میں سیٹنگز میں سیٹ کر سکتے ہیں۔",
+      "host": "SMTP ہوسٹ",
+      "hostPlaceholder": "smtp.example.com",
+      "port": "پورٹ",
+      "portPlaceholder": "587",
+      "username": "یوزر نیم",
+      "usernamePlaceholder": "you@example.com",
+      "password": "پاس ورڈ",
+      "passwordPlaceholder": "••••••••"
+    },
+    "proxy": {
+      "title": "اپنی پہلی پراکسی شامل کریں",
+      "subtitle": "اختیاری - ہر پرسونا کو اس کا اپنا نیٹ ورک دیں۔ آپ پراکسی پول میں مزید شامل کر سکتے ہیں۔",
+      "type": "قسم",
+      "host": "ہوسٹ",
+      "hostPlaceholder": "1.2.3.4",
+      "port": "پورٹ",
+      "portPlaceholder": "8080",
+      "user": "یوزر",
+      "userPlaceholder": "اختیاری",
+      "password": "پاس ورڈ",
+      "passwordPlaceholder": "اختیاری"
+    },
+    "profile": {
+      "title": "اپنا پہلا پروفائل بنائیں",
+      "subtitle": "آپ کے لیے ایک منفرد اور اندرونی طور پر ہم آہنگ فنگر پرنٹ بنایا جاتا ہے۔",
+      "createAndFinish": "بنائیں اور ختم کریں",
+      "name": "پروفائل کا نام",
+      "namePlaceholder": "میرا پہلا پروفائل",
+      "defaultName": "میرا پہلا پروفائل",
+      "deviceType": "ڈیوائس کی قسم",
+      "desktop": "ڈیسک ٹاپ",
+      "mobile": "موبائل (Android)",
+      "mobileNote": "Android کو ڈیسک ٹاپ انجن پر ایمولیٹ کیا جاتا ہے - ہم آہنگ UA، ٹچ، اسکرین اور GPU، لیکن اصل ڈیوائس نہیں۔",
+      "proxyAttached": "آپ کی نئی پراکسی اس پروفائل سے منسلک کر دی جائے گی۔"
+    }
+  }
+}

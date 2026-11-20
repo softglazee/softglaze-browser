@@ -1,0 +1,281 @@
+{
+  "common": {
+    "back": "Wstecz",
+    "redeem": "Zrealizuj",
+    "go": "Dalej"
+  },
+  "remember": {
+    "label": "Nie wylogowuj mnie na tym urządzeniu",
+    "unavailable": "To urządzenie nie może bezpiecznie zapisać logowania (szyfrowanie systemowe jest niedostępne), więc przy następnym uruchomieniu trzeba będzie zalogować się ponownie."
+  },
+  "brand": {
+    "tagline": "Wieloprofilowa",
+    "bullets": {
+      "fingerprints": "Unikalne, spójne odciski przeglądarki dla każdego profilu",
+      "proxy": "Osobne proxy dla każdej tożsamości",
+      "localFirst": "Najpierw lokalnie - obszar roboczy jest przechowywany na tym urządzeniu"
+    },
+    "heroLine1": "Prowadź setki tożsamości.",
+    "heroLine2": "Każdą trzymaj osobno.",
+    "heroBody": "Lokalna przeglądarka wieloprofilowa dla zespołów. Każdy profil ma własne pliki cookie, pamięć, proxy i ustawienia odcisku przeglądarki.",
+    "footer": "© {{year}} SoftGlaze · Lokalny obszar roboczy",
+    "trust": {
+      "local": "Najpierw lokalnie",
+      "encrypted": "Blokada obszaru",
+      "private": "Zero telemetrii"
+    },
+    "slides": {
+      "security": {
+        "title": "Solidne bezpieczeństwo danych",
+        "body": "Profile, pliki cookie i dane przeglądania pozostają na tym urządzeniu, a klucze 2FA i klucze dostawców są zabezpieczone systemowym pękiem kluczy."
+      },
+      "fingerprint": {
+        "title": "Spójne odciski przeglądarki",
+        "body": "Każdy profil ma unikalny, spójny odcisk przeglądarki: canvas, WebGL, czcionki, audio i sprzęt."
+      },
+      "proxy": {
+        "title": "Proxy dla każdej tożsamości",
+        "body": "Przypisz każdemu profilowi osobną tożsamość sieciową i rotuj ją bez obaw."
+      },
+      "automation": {
+        "title": "Automatyzacja, która oszczędza czas",
+        "body": "Rozgrzewaj pliki cookie, generuj profile masowo i zarządzaj wszystkim na dużą skalę."
+      }
+    }
+  },
+  "license": {
+    "machineMismatch": "Ta licencja jest zarejestrowana na innym komputerze. Przenieś ją na ten komputer lub poproś administratora o jej zresetowanie."
+  },
+  "pay": {
+    "noMethods": "Zakupy w aplikacji są wstrzymane, dopóki dodajemy nowego dostawcę płatności. Napisz na support@softglaze.com, aby kupić na fakturę, a potem wpisz kod zakupu.",
+    "submitted": "Płatność wysłana - administrator ją sprawdzi i wkrótce aktywuje Twój plan.",
+    "manualBadge": "Ręczna",
+    "continueTo": "Przejdź do {{label}}",
+    "openPaymentLink": "Otwórz link do płatności",
+    "referencePlaceholder": "Tytuł płatności / ID transakcji",
+    "submitForApproval": "Zapłaciłem - wyślij do zatwierdzenia"
+  },
+  "banned": {
+    "blockedHeading": "Twoje konto jest zablokowane",
+    "endedHeading": "Twoja subskrypcja wygasła",
+    "blockedBodyNamed": "{{name}}, Twoje konto zostało zablokowane przez administratora. Skontaktuj się z nim, aby przywrócić dostęp - Twoje dane są bezpieczne.",
+    "blockedBody": "Twoje konto zostało zablokowane przez administratora. Skontaktuj się z nim, aby przywrócić dostęp - Twoje dane są bezpieczne.",
+    "endedBodyNamed": "{{name}}, ta licencja nie jest już aktywna (zwrot, unieważnienie lub rejestracja na innym komputerze). Wybierz plan, aby odblokować obszar roboczy. Profile i dane są bezpieczne i czekają.",
+    "endedBody": "Ta licencja nie jest już aktywna (zwrot, unieważnienie lub rejestracja na innym komputerze). Wybierz plan, aby odblokować obszar roboczy. Profile i dane są bezpieczne i czekają.",
+    "haveCode": "Masz kod zakupu?",
+    "needHelp": "Potrzebujesz pomocy? Skontaktuj się z administratorem.",
+    "signOut": "Wyloguj się"
+  },
+  "register": {
+    "title": "Utwórz konto",
+    "subtitle": "To jest Twoje konto główne - właściciel obszaru roboczego.",
+    "firstName": "Imię",
+    "lastName": "Nazwisko",
+    "email": "E-mail",
+    "emailPlaceholder": "ty@firma.pl",
+    "phone": "Numer telefonu",
+    "phonePlaceholder": "+48 600 123 456",
+    "password": "Hasło",
+    "passwordPlaceholder": "min. 8 znaków",
+    "confirm": "Potwierdź",
+    "confirmPlaceholder": "Powtórz",
+    "continue": "Kontynuuj",
+    "storedLocally": "Zapisane lokalnie i zaszyfrowane na tym urządzeniu",
+    "haveAccount": "Masz już konto?",
+    "logIn": "Zaloguj się",
+    "consent": "Wysyłaj mi nowości o produkcie i porady",
+    "consentNote": "Kod, przypomnienia o okresie próbnym i e-maile dotyczące konta są wysyłane zawsze. Nowości o produkcie tylko po zaznaczeniu pola.",
+    "checkedByServer": "Wyślemy kod, aby potwierdzić ten adres. Profile i dane pozostają na tym urządzeniu.",
+    "phoneOptional": "Numer telefonu (opcjonalnie)",
+    "phoneIntlPlaceholder": "+48 22 123 45 67",
+    "phoneHint": "Zacznij od + i kodu kraju."
+  },
+  "verify": {
+    "title": "Zweryfikuj e-mail",
+    "subtitlePrefix": "Wpisz 6-cyfrowy kod wysłany na",
+    "subtitleSuffix": ".",
+    "devModePrefix": "Tryb deweloperski - e-maile nie są jeszcze wysyłane. Twój kod to",
+    "devModeSuffix": ".",
+    "verifyCreate": "Zweryfikuj i utwórz konto",
+    "resendIn": "Wyślij kod ponownie za {{count}} s",
+    "resend": "Wyślij kod ponownie",
+    "checkSpam": "Kod może dotrzeć dopiero po minucie. Jeśli go nie widzisz, sprawdź folder spam."
+  },
+  "lead": {
+    "useCase": "Do czego użyjesz SoftGlaze?",
+    "useCasePlaceholder": "Wybierz jedną opcję",
+    "useCases": {
+      "ecommerce": "Sklepy internetowe i marketplace'y",
+      "social_media": "Konta w mediach społecznościowych",
+      "affiliate_marketing": "Marketing afiliacyjny i zakup mediów",
+      "agency": "Praca agencji dla klientów",
+      "web_research": "Badania w sieci i QA",
+      "other": "Coś innego"
+    },
+    "useCaseOther": "Opisz to w kilku słowach",
+    "useCaseOtherPlaceholder": "Na przykład: sprawdzanie cen w różnych krajach",
+    "company": "Firma lub strona (opcjonalnie)",
+    "companyPlaceholder": "Acme sp. z o.o. lub acme.pl"
+  },
+  "confirm": {
+    "title": "Potwierdź e-mail",
+    "subtitle": "Każdy obszar roboczy SoftGlaze wymaga teraz potwierdzonego adresu e-mail. Sprawdź swoje dane, a wyślemy Ci 6-cyfrowy kod.",
+    "sendCode": "Wyślij kod",
+    "codeTitle": "Wpisz kod",
+    "codeBody": "Wysłaliśmy 6-cyfrowy kod na {{email}}. Wpisz go, aby potwierdzić e-mail tego obszaru roboczego.",
+    "confirmContinue": "Potwierdź i kontynuuj",
+    "changeDetails": "Zmień dane",
+    "dataNote": "Profile i dane pozostają na tym komputerze. Przechowujemy te dane, aby obsługiwać Twoje konto.",
+    "later": "Kontynuuj na razie",
+    "laterNote": "Nie udało się połączyć z naszym serwerem. Możesz teraz korzystać z aplikacji, a zapytamy ponownie przy następnym uruchomieniu.",
+    "memberTitle": "Właściciel musi potwierdzić ten obszar roboczy",
+    "memberBody": "Zanim będzie można korzystać z tego obszaru roboczego, jego właściciel musi potwierdzić swój e-mail. Poproś właściciela, aby się zalogował i to zrobił, lub zaloguj się jako właściciel.",
+    "signInAsOwner": "Zaloguj się jako właściciel"
+  },
+  "plan": {
+    "title": "Wszystko gotowe",
+    "subtitlePrefix": "Twoje konto jest gotowe, z",
+    "trialHighlight": "7-dniowym bezpłatnym okresem próbnym",
+    "subtitleSuffix": ". Zacznij teraz lub aktywuj płatny plan.",
+    "startTrialTitle": "Rozpocznij 7-dniowy okres próbny",
+    "startTrialSubtitle": "Bez płatności teraz - poznaj wszystko.",
+    "activatePaid": "Aktywuj płatny plan teraz",
+    "haveCode": "Masz kod zakupu?",
+    "skip": "Pomiń - rozpocznij okres próbny",
+    "tenantTitle": "Twoje konto jest gotowe",
+    "tenantSubtitle": "Rozpocznij bezpłatny okres próbny lub wybierz plan.",
+    "tenantTrialSubtitle": "Pełny dostęp, bez płatności. Jeden okres próbny na komputer i e-mail.",
+    "choosePlan": "Lub wybierz plan",
+    "verifyTitle": "Potwierdź e-mail",
+    "verifyBody": "Wysłaliśmy 6-cyfrowy kod na {{email}}. Wpisz go, aby rozpocząć bezpłatny okres próbny.",
+    "verifyStart": "Potwierdź i rozpocznij okres próbny",
+    "continueFreeTitle": "Kontynuuj w planie Free",
+    "continueFreeSubtitle": "Bezpłatny na zawsze: 25 profili, 1 uruchomiony naraz. Przejdź wyżej w dowolnym momencie.",
+    "trialUsedFree": "Bezpłatny okres próbny został już wykorzystany na tym komputerze lub e-mailu. Możesz dalej korzystać z planu Free."
+  },
+  "login": {
+    "welcomeBackNamed": "Witaj ponownie, {{name}}",
+    "welcomeBack": "Witaj ponownie",
+    "subtitle": "Zaloguj się, aby odblokować obszar roboczy.",
+    "email": "E-mail",
+    "password": "Hasło",
+    "forgot": "Nie pamiętasz?",
+    "passwordPlaceholder": "Hasło główne",
+    "forgotBody": "Hasła głównego nie da się odzyskać w instalacji lokalnej - nigdy nie opuszcza tego urządzenia. Jeśli je zgubisz, obszar roboczy trzeba zresetować w Ustawieniach.",
+    "signIn": "Zaloguj się",
+    "noAccount": "Nie masz konta?",
+    "newHere": "Nowy w SoftGlaze?",
+    "createOne": "Utwórz konto",
+    "haveInvite": "Masz kod zaproszenia?",
+    "teamSignIn": "Logowanie członka zespołu"
+  },
+  "invite": {
+    "title": "Zrealizuj zaproszenie",
+    "subtitle": "Wpisz otrzymany kod i ustaw hasło do swojego konta.",
+    "code": "Kod zaproszenia",
+    "codePlaceholder": "SG-XXXX-XXXX",
+    "yourName": "Twoje imię",
+    "optional": "(opcjonalnie)",
+    "namePlaceholder": "Imię i nazwisko",
+    "setPassword": "Ustaw hasło",
+    "passwordPlaceholder": "min. 6 znaków",
+    "join": "Dołącz do obszaru roboczego"
+  },
+  "member": {
+    "title": "Logowanie członka zespołu",
+    "subtitle": "Użyj e-maila/imienia i hasła ustawionych przy realizacji zaproszenia.",
+    "identifier": "E-mail lub imię",
+    "identifierPlaceholder": "ty@firma.pl",
+    "password": "Hasło",
+    "passwordPlaceholder": "Twoje hasło",
+    "signIn": "Zaloguj się",
+    "haveInviteInstead": "Masz zamiast tego kod zaproszenia?",
+    "redeemIt": "Zrealizuj go"
+  },
+  "super": {
+    "title": "Super Admin",
+    "access": "Dostęp Super Admina",
+    "setupSubtitlePrefix": "Pierwsza konfiguracja. Utwórz dane logowania Super Admina dla",
+    "setupSubtitleHighlight": "tej instalacji",
+    "setupSubtitleSuffix": "- są zapisane jako hash na tym urządzeniu i stanowią jedyną drogę wejścia, więc przechowuj je bezpiecznie.",
+    "username": "Nazwa użytkownika",
+    "usernamePlaceholder": "superadmin",
+    "password": "Hasło",
+    "setupPasswordPlaceholder": "Co najmniej 8 znaków",
+    "confirmPassword": "Potwierdź hasło",
+    "confirmPasswordPlaceholder": "Wpisz hasło ponownie",
+    "createCredentials": "Utwórz dane logowania",
+    "loginSubtitle": "Dostęp właściciela kodu. Pomija rejestrację i odblokowuje pełny obszar roboczy.",
+    "usernameOrEmail": "Nazwa użytkownika lub e-mail",
+    "loginPasswordPlaceholder": "Hasło",
+    "enterWorkspace": "Wejdź do obszaru roboczego"
+  },
+  "pick": {
+    "title": "Kto pracuje?",
+    "subtitle": "Wybierz swój profil członka, aby kontynuować.",
+    "pin": "PIN",
+    "suspended": "Zawieszony",
+    "pinPlaceholder": "Wpisz PIN",
+    "haveInvite": "Masz kod zaproszenia?",
+    "teamSignIn": "Logowanie członka zespołu"
+  },
+  "db": {
+    "title": "Odblokuj bazę danych",
+    "subtitle": "Baza danych tego obszaru roboczego jest zaszyfrowana. Wpisz hasło obszaru roboczego, aby ją odszyfrować i otworzyć.",
+    "workspacePassword": "Hasło obszaru roboczego",
+    "passwordPlaceholder": "Hasło obszaru roboczego",
+    "unlock": "Odblokuj",
+    "corrupted": "Jeśli masz pewność, że hasło jest poprawne, plik bazy może być uszkodzony. Możesz odzyskać dane, instalując aplikację ponownie i przywracając kopię zapasową (Ustawienia → Kopia zapasowa i przywracanie). Nie ma resetu hasła - dane można otworzyć tylko poprawnym hasłem."
+  },
+  "errors": {
+    "enterFirstLast": "Wpisz imię i nazwisko.",
+    "validEmail": "Wpisz poprawny adres e-mail.",
+    "validPhone": "Wpisz poprawny numer telefonu.",
+    "password8": "Hasło musi mieć co najmniej 8 znaków.",
+    "passwordsNoMatch": "Hasła nie są zgodne.",
+    "couldNotSendCode": "Nie udało się wysłać kodu weryfikacyjnego.",
+    "couldNotResendCode": "Nie udało się ponownie wysłać kodu.",
+    "enter6Digit": "Wpisz 6-cyfrowy kod.",
+    "verificationFailed": "Weryfikacja nie powiodła się.",
+    "incorrectPassword": "Nieprawidłowe hasło.",
+    "couldNotSignIn": "Nie udało się zalogować.",
+    "superSetupRequired": "Nie ustawiono jeszcze danych logowania Super Admina - utwórz je poniżej.",
+    "invalidSuperCredentials": "Nieprawidłowe dane logowania Super Admina.",
+    "couldNotCreateSuper": "Nie udało się utworzyć danych logowania Super Admina.",
+    "enterInviteCode": "Wpisz kod zaproszenia.",
+    "password6": "Hasło musi mieć co najmniej 6 znaków.",
+    "couldNotRedeemInvite": "Nie udało się zrealizować tego kodu zaproszenia.",
+    "enterEmailNamePassword": "Wpisz e-mail/imię i hasło.",
+    "enterPurchaseCode": "Wpisz kod zakupu.",
+    "invalidPurchaseCode": "Ten kod zakupu jest nieprawidłowy.",
+    "noPaymentMethod": "Nie ma jeszcze dostępnej metody płatności.",
+    "paymentNotStarted": "Nie udało się rozpocząć płatności.",
+    "couldNotSubmitPayment": "Nie udało się wysłać płatności.",
+    "enterWorkspacePassword": "Wpisz hasło obszaru roboczego.",
+    "dbStillLocked": "Baza danych jest nadal zablokowana - spróbuj ponownie.",
+    "dbMissing": "Brakuje zaszyfrowanego pliku bazy danych. Przywróć kopię zapasową obszaru roboczego, aby odzyskać dane.",
+    "dbUnlockFailed": "Nieprawidłowe hasło - lub plik jest uszkodzony.",
+    "couldNotUnlockDb": "Nie udało się odblokować bazy danych.",
+    "trialFailed": "Nie udało się rozpocząć bezpłatnego okresu próbnego."
+  },
+  "serverErrors": {
+    "SIGNUP_INVALID_EMAIL": "Wpisz poprawny adres e-mail.",
+    "SIGNUP_DISPOSABLE_EMAIL": "Użyj stałego adresu e-mail.",
+    "SIGNUP_NO_MX": "Nie znaleźliśmy serwera poczty dla tego adresu.",
+    "SIGNUP_BAD_CODE": "Ten kod jest błędny lub wygasł. Sprawdź e-mail lub poproś o nowy kod.",
+    "SIGNUP_OFFLINE": "Połącz się z internetem, aby utworzyć konto.",
+    "SIGNUP_FAILED": "Nie udało się teraz sprawdzić tego e-maila. Spróbuj ponownie za kilka minut.",
+    "RATE_LIMITED": "Zbyt wiele prób, spróbuj ponownie za kilka minut.",
+    "TRIAL_USED": "Bezpłatny okres próbny został już wykorzystany na tym komputerze lub e-mailu. Wybierz plan lub wpisz kod zakupu.",
+    "TRIAL_OFFLINE": "Połącz się z internetem, aby rozpocząć bezpłatny okres próbny.",
+    "TRIAL_VERIFY_EMAIL": "Potwierdź adres e-mail, aby rozpocząć bezpłatny okres próbny. Wysłaliśmy Ci 6-cyfrowy kod.",
+    "TRIAL_NO_EMAIL": "Najpierw dodaj adres e-mail do konta właściciela, potem rozpocznij bezpłatny okres próbny.",
+    "TRIAL_FAILED": "Nie udało się teraz rozpocząć bezpłatnego okresu próbnego. Spróbuj ponownie za kilka minut.",
+    "SERVER_UNAVAILABLE": "Nasz serwer licencji teraz nie odpowiada. Spróbuj ponownie za kilka minut.",
+    "MACHINE_MISMATCH": "Ta licencja jest zarejestrowana na innym komputerze. Przenieś ją na ten komputer lub poproś administratora o jej zresetowanie.",
+    "SIGNUP_INVALID_PHONE": "Wpisz numer telefonu z + i kodem kraju albo zostaw pole puste.",
+    "SIGNUP_USE_CASE": "Wybierz, do czego użyjesz SoftGlaze.",
+    "SIGNUP_USE_CASE_OTHER": "Opisz w kilku słowach, do czego użyjesz SoftGlaze.",
+    "CONFIRM_OFFLINE": "Połącz się z internetem, aby potwierdzić e-mail."
+  }
+}

@@ -1,0 +1,52 @@
+{
+  "header": {
+    "eyebrow": "企業倉庫",
+    "title": "擴充功能",
+    "summary_one": "已安裝 {{count}} 個擴充功能 · 對載入擴充功能的設定檔啟用了 {{enabled}} 個",
+    "summary_other": "已安裝 {{count}} 個擴充功能 · 對載入擴充功能的設定檔啟用了 {{enabled}} 個"
+  },
+  "stats": {
+    "total": "擴充功能總數",
+    "injected": "已啟用",
+    "disabled": "已停用"
+  },
+  "caveat": {
+    "before": "擴充功能不會新增到每個設定檔中。只有在設定檔編輯器的「進階」分頁中勾選了「載入 SoftGlaze 擴充功能（使用 Chrome for Testing）」的 Chromium 設定檔才會載入它們（預設關閉）。這些設定檔在啟動時透過 Chromium 的",
+    "middle": "參數掛載擴充功能，因此更改會在此類設定檔",
+    "nextLaunch": "下次啟動",
+    "after": "時生效。普通 Chrome 會忽略該參數，因此這些設定檔會使用 Chrome for Testing 版本開啟：請先在「瀏覽器」頁面下載一個版本，否則設定檔開啟時不會載入擴充功能。Firefox 設定檔不會載入它們。"
+  },
+  "importer": {
+    "title": "匯入到團隊",
+    "description": "貼上 Chrome 線上應用程式商店網址或其 32 位 ID，SoftGlaze 會下載並解壓真實的擴展包。",
+    "inputPlaceholder": "https://chromewebstore.google.com/detail/…  或  cjpalhdlnbpafiamejdnhcphjbkeiagm",
+    "submit": "匯入到團隊"
+  },
+  "installPhase": {
+    "downloading": "正在下載擴展包…",
+    "extracting": "正在解壓…",
+    "registering": "正在註冊…"
+  },
+  "permissionNotice": "只有管理員及以上角色可以管理團隊擴充功能。你可以檢視倉庫。",
+  "searchPlaceholder": "按名稱或 ID 搜尋…",
+  "empty": {
+    "loadErrorTitle": "無法載入擴充功能",
+    "noExtTitle": "還沒有擴充功能",
+    "noMatchTitle": "沒有符合搜尋條件的擴充功能",
+    "noExtDesc": "在上方匯入一個 Chrome 線上應用程式商店擴充功能，將其新增到團隊倉庫。它會在「進階」分頁中勾選了「載入 SoftGlaze 擴充功能」的設定檔中載入。",
+    "noMatchDesc": "請嘗試其他名稱或 ID。"
+  },
+  "card": {
+    "unpacked": "未打包的擴充功能",
+    "removeTitle": "從團隊中移除",
+    "injected": "已啟用",
+    "disabled": "已停用"
+  },
+  "confirmRemove": "從團隊倉庫中移除「{{name}}」？其本機檔案將被刪除。",
+  "errors": {
+    "couldNotLoad": "無法載入擴充功能。",
+    "installFailed": "安裝失敗。",
+    "couldNotUpdate": "無法更新該擴充功能。",
+    "couldNotRemove": "無法移除該擴充功能。"
+  }
+}

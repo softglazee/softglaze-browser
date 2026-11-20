@@ -1,0 +1,62 @@
+{
+  "header": {
+    "eyebrow": "Tài khoản của bạn",
+    "title": "Cài đặt tài khoản",
+    "description": "Quản lý ảnh đại diện, tên, email và mật khẩu."
+  },
+  "notice": {
+    "superAdmin": "Đây là phiên Super-Admin / chủ mã nguồn - không có bản ghi thành viên nào để sửa ở đây."
+  },
+  "fields": {
+    "fullName": "Họ và tên",
+    "fullNamePlaceholder": "Tên của bạn",
+    "email": "Email",
+    "newPassword": "Mật khẩu mới",
+    "newPasswordPlaceholder": "Để trống để giữ mật khẩu hiện tại",
+    "confirmPassword": "Xác nhận mật khẩu mới",
+    "confirmPasswordPlaceholder": "Nhập lại mật khẩu mới",
+    "verificationRequired": "cần xác minh"
+  },
+  "avatar": {
+    "alt": "ảnh đại diện",
+    "changeTitle": "Đổi ảnh",
+    "newSelected": "Đã chọn ảnh mới - hãy lưu để áp dụng.",
+    "notImage": "Vui lòng chọn một tệp ảnh.",
+    "tooLarge": "Ảnh này lớn hơn 2 MB. Hãy chọn ảnh nhỏ hơn.",
+    "readFailed": "Không đọc được ảnh này."
+  },
+  "verification": {
+    "banner": "Để đổi email hoặc mật khẩu, bạn cần mã 6 chữ số được gửi đến email hiện tại"
+  },
+  "actions": {
+    "save": "Lưu thay đổi",
+    "saving": "Đang lưu…",
+    "verifyAndSave": "Xác minh và lưu",
+    "discard": "Hủy bỏ"
+  },
+  "validation": {
+    "nameEmpty": "Tên không được để trống.",
+    "emailInvalid": "Hãy nhập địa chỉ email hợp lệ.",
+    "passwordTooShort": "Mật khẩu mới phải có ít nhất 8 ký tự.",
+    "passwordMismatch": "Mật khẩu không khớp."
+  },
+  "messages": {
+    "profileUpdated": "Đã cập nhật hồ sơ.",
+    "accountUpdated": "Đã cập nhật tài khoản."
+  },
+  "errors": {
+    "loadFailed": "Không tải được tài khoản của bạn.",
+    "saveFailed": "Không lưu được thay đổi."
+  },
+  "verify": {
+    "title": "Xác nhận đó là bạn",
+    "codeSentTo": "Đã gửi mã đến {{email}}",
+    "codeLabel": "Mã 6 chữ số",
+    "devMode": "Chế độ dev - chưa cấu hình email. Mã của bạn là",
+    "apply": "Xác minh và áp dụng",
+    "resend": "Gửi lại",
+    "enterCode": "Nhập mã 6 chữ số.",
+    "failed": "Xác minh thất bại.",
+    "resendFailed": "Không gửi lại được mã."
+  }
+}

@@ -1,0 +1,31 @@
+{
+  "brandSelect": {
+    "presentAs": "Tampilkan profil ini sebagai {{brand}}"
+  },
+  "versionSelect": {
+    "auto": "Otomatis",
+    "loadingVersions": "Memuat versi…",
+    "ready": "Siap",
+    "readyTitle": "Terpasang & siap dipakai",
+    "noVersions": "Tidak ada versi.",
+    "offlineError": "Offline: tidak bisa menjangkau katalog versi.",
+    "downloadFailed": "Unduhan gagal.",
+    "resumeFailed": "Gagal melanjutkan.",
+    "paused": "Dijeda",
+    "interrupted": "Terputus",
+    "resumeTitle": "{{state}} di {{percent}}%: lanjutkan",
+    "statusInstalling": "pasang",
+    "statusQueued": "…",
+    "retryTitle": "Coba lagi: {{error}}",
+    "downloadFailedShort": "unduhan gagal",
+    "downloadInstallTitle": "Unduh & pasang versi ini"
+  },
+  "pager": {
+    "showing": "Menampilkan {{from}}-{{to}} dari {{total}}",
+    "perPage": "Per halaman",
+    "all": "Semua",
+    "prev": "Sebelumnya",
+    "next": "Berikutnya",
+    "pageOf": "Halaman {{page}} / {{total}}"
+  }
+}

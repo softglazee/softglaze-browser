@@ -1,0 +1,56 @@
+{
+  "header": {
+    "eyebrow": "Espace de travail",
+    "title": "Corbeille et récupération",
+    "description": "Récupérez les profils supprimés ou effacez-les définitivement de votre stockage."
+  },
+  "actions": {
+    "emptyTrash": "Vider la corbeille",
+    "restore": "Restaurer",
+    "deleteForever": "Supprimer définitivement",
+    "clear": "Effacer",
+    "restoreTitle": "Restaurer le profil",
+    "purgeTitle": "Supprimer définitivement"
+  },
+  "errors": {
+    "loadFailed": "Impossible de charger la corbeille."
+  },
+  "warning": {
+    "title": "Suppression définitive",
+    "body": "La restauration remet le profil dans votre liste sans modification. La suppression définitive retire le profil et efface toutes ses données de navigateur (cookies, cache, identifiants) de cet ordinateur."
+  },
+  "toolbar": {
+    "searchPlaceholder": "Rechercher des profils supprimés..."
+  },
+  "bulk": {
+    "selected": "{{count}} sélectionné(s)"
+  },
+  "table": {
+    "profileName": "Nom du profil",
+    "proxy": "Proxy",
+    "deletedDate": "Date de suppression",
+    "actions": "Actions",
+    "directProxy": "Direct",
+    "defaultBrowser": "Chrome"
+  },
+  "empty": {
+    "title": "La corbeille est vide",
+    "noMatch": "Aucun profil supprimé ne correspond à votre recherche.",
+    "none": "Vous n'avez aucun profil supprimé. Tout est propre !"
+  },
+  "confirm": {
+    "purgeWithData": "Supprimer définitivement « {{title}} » ? Cette action est irréversible et ses données de navigateur locales seront effacées.",
+    "bulkPurgeWithData_one": "Supprimer définitivement {{count}} profil ? Cette action est irréversible et les données de navigateur locales seront effacées.",
+    "bulkPurgeWithData_other": "Supprimer définitivement {{count}} profils ? Cette action est irréversible et les données de navigateur locales seront effacées.",
+    "bulkPurgeWithData_many": "Supprimer définitivement {{count}} profils ? Cette action est irréversible et les données de navigateur locales seront effacées.",
+    "emptyTrashWithData_one": "Supprimer définitivement TOUS les profils de la corbeille ({{count}}) ? Cette action est irréversible et les données de navigateur locales seront effacées.",
+    "emptyTrashWithData_other": "Supprimer définitivement TOUS les {{count}} profils de la corbeille ? Cette action est irréversible et les données de navigateur locales seront effacées.",
+    "emptyTrashWithData_many": "Supprimer définitivement TOUS les {{count}} profils de la corbeille ? Cette action est irréversible et les données de navigateur locales seront effacées."
+  },
+  "pager": {
+    "showing": "Affichage {{from}}-{{to}} sur {{total}}",
+    "prev": "Préc.",
+    "next": "Suiv."
+  },
+  "bulkSkipped": "Non modifié(s) : {{count}} profil(s). {{reason}}"
+}

@@ -1,0 +1,203 @@
+{
+  "badgeTitle": "Ryzyko CAPTCHA {{score}}/100. Kliknij, aby zobaczyć przyczyny i poprawki.",
+  "title": "Wynik CAPTCHA",
+  "subtitle": "Jak często strony mogą wymagać weryfikacji od tego profilu i co to zmniejsza",
+  "outOf100": "na 100",
+  "level": {
+    "low": "Niskie ryzyko",
+    "some": "Średnie ryzyko",
+    "high": "Wysokie ryzyko",
+    "veryHigh": "Bardzo wysokie ryzyko"
+  },
+  "levelShort": {
+    "low": "Niskie",
+    "some": "Średnie",
+    "high": "Wysokie",
+    "veryHigh": "Bardzo wysokie"
+  },
+  "column": "Ryzyko CAPTCHA",
+  "issues_zero": "Nie znaleziono problemów",
+  "issues_one": "1 problem",
+  "issues_few": "{{count}} problemy",
+  "issues_many": "{{count}} problemów",
+  "issues_other": "{{count}} problemu",
+  "fixable_one": "Napraw wszystko obsługuje 1",
+  "fixable_few": "Napraw wszystko obsługuje {{count}}",
+  "fixable_many": "Napraw wszystko obsługuje {{count}}",
+  "fixable_other": "Napraw wszystko obsługuje {{count}}",
+  "leakTest": "Test wycieków",
+  "leakTestTitle": "Otwórz szczegółowy test wycieków, w tym test na żywo uruchomionego profilu",
+  "loadFailed": "Nie udało się ocenić tego profilu.",
+  "fixAll": "Napraw wszystko",
+  "fixAllTitle": "Zastosuj każdą poprawkę, która zmienia tylko ustawienia lub proxy tego profilu",
+  "rescore": "Oceń ponownie",
+  "done": "Gotowe",
+  "runningNote": "Ten profil jest otwarty. Zmiany zadziałają przy następnym uruchomieniu.",
+  "adviceOnly": "Zmień to w edytorze profilu; poprawka tutaj zmieniłaby urządzenie, które strony już znają.",
+  "status": {
+    "pass": "OK",
+    "warn": "Ryzyko",
+    "fail": "Wysokie ryzyko"
+  },
+  "fix": {
+    "assign-proxy": "Przypisz zapasowe proxy",
+    "swap-proxy": "Zmień na zapasowe proxy",
+    "check-proxy": "Sprawdź proxy teraz",
+    "tz-auto": "Użyj strefy czasowej proxy",
+    "lang-auto": "Użyj języka proxy",
+    "geo-auto": "Użyj lokalizacji proxy",
+    "webrtc-safe": "Ustaw WebRTC na Forward",
+    "allow-3p-cookies": "Zezwól na pliki cookie innych firm",
+    "warm-up": "Rozgrzej profil"
+  },
+  "result": {
+    "swapped": "Teraz używa {{name}}.",
+    "checked": "Proxy sprawdzone.",
+    "checkFailed": "Proxy nie przeszło testu: {{error}}",
+    "warming": "Rozgrzewanie rozpoczęte: profil otworzy się i odwiedzi kilka popularnych stron. Śledź to na stronie Automatyzacja.",
+    "cookies": "Pliki cookie innych firm są teraz dozwolone dla każdego profilu.",
+    "applied": "Gotowe."
+  },
+  "label": {
+    "proxy": "Proxy",
+    "proxyHealth": "Stan proxy",
+    "blocklist": "Listy antyspamowe",
+    "freeProxy": "Darmowe proxy",
+    "ipType": "Typ IP",
+    "sharedProxy": "Współdzielone proxy",
+    "timezone": "Strefa czasowa",
+    "language": "Język",
+    "geolocation": "Lokalizacja",
+    "webrtc": "WebRTC",
+    "thirdPartyCookies": "Pliki cookie innych firm",
+    "history": "Historia przeglądania",
+    "device": "Urządzenie",
+    "osMismatch": "System operacyjny"
+  },
+  "factor": {
+    "proxy": {
+      "pass": "Używa {{name}}.",
+      "warn": "Brak proxy: ten profil używa Twojego własnego połączenia, które dzieli każdy profil bez proxy."
+    },
+    "proxyHealth": {
+      "pass": "Przeszło ostatni test.",
+      "fail": "Nie przeszło ostatniego testu, więc strony nie ładują się lub pokazują błędy.",
+      "never": "Nigdy nie sprawdzono, więc stan i obecność na czarnych listach są nieznane.",
+      "stale": "Ostatnio sprawdzono {{days}} dni temu."
+    },
+    "blocklist": {
+      "pass": "Nie ma go na żadnej sprawdzonej liście antyspamowej.",
+      "warn": "Jeszcze nie sprawdzono na listach antyspamowych.",
+      "fail": "Wyjściowy adres IP jest na liście antyspamowej. Google i Cloudflare znacznie częściej wymagają weryfikacji od takich adresów."
+    },
+    "freeProxy": {
+      "fail": "Darmowe publiczne proxy. Większość jest oznaczona, więc spodziewaj się częstych CAPTCHA."
+    },
+    "ipType": {
+      "pass": "Sieć domowa lub komórkowa{{isp}}.",
+      "warn": "IP z centrum danych{{isp}}. Strony znacznie częściej wymagają weryfikacji od adresów firm hostingowych niż od domowych."
+    },
+    "sharedProxy": {
+      "msg_one": "1 inny profil używa tego proxy, więc dzielą jeden adres IP i mogą zostać powiązane.",
+      "msg_few": "{{count}} inne profile używają tego proxy, więc dzielą jeden adres IP i mogą zostać powiązane.",
+      "msg_many": "{{count}} innych profili używa tego proxy, więc dzielą jeden adres IP i mogą zostać powiązane.",
+      "msg_other": "{{count}} innego profilu używa tego proxy, więc dzielą jeden adres IP i mogą zostać powiązane."
+    },
+    "timezone": {
+      "pass": "Zgodna z IP proxy.",
+      "warn": "Ustawiona ręcznie ({{zone}}), więc może nie pasować do proxy.",
+      "fail": "Używa strefy czasowej tego komputera, która nie pasuje do kraju proxy."
+    },
+    "language": {
+      "pass": "Pasuje do kraju proxy.",
+      "warn": "Region języka {{region}} nie pasuje do kraju proxy {{country}}.",
+      "unverified": "Ustawiony ręcznie ({{lang}}); kraj proxy nie jest jeszcze znany, więc nie można ich porównać."
+    },
+    "geolocation": {
+      "pass": "Zgodna z IP proxy lub zablokowana.",
+      "warn": "Ustawiona ręcznie, więc może nie pasować do proxy."
+    },
+    "webrtc": {
+      "pass": "Tryb {{mode}} ukrywa Twój prawdziwy adres IP.",
+      "realNoProxy": "Real bez proxy: strony już widzą IP tego komputera, więc WebRTC nie pokazuje im nic nowego.",
+      "firefoxOff": "WebRTC jest wyłączone w profilach Firefox, co robi niewiele prawdziwych przeglądarek. Żadne ustawienie tego nie zmienia.",
+      "warn": "WebRTC jest wyłączone, co robi niewiele prawdziwych przeglądarek.",
+      "fail": "Ustawione na Real, co pokazuje Twój prawdziwy IP za proxy."
+    },
+    "thirdPartyCookies": {
+      "pass": "Dozwolone, jak w zwykłym Chrome.",
+      "warn": "Zablokowane dla każdego profilu w Ustawieniach. reCAPTCHA i hCaptcha z nich korzystają."
+    },
+    "history": {
+      "pass": "Ma historię przeglądania i pliki cookie.",
+      "warn": "Prawie brak plików cookie i historii. Strony bardziej ufają profilowi, który był używany.",
+      "warmed_one": "Rozgrzany {{count}} raz, więc ma prawdziwą historię przeglądania i pliki cookie.",
+      "warmed_few": "Rozgrzany {{count}} razy, więc ma prawdziwą historię przeglądania i pliki cookie.",
+      "warmed_many": "Rozgrzany {{count}} razy, więc ma prawdziwą historię przeglądania i pliki cookie.",
+      "warmed_other": "Rozgrzany {{count}} razy, więc ma prawdziwą historię przeglądania i pliki cookie."
+    },
+    "device": {
+      "warn": "Karta graficzna (WebGL) może nie pasować do tego urządzenia lub systemu.",
+      "fail": "Karta graficzna (WebGL) nie pasuje do tego urządzenia lub systemu."
+    },
+    "osMismatch": {
+      "warn": "Deklaruje {{claimed}}, ale działa na {{host}}; czcionki i inne szczegóły mogą ujawnić prawdziwy system."
+    }
+  },
+  "prelaunch": {
+    "title_one": "Sprawdź ten profil przed otwarciem",
+    "title_few": "Sprawdź {{count}} profile przed otwarciem",
+    "title_many": "Sprawdź {{count}} profili przed otwarciem",
+    "title_other": "Sprawdź {{count}} profilu przed otwarciem",
+    "subtitle": "Strony widzą te niezgodności, gdy tylko profil się otworzy.",
+    "issue": {
+      "uaOs": "User agent wskazuje {{ua}}, ale profil jest ustawiony na {{os}}.",
+      "gpuOs": "Karta graficzna (WebGL) nie pasuje do {{os}}.",
+      "screen": {
+        "mobile": "Telefon z ekranem {{width}}x{{height}}; ekrany telefonów są wąskie i pionowe.",
+        "desktop": "Komputer z ekranem {{width}}x{{height}}; ekrany komputerów mają co najmniej 1024x600."
+      },
+      "language": "Region języka {{region}} nie pasuje do kraju proxy {{country}}.",
+      "timezone": "Strefa czasowa pochodzi z tego komputera, a nie z proxy.",
+      "webrtc": "WebRTC jest ustawione na Real, co pokazuje Twój prawdziwy IP za proxy.",
+      "proxyDead": "Proxy nie przeszło ostatniego testu.",
+      "socks4Dns": "Używa proxy SOCKS4 {{proxy}}. Chromium nie może wysyłać zapytań DNS przez SOCKS4, więc każda strona byłaby wyszukiwana poza proxy (wyciek DNS) i profil się nie otworzy. Otwórz go w Firefoksie albo przypisz proxy SOCKS5 lub HTTP."
+    },
+    "os": {
+      "windows": "Windows",
+      "mac": "macOS",
+      "linux": "Linux",
+      "android": "Android",
+      "ios": "iOS"
+    },
+    "editorOnly": "(zmień to w edytorze profilu)",
+    "blocking": "(ten profil nie otworzy się, dopóki nie zmienisz tego w edytorze profilu)",
+    "stopAsking": "Nie sprawdzaj więcej przed uruchomieniem (można to włączyć w Ustawieniach)",
+    "cancel": "Anuluj",
+    "launchAnyway": "Uruchom mimo to",
+    "fixAndLaunch": "Napraw i uruchom"
+  },
+  "bulk": {
+    "fix": "Napraw problemy CAPTCHA",
+    "fixTitle": "Zastosuj bezpieczne poprawki CAPTCHA do zaznaczonych profili: strefa czasowa, język, lokalizacja, WebRTC i zapasowe proxy, gdy zmniejsza to ryzyko",
+    "confirm_one": "Naprawić problemy CAPTCHA w tym profilu? Zmieniane są tylko ustawienia i proxy, które zmniejszają ryzyko.",
+    "confirm_few": "Naprawić problemy CAPTCHA w {{count}} profilach? Zmieniane są tylko ustawienia i proxy, które zmniejszają ryzyko.",
+    "confirm_many": "Naprawić problemy CAPTCHA w {{count}} profilach? Zmieniane są tylko ustawienia i proxy, które zmniejszają ryzyko.",
+    "confirm_other": "Naprawić problemy CAPTCHA w {{count}} profilu? Zmieniane są tylko ustawienia i proxy, które zmniejszają ryzyko.",
+    "done": "Naprawiono {{changed}} z {{total}} profili; {{swapped}} przeniesiono na zapasowe proxy.",
+    "noBetter": "Dla {{count}} nie znaleziono lepszego proxy."
+  },
+  "filter": {
+    "any": "Dowolne ryzyko CAPTCHA",
+    "low": "Niskie ryzyko",
+    "some": "Pewne ryzyko",
+    "high": "Wysokie ryzyko",
+    "veryHigh": "Bardzo wysokie ryzyko",
+    "fixable": "Ma poprawki jednym kliknięciem"
+  },
+  "sort": {
+    "default": "Domyślna kolejność",
+    "riskDesc": "Najbardziej ryzykowne najpierw",
+    "riskAsc": "Najbezpieczniejsze najpierw"
+  }
+}

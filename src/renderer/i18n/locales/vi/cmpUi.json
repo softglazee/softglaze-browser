@@ -1,0 +1,31 @@
+{
+  "brandSelect": {
+    "presentAs": "Hiển thị hồ sơ này là {{brand}}"
+  },
+  "versionSelect": {
+    "auto": "Tự động",
+    "loadingVersions": "Đang tải phiên bản…",
+    "ready": "Sẵn sàng",
+    "readyTitle": "Đã cài đặt và sẵn sàng dùng",
+    "noVersions": "Không tìm thấy phiên bản nào.",
+    "offlineError": "Ngoại tuyến - không kết nối được danh mục phiên bản.",
+    "downloadFailed": "Tải xuống thất bại.",
+    "resumeFailed": "Tiếp tục thất bại.",
+    "paused": "Đã tạm dừng",
+    "interrupted": "Bị gián đoạn",
+    "resumeTitle": "{{state}} ở {{percent}}% - tiếp tục",
+    "statusInstalling": "cài",
+    "statusQueued": "…",
+    "retryTitle": "Thử lại - {{error}}",
+    "downloadFailedShort": "tải lỗi",
+    "downloadInstallTitle": "Tải xuống và cài đặt phiên bản này"
+  },
+  "pager": {
+    "showing": "Hiển thị {{from}}-{{to}} trên {{total}}",
+    "perPage": "Mỗi trang",
+    "all": "Tất cả",
+    "prev": "Trước",
+    "next": "Tiếp",
+    "pageOf": "Trang {{page}} / {{total}}"
+  }
+}

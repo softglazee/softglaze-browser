@@ -1,0 +1,106 @@
+{
+  "palette": {
+    "dialogLabel": "แผงคำสั่ง",
+    "searchPlaceholder": "ค้นหาหน้า โปรไฟล์ พร็อกซี สมาชิก…",
+    "searchAriaLabel": "ค้นหาหน้า โปรไฟล์ พร็อกซี และสมาชิก",
+    "resultsLabel": "ผลลัพธ์",
+    "esc": "Esc",
+    "noMatches": "ไม่พบรายการที่ตรงกัน",
+    "nav": {
+      "dashboard": "แดชบอร์ด",
+      "ai": "SoftGlaze AI",
+      "profiles": "โปรไฟล์",
+      "groups": "กลุ่ม",
+      "proxies": "คลังพร็อกซี",
+      "freeProxies": "พร็อกซีฟรี",
+      "proxyProviders": "ผู้ให้บริการพร็อกซี",
+      "browsers": "เบราว์เซอร์",
+      "extensions": "ส่วนขยาย",
+      "batchImport": "นำเข้าเป็นชุด",
+      "trash": "ถังขยะ",
+      "automation": "ระบบอัตโนมัติ",
+      "members": "สมาชิก",
+      "account": "บัญชี",
+      "settings": "การตั้งค่า"
+    },
+    "hint": {
+      "page": "หน้า",
+      "profile": "โปรไฟล์",
+      "proxy": "พร็อกซี",
+      "member": "สมาชิก",
+      "action": "การดำเนินการ"
+    },
+    "fallback": {
+      "profile": "โปรไฟล์ #{{id}}",
+      "proxy": "พร็อกซี #{{id}}",
+      "member": "สมาชิก #{{id}}"
+    },
+    "action": {
+      "stopAi": "หยุด AI ทั้งหมด"
+    }
+  },
+  "wizard": {
+    "skipTitle": "ข้ามการตั้งค่า",
+    "back": "ย้อนกลับ",
+    "skip": "ข้าม",
+    "saveAndContinue": "บันทึกและดำเนินการต่อ",
+    "saveAndFinish": "บันทึกและเสร็จสิ้น",
+    "msg": {
+      "smtpSaved": "บันทึก SMTP แล้ว",
+      "proxySaved": "บันทึกพร็อกซีแล้ว"
+    },
+    "err": {
+      "smtpSaveFailed": "บันทึกการตั้งค่า SMTP ไม่ได้",
+      "proxySaveFailed": "บันทึกพร็อกซีไม่ได้",
+      "profileCreateFailed": "สร้างโปรไฟล์ไม่ได้"
+    },
+    "welcome": {
+      "title": "ยินดีต้อนรับสู่ SoftGlaze",
+      "subtitle": "ตั้งค่าด่วน 3 ขั้นตอนเพื่อสร้างโปรไฟล์แรกของคุณ คุณข้ามขั้นตอนใดก็ได้",
+      "subtitleShort_other": "ตั้งค่าด่วน {{count}} ขั้นตอน คุณข้ามขั้นตอนใดก็ได้",
+      "unavailable": "ขั้นตอนที่เป็นสีเทาจะถูกข้าม เนื่องจากบัญชีของคุณทำไม่ได้",
+      "getStarted": "เริ่มต้นใช้งาน",
+      "stepEmail": "อีเมล (SMTP) - ไม่บังคับ สำหรับรหัส OTP",
+      "stepProxy": "พร็อกซีแรกของคุณ - ไม่บังคับ",
+      "stepProfile": "โปรไฟล์เบราว์เซอร์แรกของคุณ"
+    },
+    "smtp": {
+      "title": "อีเมล (SMTP)",
+      "subtitle": "ไม่บังคับ ช่วยให้แอปส่งรหัสยืนยันได้ คุณตั้งค่าภายหลังได้ในการตั้งค่า",
+      "host": "โฮสต์ SMTP",
+      "hostPlaceholder": "smtp.example.com",
+      "port": "พอร์ต",
+      "portPlaceholder": "587",
+      "username": "ชื่อผู้ใช้",
+      "usernamePlaceholder": "you@example.com",
+      "password": "รหัสผ่าน",
+      "passwordPlaceholder": "••••••••"
+    },
+    "proxy": {
+      "title": "เพิ่มพร็อกซีแรกของคุณ",
+      "subtitle": "ไม่บังคับ ให้แต่ละตัวตนมีเครือข่ายของตัวเอง คุณเพิ่มได้อีกในคลังพร็อกซี",
+      "type": "ประเภท",
+      "host": "โฮสต์",
+      "hostPlaceholder": "1.2.3.4",
+      "port": "พอร์ต",
+      "portPlaceholder": "8080",
+      "user": "ผู้ใช้",
+      "userPlaceholder": "ไม่บังคับ",
+      "password": "รหัสผ่าน",
+      "passwordPlaceholder": "ไม่บังคับ"
+    },
+    "profile": {
+      "title": "สร้างโปรไฟล์แรกของคุณ",
+      "subtitle": "ระบบจะสร้างฟิงเกอร์พรินต์ที่ไม่ซ้ำและสอดคล้องกันภายในให้คุณ",
+      "createAndFinish": "สร้างและเสร็จสิ้น",
+      "name": "ชื่อโปรไฟล์",
+      "namePlaceholder": "โปรไฟล์แรกของฉัน",
+      "defaultName": "โปรไฟล์แรกของฉัน",
+      "deviceType": "ประเภทอุปกรณ์",
+      "desktop": "เดสก์ท็อป",
+      "mobile": "มือถือ (Android)",
+      "mobileNote": "Android ถูกจำลองบนเอนจินเดสก์ท็อป UA การสัมผัส หน้าจอ และ GPU สอดคล้องกัน แต่ไม่ใช่อุปกรณ์จริง",
+      "proxyAttached": "พร็อกซีใหม่ของคุณจะถูกผูกกับโปรไฟล์นี้"
+    }
+  }
+}

@@ -1,0 +1,52 @@
+{
+  "header": {
+    "eyebrow": "Organisation",
+    "title": "Groupes et tags",
+    "description": "Organisez les profils en groupes et ajoutez-leur des tags pour les filtrer rapidement."
+  },
+  "filters": {
+    "allProfiles": "Tous les profils",
+    "ungrouped": "Sans groupe",
+    "group": "Groupe"
+  },
+  "sidebar": {
+    "directories": "Dossiers",
+    "createGroup": "Créer un groupe",
+    "renameGroup": "Renommer le groupe {{name}}",
+    "deleteGroup": "Supprimer le groupe {{name}}",
+    "groupNamePlaceholder": "Nom du groupe..."
+  },
+  "table": {
+    "searchPlaceholder": "Rechercher des profils...",
+    "loading": "Chargement des groupes...",
+    "colProfileName": "Nom du profil",
+    "colGroupAssignment": "Groupe attribué",
+    "colTags": "Tags"
+  },
+  "tagFilter": {
+    "label": "Filtres",
+    "clear": "effacer"
+  },
+  "bulk": {
+    "selected_one": "{{count}} sélectionné",
+    "selected_other": "{{count}} sélectionnés",
+    "selected_many": "{{count}} sélectionnés",
+    "moveTo": "Déplacer vers :",
+    "chooseGroup": "Choisir un groupe…",
+    "clear": "Effacer"
+  },
+  "empty": {
+    "title": "Aucun profil trouvé",
+    "noMatch": "Aucun profil ne correspond à vos filtres.",
+    "groupEmpty": "Ce groupe est vide. Déplacez-y des profils avec la liste « Groupe »."
+  },
+  "tags": {
+    "add": "Ajouter un tag",
+    "remove": "Retirer le tag",
+    "inputPlaceholder": "tag + Entrée"
+  },
+  "deleteConfirm": "Supprimer le groupe « {{name}} » ? Ses profils passeront dans « Sans groupe » (les profils eux-mêmes ne sont pas supprimés).",
+  "errors": {
+    "loadFailed": "Impossible de charger les groupes."
+  }
+}

@@ -1,0 +1,97 @@
+{
+  "upgrade": {
+    "title": {
+      "profiles": "已达到免费套餐的 {{limit}} 个配置文件上限",
+      "running": "免费套餐同时只能运行 {{limit}} 个配置文件",
+      "openable": "此配置文件不在免费套餐可打开的 {{limit}} 个之列",
+      "seats": "团队成员属于 Pro 功能",
+      "ai": "今天的 {{limit}} 次 AI 操作已用完",
+      "sync": "云同步属于 Pro 功能",
+      "phone": "从手机打开配置文件属于 Pro 功能",
+      "generic": "这是 Pro 功能"
+    },
+    "body": {
+      "profiles": "你的 {{used}} 个配置文件都很安全。升级到 Pro 可创建无限个配置文件，或删除一个以腾出空间。",
+      "running": "关闭已打开的配置文件后再启动另一个，或升级到 Pro 以同时运行 3 个。",
+      "openable": "所有配置文件都会保留。免费套餐下由你选择哪 {{limit}} 个可以打开；Pro 可打开全部。",
+      "seats": "免费套餐仅供一人使用。Pro 包含 3 位团队成员，Enterprise 包含 25 位。",
+      "ai": "免费套餐每天包含 {{limit}} 次 AI 操作，明天重置。Pro 的 AI 操作不限次数。",
+      "sync": "Pro 会在你的电脑和手机之间同步配置文件。",
+      "phone": "免费套餐下，手机和网页版应用可以查看配置文件并批准 AI 请求。Pro 还可以打开和停止配置文件。",
+      "generic": "升级到 Pro 即可使用。"
+    },
+    "price": "Pro 每月 {{price}}。",
+    "priceFallback": "Pro 每月 US$5 起。",
+    "upgradeButton": "升级到 Pro",
+    "chooseProfiles": "选择配置文件",
+    "notNow": "以后再说"
+  },
+  "welcome": {
+    "title": "Pro 试用已结束。你现在使用的是免费套餐。",
+    "keepTitle": "你仍可保留",
+    "keep": "所有配置文件（可打开 {{limit}} 个）、代理和指纹，以及手机和网页版应用。",
+    "proTitle": "Pro 额外提供",
+    "pro": "无限配置文件、同时运行 3 个、团队席位、云同步和不限次数的 AI 操作，每月 {{price}}。",
+    "upgrade": "升级到 Pro",
+    "stay": "继续使用免费套餐"
+  },
+  "counter": {
+    "freeBadge": "免费套餐",
+    "profiles": "{{used}}/{{limit}} 个配置文件",
+    "running": "{{used}}/{{limit}} 个运行中",
+    "ai": "今日 AI 操作 {{used}}/{{limit}} 次",
+    "upgrade": "升级"
+  },
+  "choose": {
+    "title": "选择可以打开的配置文件",
+    "body": "免费套餐下，你的 {{total}} 个配置文件中有 {{limit}} 个可以打开。所有配置文件都会保留；升级到 Pro 即可全部打开。",
+    "selected": "已选择 {{count}}/{{limit}} 个",
+    "search": "搜索配置文件",
+    "save": "保存",
+    "cancel": "取消",
+    "saved": "已保存。这些配置文件可在免费套餐下打开。"
+  },
+  "billing": {
+    "currentFree": "免费套餐",
+    "currentFreeBody": "永久免费，无需银行卡。随时升级以获得更多配置文件、团队功能和不限次数的 AI 操作。",
+    "currentBadge": "当前套餐",
+    "compareTitle": "比较套餐",
+    "colFeature": "功能",
+    "colFree": "免费",
+    "colPro": "Pro",
+    "colEnterprise": "Enterprise",
+    "rows": {
+      "profiles": "可保存的配置文件",
+      "running": "可同时运行的配置文件",
+      "seats": "席位（团队成员）",
+      "pcs": "每个账号的电脑数",
+      "fingerprints": "自有代理、全部指纹设置",
+      "ai": "AI 和 MCP 自动化",
+      "phone": "手机和网页版应用",
+      "sync": "电脑间云同步",
+      "support": "支持"
+    },
+    "values": {
+      "unlimited": "无限",
+      "unlimitedAudit": "无限 + 审计导出",
+      "yes": "是",
+      "no": "否",
+      "aiPerDay": "每天 {{count}} 次操作",
+      "viewApprove": "查看并批准 AI 请求",
+      "openStop": "+ 打开和停止配置文件",
+      "teamApprovals": "+ 团队审批",
+      "helpCentre": "帮助中心",
+      "email": "邮件",
+      "priorityEmail": "优先邮件支持"
+    }
+  },
+  "deals": {
+    "title": "推荐的代理优惠",
+    "disclosure": "合作伙伴优惠。SoftGlaze 可能会获得佣金。",
+    "code": "优惠码 {{code}}",
+    "copyCode": "复制优惠码",
+    "copied": "已复制",
+    "open": "获取优惠",
+    "hidden": "Pro 和 Enterprise 永远不会显示合作伙伴优惠。"
+  }
+}

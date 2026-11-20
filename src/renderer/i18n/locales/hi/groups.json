@@ -1,0 +1,51 @@
+{
+  "header": {
+    "eyebrow": "व्यवस्था",
+    "title": "ग्रुप और टैग",
+    "description": "प्रोफ़ाइल को ग्रुप में रखें और जल्दी फ़िल्टर करने के लिए टैग लगाएं।"
+  },
+  "filters": {
+    "allProfiles": "सभी प्रोफ़ाइल",
+    "ungrouped": "बिना ग्रुप",
+    "group": "ग्रुप"
+  },
+  "sidebar": {
+    "directories": "डायरेक्टरी",
+    "createGroup": "नया ग्रुप बनाएं",
+    "renameGroup": "ग्रुप {{name}} का नाम बदलें",
+    "deleteGroup": "ग्रुप {{name}} मिटाएं",
+    "groupNamePlaceholder": "ग्रुप का नाम..."
+  },
+  "table": {
+    "searchPlaceholder": "प्रोफ़ाइल खोजें...",
+    "loading": "ग्रुप लोड हो रहे हैं...",
+    "colProfileName": "प्रोफ़ाइल का नाम",
+    "colGroupAssignment": "ग्रुप",
+    "colTags": "टैग"
+  },
+  "tagFilter": {
+    "label": "फ़िल्टर",
+    "clear": "हटाएं"
+  },
+  "bulk": {
+    "selected_one": "{{count}} चुनी गई",
+    "selected_other": "{{count}} चुनी गईं",
+    "moveTo": "यहां ले जाएं:",
+    "chooseGroup": "ग्रुप चुनें…",
+    "clear": "हटाएं"
+  },
+  "empty": {
+    "title": "कोई प्रोफ़ाइल नहीं मिली",
+    "noMatch": "आपके फ़िल्टर से कोई प्रोफ़ाइल मेल नहीं खाती।",
+    "groupEmpty": "यह ग्रुप खाली है। ग्रुप ड्रॉपडाउन से प्रोफ़ाइल यहां लाएं।"
+  },
+  "tags": {
+    "add": "टैग जोड़ें",
+    "remove": "टैग हटाएं",
+    "inputPlaceholder": "टैग + Enter"
+  },
+  "deleteConfirm": "ग्रुप \"{{name}}\" मिटाएं? इसकी प्रोफ़ाइल बिना ग्रुप हो जाएंगी (प्रोफ़ाइल खुद नहीं मिटेंगी)।",
+  "errors": {
+    "loadFailed": "ग्रुप लोड नहीं हो सके।"
+  }
+}

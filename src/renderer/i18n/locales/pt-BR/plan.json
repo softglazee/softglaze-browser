@@ -1,0 +1,97 @@
+{
+  "upgrade": {
+    "title": {
+      "profiles": "Você chegou aos {{limit}} perfis do plano Free",
+      "running": "O Free abre {{limit}} perfil por vez",
+      "openable": "Este perfil não está entre os seus {{limit}} do Free",
+      "seats": "Membros da equipe fazem parte do Pro",
+      "ai": "As {{limit}} ações de IA de hoje acabaram",
+      "sync": "A sincronização na nuvem faz parte do Pro",
+      "phone": "Abrir perfis pelo celular faz parte do Pro",
+      "generic": "Isto faz parte do Pro"
+    },
+    "body": {
+      "profiles": "Seus {{used}} perfis estão seguros. Assine o Pro para ter perfis ilimitados ou exclua um para liberar espaço.",
+      "running": "Feche o perfil aberto para iniciar outro ou assine o Pro para abrir 3 ao mesmo tempo.",
+      "openable": "Todos os perfis são mantidos. No Free você escolhe quais {{limit}} podem ser abertos; o Pro abre todos.",
+      "seats": "O plano Free é para uma pessoa. O Pro inclui 3 membros da equipe, o Enterprise 25.",
+      "ai": "O Free inclui {{limit}} ações de IA por dia; elas renovam amanhã. O Pro tem ações de IA ilimitadas.",
+      "sync": "O Pro mantém seus perfis sincronizados entre seus computadores e seu celular.",
+      "phone": "No Free, o celular e o app web podem ver perfis e aprovar pedidos de IA. O Pro também abre e fecha os perfis.",
+      "generic": "Assine o Pro para usar."
+    },
+    "price": "O Pro custa {{price}} por mês.",
+    "priceFallback": "O Pro começa em US$5 por mês.",
+    "upgradeButton": "Assinar o Pro",
+    "chooseProfiles": "Escolher perfis",
+    "notNow": "Agora não"
+  },
+  "welcome": {
+    "title": "Seu teste do Pro terminou. Agora você está no plano Free.",
+    "keepTitle": "Você mantém",
+    "keep": "Todos os seus perfis ({{limit}} podem ser abertos), seus proxies e impressões digitais, o app de celular e o app web.",
+    "proTitle": "O Pro adiciona",
+    "pro": "Perfis ilimitados, 3 abertos ao mesmo tempo, vagas para equipe, sincronização na nuvem e ações de IA ilimitadas, por {{price}} por mês.",
+    "upgrade": "Assinar o Pro",
+    "stay": "Continuar no Free"
+  },
+  "counter": {
+    "freeBadge": "Plano Free",
+    "profiles": "{{used}} de {{limit}} perfis",
+    "running": "{{used}} de {{limit}} abertos",
+    "ai": "{{used}} de {{limit}} ações de IA hoje",
+    "upgrade": "Assinar"
+  },
+  "choose": {
+    "title": "Escolha quais perfis podem abrir",
+    "body": "No plano Free, {{limit}} dos seus {{total}} perfis podem ser abertos. Todos os perfis são mantidos; assine o Pro para abrir todos.",
+    "selected": "{{count}} de {{limit}} escolhidos",
+    "search": "Buscar perfis",
+    "save": "Salvar",
+    "cancel": "Cancelar",
+    "saved": "Salvo. Estes perfis podem abrir no Free."
+  },
+  "billing": {
+    "currentFree": "Plano Free",
+    "currentFreeBody": "Grátis para sempre, sem cartão. Assine quando quiser para ter mais perfis, equipes e ações de IA ilimitadas.",
+    "currentBadge": "Plano atual",
+    "compareTitle": "Comparar planos",
+    "colFeature": "Recurso",
+    "colFree": "Free",
+    "colPro": "Pro",
+    "colEnterprise": "Enterprise",
+    "rows": {
+      "profiles": "Perfis salvos",
+      "running": "Perfis abertos ao mesmo tempo",
+      "seats": "Vagas (membros da equipe)",
+      "pcs": "PCs por conta",
+      "fingerprints": "Proxies próprios, todas as opções de impressão digital",
+      "ai": "Automação com IA e MCP",
+      "phone": "App de celular e app web",
+      "sync": "Sincronização na nuvem entre PCs",
+      "support": "Suporte"
+    },
+    "values": {
+      "unlimited": "Ilimitado",
+      "unlimitedAudit": "Ilimitado + exportação de auditoria",
+      "yes": "Sim",
+      "no": "Não",
+      "aiPerDay": "{{count}} ações por dia",
+      "viewApprove": "Ver + aprovar pedidos de IA",
+      "openStop": "+ abrir e fechar perfis",
+      "teamApprovals": "+ aprovações da equipe",
+      "helpCentre": "Central de ajuda",
+      "email": "E-mail",
+      "priorityEmail": "E-mail prioritário"
+    }
+  },
+  "deals": {
+    "title": "Ofertas de proxy recomendadas",
+    "disclosure": "Oferta de parceiro. O SoftGlaze pode receber uma comissão.",
+    "code": "Código {{code}}",
+    "copyCode": "Copiar código",
+    "copied": "Copiado",
+    "open": "Ver oferta",
+    "hidden": "Pro e Enterprise nunca mostram ofertas de parceiros."
+  }
+}

@@ -1,0 +1,159 @@
+{
+  "billing": {
+    "status": {
+      "loading": "正在載入…",
+      "sourceOwner": "原始碼擁有者",
+      "active": "有效",
+      "activeUntil": "有效 · 至 {{date}}",
+      "trialDaysLeft_one": "試用 · 剩餘 {{count}} 天",
+      "trialDaysLeft_other": "試用 · 剩餘 {{count}} 天",
+      "graceDaysLeft_one": "寬限期 · 剩餘 {{count}} 天",
+      "graceDaysLeft_other": "寬限期 · 剩餘 {{count}} 天",
+      "subscriptionEnded": "訂閱已結束"
+    },
+    "subscription": {
+      "title": "訂閱",
+      "planLine": "SoftGlaze Browser · {{tier}} 方案",
+      "manageButton": "管理訂閱和方案"
+    },
+    "seats": {
+      "label": "團隊席位",
+      "usage": "已使用 {{used}} / {{total}}"
+    },
+    "gateway": {
+      "title": "付款方式",
+      "description": "僅限超級管理員。啟用在結賬時向擁有者顯示的付款方式，並儲存每個供應商的金鑰。",
+      "loadError": "無法載入付款設定。",
+      "footnote": "金鑰在本機加密儲存，永遠不會離開本機。結賬採用輪詢方式（無 Webhook），因此跨安裝的限制仍需要授權後端。Wise 和手動付款需要你在下方的「待處理付款」中核准。",
+      "retry": "重試"
+    },
+    "provider": {
+      "kindManual": "手動",
+      "kindAutomated": "自動",
+      "on": "開",
+      "enabled": "已啟用",
+      "disabled": "已停用",
+      "enableAria": "啟用 {{provider}}",
+      "documentation": "說明文件",
+      "secretStoredPlaceholder": "••••••••（留空則保持不變）",
+      "secretPlaceholder": "貼上金鑰",
+      "save": "儲存",
+      "testConnection": "測試連線",
+      "enabledMsg": "已啟用。",
+      "disabledMsg": "已停用。",
+      "updateError": "無法更新。",
+      "savedMsg": "已儲存。",
+      "saveError": "無法儲存。",
+      "connectionOk": "連線正常 ✓",
+      "validationFailedKeys": "驗證失敗，請檢查金鑰。",
+      "validationFailed": "驗證失敗。"
+    },
+    "manual": {
+      "title": "待處理付款",
+      "description": "等待你核准的手動付款（Wise/銀行轉賬）。",
+      "loadError": "無法載入手動付款。",
+      "resolveError": "無法更新該付款。",
+      "ownerFallback": "擁有者 #{{id}}",
+      "refPrefix": "參考號：",
+      "approve": "核准",
+      "reject": "拒絕",
+      "statusLabel": {
+        "pending": "待處理",
+        "approved": "已核准",
+        "rejected": "已拒絕"
+      }
+    }
+  },
+  "monetization": {
+    "heading": "營利",
+    "affiliate": {
+      "title": "聯盟行銷和推薦連結",
+      "ownerOnly": "僅限擁有者",
+      "description": "用於代理市場「購買」按鈕的合作伙伴網址。留空則使用 SoftGlaze 預設連結。",
+      "loadError": "無法載入聯盟行銷連結。",
+      "saveError": "無法儲存聯盟行銷連結。",
+      "savedMsg": "已儲存。市場按鈕現在使用你的連結。",
+      "customLink": "自訂連結",
+      "defaultLink": "預設連結",
+      "openLinkTitle": "開啟 {{provider}} 連結",
+      "saving": "正在儲存…",
+      "saveButton": "儲存連結",
+      "footnote": "這些連結用於「代理池 → 供應商」分頁上的「在…購買」/「前往控制台」按鈕。它們只是公開的推薦網址，不會影響代理權杖和憑據。"
+    }
+  },
+  "developerApi": {
+    "title": "開發者 API 存取",
+    "description": "產生 API 金鑰並執行本機 REST 伺服器，以程式設計方式控制 SoftGlaze。",
+    "copy": "複製",
+    "errors": {
+      "load": "無法載入開發者 API 設定。",
+      "nameRequired": "請為金鑰命名（例如「CI server」）。",
+      "generate": "無法產生 API 金鑰。",
+      "revoke": "無法復原金鑰。",
+      "toggleServer": "無法更改本機伺服器狀態。"
+    },
+    "keys": {
+      "title": "API 金鑰",
+      "namePlaceholder": "金鑰名稱（例如 CI server）",
+      "generate": "產生新的 API 金鑰",
+      "copyOnce": "請立即複製此金鑰：它只顯示一次，無法找回。",
+      "empty": "還沒有 API 金鑰。",
+      "lastUsed": "上次使用：{{when}}",
+      "neverUsed": "從未使用",
+      "never": "從未",
+      "revoke": "撤銷",
+      "revokeConfirm": "撤銷 API 金鑰「{{name}}」？使用它的所有指令碼將立即停止工作。此操作無法復原。"
+    },
+    "server": {
+      "title": "本機 REST API",
+      "runningAt": "執行於",
+      "stoppedPrefix": "已停止 · 將繫結到",
+      "loopbackOnly": "（僅限回送位址）",
+      "disableTitle": "停用本機 API",
+      "enableTitle": "啟用本機 API",
+      "curlExample": "範例：透過 cURL 啟動設定檔",
+      "footnote": "伺服器只接受來自本機的請求，並且需要有效的 Bearer 金鑰。"
+    }
+  },
+  "migration": {
+    "title": "遷移設定檔",
+    "ownerOnly": "僅限擁有者",
+    "description": "透過其他多設定檔瀏覽器的 API 匯入你現有的設定檔。",
+    "sourcePlatform": "來源平台",
+    "noteLabel": "注意：",
+    "instructions": "說明",
+    "tokenSectionTitle": "{{platform}} API 權杖",
+    "transferring": "正在遷移…",
+    "startTransfer": "開始遷移",
+    "tokenFootnote": "你的權杖僅用於本次遷移，絕不會被儲存。本機平台（AdsPower、ixBrowser）必須處於執行狀態，並已啟用其 Local API。",
+    "errors": {
+      "tokenRequired": "請輸入你的 {{platform}} {{placeholder}}。",
+      "transferFailed": "遷移失敗。"
+    },
+    "log": {
+      "title": "遷移記錄",
+      "imported": "已匯入 {{created}}/{{total}}",
+      "errors_one": "{{count}} 個錯誤",
+      "errors_other": "{{count}} 個錯誤",
+      "waiting": "正在等待平台回應…"
+    },
+    "platforms": {
+      "dolphin": {
+        "placeholder": "Dolphin_Token",
+        "warning": "如果從 Dolphin 免費方案遷移，Cookie 將不會被遷移。"
+      },
+      "gologin": {
+        "placeholder": "GoLogin API 權杖"
+      },
+      "multilogin": {
+        "placeholder": "Multilogin 自動化權杖"
+      },
+      "adspower": {
+        "placeholder": "AdsPower Local API 金鑰"
+      },
+      "ixbrowser": {
+        "placeholder": "ixBrowser Local API 金鑰"
+      }
+    }
+  }
+}

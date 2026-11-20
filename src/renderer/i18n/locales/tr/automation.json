@@ -1,0 +1,414 @@
+{
+  "header": {
+    "eyebrow": "SoftGlaze Pro Özellikleri",
+    "title": "Otomasyon",
+    "description": "Kodsuz makrolar, otomatik çerez ısındırma ve her arka plan görevinin günlüğü."
+  },
+  "tabs": {
+    "macros": "Makrolarım",
+    "parallel": "Paralel çalıştırmalar",
+    "warmer": "Çerez ısındırıcı",
+    "history": "Görev geçmişi"
+  },
+  "clickLabels": {
+    "none": "Yalnızca gezin",
+    "random": "Rastgele tıklamalar",
+    "links": "Bağlantılarda gezin"
+  },
+  "stepTypes": {
+    "goto": "URL'ye git",
+    "click": "Tıkla",
+    "type": "Metin yaz",
+    "keypress": "Tuşa bas",
+    "scroll": "Kaydır",
+    "wait": "Bekle",
+    "move": "Fareyi taşı",
+    "hover": "Üzerine gel",
+    "select": "Açılır liste seçeneği seç",
+    "waitFor": "Öğeyi bekle",
+    "submit": "Formu gönder",
+    "check": "İşaretle / kaldır",
+    "clear": "Alanı temizle"
+  },
+  "stepFields": {
+    "goto": {
+      "url": "URL",
+      "urlPlaceholder": "https://example.com"
+    },
+    "click": {
+      "selector": "CSS seçici",
+      "selectorPlaceholder": "#submit, .btn"
+    },
+    "type": {
+      "selector": "Seçici",
+      "selectorPlaceholder": "input[name=\"email\"]",
+      "value": "Yazılacak metin"
+    },
+    "keypress": {
+      "key": "Tuş",
+      "keyPlaceholder": "Enter"
+    },
+    "scroll": {
+      "steps": "Kaydırma miktarı",
+      "stepsPlaceholder": "4"
+    },
+    "wait": {
+      "ms": "Milisaniye",
+      "msPlaceholder": "1000"
+    },
+    "move": {
+      "selector": "Seçici (veya X/Y kullanın)",
+      "selectorPlaceholder": ".target",
+      "x": "X",
+      "y": "Y"
+    },
+    "hover": {
+      "selector": "Seçici",
+      "selectorPlaceholder": ".menu",
+      "ms": "Bekleme ms",
+      "msPlaceholder": "800"
+    },
+    "select": {
+      "selector": "Seçici",
+      "selectorPlaceholder": "select[name=\"focus\"]",
+      "value": "Seçenek (değer, etiket veya dizin)",
+      "valuePlaceholder": "Tesisat",
+      "by": "Eşleştirme ölçütü"
+    },
+    "waitFor": {
+      "selector": "Seçici",
+      "selectorPlaceholder": ".dashboard",
+      "state": "Durum",
+      "timeout": "Zaman aşımı ms",
+      "timeoutPlaceholder": "30000"
+    },
+    "submit": {
+      "selector": "Form veya alan seçicisi",
+      "selectorPlaceholder": "form#signup"
+    },
+    "check": {
+      "selector": "Seçici",
+      "selectorPlaceholder": "input[name=\"terms\"]",
+      "state": "Durum"
+    },
+    "clear": {
+      "selector": "Seçici",
+      "selectorPlaceholder": "input[name=\"email\"]"
+    }
+  },
+  "stepSummary": {
+    "noUrl": "(URL yok)",
+    "noSelector": "(seçici yok)",
+    "selectorFallback": "(seçici)",
+    "target": "(hedef)"
+  },
+  "macros": {
+    "intro": "Yeniden kullanılabilir, kodsuz iş akışları kaydedin veya oluşturun, sonra bunları bir profil içinde çalıştırın (gezinme, tıklama, yazma, bekleme) - elle veya zamanlamayla.",
+    "profileSelectTitle": "Çalıştır / Kaydet işlemlerinin uygulanacağı profil",
+    "noProfiles": "Profil yok",
+    "profileFallback": "Profil {{id}}",
+    "stopAndSave": "Durdur ve kaydet",
+    "record": "Kaydet",
+    "schedule": "Zamanlama",
+    "createMacro": "Makro oluştur",
+    "stepsBadge_one": "{{count}} adım",
+    "stepsBadge_other": "{{count}} adım",
+    "updated": "Güncellendi {{date}}",
+    "run": "Çalıştır",
+    "edit": "Düzenle",
+    "editSteps": "Adımları düzenle",
+    "delete": "Sil",
+    "runTitleNoSteps": "Bu makronun henüz adımı yok - önce düzenleyin",
+    "runTitleReady": "Seçili profilde çalıştır",
+    "emptyTitle": "Henüz makro yok",
+    "emptyHint": "Başlamak için bir iş akışı kaydedin veya oluşturun.",
+    "errors": {
+      "loadMacros": "Makrolar yüklenemedi.",
+      "deleteMacro": "Makro silinemedi.",
+      "chooseProfile": "Önce bir hedef profil seçin.",
+      "noSteps": "Bu makronun henüz adımı yok - önce düzenleyin.",
+      "chooseProfileRecord": "Kayıt yapılacak hedef profili seçin.",
+      "recordingFailed": "Kayıt işlemi başarısız oldu."
+    },
+    "recordingStarted": "Kaydediliyor… başlatılan tarayıcıda işlem yapın, sonra kaydetmek için Durdur'a basın.",
+    "savedNotice": "\"{{name}}\" {{count}} adımla kaydedildi.",
+    "stoppedNotice": "Kayıt durduruldu - {{count}} adım yakalandı (kaydedilmedi).",
+    "deleteConfirm": "\"{{name}}\" makrosu ve tüm adımları silinsin mi? Bu işlem geri alınamaz."
+  },
+  "saveRecording": {
+    "ariaLabel": "Kaydedilen makroyu kaydet",
+    "title": "Kaydedilen makroyu kaydet",
+    "subtitle": "Yakalanan adımları korumak için bir ad verin veya vazgeçin. Tarayıcı açık kalır.",
+    "placeholder": "Kaydedilen makro",
+    "discard": "Vazgeç",
+    "cancel": "İptal",
+    "save": "Kaydet"
+  },
+  "scheduleModal": {
+    "ariaLabel": "Makro zamanlaması",
+    "title": "Makro Zamanlaması",
+    "subtitle": "Bir makroyu zamanlayıcıyla otomatik çalıştırın · SoftGlaze Pro",
+    "enable": "Zamanlanmış çalıştırmaları etkinleştir",
+    "macroLabel": "Makro",
+    "selectMacro": "Bir makro seçin…",
+    "everyMinutes": "Her (dakika)",
+    "targetProfiles": "Hedef profiller",
+    "noProfiles": "Kullanılabilir profil yok.",
+    "profileFallback": "Profil {{id}}",
+    "cancel": "İptal",
+    "save": "Zamanlamayı kaydet",
+    "errors": {
+      "save": "Zamanlama kaydedilemedi."
+    }
+  },
+  "editorModal": {
+    "ariaEdit": "Makroyu düzenle",
+    "ariaCreate": "Makro oluştur",
+    "titleEdit": "Makroyu düzenle",
+    "titleCreate": "Makro oluştur",
+    "subtitle": "Kodsuz bir akış oluşturun - sırayı değiştirmek için tutamacı sürükleyin.",
+    "nameLabel": "Makro adı",
+    "namePlaceholder": "örn. Günlük giriş",
+    "descriptionLabel": "Açıklama",
+    "descriptionPlaceholder": "Ne yapıyor?",
+    "stepsLabel": "Adımlar ({{count}})",
+    "addStep": "Adım ekle",
+    "noSteps": "Henüz adım yok - bir tür seçin ve ekleyin.",
+    "dragToReorder": "Sırayı değiştirmek için sürükleyin",
+    "removeStep": "Adımı kaldır",
+    "cancel": "İptal",
+    "save": "Makroyu kaydet",
+    "errors": {
+      "name": "Makroya bir ad verin.",
+      "save": "Makro kaydedilemedi."
+    },
+    "optional": "İsteğe bağlı",
+    "optionalHint": "Bu adım başarısız olursa çalıştırmayı durdurmak yerine günlüğe yazıp devam et."
+  },
+  "runModal": {
+    "ariaLabel": "Makro çalıştırma: {{name}}",
+    "runningOn": "{{profile}} üzerinde çalışıyor",
+    "starting": "Başlatılıyor…",
+    "logStarted": "\"{{name}}\" başlatıldı · {{profile}} üzerinde {{total}} adım",
+    "logStepRunning": "▶ {{label}}: {{summary}}",
+    "logStepError": "✕ {{label}} - {{error}}",
+    "logStepFailed": "başarısız",
+    "logStopped": "Durduruldu.",
+    "logFinished": "Bitti - {{ran}}/{{total}} adım.",
+    "stopped": "Durduruldu.",
+    "finished": "Bitti.",
+    "summaryCompleted": "{{ran}}/{{total}} adım tamamlandı.",
+    "summaryRan": "{{ran}}/{{total}} adım çalıştı.",
+    "paused": "Duraklatıldı",
+    "running": "Çalışıyor…",
+    "resume": "Sürdür",
+    "pause": "Duraklat",
+    "stop": "Durdur",
+    "close": "Kapat",
+    "errors": {
+      "run": "Makro çalıştırılamadı."
+    },
+    "logStepSkipped": "{{label}} atlandı (isteğe bağlı) - {{error}}"
+  },
+  "parallel": {
+    "states": {
+      "queued": "Sırada",
+      "launching": "Başlatılıyor",
+      "running": "Çalışıyor",
+      "passed": "Başarılı",
+      "failed": "Başarısız"
+    },
+    "title": "Paralel Makro Çalıştırıcı",
+    "subtitle": "Bir makroyu aynı anda birçok profilde çalıştırın, durumu canlı izleyin.",
+    "macroLabel": "Makro",
+    "noMacros": "Henüz makro yok",
+    "macroOption": "{{name}} · {{count}} adım",
+    "concurrency": "Eşzamanlılık",
+    "concurrencyCap": "Planınız aynı anda en fazla {{max}} profil çalıştırır.",
+    "concurrencyCapUpgrade": "Planınız aynı anda en fazla {{max}} profil çalıştırır. Enterprise en fazla {{enterpriseMax}} çalıştırır.",
+    "dataBound_one": "{{fileName}} · {{count}} satır",
+    "dataBound_other": "{{fileName}} · {{count}} satır",
+    "dataHint": "İsteğe bağlı: bir tablo bağlayın (satır → profil, sırayla)",
+    "clearDataBinding": "Veri bağlantısını temizle",
+    "bindData": "Veri bağla",
+    "columnsPrefix": "Sütunlar: {{columns}} - makro adımlarında",
+    "columnsSuffix": "kullanın.",
+    "profilesLabel": "Profiller ({{count}} seçili)",
+    "selectAll": "Tümünü seç",
+    "clear": "Temizle",
+    "searchPlaceholder": "Ara",
+    "noProfiles": "Profil bulunamadı.",
+    "rowMismatch": "{{rows}} veri satırı, {{profiles}} profil - fazlası değişkensiz çalışır.",
+    "running": "Çalışıyor…",
+    "runOn_one": "{{count}} profilde çalıştır",
+    "runOn_other": "{{count}} profilde çalıştır",
+    "runStatus": "Çalıştırma durumu",
+    "summaryPassed": "başarılı",
+    "summaryFailed": "başarısız",
+    "summaryTotal": "toplam {{total}}",
+    "watchHint": "Profilleri ve bir makroyu seçin, ardından canlı ilerlemeyi izlemek için çalıştırmayı başlatın.",
+    "steps": "{{ran}}/{{total}} adım",
+    "profileFallback": "Profil {{id}}",
+    "runConsole": "Çalıştırma konsolu",
+    "live": "canlı",
+    "consoleIdle": "[ boşta ] Henüz çalıştırma yok - ilerleme burada akacak (çerez veya kimlik bilgisi asla dahil edilmez).",
+    "logRunFinished": "Çalıştırma bitti - {{passed}}/{{total}} başarılı",
+    "logRunFinishedError": "Çalıştırma bitti - {{passed}}/{{total}} başarılı ({{error}})",
+    "errors": {
+      "readSpreadsheet": "Tablo okunamadı.",
+      "chooseMacro": "Çalıştırılacak bir makro seçin.",
+      "selectProfile": "En az bir profil seçin.",
+      "startRun": "Paralel çalıştırma başlatılamadı."
+    }
+  },
+  "warmer": {
+    "title": "Çerez Isındırıcı",
+    "subtitle": "Gerçek sitelerde gezinerek doğal çerezler ve geçmiş oluşturur.",
+    "sitesLabel": "Ziyaret edilecek siteler ({{count}})",
+    "addSuggested": "Önerilen bir site ekle…",
+    "add": "Ekle",
+    "customPlaceholder": "Veya özel bir URL yapıştırın (örn. example.com)",
+    "bulkAdd": "Toplu ekle",
+    "importFile": ".txt/.csv içe aktar",
+    "clearAll": "Tümünü temizle",
+    "bulkPlaceholder": "Her satıra bir URL yapıştırın, örn.\nexample.com\nhttps://news.site\nshop.site, 45, links",
+    "addList": "Listeyi ekle",
+    "bulkHint": "Her satıra bir URL. İsteğe bağlı CSV sütunları: url, saniye, davranış (none/random/links).",
+    "addSecondsTitle": "Eklediğiniz bağlantılar için varsayılan saniye",
+    "addBehaviorTitle": "Eklediğiniz bağlantılar için varsayılan davranış",
+    "saveList": "Listeyi kaydet",
+    "saveListPrompt": "Bu bağlantı listesine ad verin (daha sonra yeniden kullanmak için):",
+    "loadListTitle": "Bu kayıtlı listeyi yükle",
+    "deleteListTitle": "Bu kayıtlı listeyi sil",
+    "selectRows": "Satırları seç",
+    "nSelected": "{{count}} seçili",
+    "bulkSetSeconds": "Seçili satırlar için saniyeyi ayarla",
+    "bulkSetBehavior": "Seçili satırlar için davranışı ayarla",
+    "setBehavior": "Davranışı ayarla…",
+    "deleteSelected": "Sil",
+    "noSites": "Henüz site yok - yukarıdan bir tane ekleyin.",
+    "secondsTitle": "Bu sitede geçirilecek saniye",
+    "secondsUnit": "sn",
+    "behaviourTitle": "Bu sitede ne yapılacak",
+    "remove": "Kaldır",
+    "loopUntilStopped": "Durdurulana kadar tekrarla",
+    "keepOpen": "Sonrasında oturumları açık tut",
+    "hidden": "Gizli çalıştır (pencere yok)",
+    "hiddenTitle": "Headless ısındırma - tarayıcı penceresi açılmaz. Çerezler ve önbellek yine her profile kaydedilir.",
+    "cookieNote": "Çerezler ve önbellek her profile otomatik kaydedilir - konsol diske ne kadar çerez ve önbellek yazıldığını bildirir. Sonraki normal bir başlatma bunları yeniden kullanır.",
+    "startWarmup": "Isınmayı başlat",
+    "warming": "Isındırılıyor…",
+    "stop": "Durdur",
+    "forceStop": "Zorla durdur",
+    "profilesLabel": "Profiller ({{count}} seçili)",
+    "searchPlaceholder": "Ara",
+    "selectAll": "Tümü",
+    "selectNone": "Hiçbiri",
+    "invert": "Tersine çevir",
+    "addGroup": "Grup ekle…",
+    "addTag": "Etiket ekle…",
+    "pasteIdsPlaceholder": "Profil kimliklerini veya adlarını yapıştırın (virgül / boşlukla ayrılmış)",
+    "selectPaste": "Seç",
+    "noProfiles": "Profil bulunamadı.",
+    "profileFallback": "Profil {{id}}",
+    "warmupConsole": "Isınma konsolu",
+    "live": "canlı",
+    "progressTitle": "Isınma ilerlemesi",
+    "modeQueue": "Sıra · birer birer",
+    "modeBulk": "Toplu · aynı anda {{n}}",
+    "consoleIdle": "[ boşta ] Canlı ilerlemeyi görmek için profilleri seçin, süre belirleyin ve ısınmayı başlatın.",
+    "errors": {
+      "selectProfile": "Isındırılacak en az bir profil seçin.",
+      "addSite": "Ziyaret edilecek en az bir site ekleyin.",
+      "startWarmup": "Isınma başlatılamadı.",
+      "stopWarmup": "Isınma durdurulamadı.",
+      "importFile": "Bu dosya okunamadı."
+    },
+    "queueTitle": "Profilleri birer birer ısındırın (katı bir sıra): bir tarayıcıyı başlatın, bitip kapanmasını bekleyin, sonra sıradakine geçin. Seçili tüm tarayıcıların aynı anda açılmasını önler; bu RAM/CPU'yu tüketip uygulamayı çökertebilir.",
+    "queueMode": "Birer birer çalıştır (sıra)",
+    "parallelTitle": "Aynı anda kaç profil ısındırılacak. Daha fazlası daha hızlıdır ama RAM/CPU'ya daha çok yük bindirir.",
+    "parallelLabel": "Aynı anda:"
+  },
+  "counter": {
+    "total": "toplam",
+    "running": "çalışıyor",
+    "done": "bitti",
+    "queued": "sırada"
+  },
+  "console": {
+    "copy": "Kopyala",
+    "copied": "Kopyalandı",
+    "export": "Dışa aktar",
+    "clear": "Temizle"
+  },
+  "history": {
+    "emptyTitle": "Henüz hiçbir görev çalışmadı",
+    "emptyHint": "Isındırma, makro ve paralel çalıştırmalar burada görünür.",
+    "columns": {
+      "task": "Görev",
+      "profiles": "Profiller",
+      "detail": "Ayrıntı",
+      "status": "Durum",
+      "when": "Ne zaman"
+    },
+    "emptyDetail": "-",
+    "parallelRun": "Paralel çalıştırma",
+    "macroRun": "Makro çalıştırma",
+    "cookieWarmup": "Çerez ısındırma",
+    "minutes": "{{count}} dk",
+    "sites_one": "{{count}} site",
+    "sites_other": "{{count}} site"
+  },
+  "stepFieldOptions": {
+    "auto": "Otomatik",
+    "value": "Değer",
+    "label": "Etiket",
+    "index": "Dizin",
+    "visible": "Görünür",
+    "hidden": "Gizli",
+    "checked": "İşaretli",
+    "unchecked": "İşaretsiz"
+  },
+  "autopilot": {
+    "title": "Isınma otomatik pilotu",
+    "subtitle": "Profilleri her gün birkaç sitede ısındırır, böylece gerçek bir gezinme geçmişi oluştururlar.",
+    "toggle": "Isınma otomatik pilotunu aç veya kapat",
+    "target": "Profiller",
+    "targetAll": "Tüm profiller",
+    "targetGroup": "Bir grup",
+    "group": "Grup",
+    "runsPerDay": "Günlük çalıştırma",
+    "runsPerDayTitle": "Her profilin günde kaç kez ısındırılacağı",
+    "sitesPerRun": "Çalıştırma başına site",
+    "sitesPerRunTitle": "Önerilen listeden rastgele siteler, her biri 20 ila 45 saniye",
+    "activeHours": "Etkin saatler",
+    "startHour": "Başlangıç saati",
+    "endHour": "Bitiş saati",
+    "hoursTo": "-",
+    "atATime": "Aynı anda",
+    "atATimeTitle": "Aynı anda ısındırılan profiller. Daha fazlası daha hızlıdır ama daha çok bellek kullanır.",
+    "hidden": "Gizli çalıştır (pencere yok)",
+    "hint": "Bir profil, son ısınması 24 saatin günlük çalıştırma sayısına bölümünden eskiyse ısındırılır. Açık, kilitli veya meşgul profiller atlanır.",
+    "ownedByOther": "Bunu başka bir üye açtı. Yalnızca o veya onun üstündeki biri değiştirebilir.",
+    "status": {
+      "off": "Kapalı",
+      "nextSoon": "Sonraki çalıştırma bir dakika içinde",
+      "nextAt": "Sonraki çalıştırma {{time}}",
+      "nothingDue": "Isındırılacak profil yok",
+      "warmedToday": "Bugün {{total}} profilden {{done}} tanesi ısındırıldı",
+      "warmingNow": "Şu anda {{n}} ısındırılıyor",
+      "lastError": "Son hata, {{time}}: {{error}}"
+    },
+    "errors": {
+      "load": "Otomatik pilot ayarları yüklenemedi.",
+      "save": "Otomatik pilot ayarları kaydedilemedi.",
+      "noGroups": "Henüz grup yok. Önce Profiller sayfasında bir tane oluşturun.",
+      "owner-missing": "Otomatik pilotu açan üye artık yok. Çalışma alanı Sahibi devralmak için kapatıp yeniden açabilir.",
+      "owner-inactive": "Otomatik pilotu açan üye askıya alındı veya engellendi.",
+      "owner-no-permission": "Otomatik pilotu açan üye artık otomasyon çalıştıramayabilir.",
+      "warm-failed": "{{profile}}: {{error}}",
+      "warmFailedHidden": "Göremediğiniz bir profil ısındırılamadı.",
+      "tick-failed": "{{error}}"
+    }
+  }
+}

@@ -1,0 +1,414 @@
+{
+  "header": {
+    "eyebrow": "Softglaze Pro फ़ीचर",
+    "title": "ऑटोमेशन",
+    "description": "बिना कोड के मैक्रो, अपने आप कुकी वार्मिंग, और हर बैकग्राउंड टास्क का लॉग।"
+  },
+  "tabs": {
+    "macros": "मेरे मैक्रो",
+    "parallel": "पैरेलल रन",
+    "warmer": "कुकी वार्मर",
+    "history": "टास्क हिस्ट्री"
+  },
+  "clickLabels": {
+    "none": "सिर्फ़ ब्राउज़ करें",
+    "random": "रैंडम क्लिक",
+    "links": "लिंक ब्राउज़ करें"
+  },
+  "stepTypes": {
+    "goto": "URL पर जाएं",
+    "click": "क्लिक करें",
+    "type": "टेक्स्ट टाइप करें",
+    "keypress": "की दबाएं",
+    "scroll": "स्क्रॉल करें",
+    "wait": "रुकें",
+    "move": "माउस घुमाएं",
+    "hover": "होवर करें",
+    "select": "ड्रॉपडाउन विकल्प चुनें",
+    "waitFor": "एलिमेंट का इंतज़ार करें",
+    "submit": "फ़ॉर्म सबमिट करें",
+    "check": "टिक करें / टिक हटाएं",
+    "clear": "फ़ील्ड खाली करें"
+  },
+  "stepFields": {
+    "goto": {
+      "url": "URL",
+      "urlPlaceholder": "https://example.com"
+    },
+    "click": {
+      "selector": "CSS सिलेक्टर",
+      "selectorPlaceholder": "#submit, .btn"
+    },
+    "type": {
+      "selector": "सिलेक्टर",
+      "selectorPlaceholder": "input[name=\"email\"]",
+      "value": "टाइप करने वाला टेक्स्ट"
+    },
+    "keypress": {
+      "key": "की",
+      "keyPlaceholder": "Enter"
+    },
+    "scroll": {
+      "steps": "स्क्रॉल की मात्रा",
+      "stepsPlaceholder": "4"
+    },
+    "wait": {
+      "ms": "मिलीसेकंड",
+      "msPlaceholder": "1000"
+    },
+    "move": {
+      "selector": "सिलेक्टर (या X/Y इस्तेमाल करें)",
+      "selectorPlaceholder": ".target",
+      "x": "X",
+      "y": "Y"
+    },
+    "hover": {
+      "selector": "सिलेक्टर",
+      "selectorPlaceholder": ".menu",
+      "ms": "रुकने का समय (ms)",
+      "msPlaceholder": "800"
+    },
+    "select": {
+      "selector": "सिलेक्टर",
+      "selectorPlaceholder": "select[name=\"focus\"]",
+      "value": "विकल्प (मान, लेबल या इंडेक्स)",
+      "valuePlaceholder": "Plumbing",
+      "by": "किससे मिलाएं"
+    },
+    "waitFor": {
+      "selector": "सिलेक्टर",
+      "selectorPlaceholder": ".dashboard",
+      "state": "स्थिति",
+      "timeout": "टाइमआउट (ms)",
+      "timeoutPlaceholder": "30000"
+    },
+    "submit": {
+      "selector": "फ़ॉर्म या फ़ील्ड सिलेक्टर",
+      "selectorPlaceholder": "form#signup"
+    },
+    "check": {
+      "selector": "सिलेक्टर",
+      "selectorPlaceholder": "input[name=\"terms\"]",
+      "state": "स्थिति"
+    },
+    "clear": {
+      "selector": "सिलेक्टर",
+      "selectorPlaceholder": "input[name=\"email\"]"
+    }
+  },
+  "stepSummary": {
+    "noUrl": "(कोई URL नहीं)",
+    "noSelector": "(कोई सिलेक्टर नहीं)",
+    "selectorFallback": "(सिलेक्टर)",
+    "target": "(टारगेट)"
+  },
+  "macros": {
+    "intro": "दोबारा इस्तेमाल होने वाले, बिना कोड के वर्कफ़्लो रिकॉर्ड करें या बनाएं, फिर उन्हें किसी प्रोफ़ाइल में चलाएं (नेविगेट, क्लिक, टाइप, इंतज़ार) - हाथ से या शेड्यूल पर।",
+    "profileSelectTitle": "प्रोफ़ाइल जिस पर चलाएं / रिकॉर्ड करें",
+    "noProfiles": "कोई प्रोफ़ाइल नहीं",
+    "profileFallback": "प्रोफ़ाइल {{id}}",
+    "stopAndSave": "रोकें और सेव करें",
+    "record": "रिकॉर्ड करें",
+    "schedule": "शेड्यूल",
+    "createMacro": "मैक्रो बनाएं",
+    "stepsBadge_one": "{{count}} स्टेप",
+    "stepsBadge_other": "{{count}} स्टेप",
+    "updated": "{{date}} को अपडेट",
+    "run": "चलाएं",
+    "edit": "एडिट करें",
+    "editSteps": "स्टेप एडिट करें",
+    "delete": "मिटाएं",
+    "runTitleNoSteps": "इस मैक्रो में अभी कोई स्टेप नहीं है - पहले इसे एडिट करें",
+    "runTitleReady": "चुनी गई प्रोफ़ाइल पर चलाएं",
+    "emptyTitle": "अभी कोई मैक्रो नहीं",
+    "emptyHint": "शुरू करने के लिए कोई वर्कफ़्लो रिकॉर्ड करें या बनाएं।",
+    "errors": {
+      "loadMacros": "मैक्रो लोड नहीं हो सके।",
+      "deleteMacro": "मैक्रो मिटाया नहीं जा सका।",
+      "chooseProfile": "पहले कोई टारगेट प्रोफ़ाइल चुनें।",
+      "noSteps": "इस मैक्रो में अभी कोई स्टेप नहीं है - पहले इसे एडिट करें।",
+      "chooseProfileRecord": "रिकॉर्ड करने के लिए कोई टारगेट प्रोफ़ाइल चुनें।",
+      "recordingFailed": "रिकॉर्डिंग की कार्रवाई नहीं हो सकी।"
+    },
+    "recordingStarted": "रिकॉर्डिंग चल रही है… खुले ब्राउज़र में काम करें, फिर सेव करने के लिए रोकें दबाएं।",
+    "savedNotice": "\"{{name}}\" {{count}} स्टेप के साथ सेव हुआ।",
+    "stoppedNotice": "रिकॉर्डिंग रुकी - {{count}} स्टेप रिकॉर्ड हुए (सेव नहीं हुए)।",
+    "deleteConfirm": "मैक्रो \"{{name}}\" और उसके सभी स्टेप मिटाएं? यह वापस नहीं होगा।"
+  },
+  "saveRecording": {
+    "ariaLabel": "रिकॉर्ड किया मैक्रो सेव करें",
+    "title": "रिकॉर्ड किया मैक्रो सेव करें",
+    "subtitle": "रिकॉर्ड हुए स्टेप रखने के लिए नाम दें, या उन्हें छोड़ दें। ब्राउज़र खुला रहेगा।",
+    "placeholder": "रिकॉर्ड किया मैक्रो",
+    "discard": "छोड़ें",
+    "cancel": "रद्द करें",
+    "save": "सेव करें"
+  },
+  "scheduleModal": {
+    "ariaLabel": "मैक्रो शेड्यूल",
+    "title": "मैक्रो शेड्यूल",
+    "subtitle": "टाइमर पर मैक्रो अपने आप चलाएं · Softglaze Pro",
+    "enable": "शेड्यूल रन चालू करें",
+    "macroLabel": "मैक्रो",
+    "selectMacro": "मैक्रो चुनें…",
+    "everyMinutes": "हर (मिनट)",
+    "targetProfiles": "टारगेट प्रोफ़ाइल",
+    "noProfiles": "कोई प्रोफ़ाइल उपलब्ध नहीं।",
+    "profileFallback": "प्रोफ़ाइल {{id}}",
+    "cancel": "रद्द करें",
+    "save": "शेड्यूल सेव करें",
+    "errors": {
+      "save": "शेड्यूल सेव नहीं हो सका।"
+    }
+  },
+  "editorModal": {
+    "ariaEdit": "मैक्रो एडिट करें",
+    "ariaCreate": "मैक्रो बनाएं",
+    "titleEdit": "मैक्रो एडिट करें",
+    "titleCreate": "मैक्रो बनाएं",
+    "subtitle": "बिना कोड का फ़्लो बनाएं - क्रम बदलने के लिए हैंडल खींचें।",
+    "nameLabel": "मैक्रो का नाम",
+    "namePlaceholder": "जैसे रोज़ का लॉगिन",
+    "descriptionLabel": "विवरण",
+    "descriptionPlaceholder": "यह क्या करता है?",
+    "stepsLabel": "स्टेप ({{count}})",
+    "addStep": "स्टेप जोड़ें",
+    "noSteps": "अभी कोई स्टेप नहीं - कोई प्रकार चुनकर एक जोड़ें।",
+    "dragToReorder": "क्रम बदलने के लिए खींचें",
+    "removeStep": "स्टेप हटाएं",
+    "cancel": "रद्द करें",
+    "save": "मैक्रो सेव करें",
+    "errors": {
+      "name": "मैक्रो को नाम दें।",
+      "save": "मैक्रो सेव नहीं हो सका।"
+    },
+    "optional": "वैकल्पिक",
+    "optionalHint": "अगर यह स्टेप फ़ेल हो, तो पूरा रन फ़ेल करने की जगह इसे लॉग करके आगे बढ़ें।"
+  },
+  "runModal": {
+    "ariaLabel": "मैक्रो रन: {{name}}",
+    "runningOn": "{{profile}} पर चल रहा है",
+    "starting": "शुरू हो रहा है…",
+    "logStarted": "\"{{name}}\" शुरू हुआ · {{profile}} पर {{total}} स्टेप",
+    "logStepRunning": "▶ {{label}}: {{summary}}",
+    "logStepError": "✕ {{label}} - {{error}}",
+    "logStepFailed": "फ़ेल",
+    "logStopped": "रुक गया।",
+    "logFinished": "पूरा हुआ - {{ran}}/{{total}} स्टेप।",
+    "stopped": "रुक गया।",
+    "finished": "पूरा हुआ।",
+    "summaryCompleted": "{{ran}}/{{total}} स्टेप पूरे हुए।",
+    "summaryRan": "{{ran}}/{{total}} स्टेप चले।",
+    "paused": "रुका हुआ",
+    "running": "चल रहा है…",
+    "resume": "दोबारा शुरू करें",
+    "pause": "रोकें",
+    "stop": "बंद करें",
+    "close": "बंद करें",
+    "errors": {
+      "run": "मैक्रो नहीं चल सका।"
+    },
+    "logStepSkipped": "{{label}} छोड़ा गया (वैकल्पिक) - {{error}}"
+  },
+  "parallel": {
+    "states": {
+      "queued": "कतार में",
+      "launching": "लॉन्च हो रहा है",
+      "running": "चल रहा है",
+      "passed": "पास",
+      "failed": "फ़ेल"
+    },
+    "title": "पैरेलल मैक्रो रनर",
+    "subtitle": "एक मैक्रो को एक साथ कई प्रोफ़ाइल पर चलाएं, लाइव स्थिति के साथ।",
+    "macroLabel": "मैक्रो",
+    "noMacros": "अभी कोई मैक्रो नहीं",
+    "macroOption": "{{name}} · {{count}} स्टेप",
+    "concurrency": "एक साथ कितने",
+    "concurrencyCap": "आपका प्लान एक साथ {{max}} प्रोफ़ाइल तक चलाता है।",
+    "concurrencyCapUpgrade": "आपका प्लान एक साथ {{max}} प्रोफ़ाइल तक चलाता है। Enterprise {{enterpriseMax}} तक चलाता है।",
+    "dataBound_one": "{{fileName}} · {{count}} पंक्ति",
+    "dataBound_other": "{{fileName}} · {{count}} पंक्तियां",
+    "dataHint": "वैकल्पिक: कोई स्प्रेडशीट जोड़ें (पंक्ति → प्रोफ़ाइल, क्रम से)",
+    "clearDataBinding": "जोड़ा गया डेटा हटाएं",
+    "bindData": "डेटा जोड़ें",
+    "columnsPrefix": "कॉलम: {{columns}} - मैक्रो स्टेप में",
+    "columnsSuffix": "इस्तेमाल करें।",
+    "profilesLabel": "प्रोफ़ाइल ({{count}} चुनी गईं)",
+    "selectAll": "सभी चुनें",
+    "clear": "हटाएं",
+    "searchPlaceholder": "खोजें",
+    "noProfiles": "कोई प्रोफ़ाइल नहीं मिली।",
+    "rowMismatch": "{{rows}} डेटा पंक्तियां बनाम {{profiles}} प्रोफ़ाइल - बची हुई प्रोफ़ाइल बिना वेरिएबल के चलेंगी।",
+    "running": "चल रहा है…",
+    "runOn_one": "{{count}} प्रोफ़ाइल पर चलाएं",
+    "runOn_other": "{{count}} प्रोफ़ाइल पर चलाएं",
+    "runStatus": "रन स्थिति",
+    "summaryPassed": "पास",
+    "summaryFailed": "फ़ेल",
+    "summaryTotal": "कुल {{total}}",
+    "watchHint": "प्रोफ़ाइल और मैक्रो चुनें, फिर लाइव प्रगति देखने के लिए रन शुरू करें।",
+    "steps": "{{ran}}/{{total}} स्टेप",
+    "profileFallback": "प्रोफ़ाइल {{id}}",
+    "runConsole": "रन कंसोल",
+    "live": "लाइव",
+    "consoleIdle": "[ खाली ] अभी कोई रन नहीं - प्रगति यहां दिखेगी (कुकीज़ या क्रेडेंशियल कभी शामिल नहीं होते)।",
+    "logRunFinished": "रन पूरा हुआ - {{total}} में से {{passed}} पास",
+    "logRunFinishedError": "रन पूरा हुआ - {{total}} में से {{passed}} पास ({{error}})",
+    "errors": {
+      "readSpreadsheet": "स्प्रेडशीट पढ़ी नहीं जा सकी।",
+      "chooseMacro": "चलाने के लिए कोई मैक्रो चुनें।",
+      "selectProfile": "कम से कम एक प्रोफ़ाइल चुनें।",
+      "startRun": "पैरेलल रन शुरू नहीं हो सका।"
+    }
+  },
+  "warmer": {
+    "title": "कुकी वार्मर",
+    "subtitle": "असली साइटें ब्राउज़ करके स्वाभाविक कुकीज़ और हिस्ट्री बनाता है।",
+    "sitesLabel": "देखने वाली साइटें ({{count}})",
+    "addSuggested": "सुझाई गई साइट जोड़ें…",
+    "add": "जोड़ें",
+    "customPlaceholder": "या कोई कस्टम URL पेस्ट करें (जैसे example.com)",
+    "bulkAdd": "एक साथ जोड़ें",
+    "importFile": ".txt/.csv इंपोर्ट करें",
+    "clearAll": "सब हटाएं",
+    "bulkPlaceholder": "हर लाइन में एक URL पेस्ट करें, जैसे\nexample.com\nhttps://news.site\nshop.site, 45, links",
+    "addList": "सूची जोड़ें",
+    "bulkHint": "हर लाइन में एक URL। वैकल्पिक CSV कॉलम: url, सेकंड, व्यवहार (none/random/links)।",
+    "addSecondsTitle": "जोड़े गए लिंक के लिए डिफ़ॉल्ट सेकंड",
+    "addBehaviorTitle": "जोड़े गए लिंक के लिए डिफ़ॉल्ट व्यवहार",
+    "saveList": "सूची सेव करें",
+    "saveListPrompt": "इस लिंक सूची को नाम दें (बाद में दोबारा इस्तेमाल के लिए):",
+    "loadListTitle": "यह सेव सूची लोड करें",
+    "deleteListTitle": "यह सेव सूची मिटाएं",
+    "selectRows": "पंक्तियां चुनें",
+    "nSelected": "{{count}} चुनी गईं",
+    "bulkSetSeconds": "चुनी गई पंक्तियों के लिए सेकंड सेट करें",
+    "bulkSetBehavior": "चुनी गई पंक्तियों के लिए व्यवहार सेट करें",
+    "setBehavior": "व्यवहार सेट करें…",
+    "deleteSelected": "मिटाएं",
+    "noSites": "अभी कोई साइट नहीं - ऊपर एक जोड़ें।",
+    "secondsTitle": "इस साइट पर बिताने वाले सेकंड",
+    "secondsUnit": "से.",
+    "behaviourTitle": "इस साइट पर क्या करना है",
+    "remove": "हटाएं",
+    "loopUntilStopped": "रोकने तक दोहराएं",
+    "keepOpen": "बाद में सेशन खुले रखें",
+    "hidden": "छिपाकर चलाएं (कोई विंडो नहीं)",
+    "hiddenTitle": "हेडलेस वार्म-अप - कोई ब्राउज़र विंडो नहीं खुलती। कुकीज़ और कैश फिर भी हर प्रोफ़ाइल में सेव होते हैं।",
+    "cookieNote": "कुकीज़ और कैश अपने आप हर प्रोफ़ाइल में सेव होते हैं - कंसोल बताता है कि डिस्क पर कितनी कुकीज़ और कितना कैश सेव हुआ। अगली बार सामान्य लॉन्च पर ये दोबारा इस्तेमाल होते हैं।",
+    "startWarmup": "वार्म-अप शुरू करें",
+    "warming": "वार्म-अप चल रहा है…",
+    "stop": "रोकें",
+    "forceStop": "ज़बरदस्ती रोकें",
+    "profilesLabel": "प्रोफ़ाइल ({{count}} चुनी गईं)",
+    "searchPlaceholder": "खोजें",
+    "selectAll": "सभी",
+    "selectNone": "कोई नहीं",
+    "invert": "उलटें",
+    "addGroup": "ग्रुप जोड़ें…",
+    "addTag": "टैग जोड़ें…",
+    "pasteIdsPlaceholder": "प्रोफ़ाइल ID या नाम पेस्ट करें (कॉमा / स्पेस से अलग)",
+    "selectPaste": "चुनें",
+    "noProfiles": "कोई प्रोफ़ाइल नहीं मिली।",
+    "profileFallback": "प्रोफ़ाइल {{id}}",
+    "warmupConsole": "वार्म-अप कंसोल",
+    "live": "लाइव",
+    "progressTitle": "वार्म-अप प्रगति",
+    "modeQueue": "कतार · एक बार में एक",
+    "modeBulk": "बल्क · एक बार में {{n}}",
+    "consoleIdle": "[ खाली ] लाइव प्रगति देखने के लिए प्रोफ़ाइल चुनें, अवधि सेट करें और वार्म-अप शुरू करें।",
+    "errors": {
+      "selectProfile": "वार्म-अप के लिए कम से कम एक प्रोफ़ाइल चुनें।",
+      "addSite": "देखने के लिए कम से कम एक साइट जोड़ें।",
+      "startWarmup": "वार्म-अप शुरू नहीं हो सका।",
+      "stopWarmup": "वार्म-अप रोका नहीं जा सका।",
+      "importFile": "यह फ़ाइल पढ़ी नहीं जा सकी।"
+    },
+    "queueTitle": "एक बार में एक प्रोफ़ाइल वार्म करें (सख्त कतार): एक ब्राउज़र खोलें, उसे पूरा होकर बंद होने दें, फिर अगला। इससे सभी चुने गए ब्राउज़र एक साथ नहीं खुलते, जो RAM/CPU खत्म करके ऐप को क्रैश कर सकता है।",
+    "queueMode": "एक बार में एक चलाएं (कतार)",
+    "parallelTitle": "एक साथ कितनी प्रोफ़ाइल वार्म करें। ज़्यादा = तेज़, पर RAM/CPU पर ज़्यादा भार।",
+    "parallelLabel": "एक बार में:"
+  },
+  "counter": {
+    "total": "कुल",
+    "running": "चल रही",
+    "done": "पूरी",
+    "queued": "कतार में"
+  },
+  "console": {
+    "copy": "कॉपी करें",
+    "copied": "कॉपी हो गया",
+    "export": "एक्सपोर्ट करें",
+    "clear": "साफ़ करें"
+  },
+  "history": {
+    "emptyTitle": "अभी कोई टास्क नहीं चला",
+    "emptyHint": "वार्मर, मैक्रो और पैरेलल रन यहां दिखेंगे।",
+    "columns": {
+      "task": "टास्क",
+      "profiles": "प्रोफ़ाइल",
+      "detail": "विवरण",
+      "status": "स्थिति",
+      "when": "कब"
+    },
+    "emptyDetail": "-",
+    "parallelRun": "पैरेलल रन",
+    "macroRun": "मैक्रो रन",
+    "cookieWarmup": "कुकी वार्म-अप",
+    "minutes": "{{count}} मिनट",
+    "sites_one": "{{count}} साइट",
+    "sites_other": "{{count}} साइटें"
+  },
+  "stepFieldOptions": {
+    "auto": "ऑटो",
+    "value": "मान",
+    "label": "लेबल",
+    "index": "इंडेक्स",
+    "visible": "दिखता हुआ",
+    "hidden": "छिपा हुआ",
+    "checked": "टिक किया",
+    "unchecked": "टिक नहीं"
+  },
+  "autopilot": {
+    "title": "वार्म-अप ऑटोपायलट",
+    "subtitle": "रोज़ कुछ साइटों से प्रोफ़ाइल वार्म करता है, ताकि उनमें असली ब्राउज़िंग हिस्ट्री बने।",
+    "toggle": "वार्म-अप ऑटोपायलट चालू या बंद करें",
+    "target": "प्रोफ़ाइल",
+    "targetAll": "सभी प्रोफ़ाइल",
+    "targetGroup": "एक ग्रुप",
+    "group": "ग्रुप",
+    "runsPerDay": "रोज़ कितने रन",
+    "runsPerDayTitle": "हर प्रोफ़ाइल दिन में कितनी बार वार्म हो",
+    "sitesPerRun": "हर रन में साइटें",
+    "sitesPerRunTitle": "सुझाई गई सूची से रैंडम साइटें, हर एक पर 20 से 45 सेकंड",
+    "activeHours": "सक्रिय घंटे",
+    "startHour": "शुरू होने का समय",
+    "endHour": "खत्म होने का समय",
+    "hoursTo": "से",
+    "atATime": "एक बार में",
+    "atATimeTitle": "एक साथ वार्म होने वाली प्रोफ़ाइल। ज़्यादा = तेज़, पर ज़्यादा मेमोरी।",
+    "hidden": "छिपाकर चलाएं (कोई विंडो नहीं)",
+    "hint": "कोई प्रोफ़ाइल तब वार्म होती है जब उसका आखिरी वार्म-अप 24 घंटे को रोज़ के रन से भाग देने पर मिले समय से पुराना हो। खुली, लॉक या व्यस्त प्रोफ़ाइल छोड़ दी जाती हैं।",
+    "ownedByOther": "इसे किसी दूसरे सदस्य ने चालू किया है। सिर्फ़ वही या उनसे ऊपर वाला इसे बदल सकता है।",
+    "status": {
+      "off": "बंद",
+      "nextSoon": "अगला रन एक मिनट के अंदर",
+      "nextAt": "अगला रन {{time}}",
+      "nothingDue": "वार्म करने के लिए कोई प्रोफ़ाइल नहीं",
+      "warmedToday": "आज {{total}} में से {{done}} वार्म हुईं",
+      "warmingNow": "अभी {{n}} वार्म हो रही हैं",
+      "lastError": "आखिरी गड़बड़ी, {{time}}: {{error}}"
+    },
+    "errors": {
+      "load": "ऑटोपायलट सेटिंग्स लोड नहीं हो सकीं।",
+      "save": "ऑटोपायलट सेटिंग्स सेव नहीं हो सकीं।",
+      "noGroups": "अभी कोई ग्रुप नहीं। पहले प्रोफ़ाइल पेज पर एक बनाएं।",
+      "owner-missing": "ऑटोपायलट चालू करने वाला सदस्य अब मौजूद नहीं है। वर्कस्पेस मालिक इसे बंद करके फिर चालू कर सकते हैं ताकि यह उनके नाम हो जाए।",
+      "owner-inactive": "ऑटोपायलट चालू करने वाला सदस्य निलंबित या ब्लॉक है।",
+      "owner-no-permission": "ऑटोपायलट चालू करने वाले सदस्य को शायद अब ऑटोमेशन चलाने की अनुमति नहीं है।",
+      "warm-failed": "{{profile}}: {{error}}",
+      "warmFailedHidden": "एक प्रोफ़ाइल, जो आपको नहीं दिखती, वार्म नहीं हो सकी।",
+      "tick-failed": "{{error}}"
+    }
+  }
+}

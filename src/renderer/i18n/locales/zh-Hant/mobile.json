@@ -1,0 +1,116 @@
+{
+  "title": "手機",
+  "description": "將 SoftGlaze 手機應用程式與這台電腦配合使用：在手機上檢視設定檔、啟動和停止它們，以及處理 AI 請求。手機與這台電腦之間的所有通訊都經過端到端加密。",
+  "enable": "開啟手機伴侶",
+  "loading": "正在載入",
+  "offOwner": "開啟後即可配對手機。這台電腦隨後會與 SoftGlaze 中繼伺服器保持安全連線，中繼伺服器只負責轉發加密訊息。",
+  "offOther": "擁有者尚未開啟手機伴侶。",
+  "copy": "複製",
+  "cancel": "取消",
+  "relay": {
+    "connected": "已連線到中繼伺服器",
+    "connecting": "正在連線中繼伺服器",
+    "authFailed": "中繼伺服器拒絕了這台電腦。請在「進階」中檢查中繼位址。"
+  },
+  "pair": {
+    "title": "配對手機",
+    "help": "在手機上安裝 SoftGlaze，然後掃描此螢幕上的QR 碼。",
+    "start": "配對手機",
+    "qrAlt": "SoftGlaze 手機應用程式的配對碼",
+    "scanTitle": "使用 SoftGlaze 手機應用程式掃描此QR 碼",
+    "step1": "在手機上開啟 SoftGlaze。",
+    "step2": "前往「設定」>「與電腦配對」，然後掃描此QR 碼。",
+    "step3": "確認兩個螢幕顯示相同的六位數字。",
+    "expiresIn": "此碼只能使用一次，將在 {{time}} 後失效。",
+    "textTitle": "無法掃描？以文字形式複製配對碼",
+    "attemptFailed": "有手機嘗試使用了錯誤或損壞的配對碼。此配對碼仍然有效。"
+  },
+  "confirm": {
+    "title": "{{name}} 請求配對",
+    "help": "只有當手機顯示的六位數字與此完全一致時才繼續。",
+    "helpBrowser": "只有當瀏覽器顯示的六位數字與此完全一致時才繼續。瀏覽器可以檢視設定檔並處理 AI 請求；只有在你也需要時，才勾選「啟動和停止設定檔」。",
+    "codeLabel": "代碼 {{code}}",
+    "name": "手機名稱",
+    "member": "身分",
+    "scopes": "此手機可執行的操作",
+    "match": "數字一致，配對",
+    "noMatch": "數字不一致"
+  },
+  "scopes": {
+    "view": {
+      "label": "檢視設定檔和狀態",
+      "help": "始終開啟。僅限該成員可以檢視的設定檔。"
+    },
+    "control_profiles": {
+      "label": "啟動和停止設定檔",
+      "help": "規則與這台電腦上相同。"
+    },
+    "approve_ai": {
+      "label": "處理 AI 請求",
+      "help": "允許或拒絕 AI 應用程式的操作，僅限該成員可處理的權杖。"
+    },
+    "approve_team": {
+      "label": "處理團隊請求",
+      "help": "核准團隊成員的存取請求。"
+    },
+    "totp": {
+      "label": "顯示雙重驗證碼",
+      "help": "儲存在設定檔中的兩步驟驗證碼。"
+    },
+    "phone_profiles_linked": {
+      "label": "同步設定檔",
+      "help": "你在下方選擇的設定檔也會在此手機上開啟。"
+    }
+  },
+  "roles": {
+    "OWNER": "擁有者",
+    "ADMIN": "管理員",
+    "MANAGER": "經理",
+    "OPERATOR": "操作員"
+  },
+  "devices": {
+    "title": "手機和瀏覽器",
+    "kindPhone": "手機",
+    "kindBrowser": "瀏覽器",
+    "empty": "還沒有手機。",
+    "online": "線上",
+    "offline": "離線",
+    "lastSeen": "最後線上 {{when}}",
+    "actsAs": "身分為 {{name}}",
+    "edit": "編輯 {{name}}",
+    "remove": "移除 {{name}}",
+    "removeConfirm": "移除 {{name}}？它將立即停止與這台電腦配合使用，需要重新配對。",
+    "rename": "重新命名",
+    "saveScopes": "儲存權限"
+  },
+  "sync": {
+    "title": "設定檔同步",
+    "help": "所選的設定檔也會在手機應用程式中開啟。設定、起始頁和 Cookie 會隨設定檔同步；同一時間一個設定檔只能在一台裝置上開啟。",
+    "noPhone": "目前還沒有可以同步的手機。請在上方為手機授予「同步設定檔」權限。",
+    "now": "立即同步",
+    "search": "查詢設定檔",
+    "toggle": "將 {{name}} 與手機同步",
+    "proxyPassword": "代理密碼",
+    "offConfirm": "停止同步 {{name}}？手機會保留其副本。",
+    "removeAll": "從中繼伺服器移除所有已同步的資料",
+    "removeAllConfirm": "從中繼伺服器移除所有已同步的設定檔？這台電腦和手機上的設定檔將保持不變。",
+    "lastOk": "上次同步：{{when}}",
+    "lastError": "上次同步失敗（{{code}}）。每分鐘會自動重試。",
+    "limits": "網站儲存、擴充功能、已儲存的密碼和下載內容不會同步。代理密碼僅在你允許時同步。"
+  },
+  "advanced": {
+    "title": "進階",
+    "pcName": "這台電腦在手機上顯示的名稱",
+    "relay": "中繼位址",
+    "relayFromEnv": "由 SG_RELAY_URL 設定，用於測試。",
+    "save": "儲存",
+    "reset": "重設手機金鑰",
+    "resetConfirm": "重設這台電腦的手機金鑰？所有已配對的手機都將被移除，需要重新配對。",
+    "protocol": "協定 {{version}}"
+  },
+  "errors": {
+    "load": "無法載入手機設定。",
+    "generic": "操作未成功，請重試。",
+    "unavailable": "此版本不支援手機功能。"
+  }
+}

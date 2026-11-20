@@ -1,0 +1,107 @@
+{
+  "palette": {
+    "dialogLabel": "कमांड पैलेट",
+    "searchPlaceholder": "पेज, प्रोफ़ाइल, प्रॉक्सी, सदस्य खोजें…",
+    "searchAriaLabel": "पेज, प्रोफ़ाइल, प्रॉक्सी और सदस्य खोजें",
+    "resultsLabel": "नतीजे",
+    "esc": "Esc",
+    "noMatches": "कुछ नहीं मिला।",
+    "nav": {
+      "dashboard": "डैशबोर्ड",
+      "ai": "SoftGlaze AI",
+      "profiles": "प्रोफ़ाइल",
+      "groups": "ग्रुप",
+      "proxies": "प्रॉक्सी पूल",
+      "freeProxies": "मुफ़्त प्रॉक्सी",
+      "proxyProviders": "प्रॉक्सी प्रोवाइडर",
+      "browsers": "ब्राउज़र",
+      "extensions": "एक्सटेंशन",
+      "batchImport": "बैच इंपोर्ट",
+      "trash": "ट्रैश",
+      "automation": "ऑटोमेशन",
+      "members": "सदस्य",
+      "account": "खाता",
+      "settings": "सेटिंग्स"
+    },
+    "hint": {
+      "page": "पेज",
+      "profile": "प्रोफ़ाइल",
+      "proxy": "प्रॉक्सी",
+      "member": "सदस्य",
+      "action": "कार्रवाई"
+    },
+    "fallback": {
+      "profile": "प्रोफ़ाइल #{{id}}",
+      "proxy": "प्रॉक्सी #{{id}}",
+      "member": "सदस्य #{{id}}"
+    },
+    "action": {
+      "stopAi": "सारा AI रोकें"
+    }
+  },
+  "wizard": {
+    "skipTitle": "सेटअप छोड़ें",
+    "back": "वापस",
+    "skip": "छोड़ें",
+    "saveAndContinue": "सेव करें और आगे बढ़ें",
+    "saveAndFinish": "सेव करें और पूरा करें",
+    "msg": {
+      "smtpSaved": "SMTP सेव हो गया।",
+      "proxySaved": "प्रॉक्सी सेव हो गई।"
+    },
+    "err": {
+      "smtpSaveFailed": "SMTP सेटिंग्स सेव नहीं हो सकीं।",
+      "proxySaveFailed": "प्रॉक्सी सेव नहीं हो सकी।",
+      "profileCreateFailed": "प्रोफ़ाइल नहीं बन सकी।"
+    },
+    "welcome": {
+      "title": "SoftGlaze में आपका स्वागत है",
+      "subtitle": "3 आसान कदमों में आपकी पहली प्रोफ़ाइल तैयार। आप कोई भी कदम छोड़ सकते हैं।",
+      "subtitleShort_one": "एक आसान कदम। आप इसे छोड़ सकते हैं।",
+      "subtitleShort_other": "{{count}} आसान कदमों का सेटअप। आप कोई भी कदम छोड़ सकते हैं।",
+      "unavailable": "धुंधले कदम छोड़ दिए जाएंगे: आपका खाता इन्हें नहीं कर सकता।",
+      "getStarted": "शुरू करें",
+      "stepEmail": "ईमेल (SMTP) - वैकल्पिक, OTP कोड के लिए",
+      "stepProxy": "आपकी पहली प्रॉक्सी - वैकल्पिक",
+      "stepProfile": "आपकी पहली ब्राउज़र प्रोफ़ाइल"
+    },
+    "smtp": {
+      "title": "ईमेल (SMTP)",
+      "subtitle": "वैकल्पिक - इससे ऐप पुष्टि कोड भेज पाता है। इसे बाद में सेटिंग्स में भी सेट कर सकते हैं।",
+      "host": "SMTP होस्ट",
+      "hostPlaceholder": "smtp.example.com",
+      "port": "पोर्ट",
+      "portPlaceholder": "587",
+      "username": "यूज़रनेम",
+      "usernamePlaceholder": "you@example.com",
+      "password": "पासवर्ड",
+      "passwordPlaceholder": "••••••••"
+    },
+    "proxy": {
+      "title": "अपनी पहली प्रॉक्सी जोड़ें",
+      "subtitle": "वैकल्पिक - हर पहचान को उसका अपना नेटवर्क दें। प्रॉक्सी पूल में और जोड़ सकते हैं।",
+      "type": "प्रकार",
+      "host": "होस्ट",
+      "hostPlaceholder": "1.2.3.4",
+      "port": "पोर्ट",
+      "portPlaceholder": "8080",
+      "user": "यूज़र",
+      "userPlaceholder": "वैकल्पिक",
+      "password": "पासवर्ड",
+      "passwordPlaceholder": "वैकल्पिक"
+    },
+    "profile": {
+      "title": "अपनी पहली प्रोफ़ाइल बनाएं",
+      "subtitle": "आपके लिए एक अलग, अंदर से एक जैसा फ़िंगरप्रिंट बनाया जाता है।",
+      "createAndFinish": "बनाएं और पूरा करें",
+      "name": "प्रोफ़ाइल का नाम",
+      "namePlaceholder": "मेरी पहली प्रोफ़ाइल",
+      "defaultName": "मेरी पहली प्रोफ़ाइल",
+      "deviceType": "डिवाइस का प्रकार",
+      "desktop": "डेस्कटॉप",
+      "mobile": "मोबाइल (Android)",
+      "mobileNote": "Android को डेस्कटॉप इंजन पर एम्युलेट किया जाता है - UA, टच, स्क्रीन और GPU एक जैसे रहते हैं, पर यह असली डिवाइस नहीं है।",
+      "proxyAttached": "आपकी नई प्रॉक्सी इस प्रोफ़ाइल से जुड़ जाएगी।"
+    }
+  }
+}

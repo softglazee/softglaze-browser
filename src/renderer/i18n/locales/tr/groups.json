@@ -1,0 +1,51 @@
+{
+  "header": {
+    "eyebrow": "Düzen",
+    "title": "Gruplar ve Etiketler",
+    "description": "Profilleri gruplara ayırın ve hızlı filtreleme için etiketleyin."
+  },
+  "filters": {
+    "allProfiles": "Tüm profiller",
+    "ungrouped": "Grupsuz",
+    "group": "Grup"
+  },
+  "sidebar": {
+    "directories": "Klasörler",
+    "createGroup": "Yeni grup oluştur",
+    "renameGroup": "{{name}} grubunu yeniden adlandır",
+    "deleteGroup": "{{name}} grubunu sil",
+    "groupNamePlaceholder": "Grup adı..."
+  },
+  "table": {
+    "searchPlaceholder": "Profillerde ara...",
+    "loading": "Gruplar yükleniyor...",
+    "colProfileName": "Profil adı",
+    "colGroupAssignment": "Atanan grup",
+    "colTags": "Etiketler"
+  },
+  "tagFilter": {
+    "label": "Filtreler",
+    "clear": "temizle"
+  },
+  "bulk": {
+    "selected_one": "{{count}} seçili",
+    "selected_other": "{{count}} seçili",
+    "moveTo": "Taşı:",
+    "chooseGroup": "Grup seçin…",
+    "clear": "Temizle"
+  },
+  "empty": {
+    "title": "Profil bulunamadı",
+    "noMatch": "Filtrelerinizle eşleşen profil yok.",
+    "groupEmpty": "Bu grup boş. Grup açılır listesini kullanarak profilleri buraya taşıyın."
+  },
+  "tags": {
+    "add": "Etiket ekle",
+    "remove": "Etiketi kaldır",
+    "inputPlaceholder": "etiket + Enter"
+  },
+  "deleteConfirm": "\"{{name}}\" grubu silinsin mi? Profilleri Grupsuz olur (profillerin kendisi silinmez).",
+  "errors": {
+    "loadFailed": "Gruplar yüklenemedi."
+  }
+}

@@ -1,0 +1,107 @@
+{
+  "palette": {
+    "dialogLabel": "Bảng lệnh",
+    "searchPlaceholder": "Tìm trang, hồ sơ, proxy, thành viên…",
+    "searchAriaLabel": "Tìm trang, hồ sơ, proxy và thành viên",
+    "resultsLabel": "Kết quả",
+    "esc": "Esc",
+    "noMatches": "Không có kết quả.",
+    "nav": {
+      "dashboard": "Bảng điều khiển",
+      "ai": "SoftGlaze AI",
+      "profiles": "Hồ sơ",
+      "groups": "Nhóm hồ sơ",
+      "proxies": "Kho proxy",
+      "freeProxies": "Proxy miễn phí",
+      "proxyProviders": "Nhà cung cấp proxy",
+      "browsers": "Trình duyệt",
+      "extensions": "Tiện ích",
+      "batchImport": "Nhập hàng loạt",
+      "trash": "Thùng rác",
+      "automation": "Tự động hóa",
+      "members": "Thành viên",
+      "account": "Tài khoản",
+      "settings": "Cài đặt"
+    },
+    "hint": {
+      "page": "Trang",
+      "profile": "Hồ sơ",
+      "proxy": "Proxy",
+      "member": "Thành viên",
+      "action": "Thao tác"
+    },
+    "fallback": {
+      "profile": "Hồ sơ #{{id}}",
+      "proxy": "Proxy #{{id}}",
+      "member": "Thành viên #{{id}}"
+    },
+    "action": {
+      "stopAi": "Dừng toàn bộ AI"
+    }
+  },
+  "wizard": {
+    "skipTitle": "Bỏ qua thiết lập",
+    "back": "Quay lại",
+    "skip": "Bỏ qua",
+    "saveAndContinue": "Lưu và tiếp tục",
+    "saveAndFinish": "Lưu và hoàn tất",
+    "msg": {
+      "smtpSaved": "Đã lưu SMTP.",
+      "proxySaved": "Đã lưu proxy."
+    },
+    "err": {
+      "smtpSaveFailed": "Không lưu được cài đặt SMTP.",
+      "proxySaveFailed": "Không lưu được proxy.",
+      "profileCreateFailed": "Không tạo được hồ sơ."
+    },
+    "welcome": {
+      "title": "Chào mừng đến với SoftGlaze",
+      "subtitle": "Thiết lập nhanh 3 bước để có hồ sơ đầu tiên. Bạn có thể bỏ qua bất kỳ bước nào.",
+      "subtitleShort_one": "Một bước nhanh. Bạn có thể bỏ qua.",
+      "subtitleShort_other": "Thiết lập nhanh {{count}} bước. Bạn có thể bỏ qua bất kỳ bước nào.",
+      "unavailable": "Các bước bị làm mờ sẽ được bỏ qua: tài khoản của bạn không làm được các bước đó.",
+      "getStarted": "Bắt đầu",
+      "stepEmail": "Email (SMTP) - không bắt buộc, dùng cho mã OTP",
+      "stepProxy": "Proxy đầu tiên - không bắt buộc",
+      "stepProfile": "Hồ sơ trình duyệt đầu tiên"
+    },
+    "smtp": {
+      "title": "Email (SMTP)",
+      "subtitle": "Không bắt buộc - cho phép ứng dụng gửi mã xác minh. Bạn có thể thiết lập sau trong Cài đặt.",
+      "host": "Máy chủ SMTP",
+      "hostPlaceholder": "smtp.example.com",
+      "port": "Cổng",
+      "portPlaceholder": "587",
+      "username": "Tên người dùng",
+      "usernamePlaceholder": "you@example.com",
+      "password": "Mật khẩu",
+      "passwordPlaceholder": "••••••••"
+    },
+    "proxy": {
+      "title": "Thêm proxy đầu tiên",
+      "subtitle": "Không bắt buộc - cho mỗi danh tính một mạng riêng. Bạn có thể thêm proxy trong Kho proxy.",
+      "type": "Loại",
+      "host": "Máy chủ",
+      "hostPlaceholder": "1.2.3.4",
+      "port": "Cổng",
+      "portPlaceholder": "8080",
+      "user": "Người dùng",
+      "userPlaceholder": "không bắt buộc",
+      "password": "Mật khẩu",
+      "passwordPlaceholder": "không bắt buộc"
+    },
+    "profile": {
+      "title": "Tạo hồ sơ đầu tiên",
+      "subtitle": "Một dấu vân tay riêng, nhất quán bên trong sẽ được tạo cho bạn.",
+      "createAndFinish": "Tạo và hoàn tất",
+      "name": "Tên hồ sơ",
+      "namePlaceholder": "Hồ sơ đầu tiên của tôi",
+      "defaultName": "Hồ sơ đầu tiên của tôi",
+      "deviceType": "Loại thiết bị",
+      "desktop": "Máy tính",
+      "mobile": "Di động (Android)",
+      "mobileNote": "Android được mô phỏng trên bộ máy máy tính - UA, cảm ứng, màn hình và GPU nhất quán, nhưng không phải thiết bị thật.",
+      "proxyAttached": "Proxy mới của bạn sẽ được gắn vào hồ sơ này."
+    }
+  }
+}

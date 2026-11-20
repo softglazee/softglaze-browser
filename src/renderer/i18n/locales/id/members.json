@@ -1,0 +1,324 @@
+{
+  "header": {
+    "eyebrow": "Tim",
+    "title": "Anggota",
+    "manageCount_other": "{{count}} anggota yang Anda kelola",
+    "workspaceStats": "{{profiles}} profil · {{proxies}} proxy di ruang kerja"
+  },
+  "tabs": {
+    "members": "Anggota",
+    "activity": "Aktivitas",
+    "licenses": "Lisensi"
+  },
+  "memberCount_other": "{{count}} anggota",
+  "roles": {
+    "SUPER_ADMIN": "Super Admin",
+    "OWNER": "Pemilik",
+    "ADMIN": "Admin",
+    "MANAGER": "Manajer",
+    "OPERATOR": "Operator"
+  },
+  "roleDesc": {
+    "OWNER": "Kendali penuh, termasuk anggota dan brankas.",
+    "ADMIN": "Kelola profil, proxy, grup, dan manajer/operator yang mereka buat.",
+    "MANAGER": "Membuat, mengedit, dan membuka profil, serta menambah operator.",
+    "OPERATOR": "Hanya membuka dan memakai profil yang ditugaskan."
+  },
+  "actionCategories": {
+    "Profiles": "Profil",
+    "Proxies": "Proxy",
+    "Automation": "Otomatisasi",
+    "Workspace": "Ruang kerja",
+    "Team": "Tim"
+  },
+  "actionLabels": {
+    "profiles_launch": "Buka profil",
+    "profiles_create": "Buat profil",
+    "profiles_edit": "Edit profil",
+    "profiles_export": "Ekspor profil",
+    "profiles_share": "Bagikan profil dengan anggota",
+    "profiles_delete": "Hapus profil (ke sampah)",
+    "profiles_purge": "Hapus profil secara permanen",
+    "proxies_manage": "Tambah / edit / hapus proxy",
+    "proxies_reveal": "Tampilkan kredensial proxy mentah",
+    "automation_run": "Jalankan otomatisasi / makro",
+    "extensions_manage": "Kelola ekstensi tim",
+    "settings_manage": "Ubah pengaturan ruang kerja",
+    "vault_manage": "Kelola Brankas Identitas",
+    "members_manage": "Kelola anggota tim",
+    "members_delete": "Hapus anggota / ubah peran"
+  },
+  "features": {
+    "dashboard": "Dasbor (halaman saja)",
+    "profiles": "Profil",
+    "groups": "Grup",
+    "proxies": "Kumpulan proxy",
+    "browsers": "Browser",
+    "extensions": "Ekstensi",
+    "batchImport": "Impor massal",
+    "trash": "Sampah",
+    "members": "Anggota",
+    "settings": "Pengaturan"
+  },
+  "caps": {
+    "maxAdmins": "Admin",
+    "maxManagers": "Manajer",
+    "maxOperators": "Operator"
+  },
+  "labels": {
+    "profiles": "Profil",
+    "proxies": "Proxy",
+    "browsers": "Browser"
+  },
+  "status": {
+    "active": "Aktif",
+    "suspended": "Ditangguhkan",
+    "banned": "Diblokir"
+  },
+  "actions": {
+    "inviteMember": "Undang anggota",
+    "inviteTeamMember": "Undang anggota tim",
+    "remove": "Hapus",
+    "removeMember": "Hapus anggota",
+    "assignProfiles": "Tugaskan profil",
+    "cancel": "Batal",
+    "close": "Tutup",
+    "clear": "Bersihkan",
+    "save": "Simpan",
+    "createInvite": "Buat undangan",
+    "done": "Selesai",
+    "copy": "Salin",
+    "copied": "Disalin"
+  },
+  "empty": {
+    "title": "Belum ada anggota",
+    "canCreate": "Undang anggota tim pertama Anda untuk mulai membagi pekerjaan.",
+    "noMembers": "Anda belum punya anggota di bawah Anda."
+  },
+  "member": {
+    "you": "Anda",
+    "noEmail": "Tanpa email",
+    "invitePending": "Undangan tertunda",
+    "loginSet": "Login diatur",
+    "subMembers_other": "{{count}} sub-anggota"
+  },
+  "time": {
+    "neverActive": "Belum pernah aktif",
+    "activeJustNow": "Aktif baru saja",
+    "activeMinutes": "Aktif {{count}} mnt lalu",
+    "activeHours": "Aktif {{count}} jam lalu",
+    "activeDays": "Aktif {{count}} hr lalu"
+  },
+  "errors": {
+    "loadMembers": "Tidak bisa memuat anggota.",
+    "changeStatus": "Tidak bisa mengubah status.",
+    "nameRequired": "Nama wajib diisi.",
+    "saveMember": "Tidak bisa menyimpan anggota.",
+    "resetPerms": "Tidak bisa mereset izin.",
+    "removeMember": "Tidak bisa menghapus anggota.",
+    "loadProfiles": "Tidak bisa memuat profil.",
+    "reassignProfiles": "Tidak bisa memindahkan profil."
+  },
+  "confirm": {
+    "revertPerms": "Kembalikan batas dan fitur {{name}} ke bawaan perannya?"
+  },
+  "modal": {
+    "inviteTitle": "Undang anggota",
+    "editTitle": "Edit {{name}}",
+    "noCreatableRoles": "Anda tidak diizinkan membuat sub-anggota.",
+    "invitePendingCode": "Undangan tertunda: kode"
+  },
+  "fields": {
+    "name": "Nama",
+    "namePlaceholder": "Nama lengkap",
+    "email": "Email",
+    "role": "Peran",
+    "color": "Warna",
+    "instructions": "Instruksi",
+    "optional": "(opsional)",
+    "instructionsPlaceholder": "Tanggung jawab anggota ini…"
+  },
+  "invite": {
+    "createdTitle": "Undangan dibuat",
+    "sharePrefix": "Bagikan kode ini kepada ",
+    "shareSuffix": ". Mereka membuka SoftGlaze Browser → “Punya kode undangan?”, memasukkannya, lalu mengatur kata sandi.",
+    "code": "Kode undangan",
+    "link": "Tautan undangan",
+    "emailedTo": "Dikirim lewat email ke {{email}}.",
+    "emailNotSent": "Email tidak terkirim (atur SMTP di Pengaturan → Email). Bagikan kode secara manual."
+  },
+  "alloc": {
+    "heading_other": "Dialokasikan ke {{count}} sub-anggota",
+    "allocated": "{{allocated}} dari {{cap}} dialokasikan",
+    "left": "· sisa {{remaining}}"
+  },
+  "perms": {
+    "title": "Izin & batas",
+    "resourceLimits": "Batas sumber daya",
+    "subMemberCaps": "Batas sub-anggota",
+    "visibleFeatures": "Fitur yang terlihat",
+    "actionPermissions": "Izin aksi",
+    "actionHint": "Aktif secara bawaan untuk peran ini. Matikan salah satu untuk mencabutnya hanya bagi anggota ini.",
+    "revertDefaults": "Kembalikan ke bawaan peran",
+    "max": "(maks {{max}})",
+    "canInvite": {
+      "canCreateAdmins": "Bisa mengundang admin",
+      "canCreateManagers": "Bisa mengundang manajer",
+      "canCreateOperators": "Bisa mengundang operator"
+    },
+    "featuresHint": "Fitur yang dimatikan disembunyikan dari sidebar, dan aksinya ditolak di mana pun (misalnya menambah proxy, memulihkan dari Sampah, atau mengunduh browser). Daftar yang dibutuhkan halaman lain, seperti memilih proxy atau grup di editor profil, tetap dimuat."
+  },
+  "accountStatus": {
+    "title": "Status akun",
+    "reason": "Alasan: {{reason}}",
+    "unban": "Buka blokir anggota",
+    "banHint": "Mengedit kolom di atas tetap mempertahankan blokir: gunakan Buka blokir untuk memulihkan akses.",
+    "suspendToggle": "Tangguhkan anggota ini (memblokir login)",
+    "ban": "Blokir anggota"
+  },
+  "delete": {
+    "title": "Hapus {{name}}",
+    "warnPrefix": "Ini menghapus ",
+    "warnMiddle": " dan memindahkan sub-anggotanya ke Anda. Pilih apa yang terjadi pada datanya -",
+    "profilesWord_other": "profil",
+    "proxiesWord_other": "proxy",
+    "options": {
+      "reassignMe": {
+        "label": "Simpan & alihkan ke saya",
+        "desc": "Anda menjadi pemilik profil dan proxy mereka."
+      },
+      "reassignOther": {
+        "label": "Simpan & alihkan ke anggota lain",
+        "desc": "Serahkan data mereka ke rekan tim tertentu."
+      },
+      "delete": {
+        "label": "Hapus semua data terkait",
+        "desc": "Proxy & grup proxy mereka dihapus; profil dipindahkan ke Sampah (bisa dipulihkan)."
+      }
+    },
+    "pickTarget": "Pilih anggota yang menerima data.",
+    "reassignTo": "Alihkan ke",
+    "noOtherMembers": "Tidak ada anggota lain: pilih opsi lain."
+  },
+  "assign": {
+    "title": "Tugaskan profil · {{name}}",
+    "searchPlaceholder": "Cari profil",
+    "noProfiles": "Tidak ada profil.",
+    "memberFallback": "anggota #{{id}}",
+    "updated": "Diperbarui: {{assigned}} ditugaskan, {{unassigned}} dilepas.",
+    "save": "Simpan penugasan"
+  },
+  "activity": {
+    "title": "Aktivitas tim",
+    "subtitle": "siapa melakukan apa di ruang kerja ini",
+    "exported": "{{count}} baris diekspor → {{path}}",
+    "exportError": "Tidak bisa mengekspor log aktivitas.",
+    "filterByMember": "Filter menurut anggota",
+    "filterByAction": "Filter menurut aksi",
+    "allMembers": "Semua anggota",
+    "allActions": "Semua aksi",
+    "fromDate": "Dari tanggal",
+    "toDate": "Sampai tanggal",
+    "empty": "Belum ada aktivitas tercatat.",
+    "noMatch": "Tidak ada aktivitas yang cocok dengan filter ini.",
+    "enterpriseFeature": "Fitur Enterprise",
+    "seeBilling": "Lihat Tagihan",
+    "exportEnterpriseOnly": "Ekspor log audit (CSV / JSON) adalah fitur Enterprise. Tingkatkan paket di halaman Tagihan untuk mengekspor log aktivitas."
+  },
+  "activityActions": {
+    "launched": "membuka",
+    "stopped": "menghentikan",
+    "created": "membuat",
+    "edited": "mengedit",
+    "deleted": "menghapus",
+    "restored": "memulihkan",
+    "imported": "mengimpor",
+    "assigned": "menugaskan",
+    "reassigned": "mengalihkan",
+    "parallel_run": "proses paralel",
+    "macro_run": "menjalankan makro",
+    "member_added": "anggota ditambahkan",
+    "member_edited": "anggota diedit",
+    "member_removed": "anggota dihapus",
+    "permissions_changed": "izin diubah",
+    "status_changed": "status diubah",
+    "signed_in": "masuk",
+    "signed_out": "keluar",
+    "invite_accepted": "undangan diterima",
+    "proxies_copied_for_extension": "proxy disalin untuk ekstensi",
+    "devtools_address_shown": "alamat DevTools ditampilkan"
+  },
+  "feedTime": {
+    "justNow": "baru saja",
+    "minutes": "{{count}} mnt lalu",
+    "hours": "{{count}} jam lalu",
+    "days": "{{count}} hr lalu"
+  },
+  "license": {
+    "intro": "Status langganan per ruang kerja pemilik. Lokal dan sebatas kemampuan: pengguna yang bertekad masih bisa mengedit DB lokal atau jam; penegakan yang andal memerlukan backend lisensi.",
+    "noOwners": "Belum ada ruang kerja pemilik.",
+    "editTitle": "Lisensi · {{name}}",
+    "setState": "Atur status",
+    "grantPlan": "Berikan paket",
+    "lifecycle": "Siklus",
+    "state": {
+      "paid": "Berbayar",
+      "trialing": "Uji coba",
+      "grace": "Masa tenggang",
+      "banned": "Diblokir"
+    },
+    "type": {
+      "trial": "uji coba",
+      "paid": "berbayar"
+    },
+    "tier": {
+      "pro": "pro",
+      "enterprise": "enterprise"
+    },
+    "fields": {
+      "type": "Jenis",
+      "tier": "Tingkat",
+      "expiry": "Berakhir",
+      "plan": "Paket",
+      "months": "Bulan"
+    },
+    "detail": {
+      "trial": "Sisa {{count}} hari uji coba",
+      "grace": "Masa tenggang: sisa {{count}} hari",
+      "paid": "Berbayar hingga {{date}}",
+      "clockAnomaly": "⚠ anomali jam"
+    },
+    "actions": {
+      "grantMonth": "Beri 1 bln",
+      "extend7": "+7 hari",
+      "startTrial": "Mulai uji coba",
+      "resetTrial": "Reset uji coba",
+      "edit": "Edit",
+      "terminate": "Akhiri",
+      "unblock": "Buka blokir",
+      "block": "Blokir",
+      "saveState": "Simpan status",
+      "grantPlan": "Berikan paket",
+      "startFreeTrial": "Mulai uji coba gratis",
+      "terminateNow": "Akhiri sekarang"
+    },
+    "confirm": {
+      "terminate": "Akhiri langganan {{name}} sekarang? Profil mereka terkunci sampai Anda memberi akses lagi.",
+      "terminateModal": "Akhiri langganan ini sekarang? Profil terkunci sampai Anda memberi akses lagi.",
+      "resetTrial": "Reset uji coba {{name}}? Hitungan uji coba dimulai ulang dan status lisensi saat ini diganti.",
+      "block": "Blokir {{name}}? Mereka dan semua sub-anggotanya dikeluarkan dan tidak bisa memakai aplikasi sampai Anda membuka blokirnya."
+    },
+    "errors": {
+      "load": "Tidak bisa memuat lisensi.",
+      "action": "Aksi gagal."
+    }
+  },
+  "seats": {
+    "usage": "{{used}} dari {{total}} anggota",
+    "fullNotice": "Semua {{total}} kursi tim di paket Anda sudah terpakai, jadi tidak bisa menambah orang baru. Tangguhkan anggota untuk mengosongkan kursi, atau tingkatkan ke Enterprise untuk hingga {{enterpriseSeats}} anggota tim.",
+    "fullNoticeTop": "Semua {{total}} kursi tim di paket Anda sudah terpakai, jadi tidak bisa menambah orang baru. Tangguhkan anggota untuk mengosongkan kursi.",
+    "overNotice": "Tim ini punya {{used}} anggota dan paket Anda mencakup {{total}}. Semua tetap punya akses; anggota baru bisa ditambahkan setelah tim di bawah batas.",
+    "seeBilling": "Lihat Tagihan",
+    "limitError": "Semua kursi tim di paket Anda sudah terpakai. Tangguhkan anggota untuk mengosongkan kursi, atau lihat opsi paket di Tagihan."
+  }
+}

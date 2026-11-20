@@ -1,0 +1,70 @@
+{
+  "header": {
+    "eyebrow": "引擎",
+    "title": "瀏覽器",
+    "subtitle": "按需下載真實的 Chrome 和 Firefox 版本，自動安裝，隨時可啟動。",
+    "refresh": "重新整理"
+  },
+  "stats": {
+    "chromeInstalled": "已安裝的 Chrome",
+    "chromeAvailable": "可用的 Chrome",
+    "firefoxInstalled": "已安裝的 Firefox",
+    "firefoxAvailable": "可用的 Firefox"
+  },
+  "counts": {
+    "installedAvailable": "· 已安裝 {{installed}} 個 · 可用 {{available}} 個"
+  },
+  "engine": {
+    "heading": "指紋引擎",
+    "installed": "已安裝",
+    "notInstalled": "未安裝",
+    "description": "fingerprint-chromium：在引擎層面原生設定 canvas / WebGL / UA / 平台 / 時區，隱藏 webdriver，並阻擋 WebRTC 洩露。請在「設定 → 瀏覽器」中開啟。",
+    "progressInstalling": "正在安裝",
+    "progressVerifying": "正在驗證",
+    "installing": "正在安裝",
+    "verifying": "正在驗證",
+    "downloading": "正在下載",
+    "download": "下載（約 180 MB）"
+  },
+  "firefox": {
+    "heading": "Firefox",
+    "ready": "就緒",
+    "notDetected": "未偵測到",
+    "detectedDesc": "就緒。已在 {{path}} 偵測到。Firefox 設定檔會啟動真實的 Firefox，並套用代理、UA、語言區域、時區，同時關閉 WebRTC。",
+    "notDetectedDesc": "未偵測到系統中的 Firefox。請在下方下載一個版本：它會安裝到應用程式中，Firefox 設定檔將啟動真實的 Firefox，並套用代理、UA、語言區域、時區，同時關閉 WebRTC。",
+    "fetching": "正在取得 Firefox 版本目錄…",
+    "empty": "沒有可用的 Firefox 版本（是否處於離線狀態？）。"
+  },
+  "chromium": {
+    "heading": "Chromium（Chrome for Testing）",
+    "subtitle": "真實版本：UA、Client Hints、TLS 和 Worker 都與該版本真正一致。",
+    "fetching": "正在取得 Chrome for Testing 版本目錄…",
+    "empty": "沒有可用的版本（是否處於離線狀態？）。"
+  },
+  "row": {
+    "versionLabel": "{{brand}} {{major}}",
+    "ready": "就緒",
+    "paused": "已暫停",
+    "interrupted": "已中斷",
+    "resume": "繼續",
+    "download": "下載",
+    "retry": "重試",
+    "downloading": "正在下載",
+    "installing": "正在安裝…",
+    "installingShort": "正在安裝",
+    "queued": "排隊中…",
+    "pauseDownload": "暫停下載",
+    "pausedPercent": "已暫停 · {{percent}}%",
+    "interruptedPercent": "已中斷 · {{percent}}%"
+  },
+  "errors": {
+    "catalogUnreachable": "無法存取瀏覽器版本目錄。請檢查網路連線。",
+    "downloadFailed": "下載失敗。",
+    "pauseFailed": "暫停失敗。",
+    "resumeFailed": "繼續下載失敗。"
+  },
+  "browsers": {
+    "showAll": "顯示全部 {{n}} 個版本",
+    "showLess": "收起"
+  }
+}

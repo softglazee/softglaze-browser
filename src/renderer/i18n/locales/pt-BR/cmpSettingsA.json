@@ -1,0 +1,162 @@
+{
+  "billing": {
+    "status": {
+      "loading": "Carregando…",
+      "sourceOwner": "Dono do código",
+      "active": "Ativa",
+      "activeUntil": "Ativa · até {{date}}",
+      "trialDaysLeft_one": "Teste · falta {{count}}d",
+      "trialDaysLeft_many": "Teste · faltam {{count}}d",
+      "trialDaysLeft_other": "Teste · faltam {{count}}d",
+      "graceDaysLeft_one": "Carência · falta {{count}}d",
+      "graceDaysLeft_many": "Carência · faltam {{count}}d",
+      "graceDaysLeft_other": "Carência · faltam {{count}}d",
+      "subscriptionEnded": "Assinatura encerrada"
+    },
+    "subscription": {
+      "title": "Assinatura",
+      "planLine": "SoftGlaze Browser · plano {{tier}}",
+      "manageButton": "Gerenciar assinatura e planos"
+    },
+    "seats": {
+      "label": "Vagas da equipe",
+      "usage": "{{used}} / {{total}} usadas"
+    },
+    "gateway": {
+      "title": "Formas de pagamento",
+      "description": "Só Super Admin. Ative as formas mostradas aos proprietários no checkout e guarde as chaves de cada provedor.",
+      "loadError": "Não foi possível carregar as configurações de pagamento.",
+      "footnote": "As chaves ficam criptografadas nesta máquina e nunca saem dela. O checkout funciona por consulta (sem webhooks), então o controle entre instalações ainda precisa do backend de licenças. Pagamentos via Wise e Manual são aprovados por você em “Pagamentos pendentes” abaixo.",
+      "retry": "Tentar de novo"
+    },
+    "provider": {
+      "kindManual": "Manual",
+      "kindAutomated": "Automático",
+      "on": "ligado",
+      "enabled": "Ativado",
+      "disabled": "Desativado",
+      "enableAria": "Ativar {{provider}}",
+      "documentation": "Documentação",
+      "secretStoredPlaceholder": "•••••••• (deixe em branco para manter a atual)",
+      "secretPlaceholder": "Cole a chave",
+      "save": "Salvar",
+      "testConnection": "Testar conexão",
+      "enabledMsg": "Ativado.",
+      "disabledMsg": "Desativado.",
+      "updateError": "Não foi possível atualizar.",
+      "savedMsg": "Salvo.",
+      "saveError": "Não foi possível salvar.",
+      "connectionOk": "A conexão parece boa ✓",
+      "validationFailedKeys": "Falha na validação: confira as chaves.",
+      "validationFailed": "Falha na validação."
+    },
+    "manual": {
+      "title": "Pagamentos pendentes",
+      "description": "Envios manuais (Wise / transferência bancária) aguardando sua aprovação.",
+      "loadError": "Não foi possível carregar os pagamentos manuais.",
+      "resolveError": "Não foi possível atualizar esse pagamento.",
+      "ownerFallback": "Proprietário #{{id}}",
+      "refPrefix": "ref:",
+      "approve": "Aprovar",
+      "reject": "Recusar",
+      "statusLabel": {
+        "pending": "pendente",
+        "approved": "aprovado",
+        "rejected": "recusado"
+      }
+    }
+  },
+  "monetization": {
+    "heading": "Monetização",
+    "affiliate": {
+      "title": "Links de afiliado e indicação",
+      "ownerOnly": "Só proprietário",
+      "description": "Suas URLs de parceiro para os botões “Comprar” do marketplace de proxies. Deixe em branco para usar o padrão do Softglaze.",
+      "loadError": "Não foi possível carregar os links de afiliado.",
+      "saveError": "Não foi possível salvar os links de afiliado.",
+      "savedMsg": "Salvo. Os botões do marketplace agora usam seus links.",
+      "customLink": "Link personalizado",
+      "defaultLink": "Link padrão",
+      "openLinkTitle": "Abrir link de {{provider}}",
+      "saving": "Salvando…",
+      "saveButton": "Salvar links",
+      "footnote": "Esses links alimentam os botões “Comprar em…” / “Visitar painel” em Pool de proxies → aba Provedores. São só URLs públicas de indicação: tokens e credenciais de proxy nunca são afetados."
+    }
+  },
+  "developerApi": {
+    "title": "Acesso à API para desenvolvedores",
+    "description": "Gere chaves de API e rode um servidor REST local para controlar o Softglaze por código.",
+    "copy": "Copiar",
+    "errors": {
+      "load": "Não foi possível carregar as configurações da API.",
+      "nameRequired": "Dê um nome à chave (ex.: \"Servidor de CI\").",
+      "generate": "Não foi possível gerar a chave de API.",
+      "revoke": "Não foi possível revogar a chave.",
+      "toggleServer": "Não foi possível mudar o estado do servidor local."
+    },
+    "keys": {
+      "title": "Chaves de API",
+      "namePlaceholder": "Nome da chave (ex.: servidor de CI)",
+      "generate": "Gerar nova chave de API",
+      "copyOnce": "Copie esta chave agora: ela só aparece uma vez e não pode ser recuperada.",
+      "empty": "Ainda não há chaves de API.",
+      "lastUsed": "último uso {{when}}",
+      "neverUsed": "nunca usada",
+      "never": "nunca",
+      "revoke": "Revogar",
+      "revokeConfirm": "Revogar a chave de API \"{{name}}\"? Qualquer script que a use para de funcionar na hora. Isso não pode ser desfeito."
+    },
+    "server": {
+      "title": "API REST local",
+      "runningAt": "Rodando em",
+      "stoppedPrefix": "Parado · usaria",
+      "loopbackOnly": "(só loopback)",
+      "disableTitle": "Desativar API local",
+      "enableTitle": "Ativar API local",
+      "curlExample": "Exemplo: abrir um perfil via cURL",
+      "footnote": "O servidor só aceita pedidos desta máquina e exige uma chave Bearer válida."
+    }
+  },
+  "migration": {
+    "title": "Transferir perfis",
+    "ownerOnly": "Só proprietário",
+    "description": "Importe seus perfis de outro navegador multiperfil pela API dele.",
+    "sourcePlatform": "Plataforma de origem",
+    "noteLabel": "Observação:",
+    "instructions": "Instruções",
+    "tokenSectionTitle": "Token de API do {{platform}}",
+    "transferring": "Transferindo…",
+    "startTransfer": "Iniciar transferência",
+    "tokenFootnote": "Seu token é usado uma vez nesta transferência e nunca é guardado. Plataformas locais (AdsPower, ixBrowser) precisam estar rodando com a API local ativada.",
+    "errors": {
+      "tokenRequired": "Digite seu {{placeholder}} do {{platform}}.",
+      "transferFailed": "Falha na transferência."
+    },
+    "log": {
+      "title": "Log da migração",
+      "imported": "{{created}}/{{total}} importados",
+      "errors_one": "{{count}} erro",
+      "errors_many": "{{count}} erro(s)",
+      "errors_other": "{{count}} erro(s)",
+      "waiting": "Aguardando resposta da plataforma…"
+    },
+    "platforms": {
+      "dolphin": {
+        "placeholder": "Dolphin_Token",
+        "warning": "Os cookies não serão transferidos se você estiver vindo do plano gratuito do Dolphin."
+      },
+      "gologin": {
+        "placeholder": "Token de API do GoLogin"
+      },
+      "multilogin": {
+        "placeholder": "Token de automação do Multilogin"
+      },
+      "adspower": {
+        "placeholder": "Chave da API local do AdsPower"
+      },
+      "ixbrowser": {
+        "placeholder": "Chave da API local do ixBrowser"
+      }
+    }
+  }
+}

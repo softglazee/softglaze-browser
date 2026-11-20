@@ -1,0 +1,31 @@
+{
+  "brandSelect": {
+    "presentAs": "Przedstawiaj ten profil jako {{brand}}"
+  },
+  "versionSelect": {
+    "auto": "Auto",
+    "loadingVersions": "Wczytywanie wersji…",
+    "ready": "Gotowa",
+    "readyTitle": "Zainstalowana i gotowa do użycia",
+    "noVersions": "Nie znaleziono wersji.",
+    "offlineError": "Offline - brak połączenia z katalogiem wersji.",
+    "downloadFailed": "Pobieranie nie powiodło się.",
+    "resumeFailed": "Nie udało się wznowić.",
+    "paused": "Wstrzymano",
+    "interrupted": "Przerwano",
+    "resumeTitle": "{{state}} przy {{percent}}% - wznów",
+    "statusInstalling": "inst",
+    "statusQueued": "…",
+    "retryTitle": "Ponów - {{error}}",
+    "downloadFailedShort": "błąd pobierania",
+    "downloadInstallTitle": "Pobierz i zainstaluj tę wersję"
+  },
+  "pager": {
+    "showing": "Wyświetlanie {{from}}-{{to}} z {{total}}",
+    "perPage": "Na stronę",
+    "all": "Wszystkie",
+    "prev": "Poprz.",
+    "next": "Dalej",
+    "pageOf": "Strona {{page}} / {{total}}"
+  }
+}

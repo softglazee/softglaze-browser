@@ -1,0 +1,70 @@
+{
+  "header": {
+    "eyebrow": "Motores",
+    "title": "Navegadores",
+    "subtitle": "Baixe versões reais do Chrome e do Firefox quando precisar: instaladas automaticamente e prontas para abrir.",
+    "refresh": "Atualizar"
+  },
+  "stats": {
+    "chromeInstalled": "Chrome instalado",
+    "chromeAvailable": "Chrome disponível",
+    "firefoxInstalled": "Firefox instalado",
+    "firefoxAvailable": "Firefox disponível"
+  },
+  "counts": {
+    "installedAvailable": "· {{installed}} instalados · {{available}} disponíveis"
+  },
+  "engine": {
+    "heading": "Motor de impressão digital",
+    "installed": "Instalado",
+    "notInstalled": "Não instalado",
+    "description": "fingerprint-chromium: altera canvas / WebGL / UA / plataforma / fuso horário de forma nativa, oculta o webdriver e bloqueia o vazamento do WebRTC. Ative em Configurações → Navegador.",
+    "progressInstalling": "instalando",
+    "progressVerifying": "verificando",
+    "installing": "Instalando",
+    "verifying": "Verificando",
+    "downloading": "Baixando",
+    "download": "Baixar (~180 MB)"
+  },
+  "firefox": {
+    "heading": "Firefox",
+    "ready": "Pronto",
+    "notDetected": "Não detectado",
+    "detectedDesc": "Pronto. Detectado em {{path}}. Perfis Firefox abrem o Firefox real com proxy, UA, idioma, fuso horário e WebRTC desligado.",
+    "notDetectedDesc": "Nenhum Firefox do sistema detectado. Baixe uma versão abaixo: ela é instalada no app e os perfis Firefox abrem o Firefox real com proxy, UA, idioma, fuso horário e WebRTC desligado.",
+    "fetching": "Buscando o catálogo de versões do Firefox…",
+    "empty": "Nenhuma versão do Firefox disponível (você está offline?)."
+  },
+  "chromium": {
+    "heading": "Chromium (Chrome for Testing)",
+    "subtitle": "Versões reais: UA, Client-Hints, TLS e workers correspondem de verdade à versão.",
+    "fetching": "Buscando o catálogo do Chrome for Testing…",
+    "empty": "Nenhuma versão disponível (você está offline?)."
+  },
+  "row": {
+    "versionLabel": "{{brand}} {{major}}",
+    "ready": "Pronto",
+    "paused": "Pausado",
+    "interrupted": "Interrompido",
+    "resume": "Retomar",
+    "download": "Baixar",
+    "retry": "Tentar de novo",
+    "downloading": "Baixando",
+    "installing": "Instalando…",
+    "installingShort": "Instalando",
+    "queued": "Na fila…",
+    "pauseDownload": "Pausar download",
+    "pausedPercent": "Pausado · {{percent}}%",
+    "interruptedPercent": "Interrompido · {{percent}}%"
+  },
+  "errors": {
+    "catalogUnreachable": "Não foi possível acessar o catálogo de navegadores. Verifique sua conexão com a internet.",
+    "downloadFailed": "Falha no download.",
+    "pauseFailed": "Falha ao pausar.",
+    "resumeFailed": "Falha ao retomar."
+  },
+  "browsers": {
+    "showAll": "Mostrar todas as {{n}} versões",
+    "showLess": "Mostrar menos"
+  }
+}

@@ -1,0 +1,25 @@
+{
+  "contextMenu": {
+    "undo": "Annuler",
+    "redo": "Rétablir",
+    "cut": "Couper",
+    "copy": "Copier",
+    "paste": "Coller",
+    "selectAll": "Tout sélectionner",
+    "copyLink": "Copier le lien"
+  },
+  "dialogs": {
+    "exportArchiveTitle": "Exporter l'archive chiffrée du profil",
+    "archiveFilter": "Archive chiffrée SoftGlaze",
+    "importProfilesTitle": "Choisissez un tableur de profils SoftGlaze à importer",
+    "spreadsheetFilter": "Fichiers tableur",
+    "exportProfilesTitle": "Exporter les profils SoftGlaze",
+    "excelFilter": "Classeur Excel",
+    "importIdentitiesTitle": "Choisissez un tableur d'identités à importer",
+    "backupTitle": "Sauvegarder l'espace de travail",
+    "backupFilter": "Sauvegarde d'espace de travail SoftGlaze",
+    "restoreTitle": "Restaurer une sauvegarde de l'espace de travail",
+    "exportActivityTitle": "Exporter le journal d'activité",
+    "bindSpreadsheetTitle": "Choisissez un tableur à lier à cette exécution en parallèle"
+  }
+}

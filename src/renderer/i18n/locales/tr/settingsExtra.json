@@ -1,0 +1,411 @@
+{
+  "actions": {
+    "refresh": "Yenile"
+  },
+  "groups": {
+    "general": "Genel",
+    "browser": "Tarayıcı",
+    "runtime": "Çalışma ortamı",
+    "security": "Güvenlik ve ekip",
+    "account": "Hesap ve veriler"
+  },
+  "nav": {
+    "billing": "Faturalandırma",
+    "monetization": "Plan ve kullanım",
+    "migration": "İçe aktarma ve taşıma",
+    "workspaceSync": "Çalışma alanı eşitleme",
+    "branding": "Marka",
+    "dbEncryption": "Veritabanı şifreleme",
+    "workspaceBackup": "Çalışma alanı yedeği",
+    "developerApi": "Geliştirici API",
+    "phones": "Telefonlar"
+  },
+  "fingerprint": {
+    "title": "Parmak izi ve kimlik",
+    "description": "Profil geçersiz kılmadıkça her profile başlatmada uygulanır."
+  },
+  "behaviour": {
+    "title": "Tarayıcı davranışı",
+    "description": "Başlatılan tarayıcının günlük davranışı."
+  },
+  "ui": {
+    "searchPlaceholder": "Ayarlarda ara",
+    "jumpTo": "Bölüme git",
+    "noResultsTitle": "“{{term}}” ile eşleşen ayar yok",
+    "noResultsDesc": "Daha kısa bir kelime deneyin, örneğin proxy, kamera veya giriş.",
+    "experimental": "Deneysel",
+    "savedIdle": "Tüm değişiklikler kaydedildi",
+    "saving": "Değişiklikler kaydediliyor…",
+    "saveError": "Değişiklikler kaydedilemedi"
+  },
+  "localRuntime": {
+    "title": "Yerel Çalışma Ortamı",
+    "description": "Yollar Electron ana işleminde çözümlenir.",
+    "loading": "Sistem bilgisi yükleniyor...",
+    "sqliteDb": "SQLite veritabanı",
+    "profileRoot": "Profil kök klasörü",
+    "databaseUrl": "Veritabanı URL'si",
+    "configured": "Yapılandırıldı",
+    "notConfigured": "Yapılandırılmadı"
+  },
+  "sessions": {
+    "title": "Etkin Oturumlar",
+    "description": "Şu anda başlatılmış ve kaynak tüketen oturumlar.",
+    "loading": "Oturumlar yükleniyor...",
+    "emptyTitle": "Etkin oturum yok",
+    "emptyDescription": "Burada görmek için bir profil başlatın.",
+    "running": "Çalışıyor",
+    "created": "Oluşturuldu {{date}}",
+    "close": "Kapat"
+  },
+  "scheduler": {
+    "title": "Proxy Sağlık Zamanlayıcısı",
+    "description": "Kayıtlı her proxy'yi arka planda düzenli olarak yeniden kontrol edin ve sağlık durumunu kaydedin.",
+    "enabled": "Etkin",
+    "disabled": "Devre dışı",
+    "runSweepEvery": "Tarama sıklığı",
+    "every15min": "15 dk",
+    "every30min": "30 dk",
+    "every1hour": "1 saat",
+    "every2hours": "2 saat",
+    "serviceRunning": "Hizmet çalışıyor",
+    "idle": "Boşta",
+    "noteLabel": "Not:",
+    "noteBody": "Bu arka plan görevi Electron ana işleminde çalışır; bu yüzden uygulama simge durumundayken veya sayfalar arasında gezinirken bile kontroller kesintisiz sürer. Sağlık sonuçları doğrudan Proxy havuzu içinde durum rozetleri olarak gösterilir."
+  },
+  "toggleRow": {
+    "appliedAtLaunch": "Başlatmada uygulanır"
+  },
+  "globalPreferences": {
+    "heading": "Genel Tercihler",
+    "loading": "Genel ayarlar yükleniyor…",
+    "saving": "Kaydediliyor…"
+  },
+  "security": {
+    "title": "Hesap Güvenliği",
+    "description": "Giriş koruması ve doğrulama politikası.",
+    "remoteLogin": {
+      "title": "Uzaktan giriş hatırlatıcısı",
+      "desc": "Hesabınıza en sık kullanılan 3 IP yerine yeni bir IP adresinden giriş yapıldığında hatırlatma e-postası gönderilir."
+    },
+    "failedLogin": {
+      "title": "Başarısız giriş uyarısı",
+      "desc": "Giriş 3'ten fazla kez başarısız olursa Sahibin e-postasına hatırlatma gönderilir."
+    },
+    "ipAllowlist": {
+      "title": "Giriş IP izin listesi",
+      "desc": "Ayarlandığında üye girişi IP ile sınırlandırılır (Sahip etkilenmez)."
+    },
+    "twoStep": {
+      "title": "İki adımlı doğrulama",
+      "desc": "Hassas işlemler kimlik doğrulayıcı uygulama, e-posta veya SMS ile doğrulama gerektirir.",
+      "methodLabel": "Yöntem",
+      "methodApp": "Kimlik doğrulayıcı uygulama",
+      "methodEmail": "E-posta",
+      "methodSms": "SMS",
+      "levelLabel": "Kimlik doğrulama düzeyi",
+      "levelLow": "Düşük - yeni cihaz veya son 2FA'dan bu yana 90+ gün",
+      "levelMedium": "Orta (önerilir) - yeni cihaz veya 30+ gün",
+      "levelHigh": "Yüksek - her girişte 2FA gerekir"
+    }
+  },
+  "multiDevice": {
+    "title": "Çoklu Cihaz Modu",
+    "description": "Birden fazla üyenin aynı profile aynı anda erişip erişemeyeceğini belirleyin.",
+    "modeOff": "Kapalı - profil başına tek üye",
+    "modeFull": "Tam - tüm profiller eşzamanlı erişimi destekler",
+    "modeSpecified": "Belirli - yalnızca seçili profiller",
+    "hintBefore": "Etkinleştirildiğinde birden fazla üye aynı profile aynı anda erişebilir. ",
+    "hintSpecified": "Belirli",
+    "hintAfter": " modunda uygun profilleri Profiller sayfasından seçin."
+  },
+  "website": {
+    "title": "Web Sitesi Yönetimi",
+    "description": "URL erişim kuralları ve kaynak yükleme.",
+    "blockAccess": {
+      "title": "Erişimi engelle",
+      "desc": "URL yönetimi için engel listesini ve izin listesini kullanın.",
+      "blocklist": "Engel listesi",
+      "allowlist": "İzin listesi"
+    },
+    "fbStatic": {
+      "title": "FB statik kaynakları",
+      "desc": "Etkinleştirildiğinde Facebook statik kaynakları yerel ağ üzerinden yüklenir."
+    },
+    "localNetwork": {
+      "title": "Yerel ağ erişimi",
+      "desc": "Etkinleştirildiğinde belirli URL'lere yerel ağda erişilebilir."
+    }
+  },
+  "platform": {
+    "title": "Platform",
+    "description": "Profil listesi görünümünü özelleştirin.",
+    "customIcon": {
+      "title": "Özel simge",
+      "desc": "Listedeki profiller için özel bir simge göster."
+    },
+    "displayCustomNo": {
+      "title": "Özel numarayı göster",
+      "desc": "Tam özel seri numarasını göster (örn. \"123456\")."
+    },
+    "displayLast4": {
+      "title": "Özel numaranın son 4 hanesini göster",
+      "desc": "Seri numarasının yalnızca son 4 hanesini göster."
+    }
+  },
+  "ipSetting": {
+    "title": "IP Ayarı",
+    "description": "Proxy otomatik yapılandırma önceliği ve IP denetleyicisi.",
+    "priorityPrefix": "Arama önceliği:",
+    "priorityChain": "Son kullanılan IP > ASN > Şehir > Bölge > Ülke/Bölge",
+    "prioritySuffix": "İşaretlenmemiş seçenekler atlanır.",
+    "lastUsedIp": "Son kullanılan IP",
+    "asn": "ASN",
+    "asnDesc": "Yalnızca Bright auto için kullanılabilir.",
+    "city": "Şehir",
+    "region": "Bölge",
+    "country": "Ülke/Bölge",
+    "ipCheckerLabel": "IP denetleyicisi"
+  },
+  "dataSync": {
+    "title": "Veri Eşitleme",
+    "description": "Cihazlar arasında eşitlenecek verileri seçin.",
+    "cookie": "Çerez",
+    "passwords": "Kayıtlı parolalar",
+    "bookmarks": "Yer imleri",
+    "localStorage": "Local storage",
+    "indexedDb": "IndexedDB",
+    "extensionData": "Uzantı verileri",
+    "history": "Geçmiş"
+  },
+  "browser": {
+    "title": "Tarayıcı Ayarları",
+    "description": "Başlatılan tarayıcının davranışı. “Başlatmada uygulanır” işaretli öğeler bir sonraki profil başlatmasında etkili olur.",
+    "geoMatch": {
+      "title": "Otomatik konum eşleştirme (saat dilimi · dil · WebRTC)",
+      "desc": "Her profilin saat dilimini, dilini ve WebRTC çıkış IP'sini başlatmada proxy'sinin konumundan belirleyin. Yalnızca her profilin elle girilen değerlerini kullanmak için kapatın. Başlatmada uygulanır."
+    },
+    "realtimeTimezone": {
+      "title": "Dinamik IP değişiminde gerçek zamanlı saat dilimi eşleştirme",
+      "desc": "Dinamik IP değiştiğinde ilgili saat dilimini ve konumu eşleştirin."
+    },
+    "chromeSignin": {
+      "title": "Chrome girişine izin ver",
+      "desc": "Kapalıyken Gmail gibi Google sitelerine Chrome'un kendisine giriş yapmadan giriş yapabilirsiniz."
+    },
+    "offerTranslate": {
+      "title": "Sayfaları çevirmeyi öner",
+      "desc": "Okuduğunuz bir dilde olmayan sayfaları çevirmeyi önerin."
+    },
+    "disableDevtools": {
+      "title": "Tarayıcı Geliştirici Araçlarını devre dışı bırak",
+      "desc": "Chrome tabanlı profillerde herhangi bir Geliştirici Araçları penceresi veya paneli (F12, Ctrl+Shift+I, İncele) açılır açılmaz kapatılır. Değiştirdikten sonra başlatılan profillere uygulanır. Bu bilgisayardaki kendi Chrome'unuz etkilenmez."
+    },
+    "minimizeCdpFootprint": {
+      "title": "CDP izini en aza indir (deneysel - daha az CAPTCHA)",
+      "shortTitle": "CDP izini en aza indir",
+      "desc": "Kalıcı CDP Runtime.enable'ı kaldırır - Cloudflare/Turnstile'ın tespit ettiği en önemli otomasyon sinyali. AÇIKKEN ÖDÜN: persona otomatik doldurma, başlangıç sayfası kontrol bağlantıları ve eşitlenmiş oturum yansıtma çalışmaz (CDP bağlamasına ihtiyaç duyarlar). Varsayılan olarak kapalı; CAPTCHA'ları azaltıp azaltmadığını denemek için açın, sonra profilleri yeniden başlatın."
+    },
+    "blockThirdPartyCookies": {
+      "title": "Üçüncü taraf çerezleri engelle",
+      "desc": "Kapalı (önerilir): profiller üçüncü taraf çerezleri normal bir Chrome penceresi gibi saklar ve gönderir; reCAPTCHA, hCaptcha ve Cloudflare bir ziyaretçiye güvenmek için bunları kullanır, bu yüzden CAPTCHA'lar daha kolay olur. Açık: Chrome tabanlı profiller bunları engeller. Değiştirdikten sonra başlatılan profillere uygulanır."
+    },
+    "checkBeforeLaunch": {
+      "title": "Profilleri açılmadan önce kontrol et",
+      "desc": "Bir profil Profiller sayfasından açılmadan önce bariz uyumsuzlukları (sistem, grafik kartı, ekran, dil, saat dilimi, WebRTC, çalışmayan proxy) listeleyin ve önce düzeltmeyi önerin."
+    },
+    "switchProxyOnBlock": {
+      "title": "Bir site profili engellediğinde proxy değiştir",
+      "desc": "Bir site Chrome tabanlı bir profili engel veya CAPTCHA sayfasında tuttuğunda, proxy'nin döndürme bağlantısından yeni bir IP alın veya profili daha iyi bir yedek proxy'ye taşıyıp sayfayı tekrar açın. Profil başına saatte en fazla iki kez ve otomasyon ya da Local API onu kullanırken asla. Her engel, başarısız olan proxy ile birlikte kaydedilir.",
+      "toast": {
+        "blocked": "{{site}}, {{profile}} profilini engelledi ({{kind}}).",
+        "rotated": "{{proxy}} için yeni IP alındı ve sayfa yenilendi.",
+        "switched": "{{proxy}} proxy'sine geçildi ve sayfa tekrar açıldı.",
+        "notReopened": "{{proxy}} proxy'sine geçildi, ancak profil tekrar açılmadı.",
+        "none": {
+          "disabled": "Proxy değiştirme Ayarlar'da kapalı, bu yüzden hiçbir şey değiştirilmedi.",
+          "noProxy": "Profil kayıtlı bir proxy olmadan çalışıyor, bu yüzden hiçbir şey değiştirilmedi.",
+          "busy": "Otomasyon veya Local API bu profili kullanıyor, bu yüzden hiçbir şey değiştirilmedi.",
+          "limit": "Bu profil son bir saatte zaten {{limit}} kez değiştirildi, bu yüzden hiçbir şey değiştirilmedi.",
+          "proxyPool": "Profil bir döndürme havuzu kullanıyor, bu yüzden hiçbir şey değiştirilmedi.",
+          "noSpare": "Daha iyi bir yedek proxy yok, bu yüzden hiçbir şey değiştirilmedi.",
+          "noPermission": "Rolünüz bu profilin proxy'sini değiştiremez, bu yüzden hiçbir şey değiştirilmedi.",
+          "signedOut": "Kimse giriş yapmamış, bu yüzden hiçbir şey değiştirilmedi.",
+          "inProgress": "Bu profil için bir değiştirme zaten çalışıyor.",
+          "failed": "Değiştirme başarısız oldu, bu yüzden hiçbir şey değiştirilmedi."
+        },
+        "kind": {
+          "googleSorry": "Google olağan dışı trafik sayfası",
+          "rateLimit": "çok fazla istek",
+          "cloudflare": "Cloudflare doğrulaması",
+          "datadome": "DataDome engeli",
+          "accessDenied": "Access Denied sayfası",
+          "perimeterx": "PerimeterX engeli",
+          "unknown": "engel sayfası"
+        }
+      }
+    },
+    "lockExtensions": {
+      "title": "Uzantı kurmayı/kaldırmayı devre dışı bırak",
+      "desc": "Chrome tabanlı profillerde Uzantılar sayfası ve Chrome Web Store açılır açılmaz kapatılır; böylece uzantılar eklenemez, kaldırılamaz veya kapatılamaz. SoftGlaze'deki Uzantılar sayfasından kurduğunuz uzantılar yine yüklenir. Değiştirdikten sonra başlatılan profillere uygulanır."
+    },
+    "virtualCamera": {
+      "title": "Sanal kamera",
+      "desc": "Yerel videoyu canlı kamera görüntüsü olarak simüle edin. Yalnızca Chrome 140 ve üzeri sürümlerde geçerlidir."
+    },
+    "mobileSimulation": {
+      "title": "Mobil simülasyon optimizasyonu",
+      "desc": "Arayüzü gerçek bir mobil cihaz deneyimine yaklaştırın. Yalnızca Chrome 143 ve üzeri sürümlerde geçerlidir."
+    },
+    "secureAccess": {
+      "title": "Güvenli erişim (HTTPS)",
+      "desc": "Mümkün olduğunda HTTPS kullanın ve HTTPS olmayan siteleri yüklemeden önce uyarı alın."
+    },
+    "disableVideos": {
+      "title": "Video yüklemeyi devre dışı bırak",
+      "desc": "Proxy trafiğinden tasarruf için medya indirmelerini engelleyin."
+    },
+    "disableImages": {
+      "title": "Görsel yüklemeyi devre dışı bırak",
+      "desc": "Trafikten tasarruf için görsel yüklemeyi engelleyin. Not: görsel yükleme tamamen devre dışıdır; aşağıdaki KB eşiği gelecekte istek bazlı filtreleme için saklanır.",
+      "skipUnder": "Şu boyutun altındaki görselleri atla:",
+      "kb": "KB"
+    },
+    "antidetectEngine": {
+      "title": "Yerel parmak izi motoru (fingerprint-chromium)",
+      "desc": "Chrome profillerini fingerprint-chromium üzerinde başlatın - her profilin parmak izi ayarlarını (canvas, WebGL, ses, UA, platform, saat dilimi) ikili düzeyde uygulayan, kaynak kodu yamalanmış bir Chromium; navigator.webdriver ve HeadlessChrome UA'sını gizler ve WebRTC gerçek IP sızıntısını doğrudan engeller, sitelerin yakalayabileceği bir JS ekleme yarışı olmadan. fingerprint-chromium ikili dosyasını gerektirir; yoksa standart Chrome kullanılır. Bu motor, sayfa-uygulama köprüsünün dayandığı CDP bağlamasını kaldırır, bu yüzden SoftGlaze bu çağrıları bağlamasız bir kanaldan yönlendirir - Veri Kasası otomatik doldurma, makro kaydedici, başlangıç sayfası bağlantıları ve oturum yansıtma bu motorda çalışır. Varsayılan olarak kapalı - açın ve profilleri yeniden başlatın."
+    }
+  },
+  "performance": {
+    "title": "Performans",
+    "description": "Birçok profili aynı anda başlatma ayarları - toplu başlatmalara ve çalışan oturum tavanına uygulanır.",
+    "parallelLimit": {
+      "title": "Paralel başlatma sınırı",
+      "desc": "Toplu başlatmada aynı anda kaç profilin açılacağı. Daha yüksek değer daha hızlıdır ama daha çok RAM kullanır. Önerilen 3-8."
+    },
+    "maxRunning": {
+      "title": "En fazla çalışan profil",
+      "desc": "Aynı anda çalışan profiller için kesin tavan (bellek güvenliği). Sınırsız için 0 bırakın; sınırı aşan başlatmalar açık bir mesajla engellenir."
+    }
+  },
+  "reliability": {
+    "title": "Güvenilirlik",
+    "description": "Son oturumunuzu geri yükleyin, çöken profilleri kurtarın ve çok sayıda profil aynı anda çalışırken bellek tükenmesine karşı koruyun.",
+    "restoreSession": {
+      "title": "Başlangıçta son oturumu geri yükle",
+      "desc": "SoftGlaze yeniden açıldığında, son kapanışta veya çökmede çalışan profilleri yeniden başlatmayı öner."
+    },
+    "autoRestart": {
+      "title": "Çöken profilleri otomatik yeniden başlat",
+      "desc": "Bir profilin tarayıcısı kendiliğinden çökerse otomatik olarak yeniden başlatın. Sürekli çöken bir profilin döngüye girmemesi için profil başına sınırlıdır.",
+      "maxRetries": "Profil başına en fazla deneme"
+    },
+    "memoryGuard": {
+      "title": "Bellek koruması",
+      "desc": "Sistem belleği azaldığında, bellek toparlanana kadar en eski çalışan profilleri otomatik kapatır. Varsayılan olarak kapalı - etkinleştirilmedikçe hiçbir profili kapatmaz.",
+      "triggerBelow": "Boş RAM şunun altına düşünce tetikle:",
+      "stopWhenReaches": "boş RAM şuna ulaşınca dur:"
+    }
+  },
+  "smartAutofill": {
+    "title": "Smart Autofill",
+    "description": "Başlatılan profillerde kayıt formlarını algılayan ve kayıtlı personalarınızla dolduran Kimlik Veri Kasası aracı.",
+    "enable": {
+      "title": "Smart Autofill'i etkinleştir",
+      "desc": "Otomatik doldurma aracını başlatılan profillere ekleyin. Chromium'da sayfa içi köprüyü kullanır; kapatmak eklemeyi tamamen atlar."
+    },
+    "firefox": {
+      "title": "Firefox otomatik doldurma",
+      "desc": "Otomatik doldurma WebExtension'ını Firefox profillerine de kurun (Firefox'ta sayfa içi köprü yoktur). Firefox Developer Edition / Nightly'de imzasız yüklenir; sürüm Firefox, yükleyiciyle gelen Mozilla imzalı derlemeyi gerektirir."
+    },
+    "members": {
+      "title": "Ekip üyeleri otomatik doldurmada Veri Kasası'nı kullanabilir",
+      "desc": "Kapalı (varsayılan): başlatılan profillerdeki otomatik doldurma düğmesi Veri Kasası kimliklerini yalnızca Sahip giriş yapmışken sunar. Açık: Yöneticiler, Müdürler ve Operatörler de bunları alır, ancak Veri Kasası sayfasını açamazlar. Bunu yalnızca Sahip değiştirebilir."
+    }
+  },
+  "audit": {
+    "title": "Denetim Günlüğü",
+    "description": "Ekip etkinliğinin ve güvenlik olaylarının (üye değişiklikleri, girişler, izin düzenlemeleri) başlangıçta temizlenmeden önce ne kadar süre saklanacağı.",
+    "retentionTitle": "Saklama süresi",
+    "retentionDesc": "Bundan eski etkinlik SoftGlaze başladığında silinir. Tüm geçmişi sonsuza kadar saklamak için 0 yapın.",
+    "days": "gün"
+  },
+  "updates": {
+    "title": "Güncellemeler",
+    "description": "Uygulama güncellemelerini denetleyin ve kurun. Güncellemelerin imzası kurulmadan önce doğrulanır.",
+    "checkDefault": "SoftGlaze Browser'ın daha yeni bir sürümünün olup olmadığını denetleyin.",
+    "notEnabled": "Bu sürümde otomatik güncellemeler etkin değil.",
+    "checking": "Güncellemeler denetleniyor…",
+    "available": "{{version}} güncellemesi mevcut - arka planda indiriliyor…",
+    "downloading": "{{version}} indiriliyor… %{{percent}}",
+    "ready": "{{version}} güncellemesi kurulmaya hazır.",
+    "errorWithReason": "Güncellemeler denetlenemedi - {{reason}}",
+    "errorNoReason": "Güncellemeler denetlenemedi.",
+    "upToDate": "En son sürümü kullanıyorsunuz.",
+    "installRestart": "Kur ve yeniden başlat",
+    "checkForUpdates": "Güncellemeleri denetle"
+  },
+  "onStartup": {
+    "title": "Başlangıçta",
+    "description": "Bir profil başlatıldığında ne olacağı.",
+    "startPageLabel": "Başlangıç sayfası",
+    "modeDetection": "Proxy/parmak izi kontrol sayfasını göster",
+    "modeLast": "Son açılan sayfadan devam et",
+    "modeBlank": "Proxy kontrol sayfasını açma (boş)",
+    "onlyWithProxy": {
+      "title": "Yalnızca kullanılabilir proxy ile aç",
+      "desc": "Proxy bulunamazsa tarayıcı açılmaz. (Aksi halde IP'ye dayalı parmak izi öğeleri eşleşmez.)"
+    },
+    "onlyWhenExtensionLoaded": {
+      "title": "Yalnızca uzantı verileri yüklendiğinde aç",
+      "desc": "Tarayıcıyı yalnızca uzantı verileri başarıyla yüklendiğinde açın."
+    },
+    "blockIfCountryChanged": {
+      "title": "Ülke/bölge değiştiyse engelle",
+      "desc": "Ülke/bölge son açılıştakinden farklıysa profili açmayın."
+    }
+  },
+  "captcha": {
+    "title": "Otomatik CAPTCHA Çözme",
+    "description": "Gezinme sırasında reCAPTCHA v2 ve hCaptcha'yı ücretli bir üçüncü taraf çözücüyle otomatik çözün. Bu, parmak izinden ayrıdır - temiz bir parmak izi CAPTCHA'ların ne sıklıkla çıktığını azaltır, ancak çözmek için çözüm başına sağlayıcı tarafından (SoftGlaze tarafından değil) ücretlendirilen ücretli bir hizmet gerekir.",
+    "enable": {
+      "title": "Otomatik CAPTCHA çözmeyi etkinleştir",
+      "desc": "Açıkken başlatılan profiller desteklenen CAPTCHA'ları algılar ve otomatik olarak çözücünüze gönderir."
+    },
+    "providerLabel": "Çözücü sağlayıcı",
+    "apiKeyLabel": "API anahtarı",
+    "apiKeyPlaceholderAnticaptcha": "Anti-Captcha clientKey",
+    "apiKeyPlaceholder2captcha": "2captcha API anahtarı",
+    "billedAnticaptcha": "Ayarlar veritabanınızda yerel olarak saklanır. Anti-Captcha her çözüm için ücret alır.",
+    "billed2captcha": "Ayarlar veritabanınızda yerel olarak saklanır. 2captcha her çözüm için ücret alır.",
+    "solveRecaptchaV2": "reCAPTCHA v2 çöz",
+    "solveHcaptcha": "hCaptcha çöz"
+  },
+  "email": {
+    "title": "E-posta (doğrulama kodları)",
+    "configured": "Yapılandırıldı",
+    "offlineMode": "Çevrimdışı mod",
+    "description": "Kayıt sırasında OTP kodları göndermek için SMTP. Çevrimdışı çalışmak için boş bırakın - kod o zaman e-postayla gönderilmek yerine uygulamada gösterilir.",
+    "smtpHost": "SMTP sunucusu",
+    "port": "Port",
+    "encryption": "Şifreleme",
+    "username": "Kullanıcı adı",
+    "password": "Parola",
+    "passwordSavedHint": "(kayıtlı - korumak için boş bırakın)",
+    "fromName": "Gönderen adı",
+    "saved": "E-posta ayarları kaydedildi.",
+    "saveFailed": "E-posta ayarları kaydedilemedi.",
+    "noSmtpYet": "Henüz SMTP yapılandırılmadı - önce ayarlarınızı kaydedin.",
+    "testSent": "Test e-postası {{to}} adresine gönderildi.",
+    "testFailed": "Test başarısız - ayarlarınızı kontrol edin.",
+    "saveButton": "E-posta ayarlarını kaydet",
+    "test": "Test"
+  },
+  "errors": {
+    "loadSettings": "Ayarlar yüklenemedi.",
+    "closeSession": "Oturum kapatılamadı.",
+    "updateScheduler": "Zamanlayıcı güncellenemedi.",
+    "loadGlobal": "Genel ayarlar yüklenemedi.",
+    "saveSetting": "Ayar kaydedilemedi."
+  }
+}

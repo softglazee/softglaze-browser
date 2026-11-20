@@ -1,0 +1,414 @@
+{
+  "header": {
+    "eyebrow": "SoftGlaze Pro 功能",
+    "title": "自动化",
+    "description": "无代码宏、自动 Cookie 预热，以及所有后台任务的日志。"
+  },
+  "tabs": {
+    "macros": "我的宏",
+    "parallel": "并行运行",
+    "warmer": "Cookie 预热",
+    "history": "任务历史"
+  },
+  "clickLabels": {
+    "none": "仅浏览",
+    "random": "随机点击",
+    "links": "浏览链接"
+  },
+  "stepTypes": {
+    "goto": "打开网址",
+    "click": "点击",
+    "type": "输入文本",
+    "keypress": "按键",
+    "scroll": "滚动",
+    "wait": "等待",
+    "move": "移动鼠标",
+    "hover": "悬停",
+    "select": "选择下拉选项",
+    "waitFor": "等待元素",
+    "submit": "提交表单",
+    "check": "勾选/取消勾选",
+    "clear": "清空字段"
+  },
+  "stepFields": {
+    "goto": {
+      "url": "URL",
+      "urlPlaceholder": "https://example.com"
+    },
+    "click": {
+      "selector": "CSS 选择器",
+      "selectorPlaceholder": "#submit, .btn"
+    },
+    "type": {
+      "selector": "选择器",
+      "selectorPlaceholder": "input[name=\"email\"]",
+      "value": "要输入的文本"
+    },
+    "keypress": {
+      "key": "按键",
+      "keyPlaceholder": "Enter"
+    },
+    "scroll": {
+      "steps": "滚动量",
+      "stepsPlaceholder": "4"
+    },
+    "wait": {
+      "ms": "毫秒",
+      "msPlaceholder": "1000"
+    },
+    "move": {
+      "selector": "选择器（或使用 X/Y）",
+      "selectorPlaceholder": ".target",
+      "x": "X",
+      "y": "Y"
+    },
+    "hover": {
+      "selector": "选择器",
+      "selectorPlaceholder": ".menu",
+      "ms": "停留毫秒数",
+      "msPlaceholder": "800"
+    },
+    "select": {
+      "selector": "选择器",
+      "selectorPlaceholder": "select[name=\"focus\"]",
+      "value": "选项（值、标签或索引）",
+      "valuePlaceholder": "Plumbing",
+      "by": "匹配方式"
+    },
+    "waitFor": {
+      "selector": "选择器",
+      "selectorPlaceholder": ".dashboard",
+      "state": "状态",
+      "timeout": "超时毫秒数",
+      "timeoutPlaceholder": "30000"
+    },
+    "submit": {
+      "selector": "表单或字段选择器",
+      "selectorPlaceholder": "form#signup"
+    },
+    "check": {
+      "selector": "选择器",
+      "selectorPlaceholder": "input[name=\"terms\"]",
+      "state": "状态"
+    },
+    "clear": {
+      "selector": "选择器",
+      "selectorPlaceholder": "input[name=\"email\"]"
+    }
+  },
+  "stepSummary": {
+    "noUrl": "（无网址）",
+    "noSelector": "（无选择器）",
+    "selectorFallback": "（选择器）",
+    "target": "（目标）"
+  },
+  "macros": {
+    "intro": "录制或构建可复用的无代码工作流，然后在配置文件中运行（导航、点击、输入、等待），可手动运行或按计划运行。",
+    "profileSelectTitle": "运行/录制所作用的配置文件",
+    "noProfiles": "没有配置文件",
+    "profileFallback": "配置文件 {{id}}",
+    "stopAndSave": "停止并保存",
+    "record": "录制",
+    "schedule": "计划",
+    "createMacro": "创建宏",
+    "stepsBadge_one": "{{count}} 个步骤",
+    "stepsBadge_other": "{{count}} 个步骤",
+    "updated": "更新于 {{date}}",
+    "run": "运行",
+    "edit": "编辑",
+    "editSteps": "编辑步骤",
+    "delete": "删除",
+    "runTitleNoSteps": "此宏还没有步骤，请先编辑",
+    "runTitleReady": "在所选配置文件上运行",
+    "emptyTitle": "还没有宏",
+    "emptyHint": "录制一个工作流或新建一个宏即可开始。",
+    "errors": {
+      "loadMacros": "无法加载宏。",
+      "deleteMacro": "无法删除宏。",
+      "chooseProfile": "请先选择目标配置文件。",
+      "noSteps": "此宏还没有步骤，请先编辑。",
+      "chooseProfileRecord": "请选择要在其中录制的目标配置文件。",
+      "recordingFailed": "录制操作失败。"
+    },
+    "recordingStarted": "正在录制… 请在已启动的浏览器中操作，然后点击“停止”保存。",
+    "savedNotice": "已保存“{{name}}”，共 {{count}} 个步骤。",
+    "stoppedNotice": "录制已停止：捕获了 {{count}} 个步骤（未保存）。",
+    "deleteConfirm": "删除宏“{{name}}”及其所有步骤？此操作无法撤销。"
+  },
+  "saveRecording": {
+    "ariaLabel": "保存录制的宏",
+    "title": "保存录制的宏",
+    "subtitle": "为其命名以保留捕获的步骤，或放弃这些步骤。浏览器会保持打开。",
+    "placeholder": "录制的宏",
+    "discard": "放弃",
+    "cancel": "取消",
+    "save": "保存"
+  },
+  "scheduleModal": {
+    "ariaLabel": "宏计划",
+    "title": "宏计划",
+    "subtitle": "按定时器自动运行宏 · SoftGlaze Pro",
+    "enable": "启用计划运行",
+    "macroLabel": "宏",
+    "selectMacro": "选择宏…",
+    "everyMinutes": "间隔（分钟）",
+    "targetProfiles": "目标配置文件",
+    "noProfiles": "没有可用的配置文件。",
+    "profileFallback": "配置文件 {{id}}",
+    "cancel": "取消",
+    "save": "保存计划",
+    "errors": {
+      "save": "无法保存计划。"
+    }
+  },
+  "editorModal": {
+    "ariaEdit": "编辑宏",
+    "ariaCreate": "创建宏",
+    "titleEdit": "编辑宏",
+    "titleCreate": "创建宏",
+    "subtitle": "构建无代码流程：拖动手柄即可调整顺序。",
+    "nameLabel": "宏名称",
+    "namePlaceholder": "例如：每日登录",
+    "descriptionLabel": "描述",
+    "descriptionPlaceholder": "它的作用是什么？",
+    "stepsLabel": "步骤（{{count}}）",
+    "addStep": "添加步骤",
+    "noSteps": "还没有步骤，请选择类型并添加一个。",
+    "dragToReorder": "拖动以调整顺序",
+    "removeStep": "移除步骤",
+    "cancel": "取消",
+    "save": "保存宏",
+    "errors": {
+      "name": "请为宏命名。",
+      "save": "无法保存宏。"
+    },
+    "optional": "可选",
+    "optionalHint": "如果此步骤失败，记录下来并继续，而不是让整个运行失败。"
+  },
+  "runModal": {
+    "ariaLabel": "宏运行：{{name}}",
+    "runningOn": "正在 {{profile}} 上运行",
+    "starting": "正在启动…",
+    "logStarted": "已开始“{{name}}” · 在 {{profile}} 上运行 {{total}} 个步骤",
+    "logStepRunning": "▶ {{label}}：{{summary}}",
+    "logStepError": "✕ {{label}} - {{error}}",
+    "logStepFailed": "失败",
+    "logStopped": "已停止。",
+    "logFinished": "已完成：{{ran}}/{{total}} 个步骤。",
+    "stopped": "已停止。",
+    "finished": "已完成。",
+    "summaryCompleted": "已完成 {{ran}}/{{total}} 个步骤。",
+    "summaryRan": "已运行 {{ran}}/{{total}} 个步骤。",
+    "paused": "已暂停",
+    "running": "正在运行…",
+    "resume": "继续",
+    "pause": "暂停",
+    "stop": "停止",
+    "close": "关闭",
+    "errors": {
+      "run": "无法运行宏。"
+    },
+    "logStepSkipped": "已跳过 {{label}}（可选）- {{error}}"
+  },
+  "parallel": {
+    "states": {
+      "queued": "排队中",
+      "launching": "正在启动",
+      "running": "运行中",
+      "passed": "成功",
+      "failed": "失败"
+    },
+    "title": "并行宏运行器",
+    "subtitle": "在多个配置文件上同时运行同一个宏，并实时显示状态。",
+    "macroLabel": "宏",
+    "noMacros": "还没有宏",
+    "macroOption": "{{name}} · {{count}} 个步骤",
+    "concurrency": "并发数",
+    "concurrencyCap": "你的套餐最多可同时运行 {{max}} 个配置文件。",
+    "concurrencyCapUpgrade": "你的套餐最多可同时运行 {{max}} 个配置文件。Enterprise 最多可同时运行 {{enterpriseMax}} 个。",
+    "dataBound_one": "{{fileName}} · {{count}} 行",
+    "dataBound_other": "{{fileName}} · {{count}} 行",
+    "dataHint": "可选：绑定电子表格（按顺序，一行对应一个配置文件）",
+    "clearDataBinding": "清除数据绑定",
+    "bindData": "绑定数据",
+    "columnsPrefix": "列：{{columns}}。在宏步骤中使用",
+    "columnsSuffix": "来引用。",
+    "profilesLabel": "配置文件（已选择 {{count}} 个）",
+    "selectAll": "全选",
+    "clear": "清除",
+    "searchPlaceholder": "搜索",
+    "noProfiles": "未找到配置文件。",
+    "rowMismatch": "{{rows}} 行数据对应 {{profiles}} 个配置文件：多出的配置文件将在没有变量的情况下运行。",
+    "running": "正在运行…",
+    "runOn_one": "在 {{count}} 个配置文件上运行",
+    "runOn_other": "在 {{count}} 个配置文件上运行",
+    "runStatus": "运行状态",
+    "summaryPassed": "成功",
+    "summaryFailed": "失败",
+    "summaryTotal": "共 {{total}} 个",
+    "watchHint": "选择配置文件和宏，然后开始运行即可查看实时进度。",
+    "steps": "{{ran}}/{{total}} 个步骤",
+    "profileFallback": "配置文件 {{id}}",
+    "runConsole": "运行控制台",
+    "live": "实时",
+    "consoleIdle": "[ 空闲 ] 尚未运行，进度将在这里实时显示（绝不包含 Cookie 或凭据）。",
+    "logRunFinished": "运行完成：{{passed}}/{{total}} 个成功",
+    "logRunFinishedError": "运行完成：{{passed}}/{{total}} 个成功（{{error}}）",
+    "errors": {
+      "readSpreadsheet": "无法读取电子表格。",
+      "chooseMacro": "请选择要运行的宏。",
+      "selectProfile": "请至少选择一个配置文件。",
+      "startRun": "无法开始并行运行。"
+    }
+  },
+  "warmer": {
+    "title": "Cookie 预热",
+    "subtitle": "通过浏览真实网站，自然积累 Cookie 和浏览历史。",
+    "sitesLabel": "要访问的网站（{{count}}）",
+    "addSuggested": "添加推荐网站…",
+    "add": "添加",
+    "customPlaceholder": "或粘贴自定义网址（例如 example.com）",
+    "bulkAdd": "批量添加",
+    "importFile": "导入 .txt/.csv",
+    "clearAll": "全部清除",
+    "bulkPlaceholder": "每行粘贴一个网址，例如：\nexample.com\nhttps://news.site\nshop.site, 45, links",
+    "addList": "添加列表",
+    "bulkHint": "每行一个网址。可选的 CSV 列：url、seconds、behaviour（none/random/links）。",
+    "addSecondsTitle": "新添加链接的默认秒数",
+    "addBehaviorTitle": "新添加链接的默认行为",
+    "saveList": "保存列表",
+    "saveListPrompt": "为此链接列表命名（以便之后复用）：",
+    "loadListTitle": "加载此已保存的列表",
+    "deleteListTitle": "删除此已保存的列表",
+    "selectRows": "选择行",
+    "nSelected": "已选择 {{count}} 个",
+    "bulkSetSeconds": "为所选行设置秒数",
+    "bulkSetBehavior": "为所选行设置行为",
+    "setBehavior": "设置行为…",
+    "deleteSelected": "删除",
+    "noSites": "还没有网站，请在上方添加。",
+    "secondsTitle": "在此网站上停留的秒数",
+    "secondsUnit": "秒",
+    "behaviourTitle": "在此网站上执行的操作",
+    "remove": "移除",
+    "loopUntilStopped": "循环直到停止",
+    "keepOpen": "完成后保持会话打开",
+    "hidden": "隐藏运行（不显示窗口）",
+    "hiddenTitle": "以无头模式预热：不会打开浏览器窗口。Cookie 和缓存仍会保存到每个配置文件。",
+    "cookieNote": "Cookie 和缓存会自动保存到每个配置文件，控制台会报告写入磁盘的 Cookie 数量和缓存大小。之后正常启动时会复用它们。",
+    "startWarmup": "开始预热",
+    "warming": "正在预热…",
+    "stop": "停止",
+    "forceStop": "强制停止",
+    "profilesLabel": "配置文件（已选择 {{count}} 个）",
+    "searchPlaceholder": "搜索",
+    "selectAll": "全部",
+    "selectNone": "无",
+    "invert": "反选",
+    "addGroup": "添加分组…",
+    "addTag": "添加标签…",
+    "pasteIdsPlaceholder": "粘贴配置文件 ID 或名称（用逗号或空格分隔）",
+    "selectPaste": "选择",
+    "noProfiles": "未找到配置文件。",
+    "profileFallback": "配置文件 {{id}}",
+    "warmupConsole": "预热控制台",
+    "live": "实时",
+    "progressTitle": "预热进度",
+    "modeQueue": "队列 · 一次一个",
+    "modeBulk": "批量 · 一次 {{n}} 个",
+    "consoleIdle": "[ 空闲 ] 选择配置文件、设置时长，然后开始预热即可查看实时进度。",
+    "errors": {
+      "selectProfile": "请至少选择一个要预热的配置文件。",
+      "addSite": "请至少添加一个要访问的网站。",
+      "startWarmup": "无法开始预热。",
+      "stopWarmup": "无法停止预热。",
+      "importFile": "无法读取该文件。"
+    },
+    "queueTitle": "一次预热一个配置文件（严格队列）：启动浏览器，等它完成并关闭后再启动下一个。可避免一次打开所有选中的浏览器，导致内存/CPU 耗尽并使应用崩溃。",
+    "queueMode": "一次运行一个（队列）",
+    "parallelTitle": "同时预热的配置文件数量。数量越多速度越快，但内存/CPU 占用也越高。",
+    "parallelLabel": "每次："
+  },
+  "counter": {
+    "total": "总计",
+    "running": "运行中",
+    "done": "已完成",
+    "queued": "排队中"
+  },
+  "console": {
+    "copy": "复制",
+    "copied": "已复制",
+    "export": "导出",
+    "clear": "清除"
+  },
+  "history": {
+    "emptyTitle": "还没有运行过任务",
+    "emptyHint": "预热、宏和并行运行都会显示在这里。",
+    "columns": {
+      "task": "任务",
+      "profiles": "配置文件",
+      "detail": "详情",
+      "status": "状态",
+      "when": "时间"
+    },
+    "emptyDetail": "-",
+    "parallelRun": "并行运行",
+    "macroRun": "宏运行",
+    "cookieWarmup": "Cookie 预热",
+    "minutes": "{{count}} 分钟",
+    "sites_one": "{{count}} 个网站",
+    "sites_other": "{{count}} 个网站"
+  },
+  "stepFieldOptions": {
+    "auto": "自动",
+    "value": "值",
+    "label": "标签",
+    "index": "索引",
+    "visible": "可见",
+    "hidden": "隐藏",
+    "checked": "已勾选",
+    "unchecked": "未勾选"
+  },
+  "autopilot": {
+    "title": "自动预热",
+    "subtitle": "每天用几个网站预热配置文件，让它们积累真实的浏览历史。",
+    "toggle": "开启或关闭自动预热",
+    "target": "配置文件",
+    "targetAll": "所有配置文件",
+    "targetGroup": "单个分组",
+    "group": "分组",
+    "runsPerDay": "每天运行次数",
+    "runsPerDayTitle": "每个配置文件每天预热的次数",
+    "sitesPerRun": "每次运行的网站数",
+    "sitesPerRunTitle": "从推荐列表中随机选择网站，每个停留 20 到 45 秒",
+    "activeHours": "运行时段",
+    "startHour": "开始时间",
+    "endHour": "结束时间",
+    "hoursTo": "至",
+    "atATime": "每次",
+    "atATimeTitle": "同时预热的配置文件数量。数量越多速度越快，但占用内存越多。",
+    "hidden": "隐藏运行（不显示窗口）",
+    "hint": "当配置文件上次预热的时间早于 24 小时除以每天运行次数时，就会对其进行预热。已打开、已锁定或忙碌的配置文件会被跳过。",
+    "ownedByOther": "此功能由另一位成员开启。只有该成员或其上级可以更改。",
+    "status": {
+      "off": "关闭",
+      "nextSoon": "一分钟内进行下次运行",
+      "nextAt": "下次运行：{{time}}",
+      "nothingDue": "没有需要预热的配置文件",
+      "warmedToday": "今天已预热 {{done}}/{{total}} 个",
+      "warmingNow": "{{n}} 个正在预热",
+      "lastError": "上次错误，{{time}}：{{error}}"
+    },
+    "errors": {
+      "load": "无法加载自动预热设置。",
+      "save": "无法保存自动预热设置。",
+      "noGroups": "还没有分组。请先在“配置文件”页面创建一个。",
+      "owner-missing": "开启自动预热的成员已不存在。工作区所有者可以将其关闭后重新开启以接管。",
+      "owner-inactive": "开启自动预热的成员已被暂停或禁止访问。",
+      "owner-no-permission": "开启自动预热的成员可能已无权运行自动化。",
+      "warm-failed": "{{profile}}：{{error}}",
+      "warmFailedHidden": "一个你看不到的配置文件预热失败。",
+      "tick-failed": "{{error}}"
+    }
+  }
+}

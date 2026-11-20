@@ -1,0 +1,80 @@
+{
+  "header": {
+    "eyebrow": "Automatisierung",
+    "title": "Profile in Serie erstellen",
+    "description": "Erstellen Sie schnell viele Browser-Umgebungen per Tabelle oder fortlaufender Generierung.",
+    "exportProfiles": "Profile exportieren"
+  },
+  "exportNotice_one": "{{count}} Profil nach {{path}} exportiert",
+  "exportNotice_other": "{{count}} Profile nach {{path}} exportiert",
+  "tabs": {
+    "importFromFile": "Aus Datei importieren",
+    "quickGenerate": "Schnell erstellen"
+  },
+  "step1": {
+    "title": "Vorlage herunterladen",
+    "description": "Damit das Einlesen reibungslos klappt, nutzen Sie bitte unsere Excel- oder CSV-Vorlage. Tragen Sie Profilnamen, Proxys und Fingerprint-Regeln ein.",
+    "downloadButton": ".CSV-Vorlage herunterladen"
+  },
+  "step2": {
+    "title": "Hochladen & Vorschau",
+    "description": "Wählen Sie Ihre ausgefüllte Tabelle. Wir lesen sie lokal ein und prüfen vor dem Speichern auf Formatfehler.",
+    "selectButton": "Datei wählen"
+  },
+  "step3": {
+    "title": "Vorschau & Daten übernehmen"
+  },
+  "awaiting": {
+    "title": "Warte auf Daten",
+    "description": "Wählen Sie eine Datei, um Ihre Profile hier in der Vorschau zu sehen."
+  },
+  "preview": {
+    "file": "Datei:",
+    "validRows": "Gültige Zeilen:",
+    "errors": "Fehler:"
+  },
+  "processing": {
+    "importing": "Importiert… {{index}}/{{total}}",
+    "backendLog": "Verarbeitungsprotokoll",
+    "connecting": "Verbindung zur Import-Engine…"
+  },
+  "table": {
+    "row": "Zeile",
+    "title": "Titel",
+    "group": "Gruppe",
+    "proxyMethod": "Proxy-Methode",
+    "dataDir": "Datenordner",
+    "auto": "Auto"
+  },
+  "autoBind": {
+    "label": "Proxys automatisch nach Land zuweisen",
+    "descPrefix": "– Zeilen ohne eigenen Proxy erhalten einen gespeicherten Proxy, dessen geprüftes Land zur Spalte",
+    "descSuffix": "der Zeile passt (reihum unter den Treffern).",
+    "sourceLabel": "Zuweisen aus",
+    "sourcePaid": "Ihre Proxys",
+    "sourceFree": "Kostenlose Proxys (nur funktionierende)",
+    "freeWarn": "Kostenlose Proxys werden von Fremden betrieben: Melden Sie sich mit diesen Profilen nie bei Konten an und bezahlen Sie nie damit."
+  },
+  "commitButton_one": "{{count}} Profil übernehmen",
+  "commitButton_other": "{{count}} Profile übernehmen",
+  "success": {
+    "title": "Import erfolgreich",
+    "importedPrefix": "Erfolgreich importiert:",
+    "importedMiddle": "Profile, zugeordnet:",
+    "importedSuffix": "neue Proxys",
+    "autoBoundPrefix": "· automatisch zugewiesen:",
+    "autoBoundSuffix": "nach Land",
+    "importAnother": "Weiteren Import starten"
+  },
+  "quick": {
+    "engineTitle": "Fortlaufende Generierung",
+    "description": "Erstellen Sie sofort viele Profile ohne Tabelle – eindeutige Fingerprints, fortlaufende Namen, eine Zielgruppe (direkt anlegbar) und Proxy-Zuweisung aus einer bestimmten Gruppe oder von einem Anbieter. Nutzt genau dieselbe Engine wie die Profilseite.",
+    "openButton": "Schnell erstellen öffnen"
+  },
+  "errors": {
+    "parse": "Die Datei konnte nicht gelesen werden. Prüfen Sie, ob es eine gültige Tabelle ist.",
+    "commit": "Profile konnten nicht in der Datenbank gespeichert werden.",
+    "importFailed": "Import fehlgeschlagen.",
+    "export": "Profile konnten nicht exportiert werden."
+  }
+}

@@ -1,0 +1,25 @@
+{
+  "contextMenu": {
+    "undo": "Hoàn tác",
+    "redo": "Làm lại",
+    "cut": "Cắt",
+    "copy": "Sao chép",
+    "paste": "Dán",
+    "selectAll": "Chọn tất cả",
+    "copyLink": "Sao chép liên kết"
+  },
+  "dialogs": {
+    "exportArchiveTitle": "Xuất tệp lưu trữ hồ sơ đã mã hóa",
+    "archiveFilter": "Tệp lưu trữ mã hóa SoftGlaze",
+    "importProfilesTitle": "Chọn bảng tính hồ sơ SoftGlaze để nhập",
+    "spreadsheetFilter": "Tệp bảng tính",
+    "exportProfilesTitle": "Xuất hồ sơ SoftGlaze",
+    "excelFilter": "Sổ làm việc Excel",
+    "importIdentitiesTitle": "Chọn bảng tính danh tính để nhập",
+    "backupTitle": "Sao lưu không gian làm việc",
+    "backupFilter": "Bản sao lưu không gian làm việc SoftGlaze",
+    "restoreTitle": "Khôi phục bản sao lưu không gian làm việc",
+    "exportActivityTitle": "Xuất nhật ký hoạt động",
+    "bindSpreadsheetTitle": "Chọn bảng tính để gắn với lượt chạy song song này"
+  }
+}

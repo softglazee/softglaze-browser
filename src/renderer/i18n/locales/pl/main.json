@@ -1,0 +1,25 @@
+{
+  "contextMenu": {
+    "undo": "Cofnij",
+    "redo": "Ponów",
+    "cut": "Wytnij",
+    "copy": "Kopiuj",
+    "paste": "Wklej",
+    "selectAll": "Zaznacz wszystko",
+    "copyLink": "Kopiuj link"
+  },
+  "dialogs": {
+    "exportArchiveTitle": "Eksportuj zaszyfrowane archiwum profili",
+    "archiveFilter": "Zaszyfrowane archiwum SoftGlaze",
+    "importProfilesTitle": "Wybierz arkusz profili SoftGlaze do importu",
+    "spreadsheetFilter": "Pliki arkuszy",
+    "exportProfilesTitle": "Eksportuj profile SoftGlaze",
+    "excelFilter": "Skoroszyt Excel",
+    "importIdentitiesTitle": "Wybierz arkusz tożsamości do importu",
+    "backupTitle": "Utwórz kopię zapasową obszaru roboczego",
+    "backupFilter": "Kopia zapasowa obszaru roboczego SoftGlaze",
+    "restoreTitle": "Przywróć kopię zapasową obszaru roboczego",
+    "exportActivityTitle": "Eksportuj dziennik aktywności",
+    "bindSpreadsheetTitle": "Wybierz arkusz do powiązania z tym uruchomieniem równoległym"
+  }
+}

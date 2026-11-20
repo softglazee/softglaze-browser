@@ -1,0 +1,627 @@
+{
+  "title": "SoftGlaze AI",
+  "beta": "ベータ",
+  "description": "Claude、Cursor、ChatGPTなどのAIアプリからプロファイルを操作できるようにします。変更にどの程度承認が必要かはあなたが選べ、すべての操作が記録されます。",
+  "loading": "SoftGlaze AIを読み込み中…",
+  "refresh": "更新",
+  "retry": "再試行",
+  "learnMore": "ガイドを読む",
+  "opensInBrowser": "（ブラウザで開きます）",
+  "copy": "コピー",
+  "copied": "コピーしました",
+  "copyFailed": "コピーできませんでした。テキストを選択して手動でコピーしてください。",
+  "cancel": "キャンセル",
+  "close": "閉じる",
+  "save": "保存",
+  "saving": "保存中…",
+  "saved": "保存しました",
+  "saveFailed": "保存されませんでした",
+  "never": "なし",
+  "unknown": "不明",
+  "roles": {
+    "OWNER": "オーナー",
+    "ADMIN": "管理者",
+    "MANAGER": "マネージャー",
+    "OPERATOR": "オペレーター",
+    "SUPER_ADMIN": "スーパー管理者"
+  },
+  "states": {
+    "unavailableTitle": "このビルドではSoftGlaze AIを利用できません",
+    "unavailableBody": "このバージョンのSoftGlaze Browserには、まだAIサーバーが含まれていません。今後のアップデートで追加されます。ワークスペースに問題はありません。",
+    "forbiddenTitle": "SoftGlaze AIを管理できるのはオーナーまたは管理者のみです",
+    "forbiddenBody": "ワークスペースのオーナーにアクセスを依頼してください。AIアプリがあなたとして動作するトークンを使う場合でも、そのリクエストはどのページにいても表示され、許可または拒否できます。",
+    "errorTitle": "SoftGlaze AIを読み込めませんでした"
+  },
+  "header": {
+    "switchLabel": "SoftGlaze AIサーバー",
+    "switchShort": "AIサーバー",
+    "on": "オン",
+    "off": "オフ",
+    "turningOn": "オンにしています…",
+    "turningOff": "オフにしています…",
+    "stopAll": "すべてのAIを停止",
+    "toggleError": "AIサーバーを切り替えられませんでした: {{message}}"
+  },
+  "status": {
+    "server": "AIサーバー",
+    "running": "稼働中",
+    "error": "停止中",
+    "off": "オフ",
+    "offHint": "AIアプリが接続できるようにオンにしてください。",
+    "errorHint": "オンですが稼働していません: {{message}}",
+    "errorHintNoMessage": "オンですが稼働していません。ポートが使用中の可能性があります。設定で変更してください。",
+    "apps": "接続中のアプリ",
+    "appsNone": "接続中のアプリはまだありません",
+    "appSeen": "{{name}} · {{when}}",
+    "appsMore_other": "ほか{{count}}件",
+    "waiting": "あなたの対応待ち",
+    "waitingNone": "対応が必要なものはありません",
+    "waitingSome_other": "対応が必要なリクエスト{{count}}件",
+    "openApprovals": "承認を開く",
+    "sessions": "稼働中のAIセッション",
+    "sessionsHint": "AIアプリが開始"
+  },
+  "tabs": {
+    "label": "SoftGlaze AIのセクション",
+    "connect": "接続",
+    "tokens": "トークン",
+    "approvals": "承認",
+    "activity": "アクティビティ",
+    "memory": "メモリ",
+    "prompts": "プロンプト",
+    "settings": "設定",
+    "waiting": "待機中"
+  },
+  "stop": {
+    "title": "すべてのAIを停止しますか？",
+    "body": "AIアプリが予期しない動作をしている場合に使用してください。",
+    "point1": "AIアプリが開始したすべての実行とプロファイルを今すぐ停止します。",
+    "point2": "接続中のすべてのAIアプリを切断し、実行中の呼び出しをキャンセルします。",
+    "point3": "あなたの回答を待っているすべてのリクエストを拒否します。",
+    "point4": "SoftGlaze AIをオフにします。トークンは有効なままです。準備ができたら再度オンにしてください。",
+    "confirm": "すべてのAIを停止",
+    "error": "すべてを停止できませんでした: {{message}}",
+    "result": "完了しました。停止した実行: {{runs}}件。停止したプロファイル: {{profiles}}件。キャンセルした呼び出し: {{calls}}件。終了したセッション: {{sessions}}件。拒否したリクエスト: {{approvals}}件。",
+    "nowOff": "SoftGlaze AIはオフです。オンにするまでAIアプリは接続できません。",
+    "turnOn": "オンにする"
+  },
+  "start": {
+    "title": "3つのステップで始めましょう",
+    "step1": "AIサーバーをオンにする",
+    "step2": "AIアプリ用のトークンを作成する",
+    "step3": "AIアプリを接続する",
+    "done": "完了",
+    "turnOn": "オンにする"
+  },
+  "connect": {
+    "loadError": "AIアプリの設定を読み込めませんでした: {{message}}",
+    "empty": "表示する設定はまだありません",
+    "emptyOn": "AIサーバーから設定が送られてきませんでした。更新を試してください。",
+    "emptyBody": "AIサーバーをオンにすると、各アプリの接続方法が表示されます。",
+    "appsLabel": "AIアプリ",
+    "guide": "詳しいガイド",
+    "appDocs": "アプリのドキュメント",
+    "where": "設定する場所",
+    "steps": "接続方法",
+    "kind": {
+      "command": "コマンド",
+      "json": "JSON",
+      "toml": "TOML",
+      "n8n": "ワークフロー"
+    },
+    "snippet": "{{app}}の設定",
+    "placeholderHint": "<YOUR_TOKEN> の部分にトークンを入れます。トークンは作成時に一度だけ表示されます。",
+    "noSnippet": "このアプリには用意された設定がありません。上の手順に従ってください。",
+    "createToken": "このアプリ用のトークンを作成",
+    "createTokenHint": "アプリごとに専用のトークンを発行してください。そうすれば各アプリの操作を確認でき、ほかに影響を与えずに1つだけ無効にできます。",
+    "installGuide": "インストールガイド",
+    "mcpb": {
+      "title": "Claude Desktopにインストール: softglaze-browser.mcpbをダウンロード",
+      "download": "softglaze-browser.mcpbをダウンロード",
+      "body": "ファイルをダブルクリックするか、Claude Desktopで Settings > Extensions > Advanced settings > Install Extension を開きます。Claude Desktopがトークンとポートを尋ねます。ポートはこのページに表示されているものを使ってください。Claude DesktopのチャットとCoworkの両方で使用されます。"
+    },
+    "claudeCode": {
+      "pluginTitle": "SoftGlazeプラグインをインストール（推奨）",
+      "pluginBody": "Claude Code内で1つずつ実行してください。softglaze-browserはスキルを追加し、softglaze-browser-connectorはSoftGlazeのツールを追加してトークンとポートを尋ねます。コネクタにはNode.js 18以降が必要です。",
+      "desktopNote": "Claude DesktopのチャットとCoworkでは、代わりにsoftglaze-browser.mcpbを使用します（Claude Desktopを参照）。",
+      "manualTitle": "またはサーバーを手動で追加（Node.js不要）"
+    },
+    "envVar": {
+      "title": "Codex用にトークンを保存",
+      "body": "CodexはSOFTGLAZE_TOKENという名前の環境変数からトークンを読み取ります。トークンを入れてこれを一度実行し、新しいターミナルを開いてください。",
+      "windows": "Windows（コマンドプロンプトまたはPowerShell）",
+      "unix": "macOSまたはLinux（シェルのプロファイルに追加）"
+    },
+    "bridge": {
+      "title": "ローカルプログラムを起動するアプリ用のブリッジ",
+      "body": "Webアドレスに接続できないアプリもあります。そうしたアプリは代わりにSoftGlazeブリッジを起動し、ブリッジがすべてをこのPCのAIサーバーに渡します。トークンも承認も同じです。",
+      "unavailable": "このビルドにはブリッジが含まれていません。",
+      "mcpb": "Claude Desktop用のワンクリックインストールファイル",
+      "command": "コマンド",
+      "args": "引数",
+      "env": "環境変数"
+    },
+    "clients": {
+      "claude-desktop": {
+        "where": "Settings > Developer > Edit Config（claude_desktop_config.json）を開き、Claude Desktopを再起動します。Claude Desktopはローカルサーバーをstdioで実行するため、これはSoftGlazeブリッジを起動します。より簡単な方法: softglaze-browser.mcpb（{{mcpb}}）をインストールすると、トークンとポートを尋ねられ、Coworkでも使えます。",
+        "title": "Claude Desktop",
+        "step1": "下のボタンでClaude Desktop用のトークンを作成します。",
+        "step2": "最も簡単な方法: 下のボタンでsoftglaze-browser.mcpbをダウンロードしてダブルクリックし、Claude Desktopに尋ねられたらトークンを貼り付けます。または Settings > Developer > Edit Config を開き、<YOUR_TOKEN> をあなたのトークンに置き換えて、設定をclaude_desktop_config.jsonに貼り付けます。",
+        "step2NoMcpb": "Settings > Developer > Edit Config を開き、<YOUR_TOKEN> をあなたのトークンに置き換えて、設定をclaude_desktop_config.jsonに貼り付けます。Claude Desktopはローカルサーバーを実行するため、これはSoftGlazeブリッジを起動します。",
+        "step3": "設定ファイルを編集した場合は、Claude Desktopを終了して開き直してください。SoftGlazeはチャット欄の下にある + ボタンの「Connectors」に表示されます。"
+      },
+      "claude-code": {
+        "where": "プラグインを使わない場合: ターミナルで実行します。すべてのプロジェクトでSoftGlazeを使うには --scope user を追加します。プラグインかこのコマンドのどちらか一方を使い、両方は使わないでください。",
+        "title": "Claude Code",
+        "step1": "下のボタンでClaude Code用のトークンを作成します。",
+        "step2": "下のコマンドでSoftGlazeプラグインをインストールし、Claude Codeに尋ねられたらトークンを貼り付けます。または <YOUR_TOKEN> をあなたのトークンに置き換えて、さらに下のコマンドを実行します。どちらか一方の方法を使ってください。",
+        "step3": "Claude Codeで /mcp と入力します。SoftGlazeが接続済みと表示されるはずです（プラグインの場合は plugin:softglaze-browser-connector:softglaze）。"
+      },
+      "cursor": {
+        "where": "~/.cursor/mcp.json（すべてのプロジェクト）またはプロジェクト内の .cursor/mcp.json。トークンをファイルに書かないようにするには \"Bearer ${env:SOFTGLAZE_TOKEN}\" を使います。",
+        "title": "Cursor",
+        "step1": "下のボタンでCursor用のトークンを作成します。",
+        "step2": "~/.cursor/mcp.json（または1つのプロジェクトの .cursor/mcp.json）を開き、<YOUR_TOKEN> をあなたのトークンに置き換えて設定を貼り付けます。",
+        "step3": "Cursorの設定でSoftGlazeが一覧にあり、オンになっていることを確認します。次にチャットでSoftGlazeのプロファイル一覧を表示するよう依頼してください。"
+      },
+      "vscode": {
+        "where": "ワークスペースの .vscode/mcp.json、または「MCP: Open User Configuration」を実行します。VS Codeはトークンを一度だけ尋ねて安全に保存するため、ファイルにトークンが残ることはありません。",
+        "title": "VS Code（Copilot）",
+        "step1": "下のボタンでVS Code用のトークンを作成します。",
+        "step2": "ワークスペースの .vscode/mcp.json に設定を追加します（または MCP: Open User Configuration を実行）。SoftGlazeの初回起動時にVS Codeがトークンを尋ねて安全に保存するため、ファイルにトークンが残ることはありません。",
+        "step3": "Copilot Chatを開き、SoftGlazeのプロファイル一覧を表示するよう依頼します。VS Codeに尋ねられたらツールを許可してください。"
+      },
+      "gemini-cli": {
+        "where": "~/.gemini/settings.json（ファイルに統合）、または次を実行: gemini mcp add --transport http -s user --header \"Authorization: Bearer <YOUR_TOKEN>\" softglaze {{mcp}}",
+        "title": "Gemini CLI",
+        "step1": "下のボタンでGemini CLI用のトークンを作成します。",
+        "step2": "<YOUR_TOKEN> をあなたのトークンに置き換えて、~/.gemini/settings.json の \"mcpServers\" 内に設定を追加します。\"trust\" はオフのままにしてください。SoftGlazeはどのみち変更のたびに確認します。",
+        "step3": "gemini を起動して /mcp と入力します。SoftGlazeとそのツールが一覧に表示されるはずです。"
+      },
+      "codex": {
+        "where": "~/.codex/config.toml（ChatGPTデスクトップアプリ、Codex CLI、IDE拡張機能で共有）。先に環境変数 SOFTGLAZE_TOKEN にトークンを設定し（Windows: setx SOFTGLAZE_TOKEN \"<YOUR_TOKEN>\"）、アプリを再起動します。",
+        "title": "ChatGPTデスクトップ / Codex",
+        "step1": "下のボタンでCodex用のトークンを作成し、環境変数 SOFTGLAZE_TOKEN に保存します（コマンドは下にあります）。",
+        "step2": "~/.codex/config.toml に設定を追加します。CodexはSOFTGLAZE_TOKENからトークンを読み取るため、ファイルにトークンは保存されません。",
+        "step3": "新しいターミナルを開いてCodexを起動し、/mcp と入力します。SoftGlazeが一覧に表示されるはずです。"
+      },
+      "windsurf": {
+        "where": "~/.codeium/windsurf/mcp_config.json に追加し、MCPサーバーを更新します。Devin Desktop（Windsurfの新しい名称）は ~/.config/devin/mcp_config.json を使い、\"serverUrl\" の代わりに \"url\" と \"transport\": \"http\" を使います。",
+        "title": "Windsurf",
+        "step1": "下のボタンでWindsurf用のトークンを作成します。",
+        "step2": "<YOUR_TOKEN> をあなたのトークンに置き換えて、WindsurfのMCP設定ファイル（「設定する場所」を参照）に設定を貼り付けます。",
+        "step3": "WindsurfでMCPサーバーを更新し、SoftGlazeが一覧にあることを確認します。"
+      },
+      "cline": {
+        "where": "Cline: MCP Servers > Configure（cline_mcp_settings.json）。",
+        "title": "Cline",
+        "step1": "下のボタンでCline用のトークンを作成します。",
+        "step2": "Clineで MCP Servers > Configure を開き、<YOUR_TOKEN> をあなたのトークンに置き換えて、設定をcline_mcp_settings.jsonに貼り付けます。",
+        "step3": "ClineのMCP Serversの一覧で、SoftGlazeが接続済みと表示されていることを確認します。"
+      },
+      "n8n": {
+        "where": "MCP Client Toolノードで、SSE Endpointを下記のとおりに、Authenticationを「Bearer」に、認証情報にトークンを設定します。n8nをDocker Desktopで実行している場合は、127.0.0.1 の代わりに host.docker.internal を使い、SoftGlaze AIの設定で host.docker.internal を「追加の許可ホスト」に加えてください。無人で動くワークフローには自動化トークン（事前承認済みのツール、グループ限定）を使います。",
+        "title": "n8n"
+      },
+      "other": {
+        "where": "ヘッダー付きのStreamable HTTPに対応するMCPクライアントであれば使えます。古いHTTP+SSEトランスポートのみ対応のクライアントはSSE URLを使います。ローカルコマンドしか実行できないクライアントはSoftGlazeブリッジを使います（Claude Desktopを参照）。",
+        "title": "その他のアプリ",
+        "step1": "下のボタンでアプリ用のトークンを作成します。",
+        "step2": "アプリのMCP設定を開き、このアドレスとAuthorizationヘッダー（Bearer、半角スペース、トークンの順）を指定してサーバーを追加します。",
+        "step3": "アプリがローカルプログラム（stdio）しか起動できない場合は、アドレスの代わりに下のSoftGlazeブリッジを使ってください。"
+      },
+      "custom": {
+        "step1": "下のボタンでこのアプリ用のトークンを作成します。",
+        "step2": "<YOUR_TOKEN> をあなたのトークンに置き換えて、アプリがMCPサーバーを管理している場所に設定を貼り付けます。",
+        "step3": "アプリを再起動し、MCPまたはツールの設定にSoftGlazeが表示されていることを確認します。"
+      }
+    },
+    "n8n": {
+      "subtitle": "このPC上のn8nワークフローからSoftGlazeを実行します。",
+      "selfHosted": "n8nはこのPC上で実行する必要があります（npxまたはDocker）。n8n Cloudからは、まだあなたのPCに接続できません。",
+      "noPort": "AIサーバーをオンにすると、n8n用のアドレスが表示されます。",
+      "a": {
+        "title": "n8nのAI AgentからSoftGlazeを使う",
+        "step1": "AI Agentノードを追加し、そのツールの1つとしてMCP Client Toolノードを追加します。",
+        "step2": "SSE Endpointに下のアドレスを設定します。n8nをDockerで実行している場合はDocker用のアドレスを使います。",
+        "step3": "AuthenticationをBearerに設定し、トークンを貼り付けます。Tools to Includeでは、Allか必要なツールだけを選びます。",
+        "sse": "SSEエンドポイント（このPCのn8n）",
+        "sseDocker": "SSEエンドポイント（Docker内のn8n）",
+        "dockerNote": "Dockerの場合は、設定タブの「追加の許可ホスト名」に host.docker.internal も追加してください。"
+      },
+      "b": {
+        "title": "HTTP Requestノードで決まった手順を実行",
+        "body": "9:00に1つのプロファイルを起動するなど、内容が変わらない手順では、HTTP RequestノードからローカルAPIを直接呼び出せます。トークンはAuthorizationヘッダーで送信してください。",
+        "kind": "HTTP Request"
+      },
+      "c": {
+        "title": "スケジュール実行のワークフローには自動化トークンを使う",
+        "body": "スケジュールで動くワークフローには「許可」をクリックする人がいません。自動化トークンは、選んだツールだけを、選んだグループに対してだけ、呼び出しごと・1時間ごとの上限付きで事前承認します。それ以外は引き続き確認を求めます。",
+        "create": "自動化トークンを作成",
+        "ownerOnly": "自動化トークンを作成できるのはオーナーのみです。"
+      }
+    },
+    "devtools": {
+      "title": "Playwright MCPまたはChrome DevTools MCPでプロファイルを使う（上級）",
+      "subtitle": "実行中のChromiumプロファイルを外部のDevToolsクライアントに渡します。",
+      "ownerOnly": "オーナーのみ",
+      "warning": "Webサイトは外部のデバッガーを検知できます。Playwright MCPとChrome DevTools MCPは2つ目のDevToolsクライアントとして接続し、独自のコマンドを送信するため、ボット対策スクリプトに気付かれる可能性があります。プロファイルにフラグが付いたりブロックされたりすることがあります。SoftGlaze自身のページツールはこのような動作をしません。プロファイルの実行中は、このコンピューター上で下のアドレスを知っている人なら誰でもプロファイルを操作できます。",
+      "intro": "パフォーマンストレースや自分のサイトのネットワーク・コンソールログなど、SoftGlazeのページツールでできないことに使い、テスト用のプロファイルで行ってください。これはあなた自身がアプリ内で行う操作であり、AIアプリが要求できる内容を決めるエキスパートモードとは別のものです。",
+      "profile": "実行中のプロファイル",
+      "loading": "実行中のプロファイルを読み込み中…",
+      "loadError": "実行中のプロファイルを読み込めませんでした: {{message}}",
+      "choose": "実行中のプロファイルを選択",
+      "option": "{{name}}（#{{id}}）· Chromium",
+      "optionFirefox": "{{name}}（#{{id}}）· Firefox: FirefoxプロファイルにはDevToolsエンドポイントがありません",
+      "empty": "先にChromiumプロファイルを起動してください。",
+      "openProfiles": "プロファイルを開く",
+      "stopped": "このプロファイル（{{name}}）は停止しました。そのアドレスはもう使えません。",
+      "address": "DevToolsアドレス",
+      "hiddenLabel": "DevToolsアドレス（「表示」を押すまで非表示）",
+      "show": "表示",
+      "showLabel": "{{name}}のDevToolsアドレスを表示",
+      "hide": "非表示",
+      "addressNote": "プロファイルを起動するたびに新しくなります。プロファイルの実行中、このコンピューター上でのみ使えます。",
+      "noAddress": "このプロファイルのDevToolsアドレスを取得できませんでした。停止してから起動し、もう一度お試しください。",
+      "setup": "設定",
+      "toolsLabel": "MCPサーバー",
+      "clientsLabel": "AIアプリ",
+      "where": {
+        "claude-code": "プロジェクトフォルダーのターミナルで実行します。アドレスはプロファイルを起動するたびに変わるため、先に claude mcp remove {{name}} を実行してから、もう一度このコマンドを実行してください。",
+        "claude-desktop": "Settings > Developer > Edit Config（claude_desktop_config.json）: これを \"mcpServers\" の下に追加し、Claude Desktopを終了して開き直します。起動するたびにアドレスを更新してください。",
+        "cursor": "~/.cursor/mcp.json（すべてのプロジェクト）または1つのプロジェクトの .cursor/mcp.json。起動するたびにアドレスを更新してください。",
+        "vscode": "ワークスペースの .vscode/mcp.json、または MCP: Open User Configuration を実行します。起動するたびにアドレスを更新してください。"
+      },
+      "snippet": "{{app}}用の{{tool}}設定",
+      "pressShow": "「表示」を押すと、このプロファイルのアドレスを含む設定が表示されます。",
+      "usageStats": "Chrome DevTools MCPの利用統計をオフにする",
+      "usageStatsHint": "--no-usage-statistics を追加します。追加しない場合、Chrome DevTools MCPは利用統計をGoogleに送信します。",
+      "footer": "作業が終わったら、MCPサーバーを閉じてからプロファイルを停止してください。",
+      "guide": "ガイド: Playwright MCPとChrome DevTools MCP"
+    }
+  },
+  "scope": {
+    "read": {
+      "title": "読み取り専用",
+      "body": "プロファイル、プロキシ、グループ、アクティビティを閲覧できます。変更や起動はできません。"
+    },
+    "operate": {
+      "title": "操作",
+      "body": "プロファイルの作成・起動、マクロの実行、ページ内での操作もできます。変更は設定に従って引き続き事前に確認されます。意図して選択してください。"
+    },
+    "full": {
+      "title": "フル",
+      "body": "「操作」のすべてに加え、エキスパートモードがオンの場合はエキスパートツールも使えます。完全に信頼できるアプリにのみ使用してください。"
+    }
+  },
+  "create": {
+    "title": "トークンを作成",
+    "titleFor": "{{app}}用のトークンを作成",
+    "description": "トークンを使うと1つのAIアプリが接続できます。トークンはチームのメンバーとして動作し、そのメンバーに許可された操作しかできません。",
+    "revealTitle": "新しいトークン",
+    "revealDescription": "今すぐAIアプリにコピーしてください。",
+    "name": "名前",
+    "nameHint": "後で見分けられるよう、アプリ名とコンピューター名を入れてください。",
+    "namePlaceholder": "自分のPCのClaude Desktop",
+    "member": "動作するメンバー",
+    "memberHint": "AIはこのメンバーとして、このメンバーの権限とプロファイルで動作します。",
+    "you": "あなた",
+    "scope": "許可する操作",
+    "expiry": "有効期限",
+    "expiryNever": "無期限",
+    "expiryDays_other": "{{count}}日",
+    "expiryNeverWarn": "無期限のトークンは、取り消すまで有効なままです。",
+    "profiles": "使用できるプロファイル",
+    "profilesAll": "すべて",
+    "profilesSome": "一部のグループのみ",
+    "profilesAllHint": "メンバーが開けるすべてのプロファイル。",
+    "profilesSomeHint": "チェックしたグループ内のプロファイルのみ。",
+    "noGroups": "グループはまだありません。先にグループページで作成してください。",
+    "pickGroups": "グループ",
+    "submit": "トークンを作成",
+    "onceWarning": "今すぐこのトークンをコピーしてください。SoftGlazeが表示するのはこの一度だけです。紛失した場合は取り消して、新しいトークンを作成してください。",
+    "yourToken": "トークン",
+    "filledSetup": "{{app}}の設定（トークン入力済み）",
+    "n8nHint": "n8nでAuthenticationをBearerに設定し、このトークンを貼り付けます。",
+    "claudeCodeHint": "SoftGlazeプラグインをインストールする場合は、softglaze-browser-connectorのインストール中にClaude Codeに尋ねられたらこのトークンを貼り付けます。上のコマンドはプラグインを使わない方法です。",
+    "claudeDesktopHint": "softglaze-browser.mcpbをインストールする場合は、Claude Desktopに尋ねられたらこのトークンを貼り付けます。上の設定は拡張機能を使わない方法です。",
+    "acknowledge": "このトークンを安全な場所に保存しました",
+    "closeWarning": "先にトークンをコピーするか、チェックボックスにチェックを入れてください。このトークンは二度と表示できません。",
+    "done": "完了"
+  },
+  "errors": {
+    "nameRequired": "名前を入力してください。",
+    "nameTooLong": "名前は{{max}}文字以内にしてください。",
+    "memberRequired": "メンバーを選択してください。",
+    "scopeRequired": "トークンに許可する操作を選択してください。",
+    "expiryRequired": "有効期限を選択してください。",
+    "groupsRequired": "グループを1つ以上チェックするか、「すべて」を選択してください。",
+    "groupsRequiredAutomation": "自動化トークンはグループに限定する必要があります。グループを1つ以上チェックしてください。",
+    "toolNotAllowed": "事前承認できないツールが含まれています。",
+    "limitRange": "{{min}}から{{max}}までの整数を入力してください。",
+    "create": "トークンは作成されませんでした。",
+    "noToken": "AIサーバーからトークンが返されませんでした。もう一度お試しください。",
+    "createFailed": "トークンは作成されませんでした: {{message}}"
+  },
+  "automation": {
+    "title": "自動化トークン（n8n、スケジュール、スクリプト用）",
+    "ownerOnly": "オーナーのみ",
+    "count_other": "{{count}}件を事前承認",
+    "intro": "あなたがいなくても動くワークフロー向けに、確認なしで実行してよいツールを選びます。",
+    "needsOperate": "ツールを事前承認するには、上で「操作」または「フル」を選択してください。",
+    "warning": "これらのツールは確認なしで実行されます。選択したグループに限定され、記録され、「すべてのAIを停止」で停止します。",
+    "tools": "確認なしで実行するツール",
+    "destructive": "元に戻せません",
+    "groups": {
+      "profiles": "プロファイル",
+      "sessions": "起動と停止",
+      "proxies": "プロキシ",
+      "groups": "グループ",
+      "automation": "自動化",
+      "page": "ページ内",
+      "other": "その他"
+    },
+    "maxProfiles": "1回の呼び出しの最大プロファイル数",
+    "maxProfilesHint": "既定は5、最大50。",
+    "maxCalls": "1時間あたりの最大呼び出し数",
+    "maxCallsHint": "既定は60、最大1000。",
+    "groupsNote": "事前承認したツールは、「使用できるプロファイル」でチェックしたグループでのみ動作します。それ以外のツールは引き続き確認を求めます。"
+  },
+  "tools": {
+    "create_profile": "プロファイルを作成",
+    "update_profile": "プロファイルを変更（名前、グループ、タグ、メモ、スタートページ、プロキシ）",
+    "batch_generate_profiles": "複数のプロファイルを一括作成",
+    "start_profile": "プロファイルを起動",
+    "stop_profile": "プロファイルを停止",
+    "assign_proxy": "プロファイルにプロキシを割り当て",
+    "rotate_proxy_ip": "プロキシから新しいIPを取得",
+    "find_free_proxies": "無料プロキシを検索してテスト",
+    "create_group": "グループを作成",
+    "move_profiles_to_group": "プロファイルをグループに移動",
+    "save_macro": "マクロを保存",
+    "run_macro": "マクロを実行",
+    "stop_run": "実行を停止",
+    "start_warmer": "ウォームアップを開始",
+    "page_navigate": "Webページを開く",
+    "page_snapshot": "ページの構造を読み取る",
+    "page_click": "ページ上でクリック",
+    "page_type": "ページ上で入力",
+    "page_press_key": "ページ上でキーを押す",
+    "page_scroll": "ページをスクロール",
+    "page_screenshot": "スクリーンショットを撮る",
+    "page_extract_text": "ページからテキストをコピー",
+    "page_wait_for": "ページ上の要素を待機"
+  },
+  "tokens": {
+    "search": "トークンを検索",
+    "showRevoked": "取り消したトークンを表示",
+    "showRevokedCount_other": "取り消し済み{{count}}件を表示",
+    "create": "トークンを作成",
+    "intro": "AIアプリはそれぞれ専用のトークンで接続します。トークンは1人のメンバーとして動作し、一部のグループに限定できます。トークンを取り消すと、そのアプリをすぐに切断できます。",
+    "loadError": "トークンを読み込めませんでした: {{message}}",
+    "emptyTitle": "トークンはまだありません",
+    "emptyBody": "トークンを作成してAIアプリに貼り付けてください。貼り付ける場所は「接続」タブに表示されます。",
+    "caption": "AIトークン",
+    "colName": "名前",
+    "colMember": "動作するメンバー",
+    "colScope": "アクセス",
+    "colGroups": "プロファイル",
+    "colExpires": "有効期限",
+    "colLastUsed": "最終使用",
+    "colActions": "操作",
+    "state": {
+      "revoked": "取り消し済み",
+      "expired": "期限切れ",
+      "expiring": "まもなく期限切れ"
+    },
+    "automation_other": "自動化 · {{count}}件を事前承認",
+    "allProfiles": "すべてのプロファイル",
+    "groupsMore_other": "{{names}} ほか{{count}}件",
+    "neverUsed": "未使用",
+    "revoke": "取り消す",
+    "revokeAria": "{{name}}を取り消す",
+    "noMatch": "一致するトークンはありません。",
+    "revokeTitle": "「{{name}}」を取り消しますか？",
+    "revokeBody": "このトークンを使っているAIアプリは、すぐにアクセスできなくなります。この操作は元に戻せません。",
+    "revokeError": "トークンを取り消せませんでした: {{message}}"
+  },
+  "approval": {
+    "eyebrow": "AIリクエスト",
+    "eyebrowMany": "AIリクエスト {{position}} / {{total}}",
+    "title": "{{app}}が許可を求めています",
+    "tokenOnly": "トークン: {{token}}",
+    "tokenAndMember": "トークン: {{token}} · {{member}}として動作",
+    "noSummary": "ツール {{tool}} を実行",
+    "unknownApp": "AIアプリ",
+    "timeLeft": "以内に回答してください。回答がない場合、リクエストは拒否されます。",
+    "timeLeftHint": "リクエストが拒否されるまでの残り時間",
+    "timeLeftSr": "リクエストが拒否されるまで残り{{time}}",
+    "secondsLeftAnnounce": "AIリクエストへの回答期限まで残り{{seconds}}秒",
+    "showDetails": "詳細を表示",
+    "hideDetails": "詳細を非表示",
+    "tool": "ツール",
+    "token": "トークン",
+    "argsLabel": "リクエストの詳細",
+    "noArgs": "このリクエストには追加の詳細はありません。",
+    "redactedNote": "パスワードなどの機密情報はここでは非表示になっています。",
+    "deny": "拒否",
+    "allowHour": "1時間許可",
+    "allowHourHint": "今後1時間、{{token}}からのこの種類の操作については確認しません。",
+    "allowOnce": "今回のみ許可",
+    "footnote": "AIアプリ側の設定にかかわらず、SoftGlazeはアプリ内で確認します。すべての回答は「アクティビティ」に記録されます。",
+    "later": "後で決める（時間切れになると拒否されます）",
+    "respondError": "回答は保存されませんでした: {{message}}",
+    "waitingChip_other": "待機中のAIリクエスト{{count}}件",
+    "timedOut": "{{app}}からのリクエストは時間切れになり、拒否されました。",
+    "gone": "そのリクエストはすでに回答済みか、キャンセルされています。"
+  },
+  "approvals": {
+    "intro": "変更を伴う操作はすべて、あなたが回答するまでここで待機します。回答がないリクエストは2分後に拒否されます。同じリクエストはどのページにもポップアップで表示されます。",
+    "changeRules": "確認のタイミングを変更",
+    "emptyTitle": "対応待ちのものはありません",
+    "emptyBody": "AIアプリが何かを変更しようとすると、そのリクエストがここに表示され、どのページにもポップアップで表示されます。",
+    "listLabel": "対応待ちのリクエスト",
+    "meta": "{{app}} · トークン {{token}} · {{when}}",
+    "actsAs": "{{member}}として動作"
+  },
+  "activity": {
+    "search": "ツール、リクエスト、トークンを検索",
+    "outcome": "結果",
+    "all": "すべて",
+    "outcomes": {
+      "ok": "OK",
+      "denied": "拒否",
+      "error": "エラー",
+      "pending": "待機中"
+    },
+    "app": "アプリ",
+    "allApps": "すべてのアプリ",
+    "loadError": "アクティビティを読み込めませんでした: {{message}}",
+    "noMatchTitle": "このフィルターに一致するものはありません",
+    "noMatchBody": "別の結果、アプリ、検索語を試してください。",
+    "emptyTitle": "AIのアクティビティはまだありません",
+    "emptyBody": "AIアプリがSoftGlazeを通じて行ったことはすべてここに表示されます。要求の内容、あなたの回答、その結果がわかります。",
+    "caption": "AIアクティビティ",
+    "colTime": "時刻",
+    "colApp": "アプリとトークン",
+    "colTool": "ツール",
+    "colSummary": "内容",
+    "colOutcome": "結果",
+    "colDuration": "所要時間",
+    "approval": {
+      "none": "承認不要",
+      "asked": "確認済み",
+      "pre-approved": "事前承認済み",
+      "allow-once": "今回のみ許可",
+      "allow-hour": "1時間許可しました",
+      "hour-grant": "1時間許可",
+      "deny": "あなたが拒否",
+      "timeout": "2分以内に回答なし",
+      "cancelled": "「すべてのAIを停止」で停止",
+      "started-by-this-token": "このアプリが起動したプロファイル",
+      "developer-token": "開発者APIトークン"
+    },
+    "pageEmpty": "これ以上の項目はありません。",
+    "runId": "実行",
+    "pageInfo": "{{page}}ページ · 1ページ{{size}}件",
+    "newer": "新しい順へ",
+    "older": "古い順へ"
+  },
+  "memory": {
+    "title": "ワークスペースのメモリ",
+    "description": "すべてのAIアプリが作業前に読むメモです。命名ルール、各グループの用途、プロキシのルール、作業時間、絶対にしてはいけないことなどを書きます。プレーンなMarkdownです。",
+    "updated": "{{when}}に保存",
+    "loadError": "メモリを読み込めませんでした: {{message}}",
+    "editorLabel": "ワークスペースのメモリ（Markdown）",
+    "placeholder": "AIアプリ向けのメモをMarkdownでここに書いてください。",
+    "usage": "{{used}} KB / {{limit}} KB · {{chars}}文字",
+    "over": "上限を超えています。保存するには短くしてください。",
+    "discard": "変更を破棄",
+    "reset": "既定に戻す",
+    "unsaved": "未保存の変更",
+    "tip": "ヒント: Ctrl+Sで保存できます。AIアプリは毎回すべてを読むため、短く具体的にしてください。",
+    "guidesTitle": "内蔵ガイド",
+    "guidesDescription": "SoftGlazeはこれらのガイドもすべてのAIアプリに渡します。読み取り専用です。",
+    "resetTitle": "メモリを既定に戻しますか？",
+    "resetBody": "あなたのメモはSoftGlazeのテンプレートに置き換えられます。この操作は元に戻せません。",
+    "guides": {
+      "howItWorks": {
+        "title": "SoftGlazeのしくみ",
+        "body": "プロファイル、フィンガープリント、プロキシ、グループ、セッション、マクロ、プランの上限、そしてツールを上手に使う方法。"
+      },
+      "acceptableUse": {
+        "title": "利用規定",
+        "body": "SoftGlazeを使用してよいこと、いけないこと。AIアプリには、禁止されている内容をすべて断るよう指示されています。"
+      }
+    },
+    "readGuide": "ガイドを読む",
+    "hideGuide": "非表示",
+    "guideReadOnly": "読み取り専用。SoftGlazeが最新の状態に保ちます。"
+  },
+  "prompts": {
+    "loadError": "プロンプトを読み込めませんでした: {{message}}",
+    "emptyTitle": "プロンプトはまだありません",
+    "emptyBody": "AIサーバーが利用可能になると、用意されたプロンプトがここに表示されます。",
+    "search": "プロンプトを検索",
+    "listLabel": "プロンプト",
+    "noMatch": "一致するプロンプトはありません。",
+    "inClaudeCode": "Claude Codeの場合:",
+    "arguments": "入力する項目",
+    "noArguments": "このプロンプトに入力する項目はありません。",
+    "argName": "名前",
+    "argRequired": "必須",
+    "argDescription": "内容",
+    "required": "必須",
+    "optional": "任意",
+    "text": "プロンプトのテキスト",
+    "howTitle": "プロンプトの使い方",
+    "howIntro": "プロンプトは用意されたタスクです。AIアプリが詳細を埋めて、SoftGlazeで実行します。",
+    "howClaudeCode": "/ と入力し、softglazeのプロンプトを選びます。",
+    "howClaudeDesktop": "チャット欄の下の + をクリックし、SoftGlazeを探します。",
+    "howVsCode": "Copilot Chatで / と入力し、SoftGlazeのプロンプトを選びます。",
+    "howCursor": "プロンプトが一覧にない場合は、下のテキストをコピーします。",
+    "howOther": "どのアプリでも: プロンプトのテキストをコピーしてチャットに貼り付け、詳細を入力します。"
+  },
+  "settings": {
+    "loadError": "設定を読み込めませんでした: {{message}}",
+    "ownerOnly": "オーナーのみ",
+    "ownerOnlyHint": "これを変更できるのはワークスペースのオーナーのみです。",
+    "remove": "{{value}}を削除",
+    "approvals": {
+      "title": "SoftGlazeが確認するタイミング",
+      "description": "AIアプリ側の設定にかかわらず、SoftGlazeはAIアプリが操作を行う前にアプリ内で確認します。",
+      "read": {
+        "title": "読み取りツール",
+        "body": "プロファイル、プロキシ、グループ、アクティビティの閲覧。"
+      },
+      "operate": {
+        "title": "操作ツール",
+        "body": "プロファイルの作成・起動、マクロの実行、ページ内での操作。"
+      },
+      "full": {
+        "title": "フルツール",
+        "body": "エキスパートツール（エキスパートモードがオンの場合のみ）。"
+      },
+      "alwaysAsk": "多数のプロファイルを一度に起動・停止する操作やエキスパートツールなど、一部の操作は毎回必ず確認します。"
+    },
+    "modes": {
+      "never": "確認しない",
+      "ask-hour": "1時間に1回確認",
+      "ask-always": "毎回確認"
+    },
+    "domains": {
+      "title": "AIが操作できるサイト",
+      "description": "ページツール（ページを開く、クリック、入力、テキストの読み取り）は、この一覧にあるサイトとそのサブドメインでのみ動作します。",
+      "placeholder": "example.com",
+      "invalid": "example.com のようなサイト名を入力してください。",
+      "empty": "サイトはまだありません。ページツールはどのサイトでも開けますが、事前に確認されます。",
+      "add": "サイトを追加"
+    },
+    "hosts": {
+      "title": "追加の許可ホスト名",
+      "description": "AIサーバーは 127.0.0.1 宛てのリクエストにのみ応答します。Docker上で動くn8nなどのツールには host.docker.internal を追加してください。",
+      "invalid": "host.docker.internal のようなホスト名を、ポートやパスなしで入力してください。",
+      "empty": "なし。127.0.0.1 のみ許可されます。",
+      "add": "ホストを追加"
+    },
+    "expert": {
+      "title": "エキスパートモード",
+      "description": "AIアプリがPlaywright、Puppeteer、Chrome DevToolsで実行中のプロファイルを操作できるようにします。",
+      "warning": "検知される可能性があります。外部ツールはWebサイトが気付ける方法でブラウザを操作するため、プロファイルにフラグが付いたりブロックされたりすることがあります。既定はオフです。オーナーのみ。",
+      "switch": "エキスパートモード",
+      "isOn": "オン。フルトークンを持つAIアプリは、実行中のプロファイルの操作を要求できます。毎回あなたに確認します。",
+      "isOff": "オフ。AIアプリは実行中のプロファイルを操作できません。",
+      "confirmTitle": "エキスパートモードをオンにしますか？",
+      "confirmBody": "フルトークンを持つAIアプリが、実行中のプロファイルを直接操作するよう要求できるようになります。Webサイトはこれを検知でき、それらのプロファイル内のアカウントにフラグが付く可能性があります。",
+      "confirm": "オンにする",
+      "ack": "検知される可能性があり、プロファイルにフラグが付く場合があることを理解しました。"
+    },
+    "port": {
+      "title": "サーバーのポート",
+      "description": "AIアプリはこのポートの http://127.0.0.1 に接続します。",
+      "label": "ポート",
+      "invalid": "{{min}}から{{max}}までの数値を使ってください。",
+      "hint": "変更した後は、接続中のすべてのAIアプリでアドレスを更新してください。新しい設定は「接続」タブに表示されます。"
+    }
+  }
+}

@@ -1,0 +1,165 @@
+{
+  "billing": {
+    "status": {
+      "loading": "Загрузка…",
+      "sourceOwner": "Владелец исходного кода",
+      "active": "Активна",
+      "activeUntil": "Активна · до {{date}}",
+      "trialDaysLeft_one": "Пробный · остался {{count}} дн.",
+      "trialDaysLeft_few": "Пробный · осталось {{count}} дн.",
+      "trialDaysLeft_many": "Пробный · осталось {{count}} дн.",
+      "trialDaysLeft_other": "Пробный · осталось {{count}} дн.",
+      "graceDaysLeft_one": "Льготный · остался {{count}} дн.",
+      "graceDaysLeft_few": "Льготный · осталось {{count}} дн.",
+      "graceDaysLeft_many": "Льготный · осталось {{count}} дн.",
+      "graceDaysLeft_other": "Льготный · осталось {{count}} дн.",
+      "subscriptionEnded": "Подписка закончилась"
+    },
+    "subscription": {
+      "title": "Подписка",
+      "planLine": "SoftGlaze Browser · тариф {{tier}}",
+      "manageButton": "Управление подпиской и тарифами"
+    },
+    "seats": {
+      "label": "Места в команде",
+      "usage": "Занято {{used}} / {{total}}"
+    },
+    "gateway": {
+      "title": "Способы оплаты",
+      "description": "Только для суперадмина. Включите способы, которые владельцы видят при оплате, и сохраните ключи каждого провайдера.",
+      "loadError": "Не удалось загрузить настройки оплаты.",
+      "footnote": "Ключи хранятся в зашифрованном виде на этом компьютере и никогда его не покидают. Оплата проверяется опросом (без вебхуков), поэтому для контроля между установками всё ещё нужен сервер лицензий. Платежи Wise и ручные вы одобряете сами в разделе «Ожидающие платежи» ниже.",
+      "retry": "Повторить"
+    },
+    "provider": {
+      "kindManual": "Вручную",
+      "kindAutomated": "Автоматически",
+      "on": "вкл.",
+      "enabled": "Включено",
+      "disabled": "Выключено",
+      "enableAria": "Включить {{provider}}",
+      "documentation": "Документация",
+      "secretStoredPlaceholder": "•••••••• (оставьте пустым, чтобы не менять)",
+      "secretPlaceholder": "Вставьте ключ",
+      "save": "Сохранить",
+      "testConnection": "Проверить соединение",
+      "enabledMsg": "Включено.",
+      "disabledMsg": "Выключено.",
+      "updateError": "Не удалось обновить.",
+      "savedMsg": "Сохранено.",
+      "saveError": "Не удалось сохранить.",
+      "connectionOk": "Соединение в порядке ✓",
+      "validationFailedKeys": "Проверка не пройдена: проверьте ключи.",
+      "validationFailed": "Проверка не пройдена."
+    },
+    "manual": {
+      "title": "Ожидающие платежи",
+      "description": "Ручные платежи (Wise / банковский перевод), ожидающие вашего одобрения.",
+      "loadError": "Не удалось загрузить ручные платежи.",
+      "resolveError": "Не удалось обновить этот платёж.",
+      "ownerFallback": "Владелец #{{id}}",
+      "refPrefix": "реф.:",
+      "approve": "Одобрить",
+      "reject": "Отклонить",
+      "statusLabel": {
+        "pending": "ожидает",
+        "approved": "одобрен",
+        "rejected": "отклонён"
+      }
+    }
+  },
+  "monetization": {
+    "heading": "Монетизация",
+    "affiliate": {
+      "title": "Партнёрские и реферальные ссылки",
+      "ownerOnly": "Только владелец",
+      "description": "Ваши партнёрские ссылки для кнопок «Купить» в маркетплейсе прокси. Оставьте пустым, чтобы использовать ссылку SoftGlaze по умолчанию.",
+      "loadError": "Не удалось загрузить партнёрские ссылки.",
+      "saveError": "Не удалось сохранить партнёрские ссылки.",
+      "savedMsg": "Сохранено. Кнопки маркетплейса теперь используют ваши ссылки.",
+      "customLink": "Своя ссылка",
+      "defaultLink": "Ссылка по умолчанию",
+      "openLinkTitle": "Открыть ссылку {{provider}}",
+      "saving": "Сохранение…",
+      "saveButton": "Сохранить ссылки",
+      "footnote": "Эти ссылки используются в кнопках «Купить у…» / «Открыть кабинет» на вкладке Пул прокси → Провайдеры. Это только публичные реферальные ссылки: токены и учётные данные прокси не затрагиваются."
+    }
+  },
+  "developerApi": {
+    "title": "Доступ к API для разработчиков",
+    "description": "Создавайте ключи API и запускайте локальный REST-сервер, чтобы управлять SoftGlaze из кода.",
+    "copy": "Копировать",
+    "errors": {
+      "load": "Не удалось загрузить настройки API для разработчиков.",
+      "nameRequired": "Назовите ключ (например, «CI-сервер»).",
+      "generate": "Не удалось создать ключ API.",
+      "revoke": "Не удалось отозвать ключ.",
+      "toggleServer": "Не удалось изменить состояние локального сервера."
+    },
+    "keys": {
+      "title": "Ключи API",
+      "namePlaceholder": "Имя ключа (например, CI-сервер)",
+      "generate": "Создать ключ API",
+      "copyOnce": "Скопируйте ключ сейчас: он показывается только один раз и не может быть восстановлен.",
+      "empty": "Ключей API пока нет.",
+      "lastUsed": "последнее использование {{when}}",
+      "neverUsed": "не использовался",
+      "never": "никогда",
+      "revoke": "Отозвать",
+      "revokeConfirm": "Отозвать ключ API «{{name}}»? Все скрипты, которые его используют, сразу перестанут работать. Это действие нельзя отменить."
+    },
+    "server": {
+      "title": "Локальный REST API",
+      "runningAt": "Работает по адресу",
+      "stoppedPrefix": "Остановлен · будет слушать",
+      "loopbackOnly": "(только loopback)",
+      "disableTitle": "Выключить локальный API",
+      "enableTitle": "Включить локальный API",
+      "curlExample": "Пример: запуск профиля через cURL",
+      "footnote": "Сервер принимает запросы только с этого компьютера и требует действительный ключ Bearer."
+    }
+  },
+  "migration": {
+    "title": "Перенос профилей",
+    "ownerOnly": "Только владелец",
+    "description": "Импортируйте существующие профили из другого мультипрофильного браузера через его API.",
+    "sourcePlatform": "Исходная платформа",
+    "noteLabel": "Примечание:",
+    "instructions": "Инструкция",
+    "tokenSectionTitle": "Токен API {{platform}}",
+    "transferring": "Перенос…",
+    "startTransfer": "Начать перенос",
+    "tokenFootnote": "Токен используется один раз для этого переноса и не сохраняется. Локальные платформы (AdsPower, ixBrowser) должны быть запущены с включённым Local API.",
+    "errors": {
+      "tokenRequired": "Введите {{placeholder}} для {{platform}}.",
+      "transferFailed": "Не удалось выполнить перенос."
+    },
+    "log": {
+      "title": "Журнал переноса",
+      "imported": "Импортировано {{created}}/{{total}}",
+      "errors_one": "{{count}} ошибка",
+      "errors_few": "{{count}} ошибки",
+      "errors_many": "{{count}} ошибок",
+      "errors_other": "{{count}} ошибки",
+      "waiting": "Ожидание ответа платформы…"
+    },
+    "platforms": {
+      "dolphin": {
+        "placeholder": "Dolphin_Token",
+        "warning": "Cookie не будут перенесены, если вы переносите профили с бесплатного тарифа Dolphin."
+      },
+      "gologin": {
+        "placeholder": "Токен API GoLogin"
+      },
+      "multilogin": {
+        "placeholder": "Токен автоматизации Multilogin"
+      },
+      "adspower": {
+        "placeholder": "Ключ Local API AdsPower"
+      },
+      "ixbrowser": {
+        "placeholder": "Ключ Local API ixBrowser"
+      }
+    }
+  }
+}

@@ -1,0 +1,52 @@
+{
+  "header": {
+    "eyebrow": "Ruang kerja",
+    "title": "Sampah & Pemulihan",
+    "description": "Pulihkan profil yang dihapus atau hapus permanen dari penyimpanan Anda."
+  },
+  "actions": {
+    "emptyTrash": "Kosongkan sampah",
+    "restore": "Pulihkan",
+    "deleteForever": "Hapus permanen",
+    "clear": "Bersihkan",
+    "restoreTitle": "Pulihkan profil",
+    "purgeTitle": "Hapus permanen"
+  },
+  "errors": {
+    "loadFailed": "Gagal memuat sampah."
+  },
+  "warning": {
+    "title": "Penghapusan permanen",
+    "body": "Memulihkan mengembalikan profil ke daftar Anda tanpa perubahan. Hapus permanen menghapus profil beserta semua data browsernya (cookie, cache, login) dari komputer ini."
+  },
+  "toolbar": {
+    "searchPlaceholder": "Cari profil yang dihapus..."
+  },
+  "bulk": {
+    "selected": "{{count}} dipilih"
+  },
+  "table": {
+    "profileName": "Nama profil",
+    "proxy": "Proxy",
+    "deletedDate": "Tanggal dihapus",
+    "actions": "Aksi",
+    "directProxy": "Langsung",
+    "defaultBrowser": "Chrome"
+  },
+  "empty": {
+    "title": "Sampah kosong",
+    "noMatch": "Tidak ada profil terhapus yang cocok dengan pencarian Anda.",
+    "none": "Tidak ada profil yang dihapus. Aman dan bersih!"
+  },
+  "confirm": {
+    "purgeWithData": "Hapus \"{{title}}\" secara permanen? Ini tidak bisa dibatalkan dan data browser lokalnya akan dihapus.",
+    "bulkPurgeWithData_other": "Hapus {{count}} profil secara permanen? Ini tidak bisa dibatalkan dan data browser lokal akan dihapus.",
+    "emptyTrashWithData_other": "Hapus permanen SEMUA {{count}} profil di sampah? Ini tidak bisa dibatalkan dan data browser lokal akan dihapus."
+  },
+  "pager": {
+    "showing": "Menampilkan {{from}}-{{to}} dari {{total}}",
+    "prev": "Sebelumnya",
+    "next": "Berikutnya"
+  },
+  "bulkSkipped": "Tidak diubah: {{count}} profil. {{reason}}"
+}

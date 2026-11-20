@@ -1,0 +1,107 @@
+{
+  "choose": {
+    "title": "Bienvenue dans SoftGlaze",
+    "subtitle": "Connectez-vous pour créer votre espace de travail. Aucun mot de passe nécessaire.",
+    "google": "Continuer avec Google",
+    "microsoft": "Continuer avec Microsoft",
+    "facebook": "Continuer avec Facebook",
+    "linkedin": "Continuer avec LinkedIn",
+    "allowEmail": "Autoriser l'accès à l'e-mail et réessayer Facebook",
+    "github": "Continuer avec GitHub",
+    "email": "Continuer avec un e-mail",
+    "or": "ou",
+    "moreOptions": "Plus d'options",
+    "moreOptionsHint": "Créer plutôt l'espace de travail avec un nom et un mot de passe",
+    "privacy": "Nous recevons uniquement votre nom et votre adresse e-mail vérifiée.",
+    "haveAccount": "Vous avez déjà un espace de travail sur cet ordinateur ?",
+    "logIn": "Se connecter"
+  },
+  "unlock": {
+    "title": "Bon retour",
+    "titleNamed": "Bon retour, {{name}}",
+    "subtitle": "Connectez-vous avec le compte auquel appartient cet espace de travail.",
+    "account": "Compte de l'espace de travail : {{email}}",
+    "passwordInstead": "Se connecter avec votre mot de passe",
+    "haveInvite": "J'ai un code d'invitation",
+    "teamSignIn": "Connexion membre de l'équipe"
+  },
+  "link": {
+    "title": "Connectez-vous à votre compte SoftGlaze",
+    "subtitle": "Utilisez la connexion en un clic ici et sur d'autres ordinateurs. Votre espace de travail reste tel quel."
+  },
+  "email": {
+    "title": "Continuer avec un e-mail",
+    "subtitle": "Nous vous envoyons un code à 6 chiffres par e-mail. Aucun mot de passe nécessaire.",
+    "label": "Adresse e-mail",
+    "placeholder": "vous@entreprise.fr",
+    "send": "Envoyer le code",
+    "codeTitle": "Consultez vos e-mails",
+    "codeBody": "Saisissez le code à 6 chiffres envoyé à {{email}}.",
+    "codeLabel": "Code à 6 chiffres",
+    "verify": "Continuer",
+    "resend": "Envoyer un nouveau code",
+    "resendIn": "Envoyer un nouveau code dans {{count}} s",
+    "checkSpam": "Cela peut prendre une minute. Vérifiez votre dossier de spam si vous ne le voyez pas.",
+    "devCode": "Aucun serveur e-mail n'est configuré dans ce build, voici donc le code : {{code}}",
+    "change": "Utiliser une autre adresse e-mail"
+  },
+  "waiting": {
+    "title": "Terminez dans votre navigateur",
+    "body": "Nous avons ouvert {{provider}} dans votre navigateur. Connectez-vous-y, puis revenez ici.",
+    "status": "En attente de {{provider}}...",
+    "reopen": "Rouvrir la page",
+    "anotherWay": "Vous n'êtes pas revenu ? Essayez un autre moyen",
+    "cancel": "Annuler"
+  },
+  "back": "Retour",
+  "useCase": {
+    "title": "Pour quoi utiliserez-vous SoftGlaze ?",
+    "subtitle": "Facultatif. Cela nous aide à améliorer SoftGlaze pour vous.",
+    "continue": "Continuer",
+    "skip": "Passer"
+  },
+  "move": {
+    "title": "Votre abonnement",
+    "moved": "C'est fait. Votre abonnement fonctionne maintenant sur cet ordinateur."
+  },
+  "account": {
+    "title": "Méthodes de connexion",
+    "subtitle": "Comment vous vous connectez à votre compte SoftGlaze. Se connecter sur un nouvel ordinateur y transfère aussi votre licence.",
+    "signedInAs": "Connecté en tant que {{email}}",
+    "google": "Google",
+    "microsoft": "Microsoft",
+    "facebook": "Facebook",
+    "linkedin": "LinkedIn",
+    "github": "GitHub",
+    "githubLogin": "GitHub (@{{login}})",
+    "email": "Code par e-mail",
+    "lastUsed": "Dernière utilisation {{date}}",
+    "linkedOn": "Lié le {{date}}",
+    "signOut": "Se déconnecter",
+    "signOutConfirm": "Se déconnecter de votre compte SoftGlaze sur cet ordinateur ? Vous pourrez vous reconnecter avec le même compte à tout moment.",
+    "signingOut": "Déconnexion...",
+    "offline": "Hors ligne : affichage de ce que cet ordinateur a enregistré.",
+    "notSignedIn": "Connectez-vous à votre compte SoftGlaze pour utiliser la connexion en un clic ici et sur d'autres ordinateurs.",
+    "signInWorkspace": "Cet espace de travail s'ouvre avec votre connexion. Ajoutez un mot de passe ci-dessus si vous voulez aussi vous connecter sans internet.",
+    "linked": "Connecté. Vos méthodes de connexion sont ci-dessous.",
+    "loading": "Chargement des méthodes de connexion...",
+    "notAvailable": "La connexion en un clic nécessite le serveur de licences SoftGlaze, que ce build n'utilise pas."
+  },
+  "errors": {
+    "SIGNIN_OFFLINE": "Connectez-vous à internet pour vous connecter.",
+    "SIGNIN_EXPIRED": "Cette connexion a expiré ou a déjà été utilisée. Veuillez réessayer.",
+    "SIGNIN_ACCOUNT_MISMATCH": "Cet espace de travail appartient à un autre compte SoftGlaze. Connectez-vous avec le compte qui l'a créé.",
+    "SIGNIN_EMAIL_MISMATCH": "Utilisez l'adresse e-mail de cet espace de travail.",
+    "SIGNIN_EMAIL_NOT_VERIFIED": "Le compte avec lequel vous vous êtes connecté n'a pas d'adresse e-mail vérifiée. Vérifiez-la sur ce service (sur GitHub : Settings > Emails) ou continuez avec un e-mail.",
+    "SIGNIN_EMAIL_MISSING": "Votre compte Facebook n'a pas partagé d'e-mail. Utilisez Google ou la connexion par e-mail, ou autorisez l'accès à l'e-mail.",
+    "SIGNIN_DISPOSABLE_EMAIL": "Veuillez utiliser une adresse e-mail permanente.",
+    "SIGNIN_UNAVAILABLE": "Cette connexion n'est pas encore disponible. Continuez avec un e-mail ou utilisez « Plus d'options ».",
+    "SIGNIN_FAILED": "La connexion n'a pas abouti. Réessayez dans une minute.",
+    "SIGNIN_TIMEOUT": "La connexion a pris trop de temps. Réessayez.",
+    "SIGNIN_NOT_ALLOWED": "Cette connexion n'est pas disponible pour cet espace de travail.",
+    "SIGNIN_KEY_LOST": "Cet espace de travail n'a pas pu être ouvert avec votre connexion sur cet ordinateur. Connectez-vous avec votre mot de passe.",
+    "SIGNIN_SESSION_ENDED": "Votre session de connexion a pris fin. Reconnectez-vous.",
+    "SIGNIN_BAD_INPUT": "Saisissez une adresse e-mail valide.",
+    "MOVE_FAILED": "La licence n'a pas pu être transférée pour le moment. Réessayez dans une minute."
+  }
+}

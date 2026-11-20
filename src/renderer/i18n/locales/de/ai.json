@@ -1,0 +1,635 @@
+{
+  "title": "SoftGlaze AI",
+  "beta": "Beta",
+  "description": "Lassen Sie KI-Apps wie Claude, Cursor und ChatGPT mit Ihren Profilen arbeiten. Sie legen fest, wie oft Änderungen Ihre Freigabe brauchen, und alles wird protokolliert.",
+  "loading": "SoftGlaze AI wird geladen…",
+  "refresh": "Aktualisieren",
+  "retry": "Erneut versuchen",
+  "learnMore": "Anleitung lesen",
+  "opensInBrowser": "(öffnet sich in Ihrem Browser)",
+  "copy": "Kopieren",
+  "copied": "Kopiert",
+  "copyFailed": "Kopieren nicht möglich. Markieren Sie den Text und kopieren Sie ihn von Hand.",
+  "cancel": "Abbrechen",
+  "close": "Schließen",
+  "save": "Speichern",
+  "saving": "Speichert…",
+  "saved": "Gespeichert",
+  "saveFailed": "Nicht gespeichert",
+  "never": "Nie",
+  "unknown": "Unbekannt",
+  "roles": {
+    "OWNER": "Inhaber",
+    "ADMIN": "Admin",
+    "MANAGER": "Manager",
+    "OPERATOR": "Operator",
+    "SUPER_ADMIN": "Super-Admin"
+  },
+  "states": {
+    "unavailableTitle": "SoftGlaze AI ist in diesem Build nicht verfügbar",
+    "unavailableBody": "Diese Version von SoftGlaze Browser enthält den KI-Server noch nicht. Er kommt mit einem Update. Mit Ihrem Arbeitsbereich ist alles in Ordnung.",
+    "forbiddenTitle": "Nur der Inhaber oder ein Admin kann SoftGlaze AI verwalten",
+    "forbiddenBody": "Bitten Sie den Inhaber des Arbeitsbereichs um Zugriff. Wenn eine KI-App ein Token nutzt, das in Ihrem Namen handelt, erscheinen ihre Anfragen weiterhin bei Ihnen zum Erlauben oder Ablehnen – auf jeder Seite.",
+    "errorTitle": "SoftGlaze AI konnte nicht geladen werden"
+  },
+  "header": {
+    "switchLabel": "SoftGlaze-AI-Server",
+    "switchShort": "KI-Server",
+    "on": "An",
+    "off": "Aus",
+    "turningOn": "Wird eingeschaltet…",
+    "turningOff": "Wird ausgeschaltet…",
+    "stopAll": "Alle KI stoppen",
+    "toggleError": "KI-Server konnte nicht umgeschaltet werden: {{message}}"
+  },
+  "status": {
+    "server": "KI-Server",
+    "running": "Läuft",
+    "error": "Läuft nicht",
+    "off": "Aus",
+    "offHint": "Schalten Sie ihn ein, damit sich KI-Apps verbinden können.",
+    "errorHint": "Er ist eingeschaltet, läuft aber nicht: {{message}}",
+    "errorHintNoMessage": "Er ist eingeschaltet, läuft aber nicht. Der Port ist eventuell belegt; ändern Sie ihn unter „Einstellungen“.",
+    "apps": "Verbundene Apps",
+    "appsNone": "Noch keine App verbunden",
+    "appSeen": "{{name}} · {{when}}",
+    "appsMore_one": "und {{count}} weitere",
+    "appsMore_other": "und {{count}} weitere",
+    "waiting": "Wartet auf Sie",
+    "waitingNone": "Nichts zu beantworten",
+    "waitingSome_one": "{{count}} Anfrage zu beantworten",
+    "waitingSome_other": "{{count}} Anfragen zu beantworten",
+    "openApprovals": "Freigaben öffnen",
+    "sessions": "Laufende KI-Sitzungen",
+    "sessionsHint": "Von KI-Apps gestartet"
+  },
+  "tabs": {
+    "label": "SoftGlaze-AI-Bereiche",
+    "connect": "Verbinden",
+    "tokens": "Tokens",
+    "approvals": "Freigaben",
+    "activity": "Aktivität",
+    "memory": "Speicher",
+    "prompts": "Prompts",
+    "settings": "Einstellungen",
+    "waiting": "wartend"
+  },
+  "stop": {
+    "title": "Alle KI stoppen?",
+    "body": "Nutzen Sie dies, wenn eine KI-App etwas tut, das Sie nicht erwartet haben.",
+    "point1": "Alle Läufe und Profile, die eine KI-App gestartet hat, werden sofort gestoppt.",
+    "point2": "Alle verbundenen KI-Apps werden getrennt, laufende Aufrufe werden abgebrochen.",
+    "point3": "Alle Anfragen, die auf Ihre Antwort warten, werden abgelehnt.",
+    "point4": "SoftGlaze AI wird ausgeschaltet. Tokens bleiben gültig; schalten Sie es wieder ein, wenn Sie bereit sind.",
+    "confirm": "Alle KI stoppen",
+    "error": "Nicht alles konnte gestoppt werden: {{message}}",
+    "result": "Fertig. Gestoppte Läufe: {{runs}}. Gestoppte Profile: {{profiles}}. Abgebrochene Aufrufe: {{calls}}. Beendete Sitzungen: {{sessions}}. Abgelehnte Anfragen: {{approvals}}.",
+    "nowOff": "SoftGlaze AI ist aus. KI-Apps können sich erst verbinden, wenn Sie es einschalten.",
+    "turnOn": "Einschalten"
+  },
+  "start": {
+    "title": "In drei Schritten loslegen",
+    "step1": "KI-Server einschalten",
+    "step2": "Token für Ihre KI-App erstellen",
+    "step3": "KI-App verbinden",
+    "done": "Erledigt",
+    "turnOn": "Einschalten"
+  },
+  "connect": {
+    "loadError": "Einrichtung für KI-Apps konnte nicht geladen werden: {{message}}",
+    "empty": "Noch keine Einrichtung vorhanden",
+    "emptyOn": "Der KI-Server hat keine Einrichtung gesendet. Klicken Sie auf „Aktualisieren“.",
+    "emptyBody": "Schalten Sie den KI-Server ein, um zu sehen, wie Sie jede App verbinden.",
+    "appsLabel": "KI-Apps",
+    "guide": "Vollständige Anleitung",
+    "appDocs": "Doku der App",
+    "where": "Wohin damit",
+    "steps": "So verbinden Sie",
+    "kind": {
+      "command": "Befehl",
+      "json": "JSON",
+      "toml": "TOML",
+      "n8n": "Workflow"
+    },
+    "snippet": "Einrichtung für {{app}}",
+    "placeholderHint": "<YOUR_TOKEN> steht für Ihr Token. Ein Token sehen Sie nur einmal – beim Erstellen.",
+    "noSnippet": "Für diese App gibt es keine fertige Einrichtung. Folgen Sie den Schritten oben.",
+    "createToken": "Token für diese App erstellen",
+    "createTokenHint": "Geben Sie jeder App ein eigenes Token. So sehen Sie, was jede App tut, und können eine abschalten, ohne die anderen zu berühren.",
+    "installGuide": "Installationsanleitung",
+    "mcpb": {
+      "title": "In Claude Desktop installieren: softglaze-browser.mcpb herunterladen",
+      "download": "softglaze-browser.mcpb herunterladen",
+      "body": "Doppelklicken Sie auf die Datei oder öffnen Sie in Claude Desktop Settings > Extensions > Advanced settings > Install Extension. Claude Desktop fragt nach Ihrem Token und dem Port; behalten Sie den auf dieser Seite angezeigten Port bei. Chats in Claude Desktop und Cowork nutzen ihn beide."
+    },
+    "claudeCode": {
+      "pluginTitle": "SoftGlaze-Plugins installieren (empfohlen)",
+      "pluginBody": "Führen Sie diese Befehle einzeln in Claude Code aus. softglaze-browser fügt die Skills hinzu; softglaze-browser-connector fügt die SoftGlaze-Tools hinzu und fragt nach Ihrem Token und dem Port. Der Connector benötigt Node.js 18 oder neuer.",
+      "desktopNote": "Chats in Claude Desktop und Cowork nutzen stattdessen softglaze-browser.mcpb (siehe Claude Desktop).",
+      "manualTitle": "Oder den Server selbst hinzufügen (ohne Node.js)"
+    },
+    "envVar": {
+      "title": "Token für Codex speichern",
+      "body": "Codex liest das Token aus einer Umgebungsvariable namens SOFTGLAZE_TOKEN. Führen Sie dies einmal mit Ihrem Token aus und öffnen Sie dann ein neues Terminal.",
+      "windows": "Windows (Eingabeaufforderung oder PowerShell)",
+      "unix": "macOS oder Linux (in Ihr Shell-Profil eintragen)"
+    },
+    "bridge": {
+      "title": "Bridge für Apps, die ein lokales Programm starten",
+      "body": "Manche Apps können sich nicht mit einer Webadresse verbinden. Sie starten stattdessen die SoftGlaze-Bridge, und die Bridge leitet alles an den KI-Server auf diesem PC weiter. Gleiches Token, gleiche Freigaben.",
+      "unavailable": "Die Bridge ist in diesem Build nicht enthalten.",
+      "mcpb": "Ein-Klick-Installationsdatei für Claude Desktop",
+      "command": "Befehl",
+      "args": "Argumente",
+      "env": "Umgebungsvariablen"
+    },
+    "clients": {
+      "claude-desktop": {
+        "where": "Settings > Developer > Edit Config (claude_desktop_config.json), dann Claude Desktop neu starten. Claude Desktop führt lokale Server über stdio aus, daher startet dies die SoftGlaze-Bridge. Einfacher: softglaze-browser.mcpb installieren ({{mcpb}}) – fragt nach Token und Port und funktioniert auch mit Cowork.",
+        "title": "Claude Desktop",
+        "step1": "Erstellen Sie mit der Schaltfläche unten ein Token für Claude Desktop.",
+        "step2": "Am einfachsten: Laden Sie softglaze-browser.mcpb mit der Schaltfläche unten herunter, doppelklicken Sie darauf und fügen Sie Ihr Token ein, wenn Claude Desktop danach fragt. Oder öffnen Sie Settings > Developer > Edit Config und fügen Sie die Einrichtung in claude_desktop_config.json ein, mit Ihrem Token anstelle von <YOUR_TOKEN>.",
+        "step2NoMcpb": "Öffnen Sie Settings > Developer > Edit Config und fügen Sie die Einrichtung in claude_desktop_config.json ein, mit Ihrem Token anstelle von <YOUR_TOKEN>. Sie startet die SoftGlaze-Bridge, da Claude Desktop lokale Server ausführt.",
+        "step3": "Wenn Sie die Konfigurationsdatei bearbeitet haben, beenden Sie Claude Desktop und öffnen Sie es erneut. SoftGlaze erscheint unter der +-Schaltfläche unter dem Chatfeld, bei „Connectors“."
+      },
+      "claude-code": {
+        "where": "Ohne die Plugins: in einem Terminal ausführen. Fügen Sie --scope user hinzu, um SoftGlaze in jedem Projekt zu nutzen. Nutzen Sie die Plugins oder diesen Befehl, nicht beides.",
+        "title": "Claude Code",
+        "step1": "Erstellen Sie mit der Schaltfläche unten ein Token für Claude Code.",
+        "step2": "Installieren Sie die SoftGlaze-Plugins mit den Befehlen unten und fügen Sie Ihr Token ein, wenn Claude Code danach fragt. Oder führen Sie den Befehl weiter unten aus, mit Ihrem Token anstelle von <YOUR_TOKEN>. Nutzen Sie einen Weg, nicht beide.",
+        "step3": "Geben Sie /mcp in Claude Code ein. SoftGlaze sollte als verbunden angezeigt werden (mit den Plugins als plugin:softglaze-browser-connector:softglaze)."
+      },
+      "cursor": {
+        "where": "~/.cursor/mcp.json (alle Projekte) oder .cursor/mcp.json in einem Projekt. Damit das Token nicht in der Datei steht, verwenden Sie \"Bearer ${env:SOFTGLAZE_TOKEN}\".",
+        "title": "Cursor",
+        "step1": "Erstellen Sie mit der Schaltfläche unten ein Token für Cursor.",
+        "step2": "Öffnen Sie ~/.cursor/mcp.json (oder .cursor/mcp.json in einem Projekt) und fügen Sie die Einrichtung ein, mit Ihrem Token anstelle von <YOUR_TOKEN>.",
+        "step3": "Prüfen Sie in den Einstellungen von Cursor, ob SoftGlaze aufgeführt und eingeschaltet ist. Bitten Sie dann den Chat, Ihre SoftGlaze-Profile aufzulisten."
+      },
+      "vscode": {
+        "where": ".vscode/mcp.json in Ihrem Arbeitsbereich, oder führen Sie \"MCP: Open User Configuration\" aus. VS Code fragt einmal nach dem Token und speichert es sicher, sodass es nie in der Datei steht.",
+        "title": "VS Code (Copilot)",
+        "step1": "Erstellen Sie mit der Schaltfläche unten ein Token für VS Code.",
+        "step2": "Fügen Sie die Einrichtung in .vscode/mcp.json in Ihrem Arbeitsbereich ein (oder führen Sie MCP: Open User Configuration aus). Beim ersten Start von SoftGlaze fragt VS Code nach Ihrem Token und speichert es sicher, sodass es nie in der Datei steht.",
+        "step3": "Öffnen Sie Copilot Chat und bitten Sie ihn, Ihre SoftGlaze-Profile aufzulisten. Erlauben Sie das Tool, wenn VS Code fragt."
+      },
+      "gemini-cli": {
+        "where": "~/.gemini/settings.json (in die Datei einfügen) oder ausführen: gemini mcp add --transport http -s user --header \"Authorization: Bearer <YOUR_TOKEN>\" softglaze {{mcp}}",
+        "title": "Gemini CLI",
+        "step1": "Erstellen Sie mit der Schaltfläche unten ein Token für Gemini CLI.",
+        "step2": "Fügen Sie die Einrichtung unter \"mcpServers\" in ~/.gemini/settings.json ein, mit Ihrem Token anstelle von <YOUR_TOKEN>. Lassen Sie \"trust\" aus: SoftGlaze fragt Sie ohnehin vor jeder Änderung.",
+        "step3": "Starten Sie gemini und geben Sie /mcp ein. SoftGlaze und seine Tools sollten aufgeführt sein."
+      },
+      "codex": {
+        "where": "~/.codex/config.toml (gemeinsam genutzt von der ChatGPT-Desktop-App, Codex CLI und der IDE-Erweiterung). Setzen Sie zuerst die Umgebungsvariable SOFTGLAZE_TOKEN auf Ihr Token (Windows: setx SOFTGLAZE_TOKEN \"<YOUR_TOKEN>\") und starten Sie dann die App neu.",
+        "title": "ChatGPT Desktop / Codex",
+        "step1": "Erstellen Sie mit der Schaltfläche unten ein Token für Codex und speichern Sie es dann in der Umgebungsvariable SOFTGLAZE_TOKEN (Befehl unten).",
+        "step2": "Fügen Sie die Einrichtung in ~/.codex/config.toml ein. Codex liest das Token aus SOFTGLAZE_TOKEN, die Datei enthält es also nie.",
+        "step3": "Öffnen Sie ein neues Terminal, starten Sie Codex und geben Sie /mcp ein. SoftGlaze sollte aufgeführt sein."
+      },
+      "windsurf": {
+        "where": "~/.codeium/windsurf/mcp_config.json, dann die MCP-Server aktualisieren. Devin Desktop (der neue Name von Windsurf) nutzt ~/.config/devin/mcp_config.json mit \"url\" und \"transport\": \"http\" statt \"serverUrl\".",
+        "title": "Windsurf",
+        "step1": "Erstellen Sie mit der Schaltfläche unten ein Token für Windsurf.",
+        "step2": "Fügen Sie die Einrichtung in die MCP-Konfigurationsdatei von Windsurf ein (siehe „Wohin damit“), mit Ihrem Token anstelle von <YOUR_TOKEN>.",
+        "step3": "Aktualisieren Sie die MCP-Server in Windsurf und prüfen Sie, ob SoftGlaze aufgeführt ist."
+      },
+      "cline": {
+        "where": "Cline: MCP Servers > Configure (cline_mcp_settings.json).",
+        "title": "Cline",
+        "step1": "Erstellen Sie mit der Schaltfläche unten ein Token für Cline.",
+        "step2": "Öffnen Sie in Cline MCP Servers > Configure und fügen Sie die Einrichtung in cline_mcp_settings.json ein, mit Ihrem Token anstelle von <YOUR_TOKEN>.",
+        "step3": "Prüfen Sie, ob SoftGlaze in der Liste „MCP Servers“ von Cline als verbunden angezeigt wird."
+      },
+      "n8n": {
+        "where": "Im Knoten „MCP Client Tool“: SSE Endpoint wie unten, Authentication \"Bearer\" und Ihr Token als Zugangsdaten. Läuft n8n in Docker Desktop, verwenden Sie host.docker.internal statt 127.0.0.1 und fügen Sie host.docker.internal in den SoftGlaze-AI-Einstellungen unter „Zusätzlich erlaubte Hosts“ hinzu. Für unbeaufsichtigte Workflows nutzen Sie ein Automatisierungs-Token (vorab freigegebene Tools, auf Gruppen beschränkt).",
+        "title": "n8n"
+      },
+      "other": {
+        "where": "Jeder MCP-Client, der Streamable HTTP mit Headern unterstützt. Clients, die nur den älteren HTTP+SSE-Transport beherrschen, nutzen die SSE-URL. Clients, die nur lokale Befehle ausführen, nutzen die SoftGlaze-Bridge (siehe Claude Desktop).",
+        "title": "Andere Apps",
+        "step1": "Erstellen Sie mit der Schaltfläche unten ein Token für die App.",
+        "step2": "Öffnen Sie die MCP-Einstellungen der App und fügen Sie einen Server mit dieser Adresse und einem Authorization-Header hinzu: Bearer, ein Leerzeichen, dann Ihr Token.",
+        "step3": "Wenn die App nur ein lokales Programm starten kann (stdio), nutzen Sie statt der Adresse die SoftGlaze-Bridge unten."
+      },
+      "custom": {
+        "step1": "Erstellen Sie mit der Schaltfläche unten ein Token für diese App.",
+        "step2": "Fügen Sie die Einrichtung dort ein, wo die App ihre MCP-Server verwaltet, mit Ihrem Token anstelle von <YOUR_TOKEN>.",
+        "step3": "Starten Sie die App neu und prüfen Sie, ob SoftGlaze in ihren MCP- oder Tool-Einstellungen aufgeführt ist."
+      }
+    },
+    "n8n": {
+      "subtitle": "SoftGlaze aus n8n-Workflows auf diesem PC ausführen.",
+      "selfHosted": "n8n muss auf diesem PC laufen (npx oder Docker). n8n Cloud kann Ihren PC noch nicht erreichen.",
+      "noPort": "Schalten Sie den KI-Server ein, um die n8n-Adresse zu sehen.",
+      "a": {
+        "title": "Einen n8n-KI-Agenten SoftGlaze nutzen lassen",
+        "step1": "Fügen Sie einen AI-Agent-Knoten hinzu und dann einen MCP-Client-Tool-Knoten als eines seiner Tools.",
+        "step2": "Setzen Sie „SSE Endpoint“ auf die Adresse unten. Läuft n8n in Docker, verwenden Sie die Docker-Adresse.",
+        "step3": "Setzen Sie „Authentication“ auf „Bearer“ und fügen Sie Ihr Token ein. Wählen Sie unter „Tools to Include“ „All“ oder nur die Tools, die Sie brauchen.",
+        "sse": "SSE-Endpunkt (n8n auf diesem PC)",
+        "sseDocker": "SSE-Endpunkt (n8n in Docker)",
+        "dockerNote": "Für Docker fügen Sie außerdem host.docker.internal im Tab „Einstellungen“ unter „Zusätzlich erlaubte Hostnamen“ hinzu."
+      },
+      "b": {
+        "title": "Feste Schritte mit dem HTTP-Request-Knoten",
+        "body": "Für Schritte, die sich nie ändern – etwa ein Profil um 9:00 starten –, kann ein HTTP-Request-Knoten die lokale API direkt aufrufen. Senden Sie das Token im Authorization-Header.",
+        "kind": "HTTP Request"
+      },
+      "c": {
+        "title": "Automatisierungs-Token für geplante Workflows nutzen",
+        "body": "Bei einem geplanten Workflow ist niemand da, der auf „Erlauben“ klickt. Ein Automatisierungs-Token gibt nur die Tools vorab frei, die Sie wählen, nur für die gewählten Gruppen und mit Limits pro Aufruf und pro Stunde. Alles andere fragt weiterhin nach.",
+        "create": "Automatisierungs-Token erstellen",
+        "ownerOnly": "Nur der Inhaber kann Automatisierungs-Tokens erstellen."
+      }
+    },
+    "devtools": {
+      "title": "Profil mit Playwright MCP oder Chrome DevTools MCP nutzen (fortgeschritten)",
+      "subtitle": "Ein laufendes Chromium-Profil an einen externen DevTools-Client übergeben.",
+      "ownerOnly": "Nur Inhaber",
+      "warning": "Websites können einen externen Debugger erkennen. Playwright MCP und Chrome DevTools MCP verbinden sich als zweiter DevTools-Client und senden eigene Befehle, die Anti-Bot-Skripte bemerken können. Das Profil kann markiert oder gesperrt werden. Die eigenen Seiten-Tools von SoftGlaze tun das nicht. Jeder auf diesem Computer, der die Adresse unten kennt, kann das Profil steuern, solange es läuft.",
+      "intro": "Nutzen Sie dies für Aufgaben, die die Seiten-Tools von SoftGlaze nicht abdecken, etwa Performance-Traces oder Netzwerk- und Konsolenprotokolle auf Ihrer eigenen Website, und verwenden Sie ein Testprofil. Hier handeln Sie selbst in der App – unabhängig vom Expertenmodus, der festlegt, was KI-Apps anfordern dürfen.",
+      "profile": "Laufendes Profil",
+      "loading": "Laufende Profile werden geladen…",
+      "loadError": "Laufende Profile konnten nicht geladen werden: {{message}}",
+      "choose": "Laufendes Profil wählen",
+      "option": "{{name}} (#{{id}}) · Chromium",
+      "optionFirefox": "{{name}} (#{{id}}) · Firefox: Firefox-Profile haben keinen DevTools-Endpunkt",
+      "empty": "Starten Sie zuerst ein Chromium-Profil.",
+      "openProfiles": "Profile öffnen",
+      "stopped": "Dieses Profil ({{name}}) wurde gestoppt. Seine Adresse funktioniert nicht mehr.",
+      "address": "DevTools-Adresse",
+      "hiddenLabel": "DevTools-Adresse, verborgen bis Sie auf „Anzeigen“ klicken",
+      "show": "Anzeigen",
+      "showLabel": "DevTools-Adresse von {{name}} anzeigen",
+      "hide": "Verbergen",
+      "addressNote": "Bei jedem Start des Profils neu. Funktioniert nur auf diesem Computer, solange das Profil läuft.",
+      "noAddress": "SoftGlaze hat für dieses Profil keine DevTools-Adresse erhalten. Stoppen und starten Sie es und versuchen Sie es dann erneut.",
+      "setup": "Einrichtung",
+      "toolsLabel": "MCP-Server",
+      "clientsLabel": "KI-App",
+      "where": {
+        "claude-code": "In einem Terminal in Ihrem Projektordner ausführen. Die Adresse ändert sich bei jedem Start des Profils, führen Sie also zuerst claude mcp remove {{name}} und dann diesen Befehl erneut aus.",
+        "claude-desktop": "Settings > Developer > Edit Config (claude_desktop_config.json): dies unter \"mcpServers\" hinzufügen, dann Claude Desktop beenden und neu öffnen. Aktualisieren Sie die Adresse nach jedem Start.",
+        "cursor": "~/.cursor/mcp.json (alle Projekte) oder .cursor/mcp.json in einem Projekt. Aktualisieren Sie die Adresse nach jedem Start.",
+        "vscode": ".vscode/mcp.json in Ihrem Arbeitsbereich, oder führen Sie MCP: Open User Configuration aus. Aktualisieren Sie die Adresse nach jedem Start."
+      },
+      "snippet": "{{tool}}-Einrichtung für {{app}}",
+      "pressShow": "Klicken Sie auf „Anzeigen“, um die Einrichtung mit der Adresse dieses Profils zu sehen.",
+      "usageStats": "Nutzungsstatistiken von Chrome DevTools MCP ausschalten",
+      "usageStatsHint": "Fügt --no-usage-statistics hinzu. Ohne diese Option sendet Chrome DevTools MCP Nutzungsstatistiken an Google.",
+      "footer": "Wenn Sie fertig sind, schließen Sie den MCP-Server und stoppen Sie dann das Profil.",
+      "guide": "Anleitung: Playwright MCP und Chrome DevTools MCP"
+    }
+  },
+  "scope": {
+    "read": {
+      "title": "Nur lesen",
+      "body": "Kann Profile, Proxys, Gruppen und Aktivität ansehen. Kann nichts ändern oder starten."
+    },
+    "operate": {
+      "title": "Bedienen",
+      "body": "Kann zusätzlich Profile erstellen und starten, Makros ausführen und in Seiten arbeiten. Änderungen fragen weiterhin zuerst bei Ihnen nach, wie in den Einstellungen festgelegt. Wählen Sie dies bewusst."
+    },
+    "full": {
+      "title": "Voll",
+      "body": "Alles aus „Bedienen“ plus Experten-Tools, wenn der Expertenmodus an ist. Nur für Apps, denen Sie voll vertrauen."
+    }
+  },
+  "create": {
+    "title": "Token erstellen",
+    "titleFor": "Token für {{app}} erstellen",
+    "description": "Mit einem Token kann sich eine KI-App verbinden. Es handelt als Mitglied Ihres Teams und kann nur tun, was dieses Mitglied darf.",
+    "revealTitle": "Ihr neues Token",
+    "revealDescription": "Kopieren Sie es jetzt in Ihre KI-App.",
+    "name": "Name",
+    "nameHint": "Geben Sie App und Computer an, damit Sie es später wiedererkennen.",
+    "namePlaceholder": "Claude Desktop auf meinem PC",
+    "member": "Handelt als",
+    "memberHint": "Die KI arbeitet als dieses Mitglied, mit dessen Berechtigungen und Profilen.",
+    "you": "Sie",
+    "scope": "Was es darf",
+    "expiry": "Läuft ab nach",
+    "expiryNever": "Nie",
+    "expiryDays_one": "{{count}} Tag",
+    "expiryDays_other": "{{count}} Tagen",
+    "expiryNeverWarn": "Ein Token ohne Ablauf bleibt gültig, bis Sie es widerrufen.",
+    "profiles": "Erlaubte Profile",
+    "profilesAll": "Alle",
+    "profilesSome": "Nur bestimmte Gruppen",
+    "profilesAllHint": "Alle Profile, die das Mitglied öffnen kann.",
+    "profilesSomeHint": "Nur Profile in den angehakten Gruppen.",
+    "noGroups": "Es gibt noch keine Gruppen. Erstellen Sie zuerst eine auf der Seite „Gruppen“.",
+    "pickGroups": "Gruppen",
+    "submit": "Token erstellen",
+    "onceWarning": "Kopieren Sie dieses Token jetzt. SoftGlaze zeigt es nur dieses eine Mal. Wenn Sie es verlieren, widerrufen Sie es und erstellen Sie ein neues.",
+    "yourToken": "Token",
+    "filledSetup": "Einrichtung für {{app}}, mit Ihrem Token ausgefüllt",
+    "n8nHint": "Setzen Sie in n8n „Authentication“ auf „Bearer“ und fügen Sie dieses Token ein.",
+    "claudeCodeHint": "Installieren Sie die SoftGlaze-Plugins? Fügen Sie dieses Token ein, wenn Claude Code bei der Installation von softglaze-browser-connector danach fragt. Der Befehl oben ist der Weg ohne die Plugins.",
+    "claudeDesktopHint": "Installieren Sie softglaze-browser.mcpb? Fügen Sie dieses Token ein, wenn Claude Desktop danach fragt. Die Einrichtung oben ist der Weg ohne die Erweiterung.",
+    "acknowledge": "Ich habe dieses Token sicher gespeichert",
+    "closeWarning": "Kopieren Sie zuerst das Token oder setzen Sie das Häkchen. Sie können dieses Token nicht noch einmal sehen.",
+    "done": "Fertig"
+  },
+  "errors": {
+    "nameRequired": "Geben Sie einen Namen ein.",
+    "nameTooLong": "Der Name darf höchstens {{max}} Zeichen lang sein.",
+    "memberRequired": "Wählen Sie ein Mitglied.",
+    "scopeRequired": "Wählen Sie, was das Token darf.",
+    "expiryRequired": "Wählen Sie, wann es abläuft.",
+    "groupsRequired": "Haken Sie mindestens eine Gruppe an oder wählen Sie „Alle“.",
+    "groupsRequiredAutomation": "Ein Automatisierungs-Token muss auf Gruppen beschränkt sein. Haken Sie mindestens eine Gruppe an.",
+    "toolNotAllowed": "Eines der Tools kann nicht vorab freigegeben werden.",
+    "limitRange": "Geben Sie eine ganze Zahl von {{min}} bis {{max}} ein.",
+    "create": "Das Token wurde nicht erstellt.",
+    "noToken": "Der KI-Server hat kein Token zurückgegeben. Versuchen Sie es erneut.",
+    "createFailed": "Das Token wurde nicht erstellt: {{message}}"
+  },
+  "automation": {
+    "title": "Automatisierungs-Token (für n8n, Zeitpläne und Skripte)",
+    "ownerOnly": "Nur Inhaber",
+    "count_one": "{{count}} vorab freigegeben",
+    "count_other": "{{count}} vorab freigegeben",
+    "intro": "Für Workflows, die ohne Sie laufen: Wählen Sie die Tools, die ohne Nachfrage laufen dürfen.",
+    "needsOperate": "Wählen Sie oben „Bedienen“ oder „Voll“, um Tools vorab freizugeben.",
+    "warning": "Diese Tools laufen ohne Nachfrage. Sie bleiben auf die gewählten Gruppen beschränkt, werden protokolliert und stoppen mit „Alle KI stoppen“.",
+    "tools": "Tools ohne Nachfrage",
+    "destructive": "Nicht rückgängig zu machen",
+    "groups": {
+      "profiles": "Profile",
+      "sessions": "Starten und stoppen",
+      "proxies": "Proxys",
+      "groups": "Gruppen",
+      "automation": "Automatisierung",
+      "page": "In Seiten",
+      "other": "Sonstiges"
+    },
+    "maxProfiles": "Max. Profile pro Aufruf",
+    "maxProfilesHint": "Standard 5, bis zu 50.",
+    "maxCalls": "Max. Aufrufe pro Stunde",
+    "maxCallsHint": "Standard 60, bis zu 1000.",
+    "groupsNote": "Vorab freigegebene Tools wirken nur auf die Gruppen, die unter „Erlaubte Profile“ angehakt sind. Jedes andere Tool fragt weiterhin bei Ihnen nach."
+  },
+  "tools": {
+    "create_profile": "Profil erstellen",
+    "update_profile": "Profil ändern (Name, Gruppe, Tags, Notizen, Startseite, Proxy)",
+    "batch_generate_profiles": "Viele Profile auf einmal erstellen",
+    "start_profile": "Profil starten",
+    "stop_profile": "Profil stoppen",
+    "assign_proxy": "Profil einen Proxy zuweisen",
+    "rotate_proxy_ip": "Neue IP vom Proxy holen",
+    "find_free_proxies": "Kostenlose Proxys finden und testen",
+    "create_group": "Gruppe erstellen",
+    "move_profiles_to_group": "Profile in eine Gruppe verschieben",
+    "save_macro": "Makro speichern",
+    "run_macro": "Makro ausführen",
+    "stop_run": "Lauf stoppen",
+    "start_warmer": "Aufwärmen starten",
+    "page_navigate": "Webseite öffnen",
+    "page_snapshot": "Seitenaufbau lesen",
+    "page_click": "Auf einer Seite klicken",
+    "page_type": "Auf einer Seite tippen",
+    "page_press_key": "Auf einer Seite eine Taste drücken",
+    "page_scroll": "Seite scrollen",
+    "page_screenshot": "Screenshot aufnehmen",
+    "page_extract_text": "Text von einer Seite kopieren",
+    "page_wait_for": "Auf etwas auf einer Seite warten"
+  },
+  "tokens": {
+    "search": "Tokens suchen",
+    "showRevoked": "Widerrufene Tokens anzeigen",
+    "showRevokedCount_one": "{{count}} widerrufenes anzeigen",
+    "showRevokedCount_other": "{{count}} widerrufene anzeigen",
+    "create": "Token erstellen",
+    "intro": "Jede KI-App verbindet sich mit ihrem eigenen Token. Ein Token handelt als ein Mitglied und kann auf bestimmte Gruppen beschränkt werden. Widerrufen Sie ein Token, um diese App sofort zu trennen.",
+    "loadError": "Tokens konnten nicht geladen werden: {{message}}",
+    "emptyTitle": "Noch keine Tokens",
+    "emptyBody": "Erstellen Sie ein Token und fügen Sie es dann in Ihre KI-App ein. Der Tab „Verbinden“ zeigt, wohin es gehört.",
+    "caption": "KI-Tokens",
+    "colName": "Name",
+    "colMember": "Handelt als",
+    "colScope": "Zugriff",
+    "colGroups": "Profile",
+    "colExpires": "Läuft ab",
+    "colLastUsed": "Zuletzt genutzt",
+    "colActions": "Aktionen",
+    "state": {
+      "revoked": "Widerrufen",
+      "expired": "Abgelaufen",
+      "expiring": "Läuft bald ab"
+    },
+    "automation_one": "Automatisierung · {{count}} vorab freigegeben",
+    "automation_other": "Automatisierung · {{count}} vorab freigegeben",
+    "allProfiles": "Alle Profile",
+    "groupsMore_one": "{{names}} und {{count}} weitere",
+    "groupsMore_other": "{{names}} und {{count}} weitere",
+    "neverUsed": "Noch nicht genutzt",
+    "revoke": "Widerrufen",
+    "revokeAria": "{{name}} widerrufen",
+    "noMatch": "Keine passenden Tokens.",
+    "revokeTitle": "„{{name}}“ widerrufen?",
+    "revokeBody": "Die KI-App, die dieses Token nutzt, verliert sofort den Zugriff. Dies kann nicht rückgängig gemacht werden.",
+    "revokeError": "Token konnte nicht widerrufen werden: {{message}}"
+  },
+  "approval": {
+    "eyebrow": "KI-Anfrage",
+    "eyebrowMany": "KI-Anfrage {{position}} von {{total}}",
+    "title": "{{app}} bittet um Erlaubnis",
+    "tokenOnly": "Token: {{token}}",
+    "tokenAndMember": "Token: {{token}} · handelt als {{member}}",
+    "noSummary": "Tool {{tool}} ausführen",
+    "unknownApp": "Eine KI-App",
+    "timeLeft": "zum Antworten. Ohne Antwort wird die Anfrage abgelehnt.",
+    "timeLeftHint": "Verbleibende Zeit, bevor die Anfrage abgelehnt wird",
+    "timeLeftSr": "Noch {{time}}, bevor die Anfrage abgelehnt wird",
+    "secondsLeftAnnounce": "Noch {{seconds}} Sekunden, um die KI-Anfrage zu beantworten",
+    "showDetails": "Details anzeigen",
+    "hideDetails": "Details ausblenden",
+    "tool": "Tool",
+    "token": "Token",
+    "argsLabel": "Details der Anfrage",
+    "noArgs": "Diese Anfrage hat keine weiteren Details.",
+    "redactedNote": "Passwörter und andere Geheimnisse sind hier verborgen.",
+    "deny": "Ablehnen",
+    "allowHour": "1 Stunde erlauben",
+    "allowHourHint": "Für diese Art von Aktion von {{token}} in der nächsten Stunde nicht mehr fragen.",
+    "allowOnce": "Einmal erlauben",
+    "footnote": "SoftGlaze fragt in der App nach – unabhängig von den Einstellungen der KI-App. Jede Antwort wird unter „Aktivität“ protokolliert.",
+    "later": "Später entscheiden (bei Zeitablauf wird abgelehnt)",
+    "respondError": "Ihre Antwort wurde nicht gespeichert: {{message}}",
+    "waitingChip_one": "{{count}} KI-Anfrage wartet",
+    "waitingChip_other": "{{count}} KI-Anfragen warten",
+    "timedOut": "Die Anfrage von {{app}} ist abgelaufen und wurde abgelehnt.",
+    "gone": "Diese Anfrage wurde bereits beantwortet oder abgebrochen."
+  },
+  "approvals": {
+    "intro": "Jede Aktion, die etwas ändert, wartet hier, bis Sie antworten. Eine unbeantwortete Anfrage wird nach 2 Minuten abgelehnt. Dieselbe Anfrage erscheint auch als Pop-up auf jeder Seite.",
+    "changeRules": "Festlegen, wann SoftGlaze fragt",
+    "emptyTitle": "Nichts wartet auf Sie",
+    "emptyBody": "Wenn eine KI-App etwas ändern möchte, erscheint die Anfrage hier und als Pop-up auf jeder Seite.",
+    "listLabel": "Anfragen, die auf Sie warten",
+    "meta": "{{app}} · Token {{token}} · {{when}}",
+    "actsAs": "handelt als {{member}}"
+  },
+  "activity": {
+    "search": "Tool, Anfrage oder Token suchen",
+    "outcome": "Ergebnis",
+    "all": "Alle",
+    "outcomes": {
+      "ok": "OK",
+      "denied": "Abgelehnt",
+      "error": "Fehler",
+      "pending": "Wartet"
+    },
+    "app": "App",
+    "allApps": "Alle Apps",
+    "loadError": "Aktivität konnte nicht geladen werden: {{message}}",
+    "noMatchTitle": "Nichts passt zu diesen Filtern",
+    "noMatchBody": "Versuchen Sie ein anderes Ergebnis, eine andere App oder Suche.",
+    "emptyTitle": "Noch keine KI-Aktivität",
+    "emptyBody": "Alles, was eine KI-App über SoftGlaze tut, wird hier aufgeführt: was sie angefragt hat, Ihre Antwort und wie es ausging.",
+    "caption": "KI-Aktivität",
+    "colTime": "Zeit",
+    "colApp": "App und Token",
+    "colTool": "Tool",
+    "colSummary": "Was passiert ist",
+    "colOutcome": "Ergebnis",
+    "colDuration": "Dauer",
+    "approval": {
+      "none": "Keine Freigabe nötig",
+      "asked": "Bei Ihnen nachgefragt",
+      "pre-approved": "Vorab freigegeben",
+      "allow-once": "Einmal erlaubt",
+      "allow-hour": "Von Ihnen für 1 Stunde erlaubt",
+      "hour-grant": "Für 1 Stunde erlaubt",
+      "deny": "Von Ihnen abgelehnt",
+      "timeout": "Keine Antwort in 2 Minuten",
+      "cancelled": "Durch „Alle KI stoppen“ gestoppt",
+      "started-by-this-token": "Ein Profil, das diese App gestartet hat",
+      "developer-token": "Entwickler-API-Token"
+    },
+    "pageEmpty": "Keine weiteren Einträge.",
+    "runId": "Lauf",
+    "pageInfo": "Seite {{page}} · {{size}} pro Seite",
+    "newer": "Neuere",
+    "older": "Ältere"
+  },
+  "memory": {
+    "title": "Arbeitsbereich-Speicher",
+    "description": "Notizen, die jede KI-App vor dem Start liest: wie Sie Dinge benennen, wofür jede Gruppe da ist, Proxy-Regeln, Arbeitszeiten und was sie niemals tun darf. Einfaches Markdown.",
+    "updated": "Gespeichert {{when}}",
+    "loadError": "Speicher konnte nicht geladen werden: {{message}}",
+    "editorLabel": "Arbeitsbereich-Speicher (Markdown)",
+    "placeholder": "Schreiben Sie hier Notizen für KI-Apps, in Markdown.",
+    "usage": "{{used}} KB von {{limit}} KB · {{chars}} Zeichen",
+    "over": "Das liegt über dem Limit. Kürzen Sie den Text, um zu speichern.",
+    "discard": "Änderungen verwerfen",
+    "reset": "Auf Standard zurücksetzen",
+    "unsaved": "Ungespeicherte Änderungen",
+    "tip": "Tipp: Drücken Sie Ctrl+S zum Speichern. Halten Sie es kurz und konkret: KI-Apps lesen jedes Mal alles.",
+    "guidesTitle": "Integrierte Anleitungen",
+    "guidesDescription": "SoftGlaze gibt jeder KI-App auch diese Anleitungen. Sie sind schreibgeschützt.",
+    "resetTitle": "Speicher auf Standard zurücksetzen?",
+    "resetBody": "Ihre Notizen werden durch die SoftGlaze-Vorlage ersetzt. Dies kann nicht rückgängig gemacht werden.",
+    "guides": {
+      "howItWorks": {
+        "title": "So funktioniert SoftGlaze",
+        "body": "Profile, Fingerprints, Proxys, Gruppen, Sitzungen, Makros und Tariflimits – und wie man die Tools gut nutzt."
+      },
+      "acceptableUse": {
+        "title": "Zulässige Nutzung",
+        "body": "Wofür SoftGlaze genutzt werden darf und wofür nicht. KI-Apps werden angewiesen, alles Verbotene abzulehnen."
+      }
+    },
+    "readGuide": "Anleitung lesen",
+    "hideGuide": "Ausblenden",
+    "guideReadOnly": "Schreibgeschützt. Wird von SoftGlaze aktuell gehalten."
+  },
+  "prompts": {
+    "loadError": "Prompts konnten nicht geladen werden: {{message}}",
+    "emptyTitle": "Noch keine Prompts",
+    "emptyBody": "Fertige Prompts erscheinen hier, sobald der KI-Server verfügbar ist.",
+    "search": "Prompts suchen",
+    "listLabel": "Prompts",
+    "noMatch": "Keine passenden Prompts.",
+    "inClaudeCode": "In Claude Code:",
+    "arguments": "Von Ihnen auszufüllende Details",
+    "noArguments": "Dieser Prompt braucht keine Details.",
+    "argName": "Name",
+    "argRequired": "Nötig",
+    "argDescription": "Bedeutung",
+    "required": "Erforderlich",
+    "optional": "Optional",
+    "text": "Prompt-Text",
+    "howTitle": "So nutzen Sie Prompts",
+    "howIntro": "Prompts sind fertige Aufgaben. Ihre KI-App füllt die Details aus und führt sie mit SoftGlaze aus.",
+    "howClaudeCode": "/ eingeben und einen softglaze-Prompt wählen.",
+    "howClaudeDesktop": "unter dem Chatfeld auf + klicken und nach SoftGlaze suchen.",
+    "howVsCode": "in Copilot Chat / eingeben und einen SoftGlaze-Prompt wählen.",
+    "howCursor": "wenn keine Prompts aufgeführt sind, den Text unten kopieren.",
+    "howOther": "Jede App: Prompt-Text kopieren, in den Chat einfügen und die Details ausfüllen."
+  },
+  "settings": {
+    "loadError": "Einstellungen konnten nicht geladen werden: {{message}}",
+    "ownerOnly": "Nur Inhaber",
+    "ownerOnlyHint": "Nur der Inhaber des Arbeitsbereichs kann dies ändern.",
+    "remove": "{{value}} entfernen",
+    "approvals": {
+      "title": "Wann SoftGlaze Sie fragt",
+      "description": "SoftGlaze fragt in der App nach, bevor eine KI-App etwas tut – unabhängig von den Einstellungen der KI-App.",
+      "read": {
+        "title": "Lese-Tools",
+        "body": "Profile, Proxys, Gruppen und Aktivität ansehen."
+      },
+      "operate": {
+        "title": "Bedien-Tools",
+        "body": "Profile erstellen und starten, Makros ausführen, in Seiten arbeiten."
+      },
+      "full": {
+        "title": "Voll-Tools",
+        "body": "Experten-Tools, nur wenn der Expertenmodus an ist."
+      },
+      "alwaysAsk": "Manche Aktionen fragen immer jedes Mal nach, etwa das Starten oder Stoppen vieler Profile auf einmal sowie Experten-Tools."
+    },
+    "modes": {
+      "never": "Nie fragen",
+      "ask-hour": "Einmal pro Stunde fragen",
+      "ask-always": "Jedes Mal fragen"
+    },
+    "domains": {
+      "title": "Websites, auf denen die KI arbeiten darf",
+      "description": "Seiten-Tools (Seite öffnen, klicken, tippen, Text lesen) funktionieren nur auf den Websites in dieser Liste und deren Subdomains.",
+      "placeholder": "example.com",
+      "invalid": "Geben Sie einen Websitenamen wie example.com ein.",
+      "empty": "Noch keine Websites. Seiten-Tools dürfen jede Website öffnen, und Sie werden trotzdem zuerst gefragt.",
+      "add": "Website hinzufügen"
+    },
+    "hosts": {
+      "title": "Zusätzlich erlaubte Hostnamen",
+      "description": "Der KI-Server beantwortet nur Anfragen an 127.0.0.1. Für n8n oder andere Tools in Docker fügen Sie host.docker.internal hinzu.",
+      "invalid": "Geben Sie einen Hostnamen wie host.docker.internal ein, ohne Port oder Pfad.",
+      "empty": "Keine. Nur 127.0.0.1 ist erlaubt.",
+      "add": "Host hinzufügen"
+    },
+    "expert": {
+      "title": "Expertenmodus",
+      "description": "Erlaubt einer KI-App, ein laufendes Profil mit Playwright, Puppeteer oder Chrome DevTools zu übernehmen.",
+      "warning": "Erkennbar. Externe Tools steuern den Browser auf eine Weise, die Websites bemerken können; Profile können daher markiert oder gesperrt werden. Standardmäßig aus. Nur Inhaber.",
+      "switch": "Expertenmodus",
+      "isOn": "An. KI-Apps mit einem Voll-Token können anfragen, ein laufendes Profil zu übernehmen. Jedes Mal werden Sie gefragt.",
+      "isOff": "Aus. Keine KI-App kann ein laufendes Profil übernehmen.",
+      "confirmTitle": "Expertenmodus einschalten?",
+      "confirmBody": "KI-Apps mit einem Voll-Token können dann anfragen, laufende Profile direkt zu steuern. Websites können dies erkennen, und Konten in diesen Profilen können markiert werden.",
+      "confirm": "Einschalten",
+      "ack": "Mir ist bewusst, dass dies erkannt werden und zur Markierung von Profilen führen kann."
+    },
+    "port": {
+      "title": "Server-Port",
+      "description": "KI-Apps verbinden sich auf diesem Port mit http://127.0.0.1.",
+      "label": "Port",
+      "invalid": "Verwenden Sie eine Zahl von {{min}} bis {{max}}.",
+      "hint": "Nach einer Änderung aktualisieren Sie die Adresse in jeder verbundenen KI-App. Der Tab „Verbinden“ zeigt die neue Einrichtung."
+    }
+  }
+}

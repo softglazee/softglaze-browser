@@ -1,0 +1,414 @@
+{
+  "header": {
+    "eyebrow": "Tính năng Softglaze Pro",
+    "title": "Tự động hóa",
+    "description": "Macro không cần code, làm nóng cookie tự động và nhật ký của mọi tác vụ nền."
+  },
+  "tabs": {
+    "macros": "Macro của tôi",
+    "parallel": "Chạy song song",
+    "warmer": "Làm nóng cookie",
+    "history": "Lịch sử tác vụ"
+  },
+  "clickLabels": {
+    "none": "Chỉ duyệt",
+    "random": "Bấm ngẫu nhiên",
+    "links": "Duyệt liên kết"
+  },
+  "stepTypes": {
+    "goto": "Đi tới URL",
+    "click": "Bấm",
+    "type": "Nhập văn bản",
+    "keypress": "Nhấn phím",
+    "scroll": "Cuộn",
+    "wait": "Chờ",
+    "move": "Di chuột",
+    "hover": "Rê chuột",
+    "select": "Chọn mục trong danh sách",
+    "waitFor": "Chờ phần tử",
+    "submit": "Gửi biểu mẫu",
+    "check": "Đánh dấu / bỏ đánh dấu",
+    "clear": "Xóa trường"
+  },
+  "stepFields": {
+    "goto": {
+      "url": "URL",
+      "urlPlaceholder": "https://example.com"
+    },
+    "click": {
+      "selector": "CSS selector",
+      "selectorPlaceholder": "#submit, .btn"
+    },
+    "type": {
+      "selector": "Selector",
+      "selectorPlaceholder": "input[name=\"email\"]",
+      "value": "Văn bản cần nhập"
+    },
+    "keypress": {
+      "key": "Phím",
+      "keyPlaceholder": "Enter"
+    },
+    "scroll": {
+      "steps": "Mức cuộn",
+      "stepsPlaceholder": "4"
+    },
+    "wait": {
+      "ms": "Mili giây",
+      "msPlaceholder": "1000"
+    },
+    "move": {
+      "selector": "Selector (hoặc dùng X/Y)",
+      "selectorPlaceholder": ".target",
+      "x": "X",
+      "y": "Y"
+    },
+    "hover": {
+      "selector": "Selector",
+      "selectorPlaceholder": ".menu",
+      "ms": "Thời gian dừng (ms)",
+      "msPlaceholder": "800"
+    },
+    "select": {
+      "selector": "Selector",
+      "selectorPlaceholder": "select[name=\"focus\"]",
+      "value": "Tùy chọn (giá trị, nhãn hoặc chỉ số)",
+      "valuePlaceholder": "Plumbing",
+      "by": "Khớp theo"
+    },
+    "waitFor": {
+      "selector": "Selector",
+      "selectorPlaceholder": ".dashboard",
+      "state": "Trạng thái",
+      "timeout": "Thời gian chờ (ms)",
+      "timeoutPlaceholder": "30000"
+    },
+    "submit": {
+      "selector": "Selector của biểu mẫu hoặc trường",
+      "selectorPlaceholder": "form#signup"
+    },
+    "check": {
+      "selector": "Selector",
+      "selectorPlaceholder": "input[name=\"terms\"]",
+      "state": "Trạng thái"
+    },
+    "clear": {
+      "selector": "Selector",
+      "selectorPlaceholder": "input[name=\"email\"]"
+    }
+  },
+  "stepSummary": {
+    "noUrl": "(chưa có URL)",
+    "noSelector": "(chưa có selector)",
+    "selectorFallback": "(selector)",
+    "target": "(mục tiêu)"
+  },
+  "macros": {
+    "intro": "Ghi hoặc tạo quy trình dùng lại được, không cần code, rồi chạy trong một hồ sơ (điều hướng, bấm, nhập, chờ) - thủ công hoặc theo lịch.",
+    "profileSelectTitle": "Hồ sơ mà Chạy / Ghi thao tác",
+    "noProfiles": "Không có hồ sơ",
+    "profileFallback": "Hồ sơ {{id}}",
+    "stopAndSave": "Dừng và lưu",
+    "record": "Ghi",
+    "schedule": "Lên lịch",
+    "createMacro": "Tạo macro",
+    "stepsBadge_one": "{{count}} bước",
+    "stepsBadge_other": "{{count}} bước",
+    "updated": "Cập nhật {{date}}",
+    "run": "Chạy",
+    "edit": "Sửa",
+    "editSteps": "Sửa các bước",
+    "delete": "Xóa",
+    "runTitleNoSteps": "Macro này chưa có bước nào - hãy sửa trước",
+    "runTitleReady": "Chạy trên hồ sơ đã chọn",
+    "emptyTitle": "Chưa có macro nào",
+    "emptyHint": "Ghi một quy trình hoặc tạo mới để bắt đầu.",
+    "errors": {
+      "loadMacros": "Không tải được macro.",
+      "deleteMacro": "Không xóa được macro.",
+      "chooseProfile": "Hãy chọn hồ sơ đích trước.",
+      "noSteps": "Macro này chưa có bước nào - hãy sửa trước.",
+      "chooseProfileRecord": "Hãy chọn hồ sơ đích để ghi.",
+      "recordingFailed": "Thao tác ghi thất bại."
+    },
+    "recordingStarted": "Đang ghi… hãy thao tác trên trình duyệt đã mở, rồi nhấn Dừng để lưu.",
+    "savedNotice": "Đã lưu \"{{name}}\" với {{count}} bước.",
+    "stoppedNotice": "Đã dừng ghi - ghi được {{count}} bước (chưa lưu).",
+    "deleteConfirm": "Xóa macro \"{{name}}\" và mọi bước của nó? Không thể hoàn tác."
+  },
+  "saveRecording": {
+    "ariaLabel": "Lưu macro đã ghi",
+    "title": "Lưu macro đã ghi",
+    "subtitle": "Đặt tên để giữ các bước đã ghi, hoặc bỏ đi. Trình duyệt vẫn mở.",
+    "placeholder": "Macro đã ghi",
+    "discard": "Bỏ",
+    "cancel": "Hủy",
+    "save": "Lưu"
+  },
+  "scheduleModal": {
+    "ariaLabel": "Lịch chạy macro",
+    "title": "Lịch chạy macro",
+    "subtitle": "Tự động chạy macro theo bộ hẹn giờ · Softglaze Pro",
+    "enable": "Bật chạy theo lịch",
+    "macroLabel": "Macro",
+    "selectMacro": "Chọn macro…",
+    "everyMinutes": "Mỗi (phút)",
+    "targetProfiles": "Hồ sơ đích",
+    "noProfiles": "Không có hồ sơ nào.",
+    "profileFallback": "Hồ sơ {{id}}",
+    "cancel": "Hủy",
+    "save": "Lưu lịch",
+    "errors": {
+      "save": "Không lưu được lịch."
+    }
+  },
+  "editorModal": {
+    "ariaEdit": "Sửa macro",
+    "ariaCreate": "Tạo macro",
+    "titleEdit": "Sửa macro",
+    "titleCreate": "Tạo macro",
+    "subtitle": "Tạo quy trình không cần code - kéo tay nắm để sắp xếp lại.",
+    "nameLabel": "Tên macro",
+    "namePlaceholder": "ví dụ: Đăng nhập hằng ngày",
+    "descriptionLabel": "Mô tả",
+    "descriptionPlaceholder": "Macro này làm gì?",
+    "stepsLabel": "Các bước ({{count}})",
+    "addStep": "Thêm bước",
+    "noSteps": "Chưa có bước nào - hãy chọn loại và thêm một bước.",
+    "dragToReorder": "Kéo để sắp xếp lại",
+    "removeStep": "Gỡ bước",
+    "cancel": "Hủy",
+    "save": "Lưu macro",
+    "errors": {
+      "name": "Hãy đặt tên cho macro.",
+      "save": "Không lưu được macro."
+    },
+    "optional": "Không bắt buộc",
+    "optionalHint": "Nếu bước này lỗi, ghi lại và tiếp tục thay vì dừng cả lượt chạy."
+  },
+  "runModal": {
+    "ariaLabel": "Chạy macro: {{name}}",
+    "runningOn": "Đang chạy trên {{profile}}",
+    "starting": "Đang bắt đầu…",
+    "logStarted": "Đã bắt đầu \"{{name}}\" · {{total}} bước trên {{profile}}",
+    "logStepRunning": "▶ {{label}}: {{summary}}",
+    "logStepError": "✕ {{label}} - {{error}}",
+    "logStepFailed": "thất bại",
+    "logStopped": "Đã dừng.",
+    "logFinished": "Hoàn tất - {{ran}}/{{total}} bước.",
+    "stopped": "Đã dừng.",
+    "finished": "Hoàn tất.",
+    "summaryCompleted": "Đã hoàn thành {{ran}}/{{total}} bước.",
+    "summaryRan": "Đã chạy {{ran}}/{{total}} bước.",
+    "paused": "Đã tạm dừng",
+    "running": "Đang chạy…",
+    "resume": "Tiếp tục",
+    "pause": "Tạm dừng",
+    "stop": "Dừng",
+    "close": "Đóng",
+    "errors": {
+      "run": "Không chạy được macro."
+    },
+    "logStepSkipped": "đã bỏ qua {{label}} (không bắt buộc) - {{error}}"
+  },
+  "parallel": {
+    "states": {
+      "queued": "Đang chờ",
+      "launching": "Đang khởi chạy",
+      "running": "Đang chạy",
+      "passed": "Đạt",
+      "failed": "Thất bại"
+    },
+    "title": "Chạy macro song song",
+    "subtitle": "Chạy một macro trên nhiều hồ sơ cùng lúc, có cập nhật trạng thái trực tiếp.",
+    "macroLabel": "Macro",
+    "noMacros": "Chưa có macro nào",
+    "macroOption": "{{name}} · {{count}} bước",
+    "concurrency": "Số lượng đồng thời",
+    "concurrencyCap": "Gói của bạn chạy tối đa {{max}} hồ sơ cùng lúc.",
+    "concurrencyCapUpgrade": "Gói của bạn chạy tối đa {{max}} hồ sơ cùng lúc. Enterprise chạy tối đa {{enterpriseMax}}.",
+    "dataBound_one": "{{fileName}} · {{count}} dòng",
+    "dataBound_other": "{{fileName}} · {{count}} dòng",
+    "dataHint": "Không bắt buộc: gắn một bảng tính (dòng → hồ sơ, theo thứ tự)",
+    "clearDataBinding": "Gỡ dữ liệu đã gắn",
+    "bindData": "Gắn dữ liệu",
+    "columnsPrefix": "Các cột: {{columns}} - dùng",
+    "columnsSuffix": "trong các bước macro.",
+    "profilesLabel": "Hồ sơ (đã chọn {{count}})",
+    "selectAll": "Chọn tất cả",
+    "clear": "Bỏ chọn",
+    "searchPlaceholder": "Tìm",
+    "noProfiles": "Không tìm thấy hồ sơ.",
+    "rowMismatch": "{{rows}} dòng dữ liệu so với {{profiles}} hồ sơ - phần dư sẽ chạy không có biến.",
+    "running": "Đang chạy…",
+    "runOn_one": "Chạy trên {{count}} hồ sơ",
+    "runOn_other": "Chạy trên {{count}} hồ sơ",
+    "runStatus": "Trạng thái chạy",
+    "summaryPassed": "đạt",
+    "summaryFailed": "thất bại",
+    "summaryTotal": "tổng {{total}}",
+    "watchHint": "Chọn hồ sơ và macro, rồi bắt đầu chạy để xem tiến trình trực tiếp.",
+    "steps": "{{ran}}/{{total}} bước",
+    "profileFallback": "Hồ sơ {{id}}",
+    "runConsole": "Bảng theo dõi",
+    "live": "trực tiếp",
+    "consoleIdle": "[ chờ ] Chưa chạy - tiến trình sẽ hiện ở đây (không bao giờ kèm cookie hay thông tin đăng nhập).",
+    "logRunFinished": "Đã chạy xong - {{passed}}/{{total}} đạt",
+    "logRunFinishedError": "Đã chạy xong - {{passed}}/{{total}} đạt ({{error}})",
+    "errors": {
+      "readSpreadsheet": "Không đọc được bảng tính.",
+      "chooseMacro": "Hãy chọn macro để chạy.",
+      "selectProfile": "Hãy chọn ít nhất một hồ sơ.",
+      "startRun": "Không bắt đầu được lượt chạy song song."
+    }
+  },
+  "warmer": {
+    "title": "Làm nóng cookie",
+    "subtitle": "Tạo cookie và lịch sử tự nhiên bằng cách duyệt các trang web thật.",
+    "sitesLabel": "Trang web cần truy cập ({{count}})",
+    "addSuggested": "Thêm trang gợi ý…",
+    "add": "Thêm",
+    "customPlaceholder": "Hoặc dán URL tùy chỉnh (ví dụ example.com)",
+    "bulkAdd": "Thêm hàng loạt",
+    "importFile": "Nhập .txt/.csv",
+    "clearAll": "Xóa tất cả",
+    "bulkPlaceholder": "Dán mỗi dòng một URL, ví dụ\nexample.com\nhttps://news.site\nshop.site, 45, links",
+    "addList": "Thêm danh sách",
+    "bulkHint": "Mỗi dòng một URL. Cột CSV tùy chọn: url, số giây, hành vi (none/random/links).",
+    "addSecondsTitle": "Số giây mặc định cho liên kết bạn thêm",
+    "addBehaviorTitle": "Hành vi mặc định cho liên kết bạn thêm",
+    "saveList": "Lưu danh sách",
+    "saveListPrompt": "Đặt tên danh sách liên kết này (để dùng lại sau):",
+    "loadListTitle": "Tải danh sách đã lưu này",
+    "deleteListTitle": "Xóa danh sách đã lưu này",
+    "selectRows": "Chọn dòng",
+    "nSelected": "Đã chọn {{count}}",
+    "bulkSetSeconds": "Đặt số giây cho các dòng đã chọn",
+    "bulkSetBehavior": "Đặt hành vi cho các dòng đã chọn",
+    "setBehavior": "Đặt hành vi…",
+    "deleteSelected": "Xóa",
+    "noSites": "Chưa có trang nào - hãy thêm ở trên.",
+    "secondsTitle": "Số giây ở lại trang này",
+    "secondsUnit": "giây",
+    "behaviourTitle": "Làm gì trên trang này",
+    "remove": "Gỡ",
+    "loopUntilStopped": "Lặp đến khi dừng",
+    "keepOpen": "Giữ phiên mở sau khi xong",
+    "hidden": "Chạy ẩn (không có cửa sổ)",
+    "hiddenTitle": "Làm nóng ở chế độ headless - không mở cửa sổ trình duyệt. Cookie và bộ nhớ đệm vẫn được lưu vào từng hồ sơ.",
+    "cookieNote": "Cookie và bộ nhớ đệm tự động được lưu vào từng hồ sơ - bảng theo dõi báo bao nhiêu cookie và bộ nhớ đệm đã ghi xuống ổ đĩa. Lần mở bình thường sau sẽ dùng lại chúng.",
+    "startWarmup": "Bắt đầu làm nóng",
+    "warming": "Đang làm nóng…",
+    "stop": "Dừng",
+    "forceStop": "Buộc dừng",
+    "profilesLabel": "Hồ sơ (đã chọn {{count}})",
+    "searchPlaceholder": "Tìm",
+    "selectAll": "Tất cả",
+    "selectNone": "Không",
+    "invert": "Đảo chọn",
+    "addGroup": "Thêm nhóm…",
+    "addTag": "Thêm nhãn…",
+    "pasteIdsPlaceholder": "Dán ID hoặc tên hồ sơ (cách nhau bằng dấu phẩy / dấu cách)",
+    "selectPaste": "Chọn",
+    "noProfiles": "Không tìm thấy hồ sơ.",
+    "profileFallback": "Hồ sơ {{id}}",
+    "warmupConsole": "Bảng theo dõi làm nóng",
+    "live": "trực tiếp",
+    "progressTitle": "Tiến trình làm nóng",
+    "modeQueue": "Hàng đợi · từng hồ sơ một",
+    "modeBulk": "Hàng loạt · {{n}} hồ sơ mỗi lần",
+    "consoleIdle": "[ chờ ] Chọn hồ sơ, đặt thời lượng và bắt đầu làm nóng để xem tiến trình trực tiếp.",
+    "errors": {
+      "selectProfile": "Hãy chọn ít nhất một hồ sơ để làm nóng.",
+      "addSite": "Hãy thêm ít nhất một trang web cần truy cập.",
+      "startWarmup": "Không bắt đầu được làm nóng.",
+      "stopWarmup": "Không dừng được làm nóng.",
+      "importFile": "Không đọc được tệp này."
+    },
+    "queueTitle": "Làm nóng từng hồ sơ một (hàng đợi nghiêm ngặt): mở một trình duyệt, chờ xong và đóng, rồi đến hồ sơ tiếp theo. Tránh mở cùng lúc mọi trình duyệt đã chọn, điều có thể làm cạn RAM/CPU và khiến ứng dụng bị treo.",
+    "queueMode": "Chạy từng hồ sơ một (hàng đợi)",
+    "parallelTitle": "Số hồ sơ làm nóng cùng lúc. Càng cao càng nhanh nhưng càng tốn RAM/CPU.",
+    "parallelLabel": "Mỗi lần:"
+  },
+  "counter": {
+    "total": "tổng",
+    "running": "đang chạy",
+    "done": "xong",
+    "queued": "đang chờ"
+  },
+  "console": {
+    "copy": "Sao chép",
+    "copied": "Đã sao chép",
+    "export": "Xuất",
+    "clear": "Xóa"
+  },
+  "history": {
+    "emptyTitle": "Chưa có tác vụ nào chạy",
+    "emptyHint": "Các lượt làm nóng, macro và chạy song song sẽ hiện ở đây.",
+    "columns": {
+      "task": "Tác vụ",
+      "profiles": "Hồ sơ",
+      "detail": "Chi tiết",
+      "status": "Trạng thái",
+      "when": "Thời điểm"
+    },
+    "emptyDetail": "-",
+    "parallelRun": "Chạy song song",
+    "macroRun": "Chạy macro",
+    "cookieWarmup": "Làm nóng cookie",
+    "minutes": "{{count}} phút",
+    "sites_one": "{{count}} trang",
+    "sites_other": "{{count}} trang"
+  },
+  "stepFieldOptions": {
+    "auto": "Tự động",
+    "value": "Giá trị",
+    "label": "Nhãn",
+    "index": "Chỉ số",
+    "visible": "Hiển thị",
+    "hidden": "Ẩn",
+    "checked": "Đã đánh dấu",
+    "unchecked": "Chưa đánh dấu"
+  },
+  "autopilot": {
+    "title": "Tự động làm nóng",
+    "subtitle": "Làm nóng hồ sơ với vài trang web mỗi ngày, để chúng có lịch sử duyệt web thật.",
+    "toggle": "Bật hoặc tắt tự động làm nóng",
+    "target": "Hồ sơ",
+    "targetAll": "Tất cả hồ sơ",
+    "targetGroup": "Một nhóm",
+    "group": "Nhóm",
+    "runsPerDay": "Số lượt mỗi ngày",
+    "runsPerDayTitle": "Số lần mỗi hồ sơ được làm nóng trong ngày",
+    "sitesPerRun": "Số trang mỗi lượt",
+    "sitesPerRunTitle": "Trang ngẫu nhiên từ danh sách gợi ý, mỗi trang 20 đến 45 giây",
+    "activeHours": "Giờ hoạt động",
+    "startHour": "Giờ bắt đầu",
+    "endHour": "Giờ kết thúc",
+    "hoursTo": "đến",
+    "atATime": "Mỗi lần",
+    "atATimeTitle": "Số hồ sơ làm nóng cùng lúc. Nhiều hơn thì nhanh hơn nhưng tốn bộ nhớ hơn.",
+    "hidden": "Chạy ẩn (không có cửa sổ)",
+    "hint": "Một hồ sơ được làm nóng khi lần làm nóng gần nhất đã cũ hơn 24 giờ chia cho số lượt mỗi ngày. Hồ sơ đang mở, bị khóa hoặc đang bận sẽ được bỏ qua.",
+    "ownedByOther": "Một thành viên khác đã bật tính năng này. Chỉ họ hoặc người cấp trên mới thay đổi được.",
+    "status": {
+      "off": "Tắt",
+      "nextSoon": "Lượt tiếp theo trong vòng một phút",
+      "nextAt": "Lượt tiếp theo {{time}}",
+      "nothingDue": "Không có hồ sơ nào cần làm nóng",
+      "warmedToday": "Đã làm nóng {{done}} / {{total}} hôm nay",
+      "warmingNow": "{{n}} đang làm nóng",
+      "lastError": "Lỗi gần nhất, {{time}}: {{error}}"
+    },
+    "errors": {
+      "load": "Không tải được cài đặt tự động làm nóng.",
+      "save": "Không lưu được cài đặt tự động làm nóng.",
+      "noGroups": "Chưa có nhóm nào. Hãy tạo nhóm ở trang Hồ sơ trước.",
+      "owner-missing": "Thành viên đã bật tự động làm nóng không còn tồn tại. Chủ sở hữu không gian làm việc có thể tắt rồi bật lại để tiếp quản.",
+      "owner-inactive": "Thành viên đã bật tự động làm nóng đang bị tạm ngưng hoặc bị chặn.",
+      "owner-no-permission": "Thành viên đã bật tự động làm nóng có thể không còn quyền chạy tự động hóa.",
+      "warm-failed": "{{profile}}: {{error}}",
+      "warmFailedHidden": "Một hồ sơ bạn không xem được đã làm nóng thất bại.",
+      "tick-failed": "{{error}}"
+    }
+  }
+}

@@ -1,0 +1,330 @@
+{
+  "header": {
+    "eyebrow": "團隊",
+    "title": "成員",
+    "manageCount_one": "你管理 {{count}} 位成員",
+    "manageCount_other": "你管理 {{count}} 位成員",
+    "workspaceStats": "工作區中有 {{profiles}} 個設定檔 · {{proxies}} 個代理"
+  },
+  "tabs": {
+    "members": "成員",
+    "activity": "活動",
+    "licenses": "授權"
+  },
+  "memberCount_one": "{{count}} 位成員",
+  "memberCount_other": "{{count}} 位成員",
+  "roles": {
+    "SUPER_ADMIN": "超級管理員",
+    "OWNER": "擁有者",
+    "ADMIN": "管理員",
+    "MANAGER": "經理",
+    "OPERATOR": "操作員"
+  },
+  "roleDesc": {
+    "OWNER": "完全控制，包括成員和保險庫。",
+    "ADMIN": "管理設定檔、代理、群組，以及自己建立的經理和操作員。",
+    "MANAGER": "建立、編輯和啟動設定檔，並新增操作員。",
+    "OPERATOR": "只能啟動和使用分配給自己的設定檔。"
+  },
+  "actionCategories": {
+    "Profiles": "設定檔",
+    "Proxies": "代理",
+    "Automation": "自動化",
+    "Workspace": "工作區",
+    "Team": "團隊"
+  },
+  "actionLabels": {
+    "profiles_launch": "啟動設定檔",
+    "profiles_create": "建立設定檔",
+    "profiles_edit": "編輯設定檔",
+    "profiles_export": "匯出設定檔",
+    "profiles_share": "與成員共用設定檔",
+    "profiles_delete": "刪除設定檔（移到垃圾桶）",
+    "profiles_purge": "永久清除設定檔",
+    "proxies_manage": "新增/編輯/刪除代理",
+    "proxies_reveal": "顯示原始代理憑據",
+    "automation_run": "執行自動化/巨集",
+    "extensions_manage": "管理團隊擴充功能",
+    "settings_manage": "更改工作區設定",
+    "vault_manage": "管理身分保險庫",
+    "members_manage": "管理團隊成員",
+    "members_delete": "刪除成員/更改角色"
+  },
+  "features": {
+    "dashboard": "儀表板（僅頁面）",
+    "profiles": "設定檔",
+    "groups": "群組",
+    "proxies": "代理池",
+    "browsers": "瀏覽器",
+    "extensions": "擴充功能",
+    "batchImport": "批次匯入",
+    "trash": "垃圾桶",
+    "members": "成員",
+    "settings": "設定"
+  },
+  "caps": {
+    "maxAdmins": "管理員",
+    "maxManagers": "經理",
+    "maxOperators": "操作員"
+  },
+  "labels": {
+    "profiles": "設定檔",
+    "proxies": "代理",
+    "browsers": "瀏覽器"
+  },
+  "status": {
+    "active": "活躍",
+    "suspended": "已暫停",
+    "banned": "已禁止存取"
+  },
+  "actions": {
+    "inviteMember": "邀請成員",
+    "inviteTeamMember": "邀請團隊成員",
+    "remove": "移除",
+    "removeMember": "移除成員",
+    "assignProfiles": "分配設定檔",
+    "cancel": "取消",
+    "close": "關閉",
+    "clear": "清除",
+    "save": "儲存",
+    "createInvite": "建立邀請",
+    "done": "完成",
+    "copy": "複製",
+    "copied": "已複製"
+  },
+  "empty": {
+    "title": "還沒有成員",
+    "canCreate": "邀請你的第一位團隊成員，開始分派工作。",
+    "noMembers": "你名下還沒有成員。"
+  },
+  "member": {
+    "you": "你",
+    "noEmail": "無電子郵件",
+    "invitePending": "邀請待接受",
+    "loginSet": "已設定登入",
+    "subMembers_one": "{{count}} 位下級成員",
+    "subMembers_other": "{{count}} 位下級成員"
+  },
+  "time": {
+    "neverActive": "從未活躍",
+    "activeJustNow": "剛剛活躍",
+    "activeMinutes": "{{count}} 分鐘前活躍",
+    "activeHours": "{{count}} 小時前活躍",
+    "activeDays": "{{count}} 天前活躍"
+  },
+  "errors": {
+    "loadMembers": "無法載入成員。",
+    "changeStatus": "無法更改狀態。",
+    "nameRequired": "名稱為必填項。",
+    "saveMember": "無法儲存成員。",
+    "resetPerms": "無法重設權限。",
+    "removeMember": "無法移除成員。",
+    "loadProfiles": "無法載入設定檔。",
+    "reassignProfiles": "無法重新分配設定檔。"
+  },
+  "confirm": {
+    "revertPerms": "將 {{name}} 的限額和功能重設為其角色的預設值？"
+  },
+  "modal": {
+    "inviteTitle": "邀請成員",
+    "editTitle": "編輯 {{name}}",
+    "noCreatableRoles": "你無權建立任何下級成員。",
+    "invitePendingCode": "邀請待接受：邀請碼"
+  },
+  "fields": {
+    "name": "名稱",
+    "namePlaceholder": "姓名",
+    "email": "電子郵件",
+    "role": "角色",
+    "color": "顏色",
+    "instructions": "說明",
+    "optional": "（可選）",
+    "instructionsPlaceholder": "此成員負責的工作…"
+  },
+  "invite": {
+    "createdTitle": "邀請已建立",
+    "sharePrefix": "請將此邀請碼分享給 ",
+    "shareSuffix": "。對方開啟 SoftGlaze Browser →「有邀請碼？」，輸入邀請碼並設定密碼。",
+    "code": "邀請碼",
+    "link": "邀請連結",
+    "emailedTo": "已傳送郵件至 {{email}}。",
+    "emailNotSent": "郵件未傳送（請在「設定 → 郵件」中設定 SMTP）。請手動分享邀請碼。"
+  },
+  "alloc": {
+    "heading_one": "已分配給 {{count}} 位下級成員",
+    "heading_other": "已分配給 {{count}} 位下級成員",
+    "allocated": "已分配 {{allocated}}/{{cap}}",
+    "left": "· 剩餘 {{remaining}}"
+  },
+  "perms": {
+    "title": "權限和限額",
+    "resourceLimits": "資源限額",
+    "subMemberCaps": "下級成員上限",
+    "visibleFeatures": "可見功能",
+    "actionPermissions": "操作權限",
+    "actionHint": "此角色預設開啟。關閉某項即可僅對此成員撤銷該權限。",
+    "revertDefaults": "還原為角色預設值",
+    "max": "（最多 {{max}}）",
+    "canInvite": {
+      "canCreateAdmins": "可以邀請管理員",
+      "canCreateManagers": "可以邀請經理",
+      "canCreateOperators": "可以邀請操作員"
+    },
+    "featuresHint": "關閉的功能會從側邊欄中隱藏，其相關操作在任何地方都會被拒絕（例如新增代理、從垃圾桶還原或下載瀏覽器）。其他頁面所需的清單（例如在設定檔編輯器中選擇代理或群組）仍會載入。"
+  },
+  "accountStatus": {
+    "title": "帳號狀態",
+    "reason": "原因：{{reason}}",
+    "unban": "恢復成員存取",
+    "banHint": "編輯上方欄位不會解除存取禁止。請使用「恢復成員存取」來恢復存取權限。",
+    "suspendToggle": "暫停此成員（阻擋登入）",
+    "ban": "禁止成員存取"
+  },
+  "delete": {
+    "title": "移除 {{name}}",
+    "warnPrefix": "此操作將移除 ",
+    "warnMiddle": "，並將其所有下級成員轉到你名下。請選擇如何處理其資料：",
+    "profilesWord_one": "個設定檔",
+    "profilesWord_other": "個設定檔",
+    "proxiesWord_one": "個代理",
+    "proxiesWord_other": "個代理",
+    "options": {
+      "reassignMe": {
+        "label": "保留並重新分配給我",
+        "desc": "你將成為其設定檔和代理的擁有者。"
+      },
+      "reassignOther": {
+        "label": "保留並重新分配給其他成員",
+        "desc": "將其資料移交給指定的隊友。"
+      },
+      "delete": {
+        "label": "刪除所有關聯資料",
+        "desc": "其代理和代理群組將被刪除；設定檔會移到垃圾桶（可還原）。"
+      }
+    },
+    "pickTarget": "請選擇接收資料的成員。",
+    "reassignTo": "重新分配給",
+    "noOtherMembers": "沒有其他可選成員，請選擇其他選項。"
+  },
+  "assign": {
+    "title": "分配設定檔 · {{name}}",
+    "searchPlaceholder": "搜尋設定檔",
+    "noProfiles": "未找到設定檔。",
+    "memberFallback": "成員 #{{id}}",
+    "updated": "已更新：分配 {{assigned}} 個，取消分配 {{unassigned}} 個。",
+    "save": "儲存分配"
+  },
+  "activity": {
+    "title": "團隊活動",
+    "subtitle": "此工作區中誰做了什麼",
+    "exported": "已匯出 {{count}} 列 → {{path}}",
+    "exportError": "無法匯出活動記錄。",
+    "filterByMember": "按成員篩選",
+    "filterByAction": "按操作篩選",
+    "allMembers": "所有成員",
+    "allActions": "所有操作",
+    "fromDate": "開始日期",
+    "toDate": "結束日期",
+    "empty": "還沒有活動記錄。",
+    "noMatch": "沒有符合這些篩選條件的活動。",
+    "enterpriseFeature": "Enterprise 功能",
+    "seeBilling": "檢視帳單",
+    "exportEnterpriseOnly": "審計記錄匯出（CSV/JSON）是 Enterprise 功能。請在「帳單」頁面升級以匯出活動記錄。"
+  },
+  "activityActions": {
+    "launched": "啟動了",
+    "stopped": "停止了",
+    "created": "建立了",
+    "edited": "編輯了",
+    "deleted": "刪除了",
+    "restored": "還原了",
+    "imported": "匯入了",
+    "assigned": "分配了",
+    "reassigned": "重新分配了",
+    "parallel_run": "並行執行",
+    "macro_run": "執行了巨集",
+    "member_added": "新增了成員",
+    "member_edited": "編輯了成員",
+    "member_removed": "移除了成員",
+    "permissions_changed": "更改了權限",
+    "status_changed": "更改了狀態",
+    "signed_in": "登入",
+    "signed_out": "登出",
+    "invite_accepted": "接受了邀請",
+    "proxies_copied_for_extension": "為擴充功能複製了代理",
+    "devtools_address_shown": "顯示了 DevTools 位址"
+  },
+  "feedTime": {
+    "justNow": "剛剛",
+    "minutes": "{{count}} 分鐘前",
+    "hours": "{{count}} 小時前",
+    "days": "{{count}} 天前"
+  },
+  "license": {
+    "intro": "每個擁有者工作區的訂閱狀態。基於本機並盡力而為：有心的使用者仍可修改本機資料庫或系統時鐘；可靠的限制需要授權後端。",
+    "noOwners": "還沒有擁有者工作區。",
+    "editTitle": "授權 · {{name}}",
+    "setState": "設定狀態",
+    "grantPlan": "授予方案",
+    "lifecycle": "生命週期",
+    "state": {
+      "paid": "已付費",
+      "trialing": "試用",
+      "grace": "寬限期",
+      "banned": "已禁用"
+    },
+    "type": {
+      "trial": "試用",
+      "paid": "付費"
+    },
+    "tier": {
+      "pro": "pro",
+      "enterprise": "enterprise"
+    },
+    "fields": {
+      "type": "類型",
+      "tier": "級別",
+      "expiry": "到期時間",
+      "plan": "方案",
+      "months": "月數"
+    },
+    "detail": {
+      "trial": "試用剩餘 {{count}} 天",
+      "grace": "寬限期：剩餘 {{count}} 天",
+      "paid": "付費至 {{date}}",
+      "clockAnomaly": "⚠ 時鐘異常"
+    },
+    "actions": {
+      "grantMonth": "授予 1 個月",
+      "extend7": "+7 天",
+      "startTrial": "開始試用",
+      "resetTrial": "重設試用",
+      "edit": "編輯",
+      "terminate": "終止",
+      "unblock": "解除阻擋",
+      "block": "阻擋",
+      "saveState": "儲存狀態",
+      "grantPlan": "授予方案",
+      "startFreeTrial": "開始免費試用",
+      "terminateNow": "立即終止"
+    },
+    "confirm": {
+      "terminate": "立即終止 {{name}} 的訂閱？在你再次授予存取權限之前，其設定檔將被鎖定。",
+      "terminateModal": "立即終止此訂閱？在你再次授予存取權限之前，設定檔將被鎖定。",
+      "resetTrial": "重設 {{name}} 的試用？其試用期將重新計時，目前的授權狀態將被替換。",
+      "block": "阻擋 {{name}}？對方及其所有下級成員都將被登出，在你解除阻擋之前無法使用應用程式。"
+    },
+    "errors": {
+      "load": "無法載入授權。",
+      "action": "操作失敗。"
+    }
+  },
+  "seats": {
+    "usage": "{{used}}/{{total}} 位成員",
+    "fullNotice": "你方案中的全部 {{total}} 個團隊席位都已使用，無法再新增新成員。暫停一位成員即可空出席位，或升級到 Enterprise，最多可有 {{enterpriseSeats}} 位團隊成員。",
+    "fullNoticeTop": "你方案中的全部 {{total}} 個團隊席位都已使用，無法再新增新成員。暫停一位成員即可空出席位。",
+    "overNotice": "此團隊有 {{used}} 位成員，而你的方案包含 {{total}} 位。所有人都會保留存取權限；團隊人數低於上限後才能新增新成員。",
+    "seeBilling": "檢視帳單",
+    "limitError": "你方案中的所有團隊席位都已使用。暫停一位成員即可空出席位，或在「帳單」中檢視方案選項。"
+  }
+}

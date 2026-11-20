@@ -1,0 +1,146 @@
+{
+  "header": {
+    "eyebrow": "Danh tính",
+    "title": "Kho dữ liệu",
+    "description": "Kho danh tính dùng lại cho bộ máy Tự điền thông minh. Thêm thủ công hoặc nhập từ bảng tính; mỗi danh tính nhớ các trang web đã dùng nó.",
+    "refresh": "Làm mới",
+    "import": "Nhập Excel/CSV",
+    "addManually": "Thêm thủ công"
+  },
+  "stats": {
+    "totalIdentities": "Tổng số danh tính",
+    "neverUsed": "Chưa dùng",
+    "usedAtLeastOnce": "Đã dùng ít nhất một lần",
+    "totalUses": "Tổng lượt dùng",
+    "filtering": "đang lọc"
+  },
+  "toolbar": {
+    "searchPlaceholder": "Tìm theo tên, email, tên người dùng hoặc nhãn...",
+    "showing": "Đang hiện {{count}} {{kind}}",
+    "kindNeverUsed": "chưa dùng",
+    "kindUsed": "đã dùng",
+    "clear": "xóa lọc"
+  },
+  "bulk": {
+    "selected": "Đã chọn {{count}}",
+    "resetUsedStatus": "Đặt lại trạng thái đã dùng",
+    "deleteSelected": "Xóa mục đã chọn",
+    "clear": "Bỏ chọn",
+    "clearSelectionTitle": "Bỏ chọn tất cả"
+  },
+  "table": {
+    "loading": "Đang tải danh tính...",
+    "selectAll": "Chọn tất cả danh tính",
+    "selectRow": "Chọn {{name}}",
+    "colName": "Tên",
+    "colEmail": "Email",
+    "colUsername": "Tên người dùng",
+    "colPassword": "Mật khẩu",
+    "colPhone": "Điện thoại",
+    "colAddress": "Địa chỉ",
+    "colLabel": "Nhãn",
+    "colTimesUsed": "Số lần dùng",
+    "colCreated": "Ngày tạo",
+    "colActions": "Thao tác",
+    "sitesUsed_one": "{{count}} trang",
+    "sitesUsed_other": "{{count}} trang",
+    "never": "Chưa bao giờ",
+    "editIdentity": "Sửa danh tính",
+    "deleteIdentity": "Xóa danh tính",
+    "hidePassword": "Ẩn",
+    "revealPassword": "Hiện",
+    "reuse": "♻ Dùng lại · {{count}}"
+  },
+  "empty": {
+    "title": "Kho dữ liệu của bạn đang trống",
+    "description": "Thêm danh tính thủ công hoặc nhập bảng Excel/CSV để bắt đầu xây dựng kho tự điền.",
+    "filteredTitle": "Không có danh tính nào khớp bộ lọc",
+    "filteredDescription": "Hãy thử tìm kiếm khác, hoặc xóa bộ lọc."
+  },
+  "groups": {
+    "identity": "Danh tính",
+    "account": "Tài khoản",
+    "address": "Địa chỉ",
+    "meta": "Thông tin thêm"
+  },
+  "fields": {
+    "firstName": "Tên",
+    "lastName": "Họ",
+    "email": "Email",
+    "username": "Tên người dùng",
+    "password": "Mật khẩu",
+    "phone": "Điện thoại",
+    "dateOfBirth": "Ngày sinh",
+    "addressLine1": "Địa chỉ dòng 1",
+    "addressLine2": "Địa chỉ dòng 2",
+    "city": "Thành phố",
+    "state": "Tỉnh / Bang",
+    "zipCode": "Mã bưu chính",
+    "country": "Quốc gia",
+    "company": "Công ty",
+    "companyAddress": "Địa chỉ công ty",
+    "label": "Nhãn lô"
+  },
+  "form": {
+    "dialogTitleEdit": "Sửa danh tính",
+    "dialogTitleAdd": "Thêm danh tính",
+    "titleEdit": "Sửa danh tính",
+    "titleAdd": "Thêm danh tính",
+    "descEdit": "Cập nhật thông tin của persona này.",
+    "descAdd": "Thêm một persona vào kho dữ liệu. Các trường có dấu * là bắt buộc.",
+    "cancel": "Hủy",
+    "saving": "Đang lưu...",
+    "saveChanges": "Lưu thay đổi",
+    "addIdentity": "Thêm danh tính",
+    "showPassword": "Hiện mật khẩu",
+    "hidePassword": "Ẩn mật khẩu"
+  },
+  "import": {
+    "dialogTitle": "Nhập danh tính",
+    "title": "Nhập từ Excel / CSV",
+    "descStep1": "Chọn tệp .xlsx, .xls hoặc .csv. Dòng đầu tiên phải là tiêu đề cột. Tối đa 1000 dòng mỗi lần nhập.",
+    "descStep2": "Ghép các cột của bạn với trường danh tính. Đã tìm thấy {{count}} dòng trong {{fileName}}.",
+    "yourFile": "tệp của bạn",
+    "chooseSpreadsheet": "Chọn bảng tính",
+    "colIdentityField": "Trường danh tính",
+    "colYourColumn": "Cột của bạn",
+    "skipOption": "- bỏ qua -",
+    "mappedCount_one": "Đã ghép {{count}} trường. Dòng không có tên/email/tên người dùng sẽ bị bỏ qua.",
+    "mappedCount_other": "Đã ghép {{count}} trường. Dòng không có tên/email/tên người dùng sẽ bị bỏ qua.",
+    "done": "Xong",
+    "cancel": "Hủy",
+    "back": "Quay lại",
+    "importing": "Đang nhập...",
+    "importRows_one": "Nhập {{count}} dòng",
+    "importRows_other": "Nhập {{count}} dòng",
+    "result": {
+      "complete": "Nhập xong",
+      "addedPrefix": "Đã thêm",
+      "addedSuffix_one": "danh tính vào kho.",
+      "addedSuffix_other": "danh tính vào kho.",
+      "skipped_one": "Đã bỏ qua {{count}} dòng trống.",
+      "skipped_other": "Đã bỏ qua {{count}} dòng trống."
+    },
+    "errors": {
+      "noRows": "Tệp này không có dòng tiêu đề hoặc dòng dữ liệu đọc được.",
+      "readFile": "Không đọc được tệp này.",
+      "nothingMapped": "Không có dòng nào để nhập - hãy ghép ít nhất một trong các trường Tên / Họ / Email / Tên người dùng.",
+      "failed": "Nhập thất bại."
+    }
+  },
+  "confirm": {
+    "fallbackName": "persona",
+    "deleteOne": "Xóa danh tính \"{{name}}\"? Không thể hoàn tác.",
+    "deleteSelected_one": "Xóa {{count}} danh tính đã chọn? Không thể hoàn tác.",
+    "deleteSelected_other": "Xóa {{count}} danh tính đã chọn? Không thể hoàn tác.",
+    "resetSelected_one": "Đặt lại lịch sử \"đã dùng trên\" của {{count}} danh tính đã chọn? Chúng sẽ dùng được lại trên mọi trang web.",
+    "resetSelected_other": "Đặt lại lịch sử \"đã dùng trên\" của {{count}} danh tính đã chọn? Chúng sẽ dùng được lại trên mọi trang web."
+  },
+  "errors": {
+    "load": "Không tải được kho dữ liệu.",
+    "save": "Không lưu được danh tính này.",
+    "deleteOne": "Không xóa được danh tính.",
+    "deleteSelected": "Không xóa được các danh tính đã chọn.",
+    "resetSelected": "Không đặt lại được các danh tính đã chọn."
+  }
+}

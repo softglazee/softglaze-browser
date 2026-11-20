@@ -1,0 +1,62 @@
+{
+  "header": {
+    "eyebrow": "Hesabınız",
+    "title": "Hesap ayarları",
+    "description": "Profil fotoğrafınızı, adınızı, e-postanızı ve parolanızı yönetin."
+  },
+  "notice": {
+    "superAdmin": "Bu bir Süper Yönetici / kaynak sahibi oturumu - burada düzenlenecek bir üye kaydı yok."
+  },
+  "fields": {
+    "fullName": "Ad soyad",
+    "fullNamePlaceholder": "Adınız",
+    "email": "E-posta",
+    "newPassword": "Yeni parola",
+    "newPasswordPlaceholder": "Mevcut parolayı korumak için boş bırakın",
+    "confirmPassword": "Yeni parolayı onaylayın",
+    "confirmPasswordPlaceholder": "Yeni parolayı tekrar girin",
+    "verificationRequired": "doğrulama gerekli"
+  },
+  "avatar": {
+    "alt": "avatar",
+    "changeTitle": "Fotoğrafı değiştir",
+    "newSelected": "Yeni fotoğraf seçildi - uygulamak için kaydedin.",
+    "notImage": "Lütfen bir görsel dosyası seçin.",
+    "tooLarge": "Bu görsel 2 MB'tan büyük. Daha küçük bir tane seçin.",
+    "readFailed": "Bu görsel okunamadı."
+  },
+  "verification": {
+    "banner": "E-postanızı veya parolanızı değiştirmek için mevcut e-postanıza gönderilen 6 haneli kod gerekir"
+  },
+  "actions": {
+    "save": "Değişiklikleri kaydet",
+    "saving": "Kaydediliyor…",
+    "verifyAndSave": "Doğrula ve kaydet",
+    "discard": "Vazgeç"
+  },
+  "validation": {
+    "nameEmpty": "Ad boş olamaz.",
+    "emailInvalid": "Geçerli bir e-posta adresi girin.",
+    "passwordTooShort": "Yeni parola en az 8 karakter olmalıdır.",
+    "passwordMismatch": "Parolalar eşleşmiyor."
+  },
+  "messages": {
+    "profileUpdated": "Profil güncellendi.",
+    "accountUpdated": "Hesap başarıyla güncellendi."
+  },
+  "errors": {
+    "loadFailed": "Hesabınız yüklenemedi.",
+    "saveFailed": "Değişiklikleriniz kaydedilemedi."
+  },
+  "verify": {
+    "title": "Siz olduğunuzu doğrulayın",
+    "codeSentTo": "Kod {{email}} adresine gönderildi",
+    "codeLabel": "6 haneli kod",
+    "devMode": "Geliştirici modu - e-posta yapılandırılmadı. Kodunuz:",
+    "apply": "Doğrula ve uygula",
+    "resend": "Tekrar gönder",
+    "enterCode": "6 haneli kodu girin.",
+    "failed": "Doğrulama başarısız oldu.",
+    "resendFailed": "Kod tekrar gönderilemedi."
+  }
+}

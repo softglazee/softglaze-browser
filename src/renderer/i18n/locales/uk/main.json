@@ -1,0 +1,25 @@
+{
+  "contextMenu": {
+    "undo": "Скасувати",
+    "redo": "Повторити",
+    "cut": "Вирізати",
+    "copy": "Копіювати",
+    "paste": "Вставити",
+    "selectAll": "Виділити все",
+    "copyLink": "Копіювати посилання"
+  },
+  "dialogs": {
+    "exportArchiveTitle": "Експорт зашифрованого архіву профілів",
+    "archiveFilter": "Зашифрований архів SoftGlaze",
+    "importProfilesTitle": "Оберіть таблицю профілів SoftGlaze для імпорту",
+    "spreadsheetFilter": "Файли таблиць",
+    "exportProfilesTitle": "Експорт профілів SoftGlaze",
+    "excelFilter": "Книга Excel",
+    "importIdentitiesTitle": "Оберіть таблицю осіб для імпорту",
+    "backupTitle": "Резервна копія робочого простору",
+    "backupFilter": "Резервна копія робочого простору SoftGlaze",
+    "restoreTitle": "Відновити резервну копію робочого простору",
+    "exportActivityTitle": "Експорт журналу активності",
+    "bindSpreadsheetTitle": "Оберіть таблицю для прив'язки до цього паралельного запуску"
+  }
+}

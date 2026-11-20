@@ -1,0 +1,82 @@
+{
+  "header": {
+    "eyebrow": "Automação",
+    "title": "Criação de perfis em lote",
+    "description": "Crie vários ambientes de navegador rapidamente por planilha ou geração sequencial.",
+    "exportProfiles": "Exportar perfis"
+  },
+  "exportNotice_one": "{{count}} perfil exportado para {{path}}",
+  "exportNotice_many": "{{count}} perfis exportados para {{path}}",
+  "exportNotice_other": "{{count}} perfis exportados para {{path}}",
+  "tabs": {
+    "importFromFile": "Importar de arquivo",
+    "quickGenerate": "Geração rápida"
+  },
+  "step1": {
+    "title": "Baixar modelo",
+    "description": "Para uma leitura sem erros, use nosso modelo padrão em Excel ou CSV. Preencha os nomes dos perfis, os proxies e as regras de impressão digital.",
+    "downloadButton": "Baixar modelo .CSV"
+  },
+  "step2": {
+    "title": "Enviar e pré-visualizar",
+    "description": "Selecione sua planilha preenchida. Vamos lê-la localmente e verificar erros de formatação antes de salvar.",
+    "selectButton": "Selecionar arquivo"
+  },
+  "step3": {
+    "title": "Pré-visualizar e confirmar dados"
+  },
+  "awaiting": {
+    "title": "Aguardando dados",
+    "description": "Selecione um arquivo para pré-visualizar seus perfis aqui."
+  },
+  "preview": {
+    "file": "Arquivo:",
+    "validRows": "Linhas válidas:",
+    "errors": "Erros:"
+  },
+  "processing": {
+    "importing": "Importando… {{index}}/{{total}}",
+    "backendLog": "Log de processamento",
+    "connecting": "Conectando ao mecanismo de importação…"
+  },
+  "table": {
+    "row": "Linha",
+    "title": "Título",
+    "group": "Grupo",
+    "proxyMethod": "Método de proxy",
+    "dataDir": "Pasta de dados",
+    "auto": "Auto"
+  },
+  "autoBind": {
+    "label": "Vincular proxies por país automaticamente",
+    "descPrefix": "- para linhas sem proxy próprio, atribui um proxy salvo cujo país verificado corresponde à coluna",
+    "descSuffix": "da linha (em rodízio entre os que correspondem).",
+    "sourceLabel": "Vincular de",
+    "sourcePaid": "Seus proxies",
+    "sourceFree": "Proxies gratuitos (só os que funcionam)",
+    "freeWarn": "Proxies gratuitos são operados por desconhecidos: nunca entre em contas nem faça pagamentos com esses perfis."
+  },
+  "commitButton_one": "Confirmar {{count}} perfil",
+  "commitButton_many": "Confirmar {{count}} perfis",
+  "commitButton_other": "Confirmar {{count}} perfis",
+  "success": {
+    "title": "Importação concluída",
+    "importedPrefix": "Importados com sucesso",
+    "importedMiddle": "perfis e mapeados",
+    "importedSuffix": "proxies novos",
+    "autoBoundPrefix": "· vinculados automaticamente",
+    "autoBoundSuffix": "por país",
+    "importAnother": "Importar outro"
+  },
+  "quick": {
+    "engineTitle": "Mecanismo de geração sequencial",
+    "description": "Crie vários perfis na hora sem planilha: impressões digitais únicas, nomes sequenciais, um grupo de destino (crie um ali mesmo) e atribuição de proxy de um grupo ou provedor específico. Usa exatamente o mesmo mecanismo da página Perfis.",
+    "openButton": "Abrir geração rápida"
+  },
+  "errors": {
+    "parse": "Falha ao ler o arquivo. Verifique se é uma planilha válida.",
+    "commit": "Falha ao salvar os perfis no banco de dados.",
+    "importFailed": "Falha na importação.",
+    "export": "Falha ao exportar os perfis."
+  }
+}

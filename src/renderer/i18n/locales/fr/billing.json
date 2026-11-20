@@ -1,0 +1,347 @@
+{
+  "common": {
+    "cancel": "Annuler",
+    "save": "Enregistrer",
+    "edit": "Modifier",
+    "delete": "Supprimer"
+  },
+  "header": {
+    "title": "Facturation et forfaits",
+    "description": "Gérez votre abonnement, comparez les forfaits et passez à un forfait supérieur, le tout au même endroit."
+  },
+  "status": {
+    "loading": "Chargement…",
+    "sourceOwner": "Propriétaire du code source",
+    "active": "Actif",
+    "activeRenews": "Actif · renouvellement le {{date}}",
+    "trial": "Essai",
+    "trialDaysLeft": "Essai · {{days}} j restants",
+    "graceDaysLeft": "Grâce · {{days}} j restants",
+    "subscriptionEnded": "Abonnement terminé",
+    "free": "Forfait Free"
+  },
+  "backend": {
+    "licensedVerified": "Licence active et vérifiée",
+    "renews": "renouvellement le {{date}}",
+    "noLicense": "Gestion des licences active : aucune licence payante pour cette installation pour l'instant.",
+    "trialVerified": "Essai gratuit, vérifié",
+    "trialEnds": "se termine le {{date}}"
+  },
+  "current": {
+    "title": "Forfait actuel",
+    "sourceOwnerAllFeatures": "Propriétaire du code source · toutes les fonctionnalités",
+    "paid": "payant",
+    "freeTrial": "essai gratuit",
+    "freeForever": "Forfait Free · gratuit pour toujours"
+  },
+  "grace": {
+    "message_one": "Votre {{kind}} a pris fin : il reste {{count}} jour de grâce. Renouvelez ci-dessous pour ne pas perdre l'accès.",
+    "message_other": "Votre {{kind}} a pris fin : il reste {{count}} jours de grâce. Renouvelez ci-dessous pour ne pas perdre l'accès.",
+    "message_many": "Votre {{kind}} a pris fin : il reste {{count}} jours de grâce. Renouvelez ci-dessous pour ne pas perdre l'accès.",
+    "kindTrial": "essai gratuit",
+    "kindSubscription": "abonnement"
+  },
+  "banned": {
+    "message": "Votre abonnement a pris fin et le lancement des profils est verrouillé. Abonnez-vous ou saisissez un code d'achat pour retrouver l'accès."
+  },
+  "trialRemaining": {
+    "message_one": "Essai gratuit : {{count}} jour restant.",
+    "message_other": "Essai gratuit : {{count}} jours restants.",
+    "message_many": "Essai gratuit : {{count}} jours restants."
+  },
+  "seats": {
+    "label": "Sièges de l'équipe",
+    "usage": "{{used}} / {{total}} utilisés",
+    "upgradeToAddMore": "· passez à un forfait supérieur pour en ajouter"
+  },
+  "exempt": {
+    "note": "Vous êtes le propriétaire du code source : vous n'êtes pas soumis au système d'abonnement. Toutes les fonctionnalités sont incluses."
+  },
+  "checkout": {
+    "waiting": "En attente de votre paiement…",
+    "waitingForPlan": "En attente de votre paiement · {{plan}}…",
+    "opened": "Une page de paiement s'est ouverte dans votre navigateur. Après le paiement, cette page se met à jour automatiquement.",
+    "reopen": "Rouvrir la page de paiement"
+  },
+  "plans": {
+    "chooseHeading": "Choisir un forfait",
+    "bestValue": "Meilleure offre",
+    "current": "Actuel",
+    "footerNote": "Les paiements sont traités par les moyens activés par votre administrateur. Après avoir payé dans votre navigateur, cette page active automatiquement votre forfait."
+  },
+  "period": {
+    "label": "Période de facturation",
+    "monthly": "Mensuel",
+    "yearly": "Annuel",
+    "billedYearly": "Facturé annuellement, environ {{perMonth}} par mois",
+    "monthsFree_one": "{{count}} mois offert, vous économisez {{saving}}",
+    "monthsFree_other": "{{count}} mois offerts, vous économisez {{saving}}",
+    "monthsFree_many": "{{count}} mois offerts, vous économisez {{saving}}",
+    "monthsFreeShort_one": "{{count}} mois offert",
+    "monthsFreeShort_other": "{{count}} mois offerts",
+    "monthsFreeShort_many": "{{count}} mois offerts",
+    "save": "Vous économisez {{saving}} par an"
+  },
+  "cta": {
+    "included": "Inclus",
+    "onPaidPlan": "Forfait payant actif",
+    "trialActiveDaysLeft": "Essai actif · {{days}} j restants",
+    "startFreeTrial": "Démarrer l'essai gratuit",
+    "trialUsed": "Essai gratuit utilisé",
+    "currentPlan": "Forfait actuel",
+    "upgradeEnterprise": "Passer à Enterprise",
+    "downgradePro": "Revenir à Pro",
+    "choosePlan": "Choisir {{name}}"
+  },
+  "trial": {
+    "started": "Votre essai gratuit avec accès complet est actif. Profitez-en !",
+    "startedWithDays": "Votre essai gratuit est actif : {{days}} jours d'accès complet. Profitez-en !",
+    "errors": {
+      "failed": "Impossible de démarrer l'essai."
+    }
+  },
+  "redeem": {
+    "label": "Vous avez un code d'achat ?",
+    "apply": "Appliquer",
+    "success": "Code d'achat appliqué, merci !",
+    "errors": {
+      "empty": "Saisissez votre code d'achat.",
+      "failed": "Impossible d'appliquer ce code."
+    }
+  },
+  "pay": {
+    "received": "Paiement reçu : votre forfait est maintenant actif !",
+    "errors": {
+      "noMethods": "L'achat dans l'application est suspendu pendant que nous ajoutons un nouveau prestataire de paiement. Écrivez à support@softglaze.com pour acheter sur facture, puis saisissez votre code d'achat ci-dessous.",
+      "checkoutFailed": "Impossible de lancer le paiement.",
+      "submitFailed": "Impossible d'envoyer votre paiement."
+    }
+  },
+  "payModal": {
+    "title": "Payer {{name}}",
+    "manualSubmitted": "Paiement envoyé. Un administrateur va le vérifier et activer votre forfait sous peu.",
+    "manualBadge": "Manuel",
+    "continueTo": "Continuer vers {{method}}",
+    "openPayLink": "Ouvrir le lien de paiement",
+    "referencePlaceholder": "Référence du paiement / ID de transaction",
+    "notePlaceholder": "Note (facultatif)",
+    "submitForApproval": "J'ai payé : envoyer pour approbation",
+    "manualActivationNote": "Votre forfait sera activé dès qu'un administrateur aura confirmé le paiement."
+  },
+  "admin": {
+    "configureMethods": "Configurer les moyens de paiement dans les Paramètres"
+  },
+  "invoices": {
+    "title": "Factures",
+    "subtitleAdmin": "Tous les paiements de tous les propriétaires : automatiques et manuels.",
+    "subtitleUser": "Vos reçus de paiement.",
+    "add": "Ajouter",
+    "empty": "Aucune facture pour l'instant.",
+    "manualSuffix": "manuel",
+    "confirmDelete": "Supprimer cette facture ?",
+    "cols": {
+      "date": "Date",
+      "owner": "Propriétaire",
+      "amount": "Montant",
+      "method": "Moyen",
+      "status": "Statut",
+      "reference": "Référence"
+    },
+    "errors": {
+      "loadFailed": "Impossible de charger les factures.",
+      "deleteFailed": "Suppression impossible."
+    }
+  },
+  "invoiceForm": {
+    "addTitle": "Ajouter une facture",
+    "editTitle": "Modifier la facture",
+    "ownerMemberId": "ID membre du propriétaire",
+    "optionalPlaceholder": "(facultatif)",
+    "amount": "Montant",
+    "currency": "Devise",
+    "method": "Moyen",
+    "status": "Statut",
+    "tier": "Niveau",
+    "months": "Mois",
+    "reference": "Référence",
+    "referencePlaceholder": "txn / code",
+    "note": "Note",
+    "errors": {
+      "invalidAmount": "Saisissez un montant valide.",
+      "saveFailed": "Impossible d'enregistrer la facture."
+    }
+  },
+  "planManager": {
+    "title": "Forfaits et offres",
+    "subtitle": "Définissez les prix, modifiez les détails et créez de nouvelles offres. Les modifications s'appliquent immédiatement au paiement.",
+    "newPackage": "Nouvelle offre",
+    "activeBadge": "Active",
+    "hiddenBadge": "Masquée",
+    "termMeta": "Durée {{months}} mois · {{tier}}",
+    "hide": "Masquer",
+    "show": "Afficher",
+    "hideTitle": "Masquer du paiement",
+    "showTitle": "Afficher au paiement",
+    "deleteTitle": "Supprimer le forfait",
+    "confirmDelete": "Supprimer le forfait « {{name}} » ? Les acheteurs ne le verront plus.",
+    "errors": {
+      "loadFailed": "Impossible de charger les forfaits.",
+      "updateFailed": "Impossible de mettre à jour le forfait.",
+      "deleteFailed": "Impossible de supprimer le forfait."
+    }
+  },
+  "planForm": {
+    "newTitle": "Nouvelle offre",
+    "editTitle": "Modifier {{name}}",
+    "editTitleAria": "Modifier l'offre",
+    "packageName": "Nom de l'offre",
+    "planType": "Type de forfait",
+    "typePaid": "Payant",
+    "typeTrial": "Essai gratuit",
+    "trialLength": "Durée de l'essai (jours)",
+    "price": "Prix",
+    "currency": "Devise",
+    "shownAs": "Affiché comme",
+    "trialShownValue": "{{days}} jours · gratuit",
+    "billedPer": "Facturé par",
+    "term": "Durée (mois accordés)",
+    "featureTier": "Niveau de fonctionnalités",
+    "bestValue": "Meilleure offre",
+    "active": "Active",
+    "tagline": "Accroche",
+    "taglinePlaceholder": "Tout ce dont un opérateur indépendant a besoin.",
+    "features": "Fonctionnalités (une par ligne)",
+    "featuresPlaceholder": "Profils de navigateur illimités\nMoteur d'empreinte complet\nPool de proxys et rotation",
+    "savePackage": "Enregistrer l'offre",
+    "errors": {
+      "nameRequired": "Donnez un nom à l'offre.",
+      "invalidPrice": "Saisissez un prix valide.",
+      "saveFailed": "Impossible d'enregistrer le forfait."
+    }
+  },
+  "subscribers": {
+    "title": "Abonnés",
+    "subtitle": "Chaque compte, sa date d'inscription, son forfait et son expiration. {{count}} au total.",
+    "assignPlan": "Attribuer un forfait",
+    "empty": "Aucun compte propriétaire pour l'instant.",
+    "trialSuffix": "essai",
+    "daysLeftShort": "{{days}} j",
+    "assign": "Attribuer",
+    "assignTitle": "Attribuer / accorder un forfait",
+    "state": {
+      "ended": "Terminé",
+      "grace": "Grâce",
+      "active": "Actif",
+      "trial": "Essai"
+    },
+    "cols": {
+      "account": "Compte",
+      "joined": "Inscrit le",
+      "plan": "Forfait",
+      "state": "État",
+      "expires": "Expire le",
+      "team": "Équipe"
+    },
+    "errors": {
+      "loadFailed": "Impossible de charger les abonnés."
+    }
+  },
+  "assignForm": {
+    "title": "Attribuer un forfait",
+    "account": "Compte",
+    "plan": "Forfait",
+    "months": "Mois",
+    "monthsWithDefault": "Mois (par défaut {{default}})",
+    "recordAsPaid": "Enregistrer comme vente payée",
+    "noteOptional": "Note (facultatif)",
+    "notePlaceholder": "Pourquoi ce forfait a été accordé",
+    "grantNote": "Accorde la durée immédiatement et lève tout blocage d'abonnement.",
+    "grantNotePaid": "Une facture payée est enregistrée.",
+    "grantNoteFree": "Enregistré comme attribution à 0 $.",
+    "fallbackAccount": "compte",
+    "fallbackPlan": "forfait",
+    "success_one": "{{plan}} attribué à {{name}} : {{count}} mois.",
+    "success_other": "{{plan}} attribué à {{name}} : {{count}} mois.",
+    "success_many": "{{plan}} attribué à {{name}} : {{count}} mois.",
+    "errors": {
+      "chooseAccount": "Choisissez un compte.",
+      "choosePlan": "Choisissez un forfait.",
+      "assignFailed": "Impossible d'attribuer le forfait."
+    }
+  },
+  "planText": {
+    "trialTagline": "Testez toutes les fonctionnalités gratuitement : accès complet, sans carte bancaire.",
+    "trialFullAccess": "Accès complet à toutes les fonctionnalités",
+    "trialTools": "Tous les outils d'empreinte, de proxy et de test de fuite",
+    "trialMacros": "Macros, préchauffage des cookies et profils mobiles",
+    "trialBackupSeats": "Sauvegarde chiffrée et sièges d'équipe",
+    "trialNoCard": "Aucune carte bancaire requise",
+    "trialUpgrade": "Passez à un forfait payant à tout moment",
+    "proTagline": "Tout ce dont un opérateur indépendant a besoin pour gérer des profils à grande échelle.",
+    "proProfiles": "Profils de navigateur locaux illimités",
+    "proFingerprint": "Moteur d'empreinte complet + tests de fuite",
+    "proProxies": "Pool de proxys, règles de rotation et correspondance géo automatique",
+    "proMacros": "Enregistreur de macros, planificateur et exécutions pilotées par les données",
+    "proCookieWarmer": "Préchauffage des cookies",
+    "proMobile": "Profils d'appareils mobiles / Android",
+    "proBackup": "Sauvegarde et restauration chiffrées de l'espace de travail",
+    "proDbEncryption": "Chiffrement complet de la base de données au repos",
+    "proPalette": "Palette de commandes + prise en main",
+    "proSeats": "Jusqu'à 3 membres d'équipe",
+    "proParallel": "Exécution parallèle, jusqu'à 3 profils à la fois, avec console d'exécution en direct",
+    "entTagline": "Pour les équipes : jusqu'à 25 membres, 10 profils à la fois et export du journal d'audit.",
+    "entEverythingInPro": "Tout ce qu'inclut Pro, plus :",
+    "entSeats": "Jusqu'à 25 membres d'équipe",
+    "entParallel": "Exécution parallèle, jusqu'à 10 profils à la fois, avec console d'exécution en direct",
+    "entAuditExport": "Export du journal d'audit (CSV / JSON)",
+    "entSupport": "Support prioritaire par e-mail"
+  },
+  "serverErrors": {
+    "SIGNUP_INVALID_EMAIL": "Saisissez une adresse e-mail valide.",
+    "SIGNUP_DISPOSABLE_EMAIL": "Veuillez utiliser une adresse e-mail permanente.",
+    "SIGNUP_NO_MX": "Nous n'avons trouvé aucun serveur de messagerie pour cette adresse.",
+    "SIGNUP_BAD_CODE": "Ce code est incorrect ou a expiré. Vérifiez l'e-mail ou demandez un nouveau code.",
+    "SIGNUP_OFFLINE": "Connectez-vous à Internet pour créer votre compte.",
+    "SIGNUP_FAILED": "Nous ne pouvons pas vérifier cet e-mail pour le moment. Réessayez dans quelques minutes.",
+    "RATE_LIMITED": "Trop de tentatives, réessayez dans quelques minutes.",
+    "TRIAL_USED": "Un essai gratuit a déjà été utilisé sur cet ordinateur ou avec cet e-mail. Choisissez un forfait ou saisissez un code d'achat.",
+    "TRIAL_OFFLINE": "Connectez-vous à Internet pour démarrer l'essai gratuit.",
+    "TRIAL_VERIFY_EMAIL": "Confirmez votre adresse e-mail pour démarrer l'essai gratuit. Nous vous avons envoyé un code à 6 chiffres.",
+    "TRIAL_NO_EMAIL": "Ajoutez d'abord une adresse e-mail au compte propriétaire, puis démarrez l'essai gratuit.",
+    "TRIAL_FAILED": "L'essai gratuit n'a pas pu être démarré pour le moment. Réessayez dans quelques minutes.",
+    "SERVER_UNAVAILABLE": "Notre serveur de licences ne répond pas pour le moment. Réessayez dans quelques minutes.",
+    "MACHINE_MISMATCH": "Cette licence est enregistrée sur un autre ordinateur. Transférez-la sur ce PC ou demandez à votre administrateur de la réinitialiser.",
+    "SIGNUP_INVALID_PHONE": "Saisissez le numéro de téléphone avec + et l'indicatif du pays, ou laissez le champ vide.",
+    "SIGNUP_USE_CASE": "Choisissez l'usage que vous ferez de SoftGlaze.",
+    "SIGNUP_USE_CASE_OTHER": "Dites-nous en quelques mots pour quoi vous utiliserez SoftGlaze.",
+    "CONFIRM_OFFLINE": "Connectez-vous à Internet pour confirmer votre e-mail."
+  },
+  "store": {
+    "cardTitle": "Abonnement Microsoft Store",
+    "processedBy": "Dans cette version, Microsoft est le prestataire de paiement : vous payez avec votre compte Microsoft et Microsoft facture l'abonnement chaque mois, ou chaque année avec un forfait annuel.",
+    "upgradeNote": "Passer de Pro à Enterprise démarre un second abonnement. Résiliez Pro dans votre compte Microsoft pour qu'il ne se renouvelle plus.",
+    "periodNote": "Passer de la facturation mensuelle à annuelle (ou l'inverse) démarre aussi un second abonnement. Résiliez l'ancien dans votre compte Microsoft pour qu'il ne se renouvelle plus.",
+    "downgradeNote": "Pour passer d'Enterprise à Pro, résiliez Enterprise dans votre compte Microsoft et achetez Pro à sa fin.",
+    "buyWith": "Acheter via le Microsoft Store",
+    "buyWithPrice": "Acheter via le Microsoft Store · {{price}}",
+    "priceFrom": "Prix du Microsoft Store, dans votre devise",
+    "restore": "Restaurer les achats Microsoft Store",
+    "moveHere": "Le transférer sur cet ordinateur",
+    "manage": "Gérer ou résilier dans votre compte Microsoft",
+    "result": {
+      "active": "Merci. Votre forfait {{plan}} est actif.",
+      "cancelled": "Achat annulé. Aucun montant n'a été débité.",
+      "pending": "Microsoft a bien reçu votre achat. Nous le confirmons, cela peut prendre une minute.",
+      "pendingLong": "Votre achat n'est pas encore confirmé. Cliquez sur « Restaurer les achats Microsoft Store » dans quelques minutes, ou écrivez à support@softglaze.com.",
+      "pendingOffline": "Votre achat est enregistré sur cet ordinateur. Il sera activé dès que l'application pourra joindre notre serveur.",
+      "pendingReview": "Nous avons reçu votre achat et le vérifions. Votre forfait sera activé dès qu'il sera approuvé.",
+      "none": "Aucun abonnement Microsoft Store actif pour cette application n'a été trouvé dans ce compte Microsoft.",
+      "inUse": "Cet abonnement est utilisé sur un autre ordinateur. Vous pouvez le transférer sur celui-ci.",
+      "moveLimit": "Cet abonnement a déjà été transféré deux fois vers un autre ordinateur au cours des 30 derniers jours. Écrivez à support@softglaze.com pour obtenir de l'aide.",
+      "unavailable": "Les achats Microsoft Store ne sont pas disponibles pour le moment. Veuillez réessayer plus tard.",
+      "productMissing": "Ce forfait n'est pas encore disponible dans le Microsoft Store.",
+      "network": "Impossible de joindre le Microsoft Store. Vérifiez votre connexion Internet et réessayez.",
+      "error": "L'achat n'a pas pu être finalisé : {{message}}"
+    }
+  }
+}

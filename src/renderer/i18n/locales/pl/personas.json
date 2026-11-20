@@ -1,0 +1,160 @@
+{
+  "header": {
+    "eyebrow": "Tożsamości",
+    "title": "Sejf danych",
+    "description": "Sejf tożsamości wielokrotnego użytku dla mechanizmu Smart Autofill. Dodawaj je ręcznie lub importuj arkusz; każda pamięta strony, na których już jej użyto.",
+    "refresh": "Odśwież",
+    "import": "Importuj Excel/CSV",
+    "addManually": "Dodaj ręcznie"
+  },
+  "stats": {
+    "totalIdentities": "Wszystkie tożsamości",
+    "neverUsed": "Nigdy nieużyte",
+    "usedAtLeastOnce": "Użyte co najmniej raz",
+    "totalUses": "Łączne użycia",
+    "filtering": "filtrowanie"
+  },
+  "toolbar": {
+    "searchPlaceholder": "Szukaj po imieniu, e-mailu, nazwie użytkownika lub etykiecie...",
+    "showing": "Wyświetlane: {{count}} ({{kind}})",
+    "kindNeverUsed": "nigdy nieużyte",
+    "kindUsed": "użyte",
+    "clear": "wyczyść"
+  },
+  "bulk": {
+    "selected": "Zaznaczono: {{count}}",
+    "resetUsedStatus": "Resetuj stan użycia",
+    "deleteSelected": "Usuń zaznaczone",
+    "clear": "Wyczyść",
+    "clearSelectionTitle": "Wyczyść zaznaczenie"
+  },
+  "table": {
+    "loading": "Wczytywanie tożsamości...",
+    "selectAll": "Zaznacz wszystkie tożsamości",
+    "selectRow": "Zaznacz {{name}}",
+    "colName": "Imię i nazwisko",
+    "colEmail": "E-mail",
+    "colUsername": "Nazwa użytkownika",
+    "colPassword": "Hasło",
+    "colPhone": "Telefon",
+    "colAddress": "Adres",
+    "colLabel": "Etykieta",
+    "colTimesUsed": "Liczba użyć",
+    "colCreated": "Utworzono",
+    "colActions": "Akcje",
+    "sitesUsed_one": "{{count}} strona",
+    "sitesUsed_few": "{{count}} strony",
+    "sitesUsed_many": "{{count}} stron",
+    "sitesUsed_other": "{{count}} strony",
+    "never": "Nigdy",
+    "editIdentity": "Edytuj tożsamość",
+    "deleteIdentity": "Usuń tożsamość",
+    "hidePassword": "Ukryj",
+    "revealPassword": "Pokaż",
+    "reuse": "♻ Użyj ponownie · {{count}}"
+  },
+  "empty": {
+    "title": "Twój sejf danych jest pusty",
+    "description": "Dodaj tożsamość ręcznie lub zaimportuj arkusz Excel/CSV, aby zacząć budować sejf autouzupełniania.",
+    "filteredTitle": "Żadna tożsamość nie pasuje do filtra",
+    "filteredDescription": "Spróbuj innego wyszukiwania lub wyczyść filtr."
+  },
+  "groups": {
+    "identity": "Tożsamość",
+    "account": "Konto",
+    "address": "Adres",
+    "meta": "Meta"
+  },
+  "fields": {
+    "firstName": "Imię",
+    "lastName": "Nazwisko",
+    "email": "E-mail",
+    "username": "Nazwa użytkownika",
+    "password": "Hasło",
+    "phone": "Telefon",
+    "dateOfBirth": "Data urodzenia",
+    "addressLine1": "Adres, wiersz 1",
+    "addressLine2": "Adres, wiersz 2",
+    "city": "Miasto",
+    "state": "Województwo / region",
+    "zipCode": "Kod pocztowy",
+    "country": "Kraj",
+    "company": "Firma",
+    "companyAddress": "Adres firmy",
+    "label": "Etykieta partii"
+  },
+  "form": {
+    "dialogTitleEdit": "Edytuj tożsamość",
+    "dialogTitleAdd": "Dodaj tożsamość",
+    "titleEdit": "Edytuj tożsamość",
+    "titleAdd": "Dodaj tożsamość",
+    "descEdit": "Zaktualizuj dane tej persony.",
+    "descAdd": "Dodaj jedną personę do sejfu danych. Pola oznaczone * są wymagane.",
+    "cancel": "Anuluj",
+    "saving": "Zapisywanie...",
+    "saveChanges": "Zapisz zmiany",
+    "addIdentity": "Dodaj tożsamość",
+    "showPassword": "Pokaż hasło",
+    "hidePassword": "Ukryj hasło"
+  },
+  "import": {
+    "dialogTitle": "Importuj tożsamości",
+    "title": "Import z Excel / CSV",
+    "descStep1": "Wybierz plik .xlsx, .xls lub .csv. Pierwszy wiersz powinien zawierać nagłówki kolumn. Do 1000 wierszy na import.",
+    "descStep2": "Przypisz kolumny do pól tożsamości. Wykryto wiersze: {{count}} w pliku {{fileName}}.",
+    "yourFile": "Twój plik",
+    "chooseSpreadsheet": "Wybierz arkusz",
+    "colIdentityField": "Pole tożsamości",
+    "colYourColumn": "Twoja kolumna",
+    "skipOption": "- pomiń -",
+    "mappedCount_one": "Przypisano {{count}} pole. Wiersze bez imienia/e-maila/nazwy użytkownika są pomijane.",
+    "mappedCount_few": "Przypisano {{count}} pola. Wiersze bez imienia/e-maila/nazwy użytkownika są pomijane.",
+    "mappedCount_many": "Przypisano {{count}} pól. Wiersze bez imienia/e-maila/nazwy użytkownika są pomijane.",
+    "mappedCount_other": "Przypisano {{count}} pola. Wiersze bez imienia/e-maila/nazwy użytkownika są pomijane.",
+    "done": "Gotowe",
+    "cancel": "Anuluj",
+    "back": "Wstecz",
+    "importing": "Importowanie...",
+    "importRows_one": "Importuj {{count}} wiersz",
+    "importRows_few": "Importuj {{count}} wiersze",
+    "importRows_many": "Importuj {{count}} wierszy",
+    "importRows_other": "Importuj {{count}} wiersza",
+    "result": {
+      "complete": "Import zakończony",
+      "addedPrefix": "Dodano",
+      "addedSuffix_one": "tożsamość do sejfu.",
+      "addedSuffix_few": "tożsamości do sejfu.",
+      "addedSuffix_many": "tożsamości do sejfu.",
+      "addedSuffix_other": "tożsamości do sejfu.",
+      "skipped_one": "Pominięto {{count}} pusty wiersz.",
+      "skipped_few": "Pominięto {{count}} puste wiersze.",
+      "skipped_many": "Pominięto {{count}} pustych wierszy.",
+      "skipped_other": "Pominięto {{count}} pustego wiersza."
+    },
+    "errors": {
+      "noRows": "Ten plik nie ma czytelnego wiersza nagłówka ani wierszy danych.",
+      "readFile": "Nie udało się odczytać tego pliku.",
+      "nothingMapped": "Brak wierszy do importu - przypisz co najmniej jedno z pól Imię / Nazwisko / E-mail / Nazwa użytkownika.",
+      "failed": "Import nie powiódł się."
+    }
+  },
+  "confirm": {
+    "fallbackName": "persona",
+    "deleteOne": "Usunąć tożsamość \"{{name}}\"? Tej operacji nie można cofnąć.",
+    "deleteSelected_one": "Usunąć {{count}} zaznaczoną tożsamość? Tej operacji nie można cofnąć.",
+    "deleteSelected_few": "Usunąć {{count}} zaznaczone tożsamości? Tej operacji nie można cofnąć.",
+    "deleteSelected_many": "Usunąć {{count}} zaznaczonych tożsamości? Tej operacji nie można cofnąć.",
+    "deleteSelected_other": "Usunąć {{count}} zaznaczonej tożsamości? Tej operacji nie można cofnąć.",
+    "resetSelected_one": "Zresetować historię \"użyto na\" dla {{count}} zaznaczonej tożsamości? Znów będzie dostępna na każdej stronie.",
+    "resetSelected_few": "Zresetować historię \"użyto na\" dla {{count}} zaznaczonych tożsamości? Znów będą dostępne na każdej stronie.",
+    "resetSelected_many": "Zresetować historię \"użyto na\" dla {{count}} zaznaczonych tożsamości? Znów będą dostępne na każdej stronie.",
+    "resetSelected_other": "Zresetować historię \"użyto na\" dla {{count}} zaznaczonej tożsamości? Znów będą dostępne na każdej stronie."
+  },
+  "errors": {
+    "load": "Nie udało się wczytać sejfu danych.",
+    "save": "Nie udało się zapisać tej tożsamości.",
+    "deleteOne": "Nie udało się usunąć tożsamości.",
+    "deleteSelected": "Nie udało się usunąć zaznaczonych tożsamości.",
+    "resetSelected": "Nie udało się zresetować zaznaczonych tożsamości."
+  }
+}

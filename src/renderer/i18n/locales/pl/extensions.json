@@ -1,0 +1,54 @@
+{
+  "header": {
+    "eyebrow": "Repozytorium Enterprise",
+    "title": "Rozszerzenia",
+    "summary_one": "{{count}} zainstalowane rozszerzenie · włączone: {{enabled}} dla profili, które ładują rozszerzenia",
+    "summary_few": "{{count}} zainstalowane rozszerzenia · włączone: {{enabled}} dla profili, które ładują rozszerzenia",
+    "summary_many": "{{count}} zainstalowanych rozszerzeń · włączone: {{enabled}} dla profili, które ładują rozszerzenia",
+    "summary_other": "{{count}} zainstalowanego rozszerzenia · włączone: {{enabled}} dla profili, które ładują rozszerzenia"
+  },
+  "stats": {
+    "total": "Wszystkie rozszerzenia",
+    "injected": "Włączone",
+    "disabled": "Wyłączone"
+  },
+  "caveat": {
+    "before": "Rozszerzenia nie są dodawane do każdego profilu. Ładują się tylko w profilach Chromium, które mają zaznaczone \"Ładuj rozszerzenia SoftGlaze (używa Chrome for Testing)\" na karcie Zaawansowane w edytorze profilu (domyślnie wyłączone). Takie profile montują je flagą Chromium",
+    "middle": "przy starcie, więc zmiana zadziała przy",
+    "nextLaunch": "następnym uruchomieniu",
+    "after": "takiego profilu. Zwykłe Chrome ignoruje tę flagę, więc te profile otwierają się w wersji Chrome for Testing: najpierw pobierz ją na stronie Przeglądarki, inaczej profil otworzy się bez rozszerzeń. Profile Firefox ich nie ładują."
+  },
+  "importer": {
+    "title": "Importuj do zespołu",
+    "description": "Wklej adres URL z Chrome Web Store lub 32-znakowy identyfikator - SoftGlaze pobierze i rozpakuje prawdziwy pakiet.",
+    "inputPlaceholder": "https://chromewebstore.google.com/detail/…  lub  cjpalhdlnbpafiamejdnhcphjbkeiagm",
+    "submit": "Importuj do zespołu"
+  },
+  "installPhase": {
+    "downloading": "Pobieranie pakietu…",
+    "extracting": "Rozpakowywanie archiwum…",
+    "registering": "Rejestrowanie…"
+  },
+  "permissionNotice": "Rozszerzeniami zespołu mogą zarządzać tylko administratorzy i wyższe role. Możesz przeglądać repozytorium.",
+  "searchPlaceholder": "Szukaj po nazwie lub ID…",
+  "empty": {
+    "loadErrorTitle": "Nie udało się wczytać rozszerzeń",
+    "noExtTitle": "Brak rozszerzeń",
+    "noMatchTitle": "Żadne rozszerzenie nie pasuje do wyszukiwania",
+    "noExtDesc": "Zaimportuj powyżej rozszerzenie z Chrome Web Store, aby dodać je do repozytorium zespołu. Ładuje się w profilach z zaznaczonym \"Ładuj rozszerzenia SoftGlaze\" na karcie Zaawansowane.",
+    "noMatchDesc": "Spróbuj innej nazwy lub ID."
+  },
+  "card": {
+    "unpacked": "Rozpakowane rozszerzenie",
+    "removeTitle": "Usuń z zespołu",
+    "injected": "Włączone",
+    "disabled": "Wyłączone"
+  },
+  "confirmRemove": "Usunąć \"{{name}}\" z repozytorium zespołu? Jego pliki lokalne zostaną usunięte.",
+  "errors": {
+    "couldNotLoad": "Nie udało się wczytać rozszerzeń.",
+    "installFailed": "Instalacja nie powiodła się.",
+    "couldNotUpdate": "Nie udało się zaktualizować rozszerzenia.",
+    "couldNotRemove": "Nie udało się usunąć rozszerzenia."
+  }
+}

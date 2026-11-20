@@ -1,0 +1,159 @@
+{
+  "billing": {
+    "status": {
+      "loading": "Đang tải…",
+      "sourceOwner": "Chủ mã nguồn",
+      "active": "Đang hoạt động",
+      "activeUntil": "Đang hoạt động · đến {{date}}",
+      "trialDaysLeft_one": "Dùng thử · còn {{count}} ngày",
+      "trialDaysLeft_other": "Dùng thử · còn {{count}} ngày",
+      "graceDaysLeft_one": "Ân hạn · còn {{count}} ngày",
+      "graceDaysLeft_other": "Ân hạn · còn {{count}} ngày",
+      "subscriptionEnded": "Gói đăng ký đã kết thúc"
+    },
+    "subscription": {
+      "title": "Gói đăng ký",
+      "planLine": "SoftGlaze Browser · gói {{tier}}",
+      "manageButton": "Quản lý gói đăng ký và các gói"
+    },
+    "seats": {
+      "label": "Chỗ cho nhóm",
+      "usage": "Đã dùng {{used}} / {{total}}"
+    },
+    "gateway": {
+      "title": "Phương thức thanh toán",
+      "description": "Chỉ dành cho Super Admin. Bật các phương thức hiện cho chủ sở hữu khi thanh toán và lưu khóa của từng nhà cung cấp.",
+      "loadError": "Không tải được cài đặt thanh toán.",
+      "footnote": "Khóa được mã hóa khi lưu trên máy này và không bao giờ rời khỏi máy. Thanh toán hoạt động bằng cách hỏi định kỳ (không có webhook), nên việc kiểm soát giữa các bản cài vẫn cần máy chủ cấp phép. Wise và Thủ công do bạn phê duyệt ở mục “Thanh toán đang chờ” bên dưới.",
+      "retry": "Thử lại"
+    },
+    "provider": {
+      "kindManual": "Thủ công",
+      "kindAutomated": "Tự động",
+      "on": "bật",
+      "enabled": "Đã bật",
+      "disabled": "Đã tắt",
+      "enableAria": "Bật {{provider}}",
+      "documentation": "Tài liệu",
+      "secretStoredPlaceholder": "•••••••• (để trống để giữ khóa hiện tại)",
+      "secretPlaceholder": "Dán khóa",
+      "save": "Lưu",
+      "testConnection": "Kiểm tra kết nối",
+      "enabledMsg": "Đã bật.",
+      "disabledMsg": "Đã tắt.",
+      "updateError": "Không cập nhật được.",
+      "savedMsg": "Đã lưu.",
+      "saveError": "Không lưu được.",
+      "connectionOk": "Kết nối ổn ✓",
+      "validationFailedKeys": "Xác thực thất bại - hãy kiểm tra khóa.",
+      "validationFailed": "Xác thực thất bại."
+    },
+    "manual": {
+      "title": "Thanh toán đang chờ",
+      "description": "Các khoản thanh toán thủ công (Wise / chuyển khoản ngân hàng) đang chờ bạn phê duyệt.",
+      "loadError": "Không tải được thanh toán thủ công.",
+      "resolveError": "Không cập nhật được khoản thanh toán đó.",
+      "ownerFallback": "Chủ sở hữu #{{id}}",
+      "refPrefix": "mã tham chiếu:",
+      "approve": "Phê duyệt",
+      "reject": "Từ chối",
+      "statusLabel": {
+        "pending": "đang chờ",
+        "approved": "đã phê duyệt",
+        "rejected": "đã từ chối"
+      }
+    }
+  },
+  "monetization": {
+    "heading": "Kiếm tiền",
+    "affiliate": {
+      "title": "Liên kết affiliate và giới thiệu",
+      "ownerOnly": "Chỉ chủ sở hữu",
+      "description": "URL đối tác của bạn cho các nút “Mua” trong chợ proxy. Để trống để dùng mặc định của Softglaze.",
+      "loadError": "Không tải được liên kết affiliate.",
+      "saveError": "Không lưu được liên kết affiliate.",
+      "savedMsg": "Đã lưu. Các nút trong chợ giờ dùng liên kết của bạn.",
+      "customLink": "Liên kết tùy chỉnh",
+      "defaultLink": "Liên kết mặc định",
+      "openLinkTitle": "Mở liên kết {{provider}}",
+      "saving": "Đang lưu…",
+      "saveButton": "Lưu liên kết",
+      "footnote": "Các liên kết này dùng cho nút “Mua tại…” / “Mở bảng điều khiển” ở Kho proxy → thẻ Nhà cung cấp. Đây chỉ là URL giới thiệu công khai - token và thông tin đăng nhập proxy không bao giờ bị ảnh hưởng."
+    }
+  },
+  "developerApi": {
+    "title": "Truy cập API cho nhà phát triển",
+    "description": "Tạo khóa API và chạy máy chủ REST cục bộ để điều khiển Softglaze bằng mã.",
+    "copy": "Sao chép",
+    "errors": {
+      "load": "Không tải được cài đặt API cho nhà phát triển.",
+      "nameRequired": "Hãy đặt tên cho khóa (ví dụ \"CI server\").",
+      "generate": "Không tạo được khóa API.",
+      "revoke": "Không thu hồi được khóa.",
+      "toggleServer": "Không thay đổi được trạng thái máy chủ cục bộ."
+    },
+    "keys": {
+      "title": "Khóa API",
+      "namePlaceholder": "Tên khóa (ví dụ CI server)",
+      "generate": "Tạo khóa API mới",
+      "copyOnce": "Hãy sao chép khóa này ngay - nó chỉ hiện một lần và không khôi phục được.",
+      "empty": "Chưa có khóa API nào.",
+      "lastUsed": "dùng lần cuối {{when}}",
+      "neverUsed": "chưa từng dùng",
+      "never": "chưa bao giờ",
+      "revoke": "Thu hồi",
+      "revokeConfirm": "Thu hồi khóa API \"{{name}}\"? Mọi script đang dùng nó sẽ ngừng hoạt động ngay. Không thể hoàn tác."
+    },
+    "server": {
+      "title": "REST API cục bộ",
+      "runningAt": "Đang chạy tại",
+      "stoppedPrefix": "Đã dừng · sẽ gắn vào",
+      "loopbackOnly": "(chỉ loopback)",
+      "disableTitle": "Tắt API cục bộ",
+      "enableTitle": "Bật API cục bộ",
+      "curlExample": "Ví dụ: khởi chạy hồ sơ bằng cURL",
+      "footnote": "Máy chủ chỉ nhận yêu cầu từ máy này và cần khóa Bearer hợp lệ."
+    }
+  },
+  "migration": {
+    "title": "Chuyển hồ sơ",
+    "ownerOnly": "Chỉ chủ sở hữu",
+    "description": "Nhập hồ sơ hiện có từ một trình duyệt đa hồ sơ khác qua API của nó.",
+    "sourcePlatform": "Nền tảng nguồn",
+    "noteLabel": "Lưu ý:",
+    "instructions": "Hướng dẫn",
+    "tokenSectionTitle": "Token API của {{platform}}",
+    "transferring": "Đang chuyển…",
+    "startTransfer": "Bắt đầu chuyển",
+    "tokenFootnote": "Token của bạn chỉ dùng một lần cho lần chuyển này và không bao giờ được lưu. Nền tảng cục bộ (AdsPower, ixBrowser) phải đang chạy và đã bật Local API.",
+    "errors": {
+      "tokenRequired": "Hãy nhập {{placeholder}} của {{platform}}.",
+      "transferFailed": "Chuyển thất bại."
+    },
+    "log": {
+      "title": "Nhật ký chuyển",
+      "imported": "Đã nhập {{created}}/{{total}}",
+      "errors_one": "{{count}} lỗi",
+      "errors_other": "{{count}} lỗi",
+      "waiting": "Đang chờ nền tảng phản hồi…"
+    },
+    "platforms": {
+      "dolphin": {
+        "placeholder": "Dolphin_Token",
+        "warning": "Cookie sẽ không được chuyển nếu bạn chuyển từ gói miễn phí của Dolphin."
+      },
+      "gologin": {
+        "placeholder": "Token API GoLogin"
+      },
+      "multilogin": {
+        "placeholder": "Token tự động hóa Multilogin"
+      },
+      "adspower": {
+        "placeholder": "Khóa Local API AdsPower"
+      },
+      "ixbrowser": {
+        "placeholder": "Khóa Local API ixBrowser"
+      }
+    }
+  }
+}

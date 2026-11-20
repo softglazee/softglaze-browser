@@ -1,0 +1,171 @@
+{
+  "billing": {
+    "status": {
+      "loading": "جارٍ التحميل…",
+      "sourceOwner": "مالك الشيفرة المصدرية",
+      "active": "نشط",
+      "activeUntil": "نشط · حتى {{date}}",
+      "trialDaysLeft_zero": "تجربة · لم يبقَ أي يوم",
+      "trialDaysLeft_one": "تجربة · بقي يوم واحد",
+      "trialDaysLeft_two": "تجربة · بقي يومان",
+      "trialDaysLeft_few": "تجربة · بقيت {{count}} أيام",
+      "trialDaysLeft_many": "تجربة · بقي {{count}} يومًا",
+      "trialDaysLeft_other": "تجربة · بقي {{count}} يوم",
+      "graceDaysLeft_zero": "مهلة · لم يبقَ أي يوم",
+      "graceDaysLeft_one": "مهلة · بقي يوم واحد",
+      "graceDaysLeft_two": "مهلة · بقي يومان",
+      "graceDaysLeft_few": "مهلة · بقيت {{count}} أيام",
+      "graceDaysLeft_many": "مهلة · بقي {{count}} يومًا",
+      "graceDaysLeft_other": "مهلة · بقي {{count}} يوم",
+      "subscriptionEnded": "انتهى الاشتراك"
+    },
+    "subscription": {
+      "title": "الاشتراك",
+      "planLine": "SoftGlaze Browser · خطة {{tier}}",
+      "manageButton": "إدارة الاشتراك والخطط"
+    },
+    "seats": {
+      "label": "مقاعد الفريق",
+      "usage": "{{used}} / {{total}} مستخدمة"
+    },
+    "gateway": {
+      "title": "طرق الدفع",
+      "description": "للمسؤول الأعلى فقط. فعّل الطرق التي تظهر للمالكين عند الدفع واحفظ مفاتيح كل مزوّد.",
+      "loadError": "تعذّر تحميل إعدادات الدفع.",
+      "footnote": "المفاتيح مشفّرة على هذا الجهاز ولا تغادره أبدًا. يعتمد الدفع على الاستعلام الدوري (بلا webhooks)، لذا ما زال فرض القيود بين التثبيتات المختلفة يحتاج إلى خادم الترخيص. توافق أنت على مدفوعات Wise والدفع اليدوي من «المدفوعات المعلقة» أدناه.",
+      "retry": "إعادة المحاولة"
+    },
+    "provider": {
+      "kindManual": "يدوي",
+      "kindAutomated": "تلقائي",
+      "on": "مفعّل",
+      "enabled": "مفعّل",
+      "disabled": "معطّل",
+      "enableAria": "تفعيل {{provider}}",
+      "documentation": "التوثيق",
+      "secretStoredPlaceholder": "•••••••• (اتركه فارغًا للإبقاء على الحالي)",
+      "secretPlaceholder": "الصق المفتاح",
+      "save": "حفظ",
+      "testConnection": "اختبار الاتصال",
+      "enabledMsg": "تم التفعيل.",
+      "disabledMsg": "تم التعطيل.",
+      "updateError": "تعذّر التحديث.",
+      "savedMsg": "تم الحفظ.",
+      "saveError": "تعذّر الحفظ.",
+      "connectionOk": "الاتصال يبدو سليمًا ✓",
+      "validationFailedKeys": "فشل التحقق - راجع المفاتيح.",
+      "validationFailed": "فشل التحقق."
+    },
+    "manual": {
+      "title": "المدفوعات المعلقة",
+      "description": "طلبات الدفع اليدوي (Wise / تحويل بنكي) بانتظار موافقتك.",
+      "loadError": "تعذّر تحميل المدفوعات اليدوية.",
+      "resolveError": "تعذّر تحديث هذه الدفعة.",
+      "ownerFallback": "المالك #{{id}}",
+      "refPrefix": "المرجع:",
+      "approve": "موافقة",
+      "reject": "رفض",
+      "statusLabel": {
+        "pending": "معلّقة",
+        "approved": "مقبولة",
+        "rejected": "مرفوضة"
+      }
+    }
+  },
+  "monetization": {
+    "heading": "تحقيق الدخل",
+    "affiliate": {
+      "title": "روابط الشراكة والإحالة",
+      "ownerOnly": "للمالك فقط",
+      "description": "روابط الشريك الخاصة بك لأزرار «شراء» في سوق البروكسي. اتركها فارغة لاستخدام الروابط الافتراضية لـ Softglaze.",
+      "loadError": "تعذّر تحميل روابط الشراكة.",
+      "saveError": "تعذّر حفظ روابط الشراكة.",
+      "savedMsg": "تم الحفظ. أزرار السوق تستخدم روابطك الآن.",
+      "customLink": "رابط مخصص",
+      "defaultLink": "الرابط الافتراضي",
+      "openLinkTitle": "فتح رابط {{provider}}",
+      "saving": "جارٍ الحفظ…",
+      "saveButton": "حفظ الروابط",
+      "footnote": "تعمل بهذه الروابط أزرار «الشراء من…» / «زيارة لوحة التحكم» في تبويب المزوّدين ضمن مجمّع البروكسيات. إنها روابط إحالة عامة فقط - ولا تتأثر رموز البروكسي وبيانات الاعتماد أبدًا."
+    }
+  },
+  "developerApi": {
+    "title": "وصول المطورين إلى API",
+    "description": "أنشئ مفاتيح API وشغّل خادم REST محليًا للتحكم في Softglaze برمجيًا.",
+    "copy": "نسخ",
+    "errors": {
+      "load": "تعذّر تحميل إعدادات API للمطورين.",
+      "nameRequired": "سمِّ المفتاح (مثلًا \"CI server\").",
+      "generate": "تعذّر إنشاء مفتاح API.",
+      "revoke": "تعذّر إلغاء المفتاح.",
+      "toggleServer": "تعذّر تغيير حالة الخادم المحلي."
+    },
+    "keys": {
+      "title": "مفاتيح API",
+      "namePlaceholder": "اسم المفتاح (مثلًا CI server)",
+      "generate": "إنشاء مفتاح API جديد",
+      "copyOnce": "انسخ هذا المفتاح الآن - يظهر مرة واحدة فقط ولا يمكن استرجاعه.",
+      "empty": "لا توجد مفاتيح API بعد.",
+      "lastUsed": "آخر استخدام {{when}}",
+      "neverUsed": "لم يُستخدم قط",
+      "never": "أبدًا",
+      "revoke": "إلغاء",
+      "revokeConfirm": "إلغاء مفتاح API «{{name}}»؟ سيتوقف أي سكربت يستخدمه عن العمل فورًا. لا يمكن التراجع عن ذلك."
+    },
+    "server": {
+      "title": "REST API محلي",
+      "runningAt": "يعمل على",
+      "stoppedPrefix": "متوقف · سيرتبط بـ",
+      "loopbackOnly": "(loopback فقط)",
+      "disableTitle": "تعطيل API المحلي",
+      "enableTitle": "تفعيل API المحلي",
+      "curlExample": "مثال: تشغيل ملف عبر cURL",
+      "footnote": "لا يقبل الخادم إلا الطلبات الواردة من هذا الجهاز ويتطلب مفتاح Bearer صالحًا."
+    }
+  },
+  "migration": {
+    "title": "نقل الملفات",
+    "ownerOnly": "للمالك فقط",
+    "description": "استورد ملفاتك الحالية من متصفح آخر متعدد الملفات عبر API الخاص به.",
+    "sourcePlatform": "المنصة المصدر",
+    "noteLabel": "ملاحظة:",
+    "instructions": "التعليمات",
+    "tokenSectionTitle": "رمز API لـ {{platform}}",
+    "transferring": "جارٍ النقل…",
+    "startTransfer": "بدء النقل",
+    "tokenFootnote": "يُستخدم رمزك مرة واحدة لهذا النقل ولا يُخزَّن أبدًا. يجب أن تكون المنصات المحلية (AdsPower وixBrowser) قيد التشغيل مع تفعيل Local API فيها.",
+    "errors": {
+      "tokenRequired": "أدخل {{placeholder}} ({{platform}}).",
+      "transferFailed": "فشل النقل."
+    },
+    "log": {
+      "title": "سجل النقل",
+      "imported": "تم استيراد {{created}}/{{total}}",
+      "errors_zero": "لا أخطاء",
+      "errors_one": "خطأ واحد",
+      "errors_two": "خطآن",
+      "errors_few": "{{count}} أخطاء",
+      "errors_many": "{{count}} خطأً",
+      "errors_other": "{{count}} خطأ",
+      "waiting": "بانتظار رد المنصة…"
+    },
+    "platforms": {
+      "dolphin": {
+        "placeholder": "Dolphin_Token",
+        "warning": "لن تُنقل الكوكيز إذا كنت تنقل من الخطة المجانية لـ Dolphin."
+      },
+      "gologin": {
+        "placeholder": "رمز API لـ GoLogin"
+      },
+      "multilogin": {
+        "placeholder": "رمز الأتمتة لـ Multilogin"
+      },
+      "adspower": {
+        "placeholder": "مفتاح Local API لـ AdsPower"
+      },
+      "ixbrowser": {
+        "placeholder": "مفتاح Local API لـ ixBrowser"
+      }
+    }
+  }
+}

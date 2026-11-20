@@ -1,0 +1,70 @@
+{
+  "header": {
+    "eyebrow": "انجنز",
+    "title": "براؤزرز",
+    "subtitle": "ضرورت کے وقت اصل Chrome اور Firefox بلڈز ڈاؤن لوڈ کریں۔ یہ خود بخود انسٹال ہو کر لانچ کے لیے تیار ہو جاتے ہیں۔",
+    "refresh": "ریفریش"
+  },
+  "stats": {
+    "chromeInstalled": "انسٹال شدہ Chrome",
+    "chromeAvailable": "دستیاب Chrome",
+    "firefoxInstalled": "انسٹال شدہ Firefox",
+    "firefoxAvailable": "دستیاب Firefox"
+  },
+  "counts": {
+    "installedAvailable": "· {{installed}} انسٹال شدہ · {{available}} دستیاب"
+  },
+  "engine": {
+    "heading": "فنگر پرنٹ انجن",
+    "installed": "انسٹال شدہ",
+    "notInstalled": "انسٹال نہیں",
+    "description": "fingerprint-chromium: یہ canvas / WebGL / UA / پلیٹ فارم / ٹائم زون براہ راست سیٹ کرتا ہے، webdriver چھپاتا ہے اور WebRTC لیک بلاک کرتا ہے۔ اسے سیٹنگز ← براؤزر میں آن کریں۔",
+    "progressInstalling": "انسٹال ہو رہا ہے",
+    "progressVerifying": "تصدیق ہو رہی ہے",
+    "installing": "انسٹال ہو رہا ہے",
+    "verifying": "تصدیق ہو رہی ہے",
+    "downloading": "ڈاؤن لوڈ ہو رہا ہے",
+    "download": "ڈاؤن لوڈ (~180 MB)"
+  },
+  "firefox": {
+    "heading": "Firefox",
+    "ready": "تیار",
+    "notDetected": "نہیں ملا",
+    "detectedDesc": "تیار۔ {{path}} پر ملا۔ Firefox پروفائلز اصل Firefox لانچ کرتی ہیں، پراکسی، UA، زبان اور ٹائم زون کے ساتھ اور WebRTC بند کر کے۔",
+    "notDetectedDesc": "سسٹم پر Firefox نہیں ملا۔ نیچے سے کوئی ورژن ڈاؤن لوڈ کریں۔ یہ ایپ کے اندر انسٹال ہوگا اور Firefox پروفائلز اصل Firefox لانچ کریں گی، پراکسی، UA، زبان اور ٹائم زون کے ساتھ اور WebRTC بند کر کے۔",
+    "fetching": "Firefox ریلیز کیٹلاگ لایا جا رہا ہے…",
+    "empty": "Firefox کا کوئی ورژن دستیاب نہیں (کیا آپ آف لائن ہیں؟)۔"
+  },
+  "chromium": {
+    "heading": "Chromium (Chrome for Testing)",
+    "subtitle": "اصل بلڈز: UA، Client-Hints، TLS اور workers سب واقعی ورژن سے ملتے ہیں۔",
+    "fetching": "Chrome-for-Testing کیٹلاگ لایا جا رہا ہے…",
+    "empty": "کوئی ورژن دستیاب نہیں (کیا آپ آف لائن ہیں؟)۔"
+  },
+  "row": {
+    "versionLabel": "{{brand}} {{major}}",
+    "ready": "تیار",
+    "paused": "رکا ہوا",
+    "interrupted": "رک گیا",
+    "resume": "دوبارہ شروع کریں",
+    "download": "ڈاؤن لوڈ",
+    "retry": "دوبارہ کوشش کریں",
+    "downloading": "ڈاؤن لوڈ ہو رہا ہے",
+    "installing": "انسٹال ہو رہا ہے…",
+    "installingShort": "انسٹال ہو رہا ہے",
+    "queued": "قطار میں…",
+    "pauseDownload": "ڈاؤن لوڈ روکیں",
+    "pausedPercent": "رکا ہوا · {{percent}}%",
+    "interruptedPercent": "رک گیا · {{percent}}%"
+  },
+  "errors": {
+    "catalogUnreachable": "براؤزر کیٹلاگ تک رسائی نہیں ہو سکی۔ اپنا انٹرنیٹ کنکشن چیک کریں۔",
+    "downloadFailed": "ڈاؤن لوڈ ناکام ہو گیا۔",
+    "pauseFailed": "روکنا ناکام ہو گیا۔",
+    "resumeFailed": "دوبارہ شروع کرنا ناکام ہو گیا۔"
+  },
+  "browsers": {
+    "showAll": "تمام {{n}} ورژن دکھائیں",
+    "showLess": "کم دکھائیں"
+  }
+}

@@ -1,0 +1,281 @@
+{
+  "common": {
+    "back": "返回",
+    "redeem": "兑换",
+    "go": "前往"
+  },
+  "remember": {
+    "label": "在此设备上保持登录",
+    "unavailable": "此设备无法安全地存储登录信息（操作系统加密不可用），因此下次启动时需要重新登录。"
+  },
+  "brand": {
+    "tagline": "多配置文件",
+    "bullets": {
+      "fingerprints": "每个配置文件都有独特且一致的指纹",
+      "proxy": "每个身份都有专属代理",
+      "localFirst": "本地优先：你的工作区存储在此设备上"
+    },
+    "heroLine1": "运行数百个身份。",
+    "heroLine2": "让每个身份彼此独立。",
+    "heroBody": "面向团队的本地优先多配置文件浏览器。每个配置文件都有自己的 Cookie、存储、代理和指纹设置。",
+    "footer": "© {{year}} SoftGlaze · 本地工作区",
+    "trust": {
+      "local": "本地优先",
+      "encrypted": "工作区锁定",
+      "private": "零遥测"
+    },
+    "slides": {
+      "security": {
+        "title": "可靠的数据安全",
+        "body": "你的配置文件、Cookie 和浏览数据都保留在此设备上，双重验证种子和服务商密钥使用系统钥匙串密封保存。"
+      },
+      "fingerprint": {
+        "title": "一致的指纹",
+        "body": "每个配置文件都带有独特且一致的指纹：canvas、WebGL、字体、音频和硬件。"
+      },
+      "proxy": {
+        "title": "每个身份一个代理",
+        "body": "为每个配置文件绑定专属的网络身份，放心轮换。"
+      },
+      "automation": {
+        "title": "节省时间的自动化",
+        "body": "预热 Cookie、批量生成配置文件，并规模化编排一切。"
+      }
+    }
+  },
+  "license": {
+    "machineMismatch": "此许可证已注册到另一台电脑。请将其转移到这台电脑，或请管理员重置。"
+  },
+  "pay": {
+    "noMethods": "我们正在接入新的支付服务商，应用内购买暂停中。如需通过发票购买，请发送邮件至 support@softglaze.com，然后输入您的购买码。",
+    "submitted": "付款已提交，管理员审核后会尽快激活你的套餐。",
+    "manualBadge": "手动",
+    "continueTo": "继续前往 {{label}}",
+    "openPaymentLink": "打开付款链接",
+    "referencePlaceholder": "付款参考号/交易 ID",
+    "submitForApproval": "我已付款，提交审核"
+  },
+  "banned": {
+    "blockedHeading": "您的账号已被阻止",
+    "endedHeading": "你的订阅已结束",
+    "blockedBodyNamed": "{{name}}，您的账号已被管理员阻止。请联系管理员恢复访问，您的数据是安全的。",
+    "blockedBody": "您的账号已被管理员阻止。请联系管理员恢复访问，您的数据是安全的。",
+    "endedBodyNamed": "{{name}}，此许可证已失效（已退款、已撤销或已注册到其他电脑）。请选择一个套餐以解锁工作区。你的配置文件和数据都安全地保留着。",
+    "endedBody": "此许可证已失效（已退款、已撤销或已注册到其他电脑）。请选择一个套餐以解锁工作区。你的配置文件和数据都安全地保留着。",
+    "haveCode": "有购买码？",
+    "needHelp": "需要帮助？请联系您的管理员。",
+    "signOut": "退出登录"
+  },
+  "register": {
+    "title": "创建你的账号",
+    "subtitle": "这是你的主账号，也就是工作区的所有者。",
+    "firstName": "名",
+    "lastName": "姓",
+    "email": "邮箱",
+    "emailPlaceholder": "you@workspace.com",
+    "phone": "电话号码",
+    "phonePlaceholder": "+31 6 12345678",
+    "password": "密码",
+    "passwordPlaceholder": "至少 8 个字符",
+    "confirm": "确认",
+    "confirmPlaceholder": "再次输入",
+    "continue": "继续",
+    "storedLocally": "在此设备上本地加密存储",
+    "haveAccount": "已有账号？",
+    "logIn": "登录",
+    "consent": "通过邮件接收产品资讯和使用技巧",
+    "consentNote": "验证码、试用提醒和账号邮件始终会发送。只有勾选此项才会发送产品资讯。",
+    "checkedByServer": "我们会向你发送验证码以确认此邮箱。你的配置文件和数据会保留在此设备上。",
+    "phoneOptional": "电话号码（可选）",
+    "phoneIntlPlaceholder": "+44 20 7946 0958",
+    "phoneHint": "以 + 和国家/地区代码开头。"
+  },
+  "verify": {
+    "title": "验证你的邮箱",
+    "subtitlePrefix": "请输入发送到以下邮箱的 6 位验证码：",
+    "subtitleSuffix": "。",
+    "devModePrefix": "开发模式：目前不会实际发送邮件。你的验证码是",
+    "devModeSuffix": "。",
+    "verifyCreate": "验证并创建账号",
+    "resendIn": "{{count}} 秒后可重新发送",
+    "resend": "重新发送验证码",
+    "checkSpam": "验证码可能需要一分钟才能送达。如果没有收到，请检查垃圾邮件文件夹。"
+  },
+  "lead": {
+    "useCase": "你打算用 SoftGlaze 做什么？",
+    "useCasePlaceholder": "请选择",
+    "useCases": {
+      "ecommerce": "电商店铺和交易平台",
+      "social_media": "社交媒体账号",
+      "affiliate_marketing": "联盟营销和媒体采购",
+      "agency": "为客户提供代理服务",
+      "web_research": "网络调研和质量测试",
+      "other": "其他用途"
+    },
+    "useCaseOther": "请简单描述",
+    "useCaseOtherPlaceholder": "例如：按国家/地区查看价格",
+    "company": "公司或网站（可选）",
+    "companyPlaceholder": "Acme Ltd 或 acme.com"
+  },
+  "confirm": {
+    "title": "确认你的邮箱",
+    "subtitle": "现在每个 SoftGlaze 工作区都需要一个已确认的邮箱。请检查你的信息，我们会向你发送 6 位验证码。",
+    "sendCode": "发送验证码",
+    "codeTitle": "输入验证码",
+    "codeBody": "我们已向 {{email}} 发送 6 位验证码。输入后即可确认此工作区的邮箱。",
+    "confirmContinue": "确认并继续",
+    "changeDetails": "修改信息",
+    "dataNote": "你的配置文件和数据会保留在这台电脑上。我们保存这些信息是为了维护你的账号。",
+    "later": "暂时继续",
+    "laterNote": "无法连接到我们的服务器。你现在可以使用应用，下次启动时我们会再次询问。",
+    "memberTitle": "所有者需要确认此工作区",
+    "memberBody": "此工作区在使用前，需要其所有者确认邮箱。请让所有者登录并完成确认，或以所有者身份登录。",
+    "signInAsOwner": "以所有者身份登录"
+  },
+  "plan": {
+    "title": "一切就绪",
+    "subtitlePrefix": "你的账号已准备好，附带",
+    "trialHighlight": "7 天免费试用",
+    "subtitleSuffix": "。立即开始，或激活付费套餐。",
+    "startTrialTitle": "开始 7 天免费试用",
+    "startTrialSubtitle": "现在无需付款，畅享全部功能。",
+    "activatePaid": "立即激活付费套餐",
+    "haveCode": "有购买码？",
+    "skip": "跳过，开始试用",
+    "tenantTitle": "你的账号已准备好",
+    "tenantSubtitle": "开始免费试用，或选择一个套餐。",
+    "tenantTrialSubtitle": "完整访问，无需付款。每台电脑和每个邮箱限一次免费试用。",
+    "choosePlan": "或选择一个套餐",
+    "verifyTitle": "确认你的邮箱",
+    "verifyBody": "我们已向 {{email}} 发送 6 位验证码。输入后即可开始免费试用。",
+    "verifyStart": "确认并开始试用",
+    "continueFreeTitle": "继续使用免费套餐",
+    "continueFreeSubtitle": "永久免费：25 个配置文件，同时运行 1 个。随时可以升级。",
+    "trialUsedFree": "这台电脑或该邮箱已使用过免费试用。你可以继续使用免费套餐。"
+  },
+  "login": {
+    "welcomeBackNamed": "欢迎回来，{{name}}",
+    "welcomeBack": "欢迎回来",
+    "subtitle": "登录以解锁你的工作区。",
+    "email": "邮箱",
+    "password": "密码",
+    "forgot": "忘记密码？",
+    "passwordPlaceholder": "主密码",
+    "forgotBody": "本地安装的主密码无法找回，它永远不会离开此设备。如果丢失，需要在“设置”中重置工作区。",
+    "signIn": "登录",
+    "noAccount": "还没有账号？",
+    "newHere": "初次使用 SoftGlaze？",
+    "createOne": "创建你的账号",
+    "haveInvite": "有邀请码？",
+    "teamSignIn": "团队成员登录"
+  },
+  "invite": {
+    "title": "兑换邀请",
+    "subtitle": "输入你收到的邀请码，并为你的账号设置密码。",
+    "code": "邀请码",
+    "codePlaceholder": "SG-XXXX-XXXX",
+    "yourName": "你的姓名",
+    "optional": "（可选）",
+    "namePlaceholder": "姓名",
+    "setPassword": "设置密码",
+    "passwordPlaceholder": "至少 6 个字符",
+    "join": "加入工作区"
+  },
+  "member": {
+    "title": "团队成员登录",
+    "subtitle": "使用兑换邀请时设置的邮箱/名称和密码。",
+    "identifier": "邮箱或名称",
+    "identifierPlaceholder": "you@workspace.com",
+    "password": "密码",
+    "passwordPlaceholder": "你的密码",
+    "signIn": "登录",
+    "haveInviteInstead": "有邀请码？",
+    "redeemIt": "去兑换"
+  },
+  "super": {
+    "title": "超级管理员",
+    "access": "超级管理员访问",
+    "setupSubtitlePrefix": "首次运行设置。为",
+    "setupSubtitleHighlight": "此安装",
+    "setupSubtitleSuffix": "创建超级管理员凭据。它以哈希形式存储在此设备上，是唯一的登录方式，请妥善保管。",
+    "username": "用户名",
+    "usernamePlaceholder": "superadmin",
+    "password": "密码",
+    "setupPasswordPlaceholder": "至少 8 个字符",
+    "confirmPassword": "确认密码",
+    "confirmPasswordPlaceholder": "再次输入密码",
+    "createCredentials": "创建凭据",
+    "loginSubtitle": "源代码所有者访问。跳过注册并解锁完整工作区。",
+    "usernameOrEmail": "用户名或邮箱",
+    "loginPasswordPlaceholder": "密码",
+    "enterWorkspace": "进入工作区"
+  },
+  "pick": {
+    "title": "谁在使用？",
+    "subtitle": "选择你的成员资料以继续。",
+    "pin": "PIN",
+    "suspended": "已暂停",
+    "pinPlaceholder": "输入 PIN",
+    "haveInvite": "有邀请码？",
+    "teamSignIn": "团队成员登录"
+  },
+  "db": {
+    "title": "解锁数据库",
+    "subtitle": "此工作区的数据库已加密。请输入工作区密码以解密并打开。",
+    "workspacePassword": "工作区密码",
+    "passwordPlaceholder": "工作区密码",
+    "unlock": "解锁",
+    "corrupted": "如果您确定密码正确，数据库文件可能已损坏。您可以重新安装并恢复工作区备份（设置 → 工作区备份和恢复）来恢复数据。密码无法重置，只有使用正确的密码才能打开数据。"
+  },
+  "errors": {
+    "enterFirstLast": "请输入你的名和姓。",
+    "validEmail": "请输入有效的邮箱地址。",
+    "validPhone": "请输入有效的电话号码。",
+    "password8": "密码至少需要 8 个字符。",
+    "passwordsNoMatch": "两次输入的密码不一致。",
+    "couldNotSendCode": "无法发送验证码。",
+    "couldNotResendCode": "无法重新发送验证码。",
+    "enter6Digit": "请输入 6 位验证码。",
+    "verificationFailed": "验证失败。",
+    "incorrectPassword": "密码不正确。",
+    "couldNotSignIn": "无法登录。",
+    "superSetupRequired": "尚未设置超级管理员凭据，请在下方创建。",
+    "invalidSuperCredentials": "超级管理员凭据无效。",
+    "couldNotCreateSuper": "无法创建超级管理员凭据。",
+    "enterInviteCode": "请输入你的邀请码。",
+    "password6": "密码至少需要 6 个字符。",
+    "couldNotRedeemInvite": "无法兑换该邀请码。",
+    "enterEmailNamePassword": "请输入你的邮箱/名称和密码。",
+    "enterPurchaseCode": "请输入你的购买码。",
+    "invalidPurchaseCode": "该购买码无效。",
+    "noPaymentMethod": "暂无可用的付款方式。",
+    "paymentNotStarted": "无法开始付款。",
+    "couldNotSubmitPayment": "无法提交你的付款。",
+    "enterWorkspacePassword": "请输入工作区密码。",
+    "dbStillLocked": "数据库仍处于锁定状态，请重试。",
+    "dbMissing": "加密的数据库文件丢失。请从工作区备份恢复。",
+    "dbUnlockFailed": "密码不正确，或文件已损坏。",
+    "couldNotUnlockDb": "无法解锁数据库。",
+    "trialFailed": "无法开始免费试用。"
+  },
+  "serverErrors": {
+    "SIGNUP_INVALID_EMAIL": "请输入有效的邮箱地址。",
+    "SIGNUP_DISPOSABLE_EMAIL": "请使用长期有效的邮箱地址。",
+    "SIGNUP_NO_MX": "找不到该地址的邮件服务器。",
+    "SIGNUP_BAD_CODE": "验证码不正确或已过期。请检查邮件或重新获取验证码。",
+    "SIGNUP_OFFLINE": "请连接互联网以创建账号。",
+    "SIGNUP_FAILED": "目前无法验证该邮箱，请过几分钟再试。",
+    "RATE_LIMITED": "尝试次数过多，请过几分钟再试。",
+    "TRIAL_USED": "这台电脑或该邮箱已使用过免费试用。请选择套餐或输入购买码。",
+    "TRIAL_OFFLINE": "请连接互联网以开始免费试用。",
+    "TRIAL_VERIFY_EMAIL": "请确认您的邮箱地址以开始免费试用。我们已向您发送 6 位验证码。",
+    "TRIAL_NO_EMAIL": "请先为所有者账号添加邮箱地址，然后再开始免费试用。",
+    "TRIAL_FAILED": "目前无法开始免费试用，请过几分钟再试。",
+    "SERVER_UNAVAILABLE": "我们的许可证服务器暂时没有响应，请过几分钟再试。",
+    "MACHINE_MISMATCH": "此许可证已注册到另一台电脑。请将其转移到这台电脑，或请管理员重置。",
+    "SIGNUP_INVALID_PHONE": "请输入带 + 和国家/地区代码的电话号码，或留空。",
+    "SIGNUP_USE_CASE": "请选择你将用 SoftGlaze 做什么。",
+    "SIGNUP_USE_CASE_OTHER": "请简单告诉我们你将用 SoftGlaze 做什么。",
+    "CONFIRM_OFFLINE": "请连接互联网以确认您的邮箱。"
+  }
+}

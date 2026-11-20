@@ -1,0 +1,146 @@
+{
+  "header": {
+    "eyebrow": "身份",
+    "title": "数据保险库",
+    "description": "供智能自动填充引擎使用的可复用身份库。可以手动添加或导入电子表格；每个身份都会记住它已用过的网站。",
+    "refresh": "刷新",
+    "import": "导入 Excel/CSV",
+    "addManually": "手动添加"
+  },
+  "stats": {
+    "totalIdentities": "身份总数",
+    "neverUsed": "从未使用",
+    "usedAtLeastOnce": "至少使用过一次",
+    "totalUses": "总使用次数",
+    "filtering": "筛选中"
+  },
+  "toolbar": {
+    "searchPlaceholder": "按姓名、邮箱、用户名或标签搜索...",
+    "showing": "显示 {{count}} 个{{kind}}身份",
+    "kindNeverUsed": "从未使用的",
+    "kindUsed": "已使用的",
+    "clear": "清除"
+  },
+  "bulk": {
+    "selected": "已选择 {{count}} 个",
+    "resetUsedStatus": "重置使用状态",
+    "deleteSelected": "删除所选",
+    "clear": "清除",
+    "clearSelectionTitle": "清除选择"
+  },
+  "table": {
+    "loading": "正在加载身份...",
+    "selectAll": "选择所有身份",
+    "selectRow": "选择 {{name}}",
+    "colName": "姓名",
+    "colEmail": "邮箱",
+    "colUsername": "用户名",
+    "colPassword": "密码",
+    "colPhone": "电话",
+    "colAddress": "地址",
+    "colLabel": "标签",
+    "colTimesUsed": "使用次数",
+    "colCreated": "创建时间",
+    "colActions": "操作",
+    "sitesUsed_one": "{{count}} 个网站",
+    "sitesUsed_other": "{{count}} 个网站",
+    "never": "从未",
+    "editIdentity": "编辑身份",
+    "deleteIdentity": "删除身份",
+    "hidePassword": "隐藏",
+    "revealPassword": "显示",
+    "reuse": "♻ 复用 · {{count}}"
+  },
+  "empty": {
+    "title": "你的数据保险库是空的",
+    "description": "手动添加一个身份，或导入 Excel/CSV 表格，开始建立你的自动填充库。",
+    "filteredTitle": "没有符合筛选条件的身份",
+    "filteredDescription": "请尝试其他搜索词，或清除筛选。"
+  },
+  "groups": {
+    "identity": "身份",
+    "account": "账号",
+    "address": "地址",
+    "meta": "其他信息"
+  },
+  "fields": {
+    "firstName": "名",
+    "lastName": "姓",
+    "email": "邮箱",
+    "username": "用户名",
+    "password": "密码",
+    "phone": "电话",
+    "dateOfBirth": "出生日期",
+    "addressLine1": "地址第 1 行",
+    "addressLine2": "地址第 2 行",
+    "city": "城市",
+    "state": "州/省",
+    "zipCode": "邮政编码",
+    "country": "国家/地区",
+    "company": "公司",
+    "companyAddress": "公司地址",
+    "label": "批次标签"
+  },
+  "form": {
+    "dialogTitleEdit": "编辑身份",
+    "dialogTitleAdd": "添加身份",
+    "titleEdit": "编辑身份",
+    "titleAdd": "添加身份",
+    "descEdit": "更新此人设的详细信息。",
+    "descAdd": "向数据保险库添加一个人设。带 * 的字段为必填项。",
+    "cancel": "取消",
+    "saving": "正在保存...",
+    "saveChanges": "保存更改",
+    "addIdentity": "添加身份",
+    "showPassword": "显示密码",
+    "hidePassword": "隐藏密码"
+  },
+  "import": {
+    "dialogTitle": "导入身份",
+    "title": "从 Excel / CSV 导入",
+    "descStep1": "选择 .xlsx、.xls 或 .csv 文件。第一行应为列标题。每次最多导入 1000 行。",
+    "descStep2": "将你的列映射到身份字段。在 {{fileName}} 中检测到 {{count}} 行。",
+    "yourFile": "你的文件",
+    "chooseSpreadsheet": "选择电子表格",
+    "colIdentityField": "身份字段",
+    "colYourColumn": "你的列",
+    "skipOption": "- 跳过 -",
+    "mappedCount_one": "已映射 {{count}} 个字段。没有姓名/邮箱/用户名的行将被跳过。",
+    "mappedCount_other": "已映射 {{count}} 个字段。没有姓名/邮箱/用户名的行将被跳过。",
+    "done": "完成",
+    "cancel": "取消",
+    "back": "返回",
+    "importing": "正在导入...",
+    "importRows_one": "导入 {{count}} 行",
+    "importRows_other": "导入 {{count}} 行",
+    "result": {
+      "complete": "导入完成",
+      "addedPrefix": "已向保险库添加",
+      "addedSuffix_one": "个身份。",
+      "addedSuffix_other": "个身份。",
+      "skipped_one": "已跳过 {{count}} 个空行。",
+      "skipped_other": "已跳过 {{count}} 个空行。"
+    },
+    "errors": {
+      "noRows": "该文件没有可读取的标题行或数据行。",
+      "readFile": "无法读取该文件。",
+      "nothingMapped": "没有可导入的行：请至少映射“名”“姓”“邮箱”“用户名”中的一项。",
+      "failed": "导入失败。"
+    }
+  },
+  "confirm": {
+    "fallbackName": "人设",
+    "deleteOne": "删除身份“{{name}}”？此操作无法撤销。",
+    "deleteSelected_one": "删除所选的 {{count}} 个身份？此操作无法撤销。",
+    "deleteSelected_other": "删除所选的 {{count}} 个身份？此操作无法撤销。",
+    "resetSelected_one": "重置所选 {{count}} 个身份的“已用于”记录？它们将再次可用于所有网站。",
+    "resetSelected_other": "重置所选 {{count}} 个身份的“已用于”记录？它们将再次可用于所有网站。"
+  },
+  "errors": {
+    "load": "无法加载数据保险库。",
+    "save": "无法保存此身份。",
+    "deleteOne": "无法删除该身份。",
+    "deleteSelected": "无法删除所选身份。",
+    "resetSelected": "无法重置所选身份。"
+  }
+}
