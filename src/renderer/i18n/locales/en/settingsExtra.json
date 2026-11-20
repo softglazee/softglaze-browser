@@ -17,7 +17,8 @@
     "branding": "Branding",
     "dbEncryption": "Database encryption",
     "workspaceBackup": "Workspace backup",
-    "developerApi": "Developer API"
+    "developerApi": "Developer API",
+    "phones": "Phones"
   },
   "fingerprint": {
     "title": "Fingerprint & identity",

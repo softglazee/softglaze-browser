@@ -19,6 +19,8 @@ const {
   importSessionCookies,
   exportStoredCookies,
   importStoredCookies,
+  replaceSessionCookies,
+  replaceStoredCookies,
   liveLeakTest,
   listAvailableBrowsers,
   resolveBrowserExecutable,
@@ -48,7 +50,9 @@ const firefoxEngine = require('./firefoxEngine');
 const localApi = require('./localApi');
 const aiActor = require('./ai/actor');
 const ai = require('./ai');
-const { registerAiIpc, createWindowEmitter } = require('./ai/ipc');
+const { registerAiIpc, createWindowEmitter, canAnswerApproval } = require('./ai/ipc');
+const mobile = require('./mobile');
+const { registerMobileIpc } = require('./mobile/ipc');
 const autofillBridge = require('./autofillBridge');
 const { siteKeyOf } = require('./siteKey');
 const updater = require('./updater');
@@ -8623,6 +8627,11 @@ async function launchProfileNow(payload) {
     throw e;
   }
 
+  // A profile that syncs with phones opens on one device at a time: take its lease first (refused
+  // with IN_USE while a phone has it open; `takeoverFromPhone` takes it over). Applies the newest
+  // cookie jar from the phone before the browser starts.
+  await mobile.beforeLaunch(id, { takeover: input.takeoverFromPhone === true });
+
   // Reserve before the heavy spawn so a parallel launch cannot slip through the check-to-acquire window.
   const reservation = reserveProfileLock(id, launcher);
   // Data Vault autofill in this browser follows the member launching it now (a token's member for
@@ -8866,6 +8875,7 @@ async function markSessionCrashed(profileId) {
 function handleSessionEvent(evt) {
   if (!evt || !evt.type) return;
   const pid = (evt.profileId != null) ? Number(evt.profileId) : (Number.isFinite(Number(evt.sessionId)) ? Number(evt.sessionId) : null);
+  try { mobile.onSessionEvent(evt, pid); } catch (e) { /* phones must never break session handling */ }
   if (evt.type === 'launched') { markSessionLaunched(pid, evt.engine).catch(() => {}); return; }
   if (evt.type === 'blocked') { onSessionBlocked(evt).catch(() => {}); return; }
   // A script or AI app that drives a profile over its DevTools endpoint can close the browser
@@ -12378,6 +12388,7 @@ async function afterDbReady() {
   // Microsoft Store build: today counts as a day of use for the rating card (nothing elsewhere).
   getStoreRating().noteUse().catch(() => {});
   try { await ai.load(); } catch (e) { /* AI stays off */ }
+  mobile.start().catch(() => {}); // phone companion: off until turned on in Settings > Phones
   try { await localApi.startIfEnabled(); } catch (e) { /* off by default */ }
   // Licensing backend (when a tenant config is baked): refresh the signed lease on
   // startup + every 6h. Best-effort - offline keeps running on the cached lease.
@@ -16684,6 +16695,195 @@ function buildAiHost() {
   };
 }
 
+// ---- SoftGlaze phone companion (src/main/mobile) ----
+// A phone acts as its member exactly like an AI token does (aiActor.run with via 'mobile'), so every
+// permission, ProfileAccess and plan check below is the app's own.
+function mobileProfileStatus(id, running) {
+  if (running.has(String(id))) return 'running';
+  if (profileLaunchesInFlight.has(Number(id))) return 'starting';
+  return 'stopped';
+}
+
+async function mobileFullMember(memberId) {
+  if (memberId == null) return null;
+  if (permissions.isSuperAdminId(memberId)) return { ...permissions.SUPER_ADMIN };
+  return getPrisma().member.findUnique({ where: { id: Number(memberId) } });
+}
+
+function buildMobileHost() {
+  let appVersion = '1.0.0';
+  try { appVersion = require('../../package.json').version || appVersion; } catch (e) { /* keep default */ }
+  const SIDE_PREFIX = 'mobileSync.side.';
+  const readSealed = async (key) => {
+    const row = await readSetting(key, null);
+    if (!row || typeof row.sealed !== 'string') return null;
+    const plain = secretStore.open(row.sealed);
+    try { return plain ? JSON.parse(plain) : null; } catch (e) { return null; }
+  };
+  const writeSealed = (key, value) => writeSetting(key, value == null ? null : { v: 1, sealed: secretStore.seal(JSON.stringify(value)) });
+  const isFirefoxProfile = async (id) => {
+    const p = await getPrisma().profile.findUnique({ where: { id: Number(id) }, select: { browserCore: true } });
+    return Boolean(p && normalizeBrowserCore(p.browserCore) === BROWSER_CORE.FIREFOX);
+  };
+  const ownerActor = async (fn) => {
+    const r = await ai.resolveTokenMember(getPrisma(), { memberId: null });
+    if (!r.ok) throw new Error(r.message);
+    return aiActor.run({ memberId: r.memberId, tokenId: null, tokenName: 'Profile sync', clientName: 'Profile sync', via: 'mobile' }, fn);
+  };
+  return {
+    getPrisma,
+    readSetting,
+    writeSetting,
+    seal: (text) => secretStore.seal(text),
+    open: (text) => secretStore.open(text),
+    emit: emitToAllWindows,
+    appVersion,
+    bridge: {
+      async resolveMember(memberId) {
+        const r = await ai.resolveTokenMember(getPrisma(), { memberId: memberId == null ? null : Number(memberId) });
+        if (!r.ok) return { ok: false, message: r.message };
+        return { ok: true, memberId: r.memberId, member: await mobileFullMember(r.memberId) };
+      },
+      runAs: (device, who, fn) => aiActor.run({ memberId: who.memberId, tokenId: null, tokenName: device.name, clientName: device.name, via: 'mobile' }, fn),
+      async listProfiles() {
+        const db = getPrisma();
+        const where = await scopedProfileWhere({ deletedAt: null });
+        const rows = await db.profile.findMany({
+          where,
+          orderBy: { id: 'asc' },
+          take: 5000,
+          select: { id: true, title: true, groupId: true, tags: true, lastUsedAt: true, assignedMemberId: true, proxy: { select: { lastCountry: true } } }
+        });
+        const groups = new Map((await db.group.findMany({ select: { id: true, name: true } })).map((g) => [g.id, g.name]));
+        const members = new Map((await db.member.findMany({ select: { id: true, name: true } })).map((m) => [m.id, m.name]));
+        const running = new Set(listAllSessions().map((s) => String(s.sessionId)));
+        return rows.map((r) => {
+          let tags = [];
+          try { tags = r.tags ? JSON.parse(r.tags) : []; } catch (e) { tags = []; }
+          return {
+            id: r.id,
+            title: r.title,
+            status: mobileProfileStatus(r.id, running),
+            group: r.groupId ? groups.get(r.groupId) || null : null,
+            tags: Array.isArray(tags) ? tags.map(String) : [],
+            proxyCountry: r.proxy && r.proxy.lastCountry ? String(r.proxy.lastCountry).toUpperCase() : null,
+            member: r.assignedMemberId ? members.get(r.assignedMemberId) || null : null,
+            lastUsedAt: r.lastUsedAt ? new Date(r.lastUsedAt).toISOString() : null
+          };
+        });
+      },
+      startProfile: (id) => launchProfile({ id }),
+      async stopProfile(id) {
+        await requirePermission('profiles.launch');
+        await assertCanAccessProfile(Number(id));
+        await closeAnySession(String(id));
+        reconcileProfileLocks();
+      },
+      approvals: {
+        list: () => ai.listApprovals(),
+        get: (id) => ai.getApproval(id),
+        respond: (id, decision) => ai.respondApproval(id, decision)
+      },
+      canAnswerApproval,
+      async logActivity({ device, memberId, action, profileId, detail }) {
+        await getPrisma().activityLog.create({
+          data: { profileId: Number(profileId) || 0, memberId: memberId == null ? null : Number(memberId), action, detail: JSON.stringify({ ...detail, via: `[via phone: ${String((device && device.name) || 'phone').slice(0, 60)}]` }) }
+        });
+      }
+    },
+    sync: {
+      async readProfile(id) {
+        const row = await getPrisma().profile.findUnique({ where: { id: Number(id) }, include: { proxy: true, group: { select: { name: true } } } });
+        if (!row || row.deletedAt) return null;
+        let tags = [];
+        try { tags = row.tags ? JSON.parse(row.tags) : []; } catch (e) { tags = []; }
+        const proxy = row.proxy ? { type: row.proxy.type, host: row.proxy.host, port: row.proxy.port, username: row.proxy.username, password: row.proxy.password, countryCode: row.proxy.lastCountry } : null;
+        return {
+          id: row.id,
+          title: row.title,
+          notes: row.notes,
+          tags: Array.isArray(tags) ? tags.map(String) : [],
+          startUrls: parseStartupUrls(row.startupUrls),
+          folder: row.group ? row.group.name : null,
+          updatedAt: row.updatedAt ? new Date(row.updatedAt).getTime() : 0,
+          proxy,
+          region: {
+            timezoneType: row.timezoneType, timezoneCustom: row.timezoneCustom, languageType: row.languageType, languageCustom: row.languageCustom,
+            locationType: row.locationType, locationLat: row.locationLat, locationLng: row.locationLng, locationAcc: row.locationAcc, webrtc: row.webrtc
+          }
+        };
+      },
+      async writeProfile(id, patch) {
+        const db = getPrisma();
+        const data = {};
+        if (patch.title !== undefined) data.title = String(patch.title).slice(0, 200);
+        if (patch.notes !== undefined) data.notes = patch.notes;
+        if (patch.tags !== undefined) data.tags = JSON.stringify(patch.tags);
+        if (patch.startUrls !== undefined) data.startupUrls = normalizeStartupUrls(patch.startUrls);
+        if (patch.folder !== undefined) {
+          if (patch.folder == null) data.groupId = null;
+          else {
+            const g = await db.group.findFirst({ where: { name: String(patch.folder) }, select: { id: true } });
+            if (g) data.groupId = g.id; // a folder the PC does not have is kept for the phone only
+          }
+        }
+        if (patch.region) {
+          for (const k of ['timezoneType', 'timezoneCustom', 'languageType', 'languageCustom', 'locationType', 'locationLat', 'locationLng', 'locationAcc', 'webrtc']) {
+            if (patch.region[k] !== undefined) data[k] = patch.region[k];
+          }
+        }
+        if (Object.keys(data).length) await db.profile.update({ where: { id: Number(id) }, data });
+      },
+      // A profile a phone shared: created like any new profile (own fingerprint), as the workspace owner.
+      async createProfile({ title }) {
+        const created = await ownerActor(() => createProfile({ title: String(title || 'Phone profile').slice(0, 200) }));
+        return Number(created && created.id);
+      },
+      async exportCookies(id) {
+        if (await isFirefoxProfile(id)) return [];
+        const live = await exportSessionCookies(String(id));
+        if (live) return live;
+        return exportStoredCookies(await offlineProfileOpts(Number(id)));
+      },
+      async replaceCookies(id, params) {
+        if (await isFirefoxProfile(id)) return;
+        const live = await replaceSessionCookies(String(id), params);
+        if (live) return;
+        await replaceStoredCookies(await offlineProfileOpts(Number(id)), params);
+      },
+      snapshotCookies: (syncId, cookies) => writeSealed(`mobileSync.jar.${syncId}`, { at: new Date().toISOString(), cookies }),
+      readSidecar: (syncId) => readSealed(SIDE_PREFIX + syncId),
+      writeSidecar: (syncId, value) => writeSealed(SIDE_PREFIX + syncId, value),
+      readIdMap: () => readSetting('mobileSync.idMap', {}),
+      writeIdMap: (map) => writeSetting('mobileSync.idMap', map),
+      async closeProfile(id) {
+        await closeAnySession(String(id));
+        reconcileProfileLocks();
+      }
+    }
+  };
+}
+
+function buildMobileIpcHost() {
+  return {
+    getWindowMember: () => getActiveMember(),
+    membersExist: async () => (await getPrisma().member.count()) > 0,
+    ownerId: async () => {
+      const o = await getPrisma().member.findFirst({ where: { role: 'OWNER' }, orderBy: { id: 'asc' }, select: { id: true } });
+      return o ? o.id : null;
+    },
+    getMember: (id) => getPrisma().member.findUnique({ where: { id: Number(id) } }),
+    visibleMemberIds: async (member) => permissions.visibleMemberIds(await getPrisma().member.findMany(), member),
+    // Members the window member may pair a phone for (themselves and those they manage).
+    async listMembers(member) {
+      const all = await getPrisma().member.findMany({ orderBy: { id: 'asc' }, select: { id: true, name: true, role: true, status: true, parentMemberId: true } });
+      if (!member || member.role === 'OWNER' || member.role === 'SUPER_ADMIN') return all.filter((m) => m.status === 'active');
+      const visible = permissions.visibleMemberIds(all, member);
+      return all.filter((m) => m.status === 'active' && (m.id === member.id || (visible.has(m.id) && m.role !== 'OWNER')));
+    }
+  };
+}
+
 function registerIpcHandlers() {
   if (registered) return;
 
@@ -17092,6 +17292,15 @@ function registerIpcHandlers() {
     getWindowMember: () => getActiveMember(),
     visibleMemberIds: async (member) => permissions.visibleMemberIds(await getPrisma().member.findMany(), member)
   });
+  // SoftGlaze phone companion (Settings > Phones): pairing, relay, approvals on the phone, sync.
+  mobile.configure(buildMobileHost());
+  registerMobileIpc(registerHandler, mobile, buildMobileIpcHost());
+  ai.onApprovalEvent((channel, data) => mobile.onApprovalEvent(channel, data));
+  try {
+    const { powerMonitor } = require('electron');
+    powerMonitor.on('suspend', () => { mobile.onSuspend().catch(() => {}); });
+    powerMonitor.on('resume', () => mobile.onResume());
+  } catch (e) { /* no powerMonitor (tests) */ }
   // Bring the session online only when the DB is readable. With at-rest encryption the DB starts
   // locked, and db:unlock runs afterDbReady() itself.
   if (database.isDbUnlocked()) {
@@ -17108,6 +17317,7 @@ async function shutdownIpcHandlers() {
   if (memoryGuardTimer) { clearInterval(memoryGuardTimer); memoryGuardTimer = null; }
   try { const mcp = ai.mcpHandler(); if (mcp) await mcp.dispose(); } catch (e) { /* not configured */ }
   await localApi.stop().catch(() => {});
+  await mobile.shutdown().catch(() => {});
   await autofillBridge.stop().catch(() => {});
   await closeAllProfileSessions();
   await firefoxEngine.closeAllFirefoxSessions().catch(() => {});

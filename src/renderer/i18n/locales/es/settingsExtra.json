@@ -17,7 +17,8 @@
     "branding": "Marca",
     "dbEncryption": "Cifrado de base de datos",
     "workspaceBackup": "Copia del espacio",
-    "developerApi": "API para desarrolladores"
+    "developerApi": "API para desarrolladores",
+    "phones": "Teléfonos"
   },
   "fingerprint": {
     "title": "Huella e identidad",

@@ -1,0 +1,16 @@
+{
+  "package": "@softglaze/protocol",
+  "version": "0.1.0",
+  "sourceCommit": "8b4c8f20dde61f7aece77c96d0cdf7845a1aab67",
+  "protocolCommit": "0eaecd861b4a6a5824e949d9d0d48eacfa5df637",
+  "sourceDirty": false,
+  "dependencies": {
+    "@noble/ciphers": "2.4.0",
+    "@noble/curves": "2.4.0",
+    "@noble/hashes": "2.4.0",
+    "valibot": "1.5.0"
+  },
+  "bundle": "softglaze-protocol.cjs",
+  "sha256": "1c6a6e817d14d3187ccadc6612123a912cbc1b87f5a62ea38dc0ef0972dcadcc",
+  "bytes": 306860
+}

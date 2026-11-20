@@ -37,9 +37,25 @@ function host() {
   return state.host;
 }
 
+// Other listeners of the approval events (the phone companion forwards approvals to paired phones).
+const approvalListeners = new Set();
+
 function emit(channel, data) {
   try { if (state.host && typeof state.host.emit === 'function') state.host.emit(channel, data); } catch (e) { /* renderer gone */ }
+  if (channel === 'ai:approval-requested' || channel === 'ai:approvals-changed') {
+    for (const fn of approvalListeners) { try { fn(channel, data); } catch (e) { /* one listener must not break the rest */ } }
+  }
 }
+
+// fn(channel, data) for 'ai:approval-requested' (publicView, args already redacted) and
+// 'ai:approvals-changed' ({ pending }). Returns an unsubscribe function.
+function onApprovalEvent(fn) {
+  approvalListeners.add(fn);
+  return () => approvalListeners.delete(fn);
+}
+
+// Pending approvals, for listeners that are not the window (no member filter here: callers filter).
+function approvalsManager() { return state.approvals; }
 
 function configure({ toolDeps, host: h, inlineWaitMs, approvalTimeoutMs }) {
   state.host = h;
@@ -408,6 +424,8 @@ module.exports = {
   listApprovals,
   getApproval,
   respondApproval,
+  onApprovalEvent,
+  approvalsManager,
   listAudit,
   memoryGet,
   memorySet,

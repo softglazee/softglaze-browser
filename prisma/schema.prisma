@@ -484,3 +484,26 @@ model ProfileAccess {
   @@index([memberId])
   @@index([profileId])
 }
+// Phones paired with this PC for the SoftGlaze phone companion (src/main/mobile). Keys are the
+// public keys pinned at pairing (base64url); the PC's own keys live sealed in the Setting table.
+// A revoked phone keeps its row (revokedAt set, refused at once) only until the relay has been told
+// (unlink); then the row is deleted. The ActivityLog keeps the history.
+model PairedDevice {
+  id         Int       @id @default(autoincrement())
+  deviceId   String    @unique // id the PC gave the phone (sent in hello)
+  name       String
+  platform   String?
+  appVersion String?
+  mailboxId  String    @unique // the phone's relay mailbox
+  x25519Pub  String // Noise static key, base64url
+  ed25519Pub String // mailbox key, base64url
+  keyId      String // keyId(x25519Pub): finds the sender of a sealed envelope
+  memberId   Int? // the member the phone acts as (null only in single-user mode)
+  scopesJson String    @default("[\"view\"]") // JSON array of protocol scopes
+  createdAt  DateTime  @default(now())
+  lastSeenAt DateTime?
+  revokedAt  DateTime?
+
+  @@index([keyId])
+  @@index([memberId])
+}

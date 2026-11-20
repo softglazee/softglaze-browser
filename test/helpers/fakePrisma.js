@@ -27,7 +27,7 @@ function matchValue(value, cond) {
 function createFakePrisma(seed = {}) {
   const tables = {};
   const ids = {};
-  const models = ['apiToken', 'aiAuditLog', 'member', 'profile', 'proxy', 'group', 'proxyGroup', 'activityLog', 'setting', 'macro', 'template'];
+  const models = ['apiToken', 'aiAuditLog', 'member', 'profile', 'proxy', 'group', 'proxyGroup', 'activityLog', 'setting', 'macro', 'template', 'pairedDevice'];
   for (const m of models) { tables[m] = []; ids[m] = 0; }
 
   const db = { _tables: tables };

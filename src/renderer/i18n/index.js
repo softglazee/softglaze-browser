@@ -58,6 +58,8 @@ import aiEn from './locales/en/ai.json';
 import aiEs from './locales/es/ai.json';
 import signinEn from './locales/en/signin.json';
 import signinEs from './locales/es/signin.json';
+import mobileEn from './locales/en/mobile.json';
+import mobileEs from './locales/es/mobile.json';
 
 export const LANG_KEY = 'softglaze-lang';
 
@@ -81,6 +83,8 @@ const NAMESPACES = [
   'ai',
   // One-click sign-in (first screen, Settings > Account)
   'signin',
+  // Settings > Phones (the SoftGlaze phone companion)
+  'mobile',
 ];
 
 export function readStoredLang() {
@@ -105,7 +109,7 @@ i18n.use(initReactI18next).init({
       cmpModalsA: cmpModalsAEn, cmpModalsB: cmpModalsBEn, cmpModalsC: cmpModalsCEn,
       cmpOverlays: cmpOverlaysEn, cmpSettingsA: cmpSettingsAEn, cmpSettingsB: cmpSettingsBEn,
       cmpSettingsC: cmpSettingsCEn, cmpUi: cmpUiEn, captcha: captchaEn, scoreboard: scoreboardEn,
-      ai: aiEn, signin: signinEn,
+      ai: aiEn, signin: signinEn, mobile: mobileEn,
     },
     es: {
       common: commonEs, proxies: proxiesEs, groups: groupsEs, extensions: extensionsEs,
@@ -115,7 +119,7 @@ i18n.use(initReactI18next).init({
       cmpModalsA: cmpModalsAEs, cmpModalsB: cmpModalsBEs, cmpModalsC: cmpModalsCEs,
       cmpOverlays: cmpOverlaysEs, cmpSettingsA: cmpSettingsAEs, cmpSettingsB: cmpSettingsBEs,
       cmpSettingsC: cmpSettingsCEs, cmpUi: cmpUiEs, captcha: captchaEs, scoreboard: scoreboardEs,
-      ai: aiEs, signin: signinEs,
+      ai: aiEs, signin: signinEs, mobile: mobileEs,
     },
   },
   lng,
