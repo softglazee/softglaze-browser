@@ -1,0 +1,342 @@
+{
+  "common": {
+    "cancel": "İptal",
+    "save": "Kaydet",
+    "edit": "Düzenle",
+    "delete": "Sil"
+  },
+  "header": {
+    "title": "Faturalandırma ve Planlar",
+    "description": "Aboneliğinizi yönetin, planları karşılaştırın ve yükseltin - hepsi tek yerde."
+  },
+  "status": {
+    "loading": "Yükleniyor…",
+    "sourceOwner": "Kaynak sahibi",
+    "active": "Etkin",
+    "activeRenews": "Etkin · {{date}} tarihinde yenilenir",
+    "trial": "Deneme",
+    "trialDaysLeft": "Deneme · {{days}} gün kaldı",
+    "graceDaysLeft": "Ek süre · {{days}} gün kaldı",
+    "subscriptionEnded": "Abonelik sona erdi",
+    "free": "Free plan"
+  },
+  "backend": {
+    "licensedVerified": "Lisanslı ve doğrulandı",
+    "renews": "{{date}} tarihinde yenilenir",
+    "noLicense": "Lisanslama etkin - bu kurulum için henüz ücretli lisans yok.",
+    "trialVerified": "Ücretsiz deneme, doğrulandı",
+    "trialEnds": "{{date}} tarihinde biter"
+  },
+  "current": {
+    "title": "Mevcut plan",
+    "sourceOwnerAllFeatures": "Kaynak sahibi · tüm özellikler",
+    "paid": "ücretli",
+    "freeTrial": "ücretsiz deneme",
+    "freeForever": "Free plan · sonsuza kadar ücretsiz"
+  },
+  "grace": {
+    "message_one": "{{kind}} sona erdi - {{count}} gün ek süre kaldı. Erişimi kaybetmemek için aşağıdan yenileyin.",
+    "message_other": "{{kind}} sona erdi - {{count}} gün ek süre kaldı. Erişimi kaybetmemek için aşağıdan yenileyin.",
+    "kindTrial": "Ücretsiz denemeniz",
+    "kindSubscription": "Aboneliğiniz"
+  },
+  "banned": {
+    "message": "Aboneliğiniz sona erdi ve profil başlatma kilitlendi. Erişimi geri almak için abone olun veya satın alma kodu girin."
+  },
+  "trialRemaining": {
+    "message_one": "Ücretsiz deneme - {{count}} gün kaldı.",
+    "message_other": "Ücretsiz deneme - {{count}} gün kaldı."
+  },
+  "seats": {
+    "label": "Ekip koltukları",
+    "usage": "{{used}} / {{total}} kullanılıyor",
+    "upgradeToAddMore": "· daha fazlası için yükseltin"
+  },
+  "exempt": {
+    "note": "Kaynak sahibisiniz - abonelik sisteminden muafsınız. Tüm özellikler dahildir."
+  },
+  "checkout": {
+    "waiting": "Ödemeniz bekleniyor…",
+    "waitingForPlan": "Ödemeniz bekleniyor · {{plan}}…",
+    "opened": "Tarayıcınızda bir ödeme sayfası açıldı. Ödemeden sonra bu sayfa otomatik güncellenir.",
+    "reopen": "Ödeme sayfasını tekrar aç"
+  },
+  "plans": {
+    "chooseHeading": "Bir plan seçin",
+    "bestValue": "En iyi değer",
+    "current": "Mevcut",
+    "footerNote": "Ödemeler, yöneticinizin etkinleştirdiği yöntemlerle işlenir. Tarayıcınızda ödedikten sonra bu sayfa planınızı otomatik olarak etkinleştirir."
+  },
+  "period": {
+    "label": "Faturalama dönemi",
+    "monthly": "Aylık",
+    "yearly": "Yıllık",
+    "billedYearly": "Yıllık faturalandırılır, ayda yaklaşık {{perMonth}}",
+    "monthsFree_one": "{{count}} ay ücretsiz, {{saving}} tasarruf",
+    "monthsFree_other": "{{count}} ay ücretsiz, {{saving}} tasarruf",
+    "monthsFreeShort_one": "{{count}} ay ücretsiz",
+    "monthsFreeShort_other": "{{count}} ay ücretsiz",
+    "save": "Yılda {{saving}} tasarruf edersiniz"
+  },
+  "cta": {
+    "included": "Dahil",
+    "onPaidPlan": "Ücretli planda",
+    "trialActiveDaysLeft": "Deneme etkin · {{days}} gün kaldı",
+    "startFreeTrial": "Ücretsiz deneme başlat",
+    "trialUsed": "Ücretsiz deneme kullanıldı",
+    "currentPlan": "Mevcut plan",
+    "upgradeEnterprise": "Enterprise'a yükselt",
+    "downgradePro": "Pro'ya geç",
+    "choosePlan": "{{name}} seç"
+  },
+  "trial": {
+    "started": "Tam erişimli ücretsiz denemeniz etkin. İyi kullanımlar!",
+    "startedWithDays": "Ücretsiz denemeniz etkin - {{days}} gün tam erişim. İyi kullanımlar!",
+    "errors": {
+      "failed": "Deneme başlatılamadı."
+    }
+  },
+  "redeem": {
+    "label": "Satın alma kodunuz mu var?",
+    "apply": "Uygula",
+    "success": "Satın alma kodu uygulandı - teşekkürler!",
+    "errors": {
+      "empty": "Satın alma kodunuzu girin.",
+      "failed": "Bu kod uygulanamadı."
+    }
+  },
+  "pay": {
+    "received": "Ödeme alındı - planınız artık etkin!",
+    "errors": {
+      "noMethods": "Yeni bir ödeme sağlayıcısı eklenirken uygulama içi satın alma duraklatıldı. Faturayla satın almak için support@softglaze.com adresine yazın, ardından satın alma kodunuzu aşağıya girin.",
+      "checkoutFailed": "Ödeme başlatılamadı.",
+      "submitFailed": "Ödemeniz gönderilemedi."
+    }
+  },
+  "payModal": {
+    "title": "{{name}} için öde",
+    "manualSubmitted": "Ödeme gönderildi. Bir yönetici inceleyip planınızı kısa süre içinde etkinleştirecek.",
+    "manualBadge": "Manuel",
+    "continueTo": "{{method}} ile devam et",
+    "openPayLink": "Ödeme bağlantısını aç",
+    "referencePlaceholder": "Ödeme referansı / işlem kimliği",
+    "notePlaceholder": "Not (isteğe bağlı)",
+    "submitForApproval": "Ödedim - onaya gönder",
+    "manualActivationNote": "Planınız, bir yönetici ödemeyi onayladığında etkinleşir."
+  },
+  "admin": {
+    "configureMethods": "Ödeme yöntemlerini Ayarlar'da yapılandırın"
+  },
+  "invoices": {
+    "title": "Faturalar",
+    "subtitleAdmin": "Tüm sahiplerin ödemeleri - otomatik alınan + manuel.",
+    "subtitleUser": "Ödeme makbuzlarınız.",
+    "add": "Ekle",
+    "empty": "Henüz fatura yok.",
+    "manualSuffix": "manuel",
+    "confirmDelete": "Bu fatura silinsin mi?",
+    "cols": {
+      "date": "Tarih",
+      "owner": "Sahip",
+      "amount": "Tutar",
+      "method": "Yöntem",
+      "status": "Durum",
+      "reference": "Referans"
+    },
+    "errors": {
+      "loadFailed": "Faturalar yüklenemedi.",
+      "deleteFailed": "Silinemedi."
+    }
+  },
+  "invoiceForm": {
+    "addTitle": "Fatura ekle",
+    "editTitle": "Faturayı düzenle",
+    "ownerMemberId": "Sahip üye kimliği",
+    "optionalPlaceholder": "(isteğe bağlı)",
+    "amount": "Tutar",
+    "currency": "Para birimi",
+    "method": "Yöntem",
+    "status": "Durum",
+    "tier": "Seviye",
+    "months": "Ay",
+    "reference": "Referans",
+    "referencePlaceholder": "işlem / kod",
+    "note": "Not",
+    "errors": {
+      "invalidAmount": "Geçerli bir tutar girin.",
+      "saveFailed": "Fatura kaydedilemedi."
+    }
+  },
+  "planManager": {
+    "title": "Planlar ve paketler",
+    "subtitle": "Fiyatları belirleyin, ayrıntıları düzenleyin ve yeni paketler oluşturun. Değişiklikler ödeme sayfasına anında yansır.",
+    "newPackage": "Yeni paket",
+    "activeBadge": "Etkin",
+    "hiddenBadge": "Gizli",
+    "termMeta": "{{months}} aylık dönem · {{tier}}",
+    "hide": "Gizle",
+    "show": "Göster",
+    "hideTitle": "Ödeme sayfasından gizle",
+    "showTitle": "Ödeme sayfasında göster",
+    "deleteTitle": "Planı sil",
+    "confirmDelete": "“{{name}}” planı silinsin mi? Alıcılar artık görmeyecek.",
+    "errors": {
+      "loadFailed": "Planlar yüklenemedi.",
+      "updateFailed": "Plan güncellenemedi.",
+      "deleteFailed": "Plan silinemedi."
+    }
+  },
+  "planForm": {
+    "newTitle": "Yeni paket",
+    "editTitle": "Düzenle: {{name}}",
+    "editTitleAria": "Paketi düzenle",
+    "packageName": "Paket adı",
+    "planType": "Plan türü",
+    "typePaid": "Ücretli",
+    "typeTrial": "Ücretsiz deneme",
+    "trialLength": "Deneme süresi (gün)",
+    "price": "Fiyat",
+    "currency": "Para birimi",
+    "shownAs": "Gösterim",
+    "trialShownValue": "{{days}} gün · ücretsiz",
+    "billedPer": "Faturalama birimi",
+    "term": "Dönem (verilen ay)",
+    "featureTier": "Özellik seviyesi",
+    "bestValue": "En iyi değer",
+    "active": "Etkin",
+    "tagline": "Slogan",
+    "taglinePlaceholder": "Tek başına çalışan birinin ihtiyacı olan her şey.",
+    "features": "Özellikler (her satıra bir tane)",
+    "featuresPlaceholder": "Sınırsız tarayıcı profili\nTam parmak izi motoru\nProxy havuzu ve döndürme",
+    "savePackage": "Paketi kaydet",
+    "errors": {
+      "nameRequired": "Pakete bir ad verin.",
+      "invalidPrice": "Geçerli bir fiyat girin.",
+      "saveFailed": "Plan kaydedilemedi."
+    }
+  },
+  "subscribers": {
+    "title": "Aboneler",
+    "subtitle": "Her hesap, katılma tarihi, planı ve bitiş tarihi. Toplam {{count}}.",
+    "assignPlan": "Plan ata",
+    "empty": "Henüz sahip hesabı yok.",
+    "trialSuffix": "deneme",
+    "daysLeftShort": "{{days}} gün",
+    "assign": "Ata",
+    "assignTitle": "Plan ata / ver",
+    "state": {
+      "ended": "Bitti",
+      "grace": "Ek süre",
+      "active": "Etkin",
+      "trial": "Deneme"
+    },
+    "cols": {
+      "account": "Hesap",
+      "joined": "Katılma",
+      "plan": "Plan",
+      "state": "Durum",
+      "expires": "Bitiş",
+      "team": "Ekip"
+    },
+    "errors": {
+      "loadFailed": "Aboneler yüklenemedi."
+    }
+  },
+  "assignForm": {
+    "title": "Plan ata",
+    "account": "Hesap",
+    "plan": "Plan",
+    "months": "Ay",
+    "monthsWithDefault": "Ay (varsayılan {{default}})",
+    "recordAsPaid": "Ücretli satış olarak kaydet",
+    "noteOptional": "Not (isteğe bağlı)",
+    "notePlaceholder": "Neden verildi",
+    "grantNote": "Dönemi hemen verir ve abonelik engelini kaldırır.",
+    "grantNotePaid": "Ödenmiş bir fatura kaydedilir.",
+    "grantNoteFree": "$0'lık bir hibe olarak kaydedilir.",
+    "fallbackAccount": "hesap",
+    "fallbackPlan": "plan",
+    "success_one": "{{name}} hesabına {{plan}} atandı - {{count}} ay.",
+    "success_other": "{{name}} hesabına {{plan}} atandı - {{count}} ay.",
+    "errors": {
+      "chooseAccount": "Bir hesap seçin.",
+      "choosePlan": "Bir plan seçin.",
+      "assignFailed": "Plan atanamadı."
+    }
+  },
+  "planText": {
+    "trialTagline": "Her özelliği ücretsiz test edin - tam erişim, kart gerekmez.",
+    "trialFullAccess": "Her özelliğe tam erişim",
+    "trialTools": "Tüm parmak izi, proxy ve sızıntı araçları",
+    "trialMacros": "Makrolar, çerez ısındırıcı ve mobil profiller",
+    "trialBackupSeats": "Şifreli yedekleme ve ekip koltukları",
+    "trialNoCard": "Kredi kartı gerekmez",
+    "trialUpgrade": "İstediğiniz zaman ücretli plana geçin",
+    "proTagline": "Tek başına çalışan birinin profilleri geniş ölçekte yönetmek için ihtiyacı olan her şey.",
+    "proProfiles": "Sınırsız yerel tarayıcı profili",
+    "proFingerprint": "Tam parmak izi motoru + sızıntı kontrolleri",
+    "proProxies": "Proxy havuzu, döndürme politikası ve otomatik konum eşleştirme",
+    "proMacros": "Makro kaydedici, zamanlayıcı ve veriye dayalı çalıştırmalar",
+    "proCookieWarmer": "Çerez ısındırıcı",
+    "proMobile": "Mobil / Android cihaz profilleri",
+    "proBackup": "Şifreli çalışma alanı yedekleme ve geri yükleme",
+    "proDbEncryption": "Diskte tam veritabanı şifreleme",
+    "proPalette": "Komut paleti + başlangıç rehberi",
+    "proSeats": "3 ekip üyesine kadar",
+    "proParallel": "Paralel çalıştırıcı, aynı anda 3 profile kadar, canlı çalıştırma konsoluyla",
+    "entTagline": "Ekipler için - 25 üyeye kadar, aynı anda 10 profil ve denetim günlüğü dışa aktarma.",
+    "entEverythingInPro": "Pro'daki her şey, artı:",
+    "entSeats": "25 ekip üyesine kadar",
+    "entParallel": "Paralel çalıştırıcı, aynı anda 10 profile kadar, canlı çalıştırma konsoluyla",
+    "entAuditExport": "Denetim günlüğü dışa aktarma (CSV / JSON)",
+    "entSupport": "Öncelikli e-posta desteği"
+  },
+  "serverErrors": {
+    "SIGNUP_INVALID_EMAIL": "Geçerli bir e-posta adresi girin.",
+    "SIGNUP_DISPOSABLE_EMAIL": "Lütfen kalıcı bir e-posta adresi kullanın.",
+    "SIGNUP_NO_MX": "Bu adres için bir e-posta sunucusu bulamadık.",
+    "SIGNUP_BAD_CODE": "Bu kod doğru değil veya süresi doldu. E-postayı kontrol edin veya yeni bir kod isteyin.",
+    "SIGNUP_OFFLINE": "Hesabınızı oluşturmak için internete bağlanın.",
+    "SIGNUP_FAILED": "Bu e-postayı şu anda kontrol edemedik. Birkaç dakika sonra tekrar deneyin.",
+    "RATE_LIMITED": "Çok fazla deneme, birkaç dakika sonra tekrar deneyin.",
+    "TRIAL_USED": "Bu bilgisayarda veya e-postada ücretsiz deneme zaten kullanıldı. Bir plan seçin veya satın alma kodu girin.",
+    "TRIAL_OFFLINE": "Ücretsiz denemeyi başlatmak için internete bağlanın.",
+    "TRIAL_VERIFY_EMAIL": "Ücretsiz denemeyi başlatmak için e-posta adresinizi onaylayın. Size 6 haneli bir kod gönderdik.",
+    "TRIAL_NO_EMAIL": "Önce sahip hesabına bir e-posta adresi ekleyin, ardından ücretsiz denemeyi başlatın.",
+    "TRIAL_FAILED": "Ücretsiz deneme şu anda başlatılamadı. Birkaç dakika sonra tekrar deneyin.",
+    "SERVER_UNAVAILABLE": "Lisans sunucumuz şu anda yanıt vermiyor. Birkaç dakika sonra tekrar deneyin.",
+    "MACHINE_MISMATCH": "Bu lisans başka bir bilgisayara kayıtlı. Bu PC'ye taşıyın veya yöneticinizden sıfırlamasını isteyin.",
+    "SIGNUP_INVALID_PHONE": "Telefon numarasını + ve ülke koduyla girin veya boş bırakın.",
+    "SIGNUP_USE_CASE": "SoftGlaze'i ne için kullanacağınızı seçin.",
+    "SIGNUP_USE_CASE_OTHER": "SoftGlaze'i ne için kullanacağınızı birkaç kelimeyle anlatın.",
+    "CONFIRM_OFFLINE": "E-postanızı onaylamak için internete bağlanın."
+  },
+  "store": {
+    "cardTitle": "Microsoft Store aboneliği",
+    "processedBy": "Bu sürümde ödeme işlemcisi Microsoft'tur: Microsoft hesabınızla ödersiniz ve Microsoft aboneliği her ay, yıllık planda ise her yıl faturalandırır.",
+    "upgradeNote": "Pro'dan Enterprise'a geçmek ikinci bir abonelik başlatır. Yenilenmesinin durması için Microsoft hesabınızda Pro'yu iptal edin.",
+    "periodNote": "Aylık ve yıllık faturalama arasında geçmek de ikinci bir abonelik başlatır. Yenilenmesinin durması için eski aboneliği Microsoft hesabınızda iptal edin.",
+    "downgradeNote": "Enterprise'dan Pro'ya geçmek için Microsoft hesabınızda Enterprise'ı iptal edin ve sona erdiğinde Pro satın alın.",
+    "buyWith": "Microsoft Store ile satın al",
+    "buyWithPrice": "Microsoft Store ile satın al · {{price}}",
+    "priceFrom": "Microsoft Store'dan, kendi para biriminizde fiyat",
+    "restore": "Microsoft Store satın alımlarını geri yükle",
+    "moveHere": "Bu bilgisayara taşı",
+    "manage": "Microsoft hesabınızda yönetin veya iptal edin",
+    "result": {
+      "active": "Teşekkürler. {{plan}} planınız etkin.",
+      "cancelled": "Satın alma iptal edildi. Ücret alınmadı.",
+      "pending": "Satın alımınız Microsoft'ta. Onaylıyoruz, bu bir dakika sürebilir.",
+      "pendingLong": "Satın alımınız henüz onaylanmadı. Birkaç dakika sonra Microsoft Store satın alımlarını geri yükle'ye tıklayın veya support@softglaze.com adresine yazın.",
+      "pendingOffline": "Satın alımınız bu bilgisayarda kayıtlı. Uygulama sunucumuza ulaşır ulaşmaz etkinleştirilecek.",
+      "pendingReview": "Satın alımınızı aldık ve kontrol ediyoruz. Onaylanır onaylanmaz planınız etkinleştirilecek.",
+      "none": "Bu Microsoft hesabında bu uygulama için etkin bir Microsoft Store aboneliği bulunamadı.",
+      "inUse": "Bu abonelik başka bir bilgisayarda kullanılıyor. Bu bilgisayara taşıyabilirsiniz.",
+      "moveLimit": "Bu abonelik son 30 günde zaten iki kez başka bir bilgisayara taşındı. Yardım için support@softglaze.com adresine yazın.",
+      "unavailable": "Microsoft Store satın alımları şu anda kullanılamıyor. Lütfen daha sonra tekrar deneyin.",
+      "productMissing": "Bu plan henüz Microsoft Store'da yok.",
+      "network": "Microsoft Store'a ulaşılamadı. İnternet bağlantınızı kontrol edip tekrar deneyin.",
+      "error": "Satın alma tamamlanamadı: {{message}}"
+    }
+  }
+}

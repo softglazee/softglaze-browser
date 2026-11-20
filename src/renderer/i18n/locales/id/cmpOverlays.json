@@ -1,0 +1,106 @@
+{
+  "palette": {
+    "dialogLabel": "Palet perintah",
+    "searchPlaceholder": "Cari halaman, profil, proxy, anggota…",
+    "searchAriaLabel": "Cari halaman, profil, proxy, dan anggota",
+    "resultsLabel": "Hasil",
+    "esc": "Esc",
+    "noMatches": "Tidak ada yang cocok.",
+    "nav": {
+      "dashboard": "Dasbor",
+      "ai": "SoftGlaze AI",
+      "profiles": "Profil",
+      "groups": "Grup",
+      "proxies": "Kumpulan proxy",
+      "freeProxies": "Proxy gratis",
+      "proxyProviders": "Penyedia proxy",
+      "browsers": "Browser",
+      "extensions": "Ekstensi",
+      "batchImport": "Impor massal",
+      "trash": "Sampah",
+      "automation": "Otomatisasi",
+      "members": "Anggota",
+      "account": "Akun",
+      "settings": "Pengaturan"
+    },
+    "hint": {
+      "page": "Halaman",
+      "profile": "Profil",
+      "proxy": "Proxy",
+      "member": "Anggota",
+      "action": "Aksi"
+    },
+    "fallback": {
+      "profile": "Profil #{{id}}",
+      "proxy": "Proxy #{{id}}",
+      "member": "Anggota #{{id}}"
+    },
+    "action": {
+      "stopAi": "Hentikan semua AI"
+    }
+  },
+  "wizard": {
+    "skipTitle": "Lewati pengaturan",
+    "back": "Kembali",
+    "skip": "Lewati",
+    "saveAndContinue": "Simpan & lanjut",
+    "saveAndFinish": "Simpan & selesai",
+    "msg": {
+      "smtpSaved": "SMTP tersimpan.",
+      "proxySaved": "Proxy tersimpan."
+    },
+    "err": {
+      "smtpSaveFailed": "Tidak bisa menyimpan pengaturan SMTP.",
+      "proxySaveFailed": "Tidak bisa menyimpan proxy.",
+      "profileCreateFailed": "Tidak bisa membuat profil."
+    },
+    "welcome": {
+      "title": "Selamat datang di SoftGlaze",
+      "subtitle": "Pengaturan cepat 3 langkah membawa Anda ke profil pertama. Anda bisa melewati langkah mana pun.",
+      "subtitleShort_other": "Pengaturan cepat {{count}} langkah. Anda bisa melewati langkah mana pun.",
+      "unavailable": "Langkah berwarna abu-abu dilewati: akun Anda tidak bisa melakukannya.",
+      "getStarted": "Mulai",
+      "stepEmail": "Email (SMTP): opsional, untuk kode OTP",
+      "stepProxy": "Proxy pertama Anda: opsional",
+      "stepProfile": "Profil browser pertama Anda"
+    },
+    "smtp": {
+      "title": "Email (SMTP)",
+      "subtitle": "Opsional: memungkinkan aplikasi mengirim kode verifikasi. Anda bisa mengaturnya nanti di Pengaturan.",
+      "host": "Host SMTP",
+      "hostPlaceholder": "smtp.example.com",
+      "port": "Port",
+      "portPlaceholder": "587",
+      "username": "Nama pengguna",
+      "usernamePlaceholder": "you@example.com",
+      "password": "Kata sandi",
+      "passwordPlaceholder": "••••••••"
+    },
+    "proxy": {
+      "title": "Tambahkan proxy pertama Anda",
+      "subtitle": "Opsional: beri setiap identitas jaringannya sendiri. Anda bisa menambah lagi di Kumpulan proxy.",
+      "type": "Jenis",
+      "host": "Host",
+      "hostPlaceholder": "1.2.3.4",
+      "port": "Port",
+      "portPlaceholder": "8080",
+      "user": "Pengguna",
+      "userPlaceholder": "opsional",
+      "password": "Kata sandi",
+      "passwordPlaceholder": "opsional"
+    },
+    "profile": {
+      "title": "Buat profil pertama Anda",
+      "subtitle": "Fingerprint unik yang konsisten dibuatkan untuk Anda.",
+      "createAndFinish": "Buat & selesai",
+      "name": "Nama profil",
+      "namePlaceholder": "Profil pertama saya",
+      "defaultName": "Profil pertama saya",
+      "deviceType": "Jenis perangkat",
+      "desktop": "Desktop",
+      "mobile": "Seluler (Android)",
+      "mobileNote": "Android diemulasikan di mesin desktop: UA, sentuhan, layar & GPU konsisten, tetapi bukan perangkat asli.",
+      "proxyAttached": "Proxy baru Anda akan dipasang ke profil ini."
+    }
+  }
+}

@@ -1,0 +1,107 @@
+{
+  "palette": {
+    "dialogLabel": "Befehlspalette",
+    "searchPlaceholder": "Seiten, Profile, Proxys, Mitglieder suchen…",
+    "searchAriaLabel": "Seiten, Profile, Proxys und Mitglieder suchen",
+    "resultsLabel": "Ergebnisse",
+    "esc": "Esc",
+    "noMatches": "Keine Treffer.",
+    "nav": {
+      "dashboard": "Dashboard",
+      "ai": "SoftGlaze AI",
+      "profiles": "Profile",
+      "groups": "Gruppen",
+      "proxies": "Proxy-Pool",
+      "freeProxies": "Kostenlose Proxys",
+      "proxyProviders": "Proxy-Anbieter",
+      "browsers": "Browser",
+      "extensions": "Erweiterungen",
+      "batchImport": "Serienimport",
+      "trash": "Papierkorb",
+      "automation": "Automatisierung",
+      "members": "Mitglieder",
+      "account": "Konto",
+      "settings": "Einstellungen"
+    },
+    "hint": {
+      "page": "Seite",
+      "profile": "Profil",
+      "proxy": "Proxy",
+      "member": "Mitglied",
+      "action": "Aktion"
+    },
+    "fallback": {
+      "profile": "Profil #{{id}}",
+      "proxy": "Proxy #{{id}}",
+      "member": "Mitglied #{{id}}"
+    },
+    "action": {
+      "stopAi": "Alle KI stoppen"
+    }
+  },
+  "wizard": {
+    "skipTitle": "Einrichtung überspringen",
+    "back": "Zurück",
+    "skip": "Überspringen",
+    "saveAndContinue": "Speichern & weiter",
+    "saveAndFinish": "Speichern & fertig",
+    "msg": {
+      "smtpSaved": "SMTP gespeichert.",
+      "proxySaved": "Proxy gespeichert."
+    },
+    "err": {
+      "smtpSaveFailed": "SMTP-Einstellungen konnten nicht gespeichert werden.",
+      "proxySaveFailed": "Der Proxy konnte nicht gespeichert werden.",
+      "profileCreateFailed": "Das Profil konnte nicht erstellt werden."
+    },
+    "welcome": {
+      "title": "Willkommen bei SoftGlaze",
+      "subtitle": "Eine kurze Einrichtung in 3 Schritten bringt Sie zu Ihrem ersten Profil. Sie können jeden Schritt überspringen.",
+      "subtitleShort_one": "Ein kurzer Schritt. Sie können ihn überspringen.",
+      "subtitleShort_other": "Eine kurze Einrichtung in {{count}} Schritten. Sie können jeden Schritt überspringen.",
+      "unavailable": "Ausgegraute Schritte werden übersprungen: Ihr Konto kann sie nicht ausführen.",
+      "getStarted": "Los geht’s",
+      "stepEmail": "E-Mail (SMTP) – optional, für Einmalcodes",
+      "stepProxy": "Ihr erster Proxy – optional",
+      "stepProfile": "Ihr erstes Browserprofil"
+    },
+    "smtp": {
+      "title": "E-Mail (SMTP)",
+      "subtitle": "Optional – damit kann die App Bestätigungscodes senden. Sie können das später in den Einstellungen festlegen.",
+      "host": "SMTP-Host",
+      "hostPlaceholder": "smtp.example.com",
+      "port": "Port",
+      "portPlaceholder": "587",
+      "username": "Benutzername",
+      "usernamePlaceholder": "you@example.com",
+      "password": "Passwort",
+      "passwordPlaceholder": "••••••••"
+    },
+    "proxy": {
+      "title": "Ihren ersten Proxy hinzufügen",
+      "subtitle": "Optional – geben Sie jeder Identität ein eigenes Netzwerk. Weitere fügen Sie im Proxy-Pool hinzu.",
+      "type": "Typ",
+      "host": "Host",
+      "hostPlaceholder": "1.2.3.4",
+      "port": "Port",
+      "portPlaceholder": "8080",
+      "user": "Benutzer",
+      "userPlaceholder": "optional",
+      "password": "Passwort",
+      "passwordPlaceholder": "optional"
+    },
+    "profile": {
+      "title": "Ihr erstes Profil erstellen",
+      "subtitle": "Ein eindeutiger, in sich stimmiger Fingerprint wird für Sie erzeugt.",
+      "createAndFinish": "Erstellen & fertig",
+      "name": "Profilname",
+      "namePlaceholder": "Mein erstes Profil",
+      "defaultName": "Mein erstes Profil",
+      "deviceType": "Gerätetyp",
+      "desktop": "Desktop",
+      "mobile": "Mobil (Android)",
+      "mobileNote": "Android wird auf der Desktop-Engine emuliert – stimmiger UA, Touch, Bildschirm & GPU, aber kein echtes Gerät.",
+      "proxyAttached": "Ihr neuer Proxy wird diesem Profil zugewiesen."
+    }
+  }
+}

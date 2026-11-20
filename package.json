@@ -102,6 +102,7 @@
       "dist/**/*",
       "src/main/**/*",
       "src/preload/**/*",
+    "src/renderer/i18n/locales/*/main.json",
       "prisma/**/*",
       "!prisma/**/*.sqlite",
       "!prisma/**/*.sqlite-journal",

@@ -204,7 +204,7 @@ export default function CaptchaScoreModal({ profile, running, onClose, onChanged
                       </div>
                       {showFix && (
                         <GuardedButton deny={denyFix(f.fix)} wrapperClassName="inline-flex shrink-0" size="sm" variant="secondary" className="shrink-0" disabled={Boolean(busy)} onClick={() => apply([f.fix])}>
-                          {busy === f.fix ? <Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin" aria-hidden="true" /> : null}
+                          {busy === f.fix ? <Loader2 className="me-1.5 h-3.5 w-3.5 animate-spin" aria-hidden="true" /> : null}
                           {t(`fix.${f.fix}`)}
                         </GuardedButton>
                       )}
@@ -218,16 +218,16 @@ export default function CaptchaScoreModal({ profile, running, onClose, onChanged
 
         <footer className="flex flex-wrap items-center justify-end gap-3 border-t border-border bg-surface px-5 py-4">
           {onLeakCheck && (
-            <Button size="sm" variant="ghost" className="mr-auto" disabled={Boolean(busy)} onClick={onLeakCheck} title={t('leakTestTitle')}>
-              <Radio className="mr-1.5 h-3.5 w-3.5" aria-hidden="true" /> {t('leakTest')}
+            <Button size="sm" variant="ghost" className="me-auto" disabled={Boolean(busy)} onClick={onLeakCheck} title={t('leakTestTitle')}>
+              <Radio className="me-1.5 h-3.5 w-3.5" aria-hidden="true" /> {t('leakTest')}
             </Button>
           )}
           <Button size="sm" variant="secondary" disabled={Boolean(busy)} onClick={() => { setNotes([]); setScore(null); load(); }}>
-            <RefreshCcw className="mr-1.5 h-3.5 w-3.5" aria-hidden="true" /> {t('rescore')}
+            <RefreshCcw className="me-1.5 h-3.5 w-3.5" aria-hidden="true" /> {t('rescore')}
           </Button>
           {fixable.length > 0 && (
             <GuardedButton deny={denyProfileFix} size="sm" variant="secondary" disabled={Boolean(busy)} onClick={() => apply(fixable)} title={t('fixAllTitle')}>
-              {busy === 'all' ? <Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin" aria-hidden="true" /> : <Wand2 className="mr-1.5 h-3.5 w-3.5" aria-hidden="true" />}
+              {busy === 'all' ? <Loader2 className="me-1.5 h-3.5 w-3.5 animate-spin" aria-hidden="true" /> : <Wand2 className="me-1.5 h-3.5 w-3.5" aria-hidden="true" />}
               {t('fixAll')} ({fixable.length})
             </GuardedButton>
           )}

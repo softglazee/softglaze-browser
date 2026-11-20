@@ -1,0 +1,51 @@
+{
+  "header": {
+    "eyebrow": "组织",
+    "title": "分组和标签",
+    "description": "将配置文件整理到分组中，并添加标签以便快速筛选。"
+  },
+  "filters": {
+    "allProfiles": "所有配置文件",
+    "ungrouped": "未分组",
+    "group": "分组"
+  },
+  "sidebar": {
+    "directories": "目录",
+    "createGroup": "新建分组",
+    "renameGroup": "重命名分组 {{name}}",
+    "deleteGroup": "删除分组 {{name}}",
+    "groupNamePlaceholder": "分组名称..."
+  },
+  "table": {
+    "searchPlaceholder": "搜索配置文件...",
+    "loading": "正在加载分组...",
+    "colProfileName": "配置文件名称",
+    "colGroupAssignment": "所属分组",
+    "colTags": "标签"
+  },
+  "tagFilter": {
+    "label": "筛选",
+    "clear": "清除"
+  },
+  "bulk": {
+    "selected_one": "已选择 {{count}} 个",
+    "selected_other": "已选择 {{count}} 个",
+    "moveTo": "移动到：",
+    "chooseGroup": "选择分组…",
+    "clear": "清除"
+  },
+  "empty": {
+    "title": "未找到配置文件",
+    "noMatch": "没有符合筛选条件的配置文件。",
+    "groupEmpty": "此分组为空。可通过“分组”下拉菜单将配置文件移到这里。"
+  },
+  "tags": {
+    "add": "添加标签",
+    "remove": "移除标签",
+    "inputPlaceholder": "标签 + Enter"
+  },
+  "deleteConfirm": "删除分组“{{name}}”？其中的配置文件将变为未分组（配置文件本身不会被删除）。",
+  "errors": {
+    "loadFailed": "无法加载分组。"
+  }
+}

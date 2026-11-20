@@ -1,0 +1,108 @@
+{
+  "palette": {
+    "dialogLabel": "Palette de commandes",
+    "searchPlaceholder": "Rechercher pages, profils, proxys, membres…",
+    "searchAriaLabel": "Rechercher des pages, profils, proxys et membres",
+    "resultsLabel": "Résultats",
+    "esc": "Échap",
+    "noMatches": "Aucun résultat.",
+    "nav": {
+      "dashboard": "Tableau de bord",
+      "ai": "SoftGlaze AI",
+      "profiles": "Profils",
+      "groups": "Groupes",
+      "proxies": "Pool de proxys",
+      "freeProxies": "Proxys gratuits",
+      "proxyProviders": "Fournisseurs de proxys",
+      "browsers": "Navigateurs",
+      "extensions": "Extensions",
+      "batchImport": "Import en lot",
+      "trash": "Corbeille",
+      "automation": "Automatisation",
+      "members": "Membres",
+      "account": "Compte",
+      "settings": "Paramètres"
+    },
+    "hint": {
+      "page": "Page",
+      "profile": "Profil",
+      "proxy": "Proxy",
+      "member": "Membre",
+      "action": "Action"
+    },
+    "fallback": {
+      "profile": "Profil n° {{id}}",
+      "proxy": "Proxy n° {{id}}",
+      "member": "Membre n° {{id}}"
+    },
+    "action": {
+      "stopAi": "Arrêter toute l'IA"
+    }
+  },
+  "wizard": {
+    "skipTitle": "Passer la configuration",
+    "back": "Retour",
+    "skip": "Passer",
+    "saveAndContinue": "Enregistrer et continuer",
+    "saveAndFinish": "Enregistrer et terminer",
+    "msg": {
+      "smtpSaved": "SMTP enregistré.",
+      "proxySaved": "Proxy enregistré."
+    },
+    "err": {
+      "smtpSaveFailed": "Impossible d'enregistrer les paramètres SMTP.",
+      "proxySaveFailed": "Impossible d'enregistrer le proxy.",
+      "profileCreateFailed": "Impossible de créer le profil."
+    },
+    "welcome": {
+      "title": "Bienvenue dans SoftGlaze",
+      "subtitle": "Une configuration rapide en 3 étapes vous mène à votre premier profil. Vous pouvez passer chaque étape.",
+      "subtitleShort_one": "Une seule étape rapide. Vous pouvez la passer.",
+      "subtitleShort_other": "Une configuration rapide en {{count}} étapes. Vous pouvez passer chaque étape.",
+      "subtitleShort_many": "Une configuration rapide en {{count}} étapes. Vous pouvez passer chaque étape.",
+      "unavailable": "Les étapes grisées sont ignorées : votre compte ne peut pas les effectuer.",
+      "getStarted": "Commencer",
+      "stepEmail": "E-mail (SMTP) : facultatif, pour les codes à usage unique",
+      "stepProxy": "Votre premier proxy : facultatif",
+      "stepProfile": "Votre premier profil de navigation"
+    },
+    "smtp": {
+      "title": "E-mail (SMTP)",
+      "subtitle": "Facultatif : permet à l'application d'envoyer des codes de vérification. Vous pourrez le régler plus tard dans les Paramètres.",
+      "host": "Hôte SMTP",
+      "hostPlaceholder": "smtp.example.com",
+      "port": "Port",
+      "portPlaceholder": "587",
+      "username": "Nom d'utilisateur",
+      "usernamePlaceholder": "vous@exemple.com",
+      "password": "Mot de passe",
+      "passwordPlaceholder": "••••••••"
+    },
+    "proxy": {
+      "title": "Ajoutez votre premier proxy",
+      "subtitle": "Facultatif : donnez à chaque identité son propre réseau. Vous pourrez en ajouter d'autres dans le pool de proxys.",
+      "type": "Type",
+      "host": "Hôte",
+      "hostPlaceholder": "1.2.3.4",
+      "port": "Port",
+      "portPlaceholder": "8080",
+      "user": "Utilisateur",
+      "userPlaceholder": "facultatif",
+      "password": "Mot de passe",
+      "passwordPlaceholder": "facultatif"
+    },
+    "profile": {
+      "title": "Créez votre premier profil",
+      "subtitle": "Une empreinte unique et cohérente est générée pour vous.",
+      "createAndFinish": "Créer et terminer",
+      "name": "Nom du profil",
+      "namePlaceholder": "Mon premier profil",
+      "defaultName": "Mon premier profil",
+      "deviceType": "Type d'appareil",
+      "desktop": "Ordinateur",
+      "mobile": "Mobile (Android)",
+      "mobileNote": "Android est émulé sur le moteur de bureau : UA, tactile, écran et GPU cohérents, mais ce n'est pas un vrai appareil.",
+      "proxyAttached": "Votre nouveau proxy sera associé à ce profil."
+    }
+  }
+}

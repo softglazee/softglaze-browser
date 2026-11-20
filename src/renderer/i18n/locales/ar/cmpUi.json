@@ -1,0 +1,31 @@
+{
+  "brandSelect": {
+    "presentAs": "اعرض هذا الملف على أنه {{brand}}"
+  },
+  "versionSelect": {
+    "auto": "تلقائي",
+    "loadingVersions": "جارٍ تحميل الإصدارات…",
+    "ready": "جاهز",
+    "readyTitle": "مثبّت وجاهز للاستخدام",
+    "noVersions": "لم يتم العثور على إصدارات.",
+    "offlineError": "غير متصل: تعذّر الوصول إلى كتالوج الإصدارات.",
+    "downloadFailed": "فشل التنزيل.",
+    "resumeFailed": "فشل الاستئناف.",
+    "paused": "متوقف مؤقتًا",
+    "interrupted": "متقطّع",
+    "resumeTitle": "{{state}} عند {{percent}}%، استئناف",
+    "statusInstalling": "تثبيت",
+    "statusQueued": "…",
+    "retryTitle": "إعادة المحاولة: {{error}}",
+    "downloadFailedShort": "فشل التنزيل",
+    "downloadInstallTitle": "تنزيل هذا الإصدار وتثبيته"
+  },
+  "pager": {
+    "showing": "عرض {{from}}-{{to}} من {{total}}",
+    "perPage": "لكل صفحة",
+    "all": "الكل",
+    "prev": "السابق",
+    "next": "التالي",
+    "pageOf": "صفحة {{page}} / {{total}}"
+  }
+}

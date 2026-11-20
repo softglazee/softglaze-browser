@@ -1,0 +1,528 @@
+{
+  "header": {
+    "eyebrow": "Réseau",
+    "title": "Pool de proxys",
+    "description": "Stockez localement des proxys HTTP et SOCKS5 réutilisables, ou synchronisez des pools achetés directement depuis les fournisseurs intégrés."
+  },
+  "rotation": {
+    "label": "Rotation :",
+    "tooltip": "Comment le pool de rotation d'un profil est appliqué au lancement",
+    "eachLaunch": "Rotation à chaque lancement",
+    "sticky": "Fixe (proxy fixe)",
+    "failover": "Basculer vers un proxy sain",
+    "latencyOptimized": "Le plus rapide (latence)",
+    "failoverMaxTooltip": "Ignorer les proxys plus lents que ce nombre de ms (0 = sans limite ; utilise tout le pool si aucun ne convient)",
+    "maxMsPlaceholder": "ms max",
+    "topNTooltip": "Tour à tour parmi les N proxys les plus rapides",
+    "topNPlaceholder": "top N"
+  },
+  "actions": {
+    "testAll": "Tout tester",
+    "testAllTooltip": "Test d'état simultané de tous les proxys",
+    "testAllSummary": "{{ok}}/{{total}} OK",
+    "checkAll": "Tout vérifier",
+    "refresh": "Actualiser",
+    "batchAdd": "Ajout en lot",
+    "newProxy": "Nouveau proxy",
+    "checkNew": "Vérifier les nouveaux",
+    "checkNewTooltip": "Vérifier uniquement les proxys ajoutés récemment et jamais vérifiés."
+  },
+  "free": {
+    "button": "Proxys gratuits",
+    "buttonTooltip": "Trouvez, testez et conservez des proxys publics gratuits sur une page dédiée, à part de vos proxys payants",
+    "title": "Proxys publics gratuits",
+    "description": "SoftGlaze télécharge les listes publiques publiées par les projets de proxys gratuits, teste chaque proxy et ne conserve que ceux qui fonctionnent, sur cette page et à part de vos proxys payants.",
+    "warn": {
+      "strangers": "Les proxys gratuits sont gérés par des inconnus. Ne les utilisez pas pour vous connecter à des comptes, saisir des mots de passe ou payer : le propriétaire d'un proxy peut voir le trafic non chiffré.",
+      "quality": "Ils sont lents, cessent souvent de fonctionner en quelques heures et beaucoup figurent sur des listes de blocage : attendez-vous à plus de CAPTCHA qu'avec un proxy payant. Pour un vrai travail sur des comptes, utilisez un fournisseur de proxys.",
+      "legal": "Ne les utilisez que là où c'est autorisé. La génération rapide ne choisit jamais de proxys gratuits, sauf si vous choisissez « Proxys gratuits » comme source de proxys."
+    },
+    "checks": "Chaque proxy est testé en direct, et les proxys HTTP qui transmettent votre IP réelle aux sites web sont rejetés.",
+    "protocol": "Protocole",
+    "country": "Pays (facultatif)",
+    "countryPlaceholder": "par ex. US",
+    "limit": "Combien en ajouter",
+    "start": "Trouver des proxys gratuits",
+    "again": "En trouver plus",
+    "cancel": "Arrêter",
+    "close": "Fermer",
+    "done": "Terminé",
+    "progress": {
+      "fetching": "Téléchargement des listes publiques…",
+      "checking": "{{checked}} sur {{total}} testés · {{found}} bons"
+    },
+    "result": {
+      "added": "{{added}} ajoutés sur {{requested}} demandés.",
+      "checked": "{{checked}} candidats testés sur {{total}}",
+      "rejected": "{{dead}} hors service, {{leak}} ont exposé votre IP, {{country}} dans le mauvais pays",
+      "planLimit": "La limite de proxys de votre forfait a été atteinte : certains bons proxys n'ont pas été ajoutés."
+    },
+    "stopped": {
+      "limit": "Arrêté : le nombre demandé a été atteint.",
+      "time": "Arrêté après 3 minutes. Relancez pour en trouver plus.",
+      "cancelled": "Arrêté par vous.",
+      "exhausted": "Tous les candidats des listes ont été testés."
+    },
+    "errors": {
+      "country": "Utilisez un code pays à deux lettres, comme US ou DE.",
+      "failed": "Impossible de terminer la recherche."
+    }
+  },
+  "freePage": {
+    "eyebrow": "Proxys",
+    "title": "Proxys gratuits",
+    "description": "Les proxys publics gratuits sont ici, à part de vos proxys payants. Ils n'apparaissent jamais dans le pool de proxys, ses compteurs ou ses groupes, et un profil n'en utilise un que si vous le choisissez.",
+    "openPool": "Pool de proxys",
+    "refresh": "Actualiser",
+    "warnTitle": "Lisez ceci avant d'utiliser un proxy gratuit",
+    "searchTitle": "Trouver des proxys gratuits",
+    "busy": "Une recherche de proxys gratuits est déjà en cours.",
+    "stopIt": "L'arrêter",
+    "listTitle": "Proxys gratuits enregistrés",
+    "listCount": "{{shown}} sur {{total}}",
+    "filters": {
+      "protocol": "Protocole",
+      "protocolAll": "Tous les protocoles",
+      "country": "Pays",
+      "countryAll": "Tous les pays",
+      "countryUnknown": "Pays inconnu",
+      "status": "Statut",
+      "statusAll": "Tous les statuts",
+      "reset": "Réinitialiser les filtres"
+    },
+    "status": {
+      "working": "Fonctionne",
+      "dead": "Hors service",
+      "unchecked": "Non vérifié",
+      "checking": "Vérification…"
+    },
+    "table": {
+      "address": "Adresse",
+      "protocol": "Protocole",
+      "country": "Pays",
+      "speed": "Vitesse",
+      "lastCheck": "Dernière vérif.",
+      "status": "Statut",
+      "usedBy": "Utilisé par",
+      "actions": "Actions",
+      "selectAll": "Tout sélectionner (affichés)",
+      "selectRow": "Sélectionner {{address}}",
+      "loading": "Chargement des proxys gratuits…",
+      "never": "Jamais",
+      "notUsed": "Aucun profil",
+      "usedByCount_one": "{{count}} profil",
+      "usedByCount_other": "{{count}} profils",
+      "usedByCount_many": "{{count}} profils"
+    },
+    "actions": {
+      "check": "Vérifier",
+      "checkAria": "Vérifier {{address}} maintenant",
+      "delete": "Supprimer",
+      "deleteAria": "Supprimer {{address}}",
+      "checkAll": "Vérifier les affichés",
+      "deleteDead": "Supprimer les hors service",
+      "checkSelected": "Vérifier la sélection",
+      "deleteSelected": "Supprimer la sélection",
+      "clear": "Effacer",
+      "selected": "{{count}} sélectionnés"
+    },
+    "confirm": {
+      "delete": "Supprimer le proxy gratuit {{address}} ?",
+      "deleteUsed_one": "Supprimer le proxy gratuit {{address}} ? {{count}} profil l'utilise et perdra son proxy.",
+      "deleteUsed_other": "Supprimer le proxy gratuit {{address}} ? {{count}} profils l'utilisent et perdront leur proxy.",
+      "deleteUsed_many": "Supprimer le proxy gratuit {{address}} ? {{count}} profils l'utilisent et perdront leur proxy.",
+      "deleteSelected_one": "Supprimer {{count}} proxy gratuit sélectionné ?",
+      "deleteSelected_other": "Supprimer {{count}} proxys gratuits sélectionnés ?",
+      "deleteSelected_many": "Supprimer {{count}} proxys gratuits sélectionnés ?",
+      "deleteDead_one": "Supprimer {{count}} proxy gratuit qui a échoué à sa dernière vérification ?",
+      "deleteDead_other": "Supprimer {{count}} proxys gratuits qui ont échoué à leur dernière vérification ?",
+      "deleteDead_many": "Supprimer {{count}} proxys gratuits qui ont échoué à leur dernière vérification ?"
+    },
+    "checkRun": {
+      "running": "Vérification {{done}} sur {{total}} · {{ok}} fonctionnent, {{fail}} hors service",
+      "done": "{{total}} vérifiés · {{ok}} fonctionnent, {{fail}} hors service",
+      "stop": "Arrêter"
+    },
+    "empty": {
+      "title": "Aucun proxy gratuit pour l'instant",
+      "description": "Utilisez la recherche ci-dessus pour trouver, tester et enregistrer des proxys publics gratuits. Seuls ceux qui fonctionnent et masquent votre IP sont conservés."
+    },
+    "noMatch": {
+      "title": "Aucun proxy gratuit ne correspond à ces filtres",
+      "description": "Modifiez ou réinitialisez les filtres pour voir les autres."
+    },
+    "errors": {
+      "load": "Impossible de charger les proxys gratuits.",
+      "delete": "Impossible de supprimer les proxys gratuits.",
+      "check": "Impossible de vérifier les proxys gratuits."
+    }
+  },
+  "tabs": {
+    "custom": "Proxys personnalisés",
+    "providers": "Fournisseurs de proxys",
+    "integrated": "Intégrés",
+    "history": "Historique des vérifs",
+    "groups": "Groupes et pays"
+  },
+  "stats": {
+    "totalProxies": "Total des proxys",
+    "totalTip": "Afficher tout le pool",
+    "splitSub": "{{verified}} vérifiés · {{unchecked}} non vérifiés",
+    "proxyTypes": "Types de proxys",
+    "verified": "Vérifiés",
+    "verifiedTip": "Filtrer le tableau sur les proxys vérifiés",
+    "pctOfPool": "{{pct}} % du pool",
+    "failed": "En échec",
+    "failedTip": "Filtrer le tableau sur les proxys en échec",
+    "uncheckedSub": "{{count}} pas encore vérifiés",
+    "nonVerified": "Non vérifiés",
+    "protocols": "HTTP / SOCKS",
+    "protocolsTip": "Répartition des protocoles dans le pool",
+    "protocolsSub": "{{http}} HTTP · {{socks}} SOCKS",
+    "countries": "Pays",
+    "countriesTip": "Ouvrir la répartition par pays",
+    "topCountry": "{{country}} en tête · {{count}}",
+    "countriesEmpty": "Lancez une vérification pour détecter les emplacements",
+    "lastCheck": "Dernière vérif.",
+    "lastCheckTip": "Ouvrir les vérifications d'état automatiques",
+    "autoEvery": "Vérif. auto toutes les {{n}} min",
+    "autoOff": "Vérif. auto désactivée",
+    "justNow": "à l'instant",
+    "minAgo": "il y a {{n}} min",
+    "hrAgo": "il y a {{n}} h",
+    "dayAgo": "il y a {{n}} j",
+    "filtering": "filtrage",
+    "noProxies": "Aucun proxy",
+    "total": "total"
+  },
+  "search": {
+    "placeholder": "Rechercher par nom de proxy, hôte ou nom d'utilisateur..."
+  },
+  "deleteFiltered": {
+    "tooltip": "Supprimer tous les proxys correspondant au filtre actuel",
+    "button": "Tout supprimer : {{scope}} ({{count}})",
+    "confirm_one": "Supprimer {{count}} proxy ({{scope}}) ? Action irréversible : les profils qui l'utilisent le perdent et ne se lanceront plus tant que vous ne leur aurez pas attribué un autre proxy.",
+    "confirm_other": "Supprimer les {{count}} proxys ({{scope}}) ? Action irréversible : les profils qui les utilisent perdent leur proxy et ne se lanceront plus tant que vous ne leur en aurez pas attribué un autre.",
+    "confirm_many": "Supprimer les {{count}} proxys ({{scope}}) ? Action irréversible : les profils qui les utilisent perdent leur proxy et ne se lanceront plus tant que vous ne leur en aurez pas attribué un autre.",
+    "scope": {
+      "all": "tous",
+      "filtered": "filtrés",
+      "matching": "correspondants",
+      "verified": "vérifiés",
+      "failed": "en échec"
+    }
+  },
+  "filters": {
+    "all": "Tous",
+    "ungrouped": "Sans groupe",
+    "byProvider": "Par fournisseur"
+  },
+  "groups": {
+    "chipTooltip": "Cliquez pour filtrer · faites glisser des proxys ici pour les ajouter",
+    "renameRecolor": "Renommer / changer la couleur",
+    "deleteGroup": "Supprimer le groupe",
+    "newGroup": "Nouveau groupe",
+    "deleteConfirm": "Supprimer le groupe \"{{name}}\" ? Les proxys restent dans le pool : ils deviennent simplement sans groupe."
+  },
+  "autoGroup": {
+    "granularityTooltip": "Précision du regroupement auto",
+    "country": "Pays",
+    "state": "État",
+    "city": "Ville",
+    "buttonTooltip": "Créer des groupes à partir du pays/de l'État/de la ville vérifiés de chaque proxy. Lancez d'abord « Tout tester » pour que les proxys aient un emplacement détecté.",
+    "button": "Regroupement auto",
+    "result_one": "+{{count}} groupe · {{assigned}} attribués",
+    "result_other": "+{{count}} groupes · {{assigned}} attribués",
+    "result_many": "+{{count}} groupes · {{assigned}} attribués"
+  },
+  "sort": {
+    "tooltip": "Trier par latence",
+    "default": "Tri : par défaut",
+    "fastest": "Les plus rapides d'abord",
+    "slowest": "Les plus lents d'abord"
+  },
+  "geo": {
+    "toggleTooltip": "Afficher/masquer la répartition géographique",
+    "button": "Géo",
+    "byCountry": "Proxys par pays",
+    "summary": "{{countries}} pays · {{proxies}} proxys",
+    "unknown": "Inconnu"
+  },
+  "scheduler": {
+    "tooltip": "Retester automatiquement chaque proxy selon un planning",
+    "autoCheckEvery": "Vérif. auto toutes les",
+    "min": "min"
+  },
+  "selection": {
+    "count": "{{count}} sélectionnés",
+    "checkSelected": "Vérifier la sélection",
+    "moveToGroup": "Déplacer vers un groupe",
+    "noGroupsYet": "Aucun groupe pour l'instant : créez-en un d'abord.",
+    "removeFromGroup": "Retirer du groupe",
+    "deleteSelected": "Supprimer la sélection",
+    "clear": "Effacer",
+    "clearTooltip": "Effacer la sélection",
+    "copyForExtension": "Copier pour SoftGlaze Proxy",
+    "copyForExtensionTooltip": "Copier les proxys sélectionnés pour l'import en lot de l'extension de navigateur SoftGlaze Proxy"
+  },
+  "copyForExtension": {
+    "title": "Copier pour SoftGlaze Proxy",
+    "description": "Copie les proxys sélectionnés sous forme de lignes que l'extension de navigateur SoftGlaze Proxy lit dans sa zone d'import en lot. Chaque ligne indique son type (http, https, socks5 ou socks4), pour qu'un proxy SOCKS5 ne soit jamais lu comme HTTP.",
+    "loading": "Comptage des proxys sélectionnés…",
+    "count": "Proxys à copier : {{count}}",
+    "skipped": "Exclus : {{count}} (type, adresse ou port que l'extension ne lit pas).",
+    "includeCredentials": "Inclure les noms d'utilisateur et mots de passe",
+    "credsNoRole": "Votre rôle ne permet pas de voir les noms d'utilisateur et mots de passe des proxys. Demandez à un propriétaire ou à un admin.",
+    "credsNone": "Aucun des proxys sélectionnés n'a de nom d'utilisateur ou de mot de passe.",
+    "socks5Note": "Proxys SOCKS5 avec identifiants : {{count}}. Chrome et Edge ne peuvent pas s'authentifier auprès des proxys SOCKS5 : l'extension n'acceptera donc pas ces lignes dans ces navigateurs. Firefox peut les utiliser.",
+    "socks4Note": "Proxys SOCKS4 avec identifiants : {{count}}. Ils sont copiés sans identifiants, car SOCKS4 n'a pas de mot de passe et l'extension n'en accepte pas.",
+    "clipboardWarning": "D'autres programmes sur cet ordinateur peuvent lire le presse-papiers. L'application le vide au bout de 2 minutes s'il contient encore cette liste.",
+    "copy": "Copier",
+    "copying": "Copie…",
+    "cancel": "Annuler",
+    "close": "Fermer",
+    "copied": "{{count}} proxys copiés sans noms d'utilisateur ni mots de passe. Dans l'extension, ouvrez Proxies, choisissez Bulk import et collez.",
+    "copiedWithCredentials": "{{count}} proxys copiés avec leurs noms d'utilisateur et mots de passe. Dans l'extension, ouvrez Proxies, choisissez Bulk import et collez.",
+    "getExtension": "Obtenir l'extension SoftGlaze Proxy",
+    "loadError": "Impossible de lire les proxys sélectionnés.",
+    "copyError": "Impossible de copier les proxys."
+  },
+  "table": {
+    "loading": "Chargement des proxys...",
+    "emptyTitle": "Aucun proxy trouvé",
+    "emptyDescription": "Ajoutez un proxy manuellement ou collez un lot de chaînes de proxy.",
+    "selectAll": "Sélectionner tous les proxys",
+    "selectRow": "Sélectionner {{name}}",
+    "colName": "Nom",
+    "colType": "Type",
+    "colEndpoint": "Point d'accès",
+    "colUsername": "Nom d'utilisateur",
+    "colGroup": "Groupe",
+    "colProfiles": "Profils",
+    "colCreated": "Créé le",
+    "colSpeed": "Vitesse",
+    "colBlocklist": "Liste de blocage",
+    "colStatus": "Statut",
+    "colActions": "Actions",
+    "profileCount_one": "{{count}} profil",
+    "profileCount_other": "{{count}} profils",
+    "profileCount_many": "{{count}} profils",
+    "defaultProxyName": "Proxy"
+  },
+  "rowActions": {
+    "testProxy": "Tester le proxy",
+    "healthHistory": "Historique d'état",
+    "editProxy": "Modifier le proxy",
+    "deleteProxy": "Supprimer le proxy",
+    "copyEndpoint": "Copier hôte:port",
+    "check": "Vérifier",
+    "rotateIp": "Changer d'IP",
+    "rotateIpTitle": "Obtenir une nouvelle IP de sortie sur ce proxy"
+  },
+  "status": {
+    "checking": "Vérification…",
+    "failed": "Échec",
+    "ok": "OK"
+  },
+  "checker": {
+    "running": "Vérification des proxys…",
+    "done": "Vérification terminée",
+    "healthy": "{{n}} sains",
+    "failed": "{{n}} en échec",
+    "eta": "Temps restant",
+    "stop": "Arrêter",
+    "dismiss": "Masquer",
+    "idle": "En attente de démarrage…",
+    "health": "État",
+    "blacklisted": "Sur liste noire de",
+    "blacklistShort": "liste noire",
+    "notBlacklisted": "Absent de toutes les listes de blocage vérifiées",
+    "clean": "propre",
+    "residential": "Plage résidentielle",
+    "residentialTip": "Plage résidentielle (Spamhaus PBL), pas une inscription pour spam. Normal pour les proxys résidentiels et mobiles ; cela ne baisse pas le score d'état.",
+    "hideLog": "Masquer le journal",
+    "showLog": "Afficher le journal",
+    "speed": {
+      "fast": "rapide",
+      "good": "bon",
+      "ok": "correct",
+      "slow": "lent"
+    }
+  },
+  "blacklistFilter": {
+    "all": "Tous",
+    "clean": "Propres",
+    "blacklisted": "Sur liste noire",
+    "cleanTip": "Afficher uniquement les proxys absents de toutes les listes de blocage vérifiées",
+    "blacklistedTip": "Afficher uniquement les proxys signalés sur une liste de blocage DNS"
+  },
+  "speedFilter": {
+    "all": "Tous",
+    "fast": "Rapides",
+    "slow": "Lents",
+    "fastTip": "Afficher uniquement les proxys mesurés à 2 s ou moins",
+    "slowTip": "Afficher uniquement les proxys mesurés à plus de 2 s"
+  },
+  "bulkDelete": {
+    "confirm_one": "Supprimer {{count}} proxy sélectionné ? Les profils qui l'utilisent le perdent et ne se lanceront plus tant que vous ne leur aurez pas attribué un autre proxy.",
+    "confirm_other": "Supprimer {{count}} proxys sélectionnés ? Les profils qui les utilisent perdent leur proxy et ne se lanceront plus tant que vous ne leur en aurez pas attribué un autre.",
+    "confirm_many": "Supprimer {{count}} proxys sélectionnés ? Les profils qui les utilisent perdent leur proxy et ne se lanceront plus tant que vous ne leur en aurez pas attribué un autre."
+  },
+  "delete": {
+    "confirm": "Supprimer le proxy \"{{name}}\" ?",
+    "profilesNeedProxy": "Profils qui utilisaient le proxy supprimé : {{count}}. Ils n'ont plus de proxy et ne se lanceront pas tant que vous ne leur en aurez pas attribué un (dans l'éditeur de profil, ou avec Proxys sur la page Profils).",
+    "dismissNotice": "Masquer"
+  },
+  "history": {
+    "dialogTitle": "Historique d'état du proxy",
+    "title": "Historique d'état",
+    "empty": "Aucun historique pour l'instant. Lancez une vérification d'état (ou activez la vérif. auto) et la chronologie latence/statut se construira ici.",
+    "latencyOverTime": "Latence dans le temps (ms)",
+    "ok": "ok",
+    "fail": "échec",
+    "checks_one": "{{count}} vérification",
+    "checks_other": "{{count}} vérifications",
+    "checks_many": "{{count}} vérifications",
+    "close": "Fermer"
+  },
+  "historyCards": {
+    "title": "Historique récent des vérifications",
+    "openDetail": "Ouvrir l'historique complet",
+    "regressed": "Vérifié avant, en échec ensuite",
+    "regressedCount_one": "{{count}} vérifié puis en échec",
+    "regressedCount_other": "{{count}} vérifiés puis en échec",
+    "regressedCount_many": "{{count}} vérifiés puis en échec",
+    "empty": "Aucune vérification pour l'instant. Lancez « Tout vérifier » ou « Tout tester » sur la page Proxys et les résultats s'afficheront ici."
+  },
+  "form": {
+    "dialogTitleEdit": "Modifier le proxy",
+    "dialogTitleCreate": "Créer un proxy",
+    "titleEdit": "Modifier le proxy",
+    "titleCreate": "Créer un proxy",
+    "descriptionEdit": "Mettez à jour un proxy existant. Laissez le mot de passe masqué tel quel pour conserver la valeur actuelle.",
+    "descriptionCreate": "Ajoutez un proxy structuré au pool SQLite local.",
+    "tipPrefix": "Astuce : collez votre proxy",
+    "tipSuffix": "dans le champ Hôte pour remplir tous les champs automatiquement.",
+    "proxyName": "Nom du proxy",
+    "proxyNamePlaceholder": "Résidentiel US 01",
+    "type": "Type",
+    "host": "Hôte",
+    "port": "Port",
+    "username": "Nom d'utilisateur",
+    "password": "Mot de passe",
+    "optional": "Facultatif",
+    "cancel": "Annuler",
+    "saving": "Enregistrement...",
+    "saveChanges": "Enregistrer",
+    "createProxy": "Créer le proxy",
+    "socks4Note": "SOCKS4 fonctionne dans les profils Firefox. Les profils Chromium ne s'ouvriront pas avec : Chromium ne peut pas envoyer les requêtes DNS via SOCKS4, donc chaque site serait résolu en dehors du proxy. Utilisez SOCKS5 ou HTTP pour les profils Chromium."
+  },
+  "batch": {
+    "dialogTitle": "Ajouter des proxys en lot",
+    "title": "Ajout de proxys en lot",
+    "descriptionPrefix": "Collez un proxy par ligne. Format pris en charge :",
+    "defaultType": "Type par défaut",
+    "providerLabel": "Fournisseur (facultatif)",
+    "providerNone": "Aucun",
+    "providerHint": "Associe ces proxys au fournisseur dont ils proviennent, pour qu'ils soient regroupés sous ce fournisseur ici et comptés sur la page Fournisseurs de proxys.",
+    "proxyLines": "Lignes de proxy",
+    "resultTitle": "Résultat du lot",
+    "total": "Total",
+    "created": "Créés",
+    "skipped": "Ignorés",
+    "errors": "Erreurs",
+    "lineError": "Ligne {{line}} : {{message}}",
+    "close": "Fermer",
+    "importing": "Import...",
+    "addProxies": "Ajouter les proxys"
+  },
+  "groupModal": {
+    "dialogTitleEdit": "Modifier le groupe",
+    "dialogTitleNew": "Nouveau groupe",
+    "titleEdit": "Modifier le groupe de proxys",
+    "titleNew": "Nouveau groupe de proxys",
+    "description": "Regroupez les proxys par pays ou par usage (par ex. USA, Royaume-Uni, Japon). Vous pouvez cibler un groupe lors de la création de profils en lot.",
+    "groupName": "Nom du groupe",
+    "groupNamePlaceholder": "Proxys USA",
+    "color": "Couleur",
+    "colorLabel": "Couleur {{color}}",
+    "cancel": "Annuler",
+    "saveChanges": "Enregistrer",
+    "createGroup": "Créer le groupe"
+  },
+  "errors": {
+    "deleteProxies": "Échec de la suppression des proxys.",
+    "loadProxies": "Échec du chargement des proxys.",
+    "copyClipboard": "Impossible de copier dans le presse-papiers.",
+    "deleteSelected": "Échec de la suppression des proxys sélectionnés.",
+    "saveProxy": "Échec de l'enregistrement du proxy.",
+    "batchAdd": "Échec de l'ajout en lot des proxys.",
+    "bulkTest": "Échec du test en lot.",
+    "savePolicy": "Impossible d'enregistrer la règle de proxy.",
+    "saveSchedule": "Impossible d'enregistrer le planning.",
+    "enterGroupName": "Saisissez un nom de groupe.",
+    "saveGroup": "Impossible d'enregistrer le groupe.",
+    "deleteGroup": "Impossible de supprimer le groupe.",
+    "moveProxies": "Impossible de déplacer les proxys.",
+    "autoGroup": "Échec du regroupement auto. Lancez d'abord « Tout tester » pour que les proxys aient un pays détecté.",
+    "deleteProxy": "Échec de la suppression du proxy. Retirez d'abord les profils liés ou modifiez leur proxy attribué.",
+    "rotate": "Impossible de changer l'IP.",
+    "rotateStatus": "La demande de rotation a renvoyé HTTP {{status}}."
+  },
+  "groupsPage": {
+    "groupsTitle": "Groupes et pays",
+    "openGroup": "Afficher ces proxys",
+    "noGeo": "Lancez « Tout vérifier » sur la page Proxys pour détecter le pays de chaque proxy.",
+    "noProviders": "Aucun proxy de fournisseur pour l'instant. Importez-en depuis Fournisseurs de proxys.",
+    "scheduleTitle": "Vérifications d'état automatiques"
+  },
+  "filterBar": {
+    "statusTip": "Statut de vérification",
+    "statusAll": "Tous les statuts",
+    "blocklistAll": "Toutes les listes",
+    "speedAll": "Toutes les vitesses",
+    "groupTip": "Groupe ou pays",
+    "groupAll": "Tous les groupes",
+    "providerAll": "Tous les fournisseurs",
+    "reset": "Réinitialiser les filtres"
+  },
+  "providerAccount": {
+    "title": "Compte",
+    "check": "Vérifier le compte",
+    "checkedAt": "Vérifié {{time}}",
+    "notChecked": "Pas encore vérifié. « Vérifier le compte » lit le forfait, l'expiration, le trafic et le solde avec la clé enregistrée pour ce fournisseur.",
+    "notSupported": "L'API de ce fournisseur ne fournit pas les détails du compte.",
+    "openDashboard": "Ouvrir le tableau de bord",
+    "status": "Statut",
+    "statusActive": "Actif",
+    "statusExpired": "Expiré",
+    "statusSuspended": "Suspendu",
+    "statusUnknown": "Inconnu",
+    "plan": "Forfait",
+    "expires": "Expire le",
+    "daysLeft_one": "{{count}} jour restant",
+    "daysLeft_other": "{{count}} jours restants",
+    "daysLeft_many": "{{count}} jours restants",
+    "endsToday": "se termine aujourd'hui",
+    "endedAgo_one": "terminé il y a {{count}} jour",
+    "endedAgo_other": "terminé il y a {{count}} jours",
+    "endedAgo_many": "terminé il y a {{count}} jours",
+    "traffic": "Trafic",
+    "trafficLeft": "{{left}} restants",
+    "trafficUsedOf": "{{used}} utilisés sur {{total}}",
+    "trafficUsed": "{{used}} utilisés",
+    "trafficTotal": "Forfait de {{total}}",
+    "balance": "Solde",
+    "noDetails": "Le fournisseur a répondu, mais sans forfait, expiration, trafic ni solde.",
+    "error": "Impossible de vérifier le compte : {{message}}",
+    "note": {
+      "firstToExpire": "L'expiration affichée est celle du premier de vos proxys ou forfaits à arriver à terme.",
+      "summedPlans": "Les chiffres additionnent tous vos forfaits actifs.",
+      "noActivePlans": "Aucun forfait actif sur ce compte.",
+      "noActiveProxies": "Aucun proxy actif sur ce compte.",
+      "planSizeOnly": "L'API indique la taille du forfait, pas le trafic restant.",
+      "firstPageOnly": "Calculé à partir de vos 1000 premiers proxys.",
+      "usedLast7Days": "Trafic utilisé au cours des 7 derniers jours ; l'API n'indique pas ce qui reste."
+    }
+  }
+}

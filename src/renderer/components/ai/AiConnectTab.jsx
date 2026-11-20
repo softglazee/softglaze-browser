@@ -123,7 +123,7 @@ export default function AiConnectTab({ status, clients, loading, bridge, error, 
                   aria-controls="ai-client-panel"
                   tabIndex={on ? 0 : -1}
                   onClick={() => pick(c.key)}
-                  className={cn('flex shrink-0 items-center gap-2.5 rounded-lg border px-3 py-2 text-left text-[13px] font-medium transition-colors',
+                  className={cn('flex shrink-0 items-center gap-2.5 rounded-lg border px-3 py-2 text-start text-[13px] font-medium transition-colors',
                     on ? 'text-foreground' : 'border-transparent text-muted-foreground hover:bg-secondary hover:text-foreground')}
                   style={on ? { background: 'color-mix(in srgb, var(--primary) 12%, transparent)', borderColor: 'color-mix(in srgb, var(--primary) 26%, transparent)' } : undefined}
                 >

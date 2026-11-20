@@ -1,0 +1,31 @@
+{
+  "brandSelect": {
+    "presentAs": "將此設定檔呈現為 {{brand}}"
+  },
+  "versionSelect": {
+    "auto": "自動",
+    "loadingVersions": "正在載入版本…",
+    "ready": "就緒",
+    "readyTitle": "已安裝，可以使用",
+    "noVersions": "未找到版本。",
+    "offlineError": "離線：無法存取版本目錄。",
+    "downloadFailed": "下載失敗。",
+    "resumeFailed": "繼續下載失敗。",
+    "paused": "已暫停",
+    "interrupted": "已中斷",
+    "resumeTitle": "{{state}}於 {{percent}}%，點選繼續",
+    "statusInstalling": "安裝中",
+    "statusQueued": "…",
+    "retryTitle": "重試：{{error}}",
+    "downloadFailedShort": "下載失敗",
+    "downloadInstallTitle": "下載並安裝此版本"
+  },
+  "pager": {
+    "showing": "顯示第 {{from}}-{{to}} 項，共 {{total}} 項",
+    "perPage": "每頁",
+    "all": "全部",
+    "prev": "上一頁",
+    "next": "下一頁",
+    "pageOf": "第 {{page}} / {{total}} 頁"
+  }
+}

@@ -1,0 +1,146 @@
+{
+  "header": {
+    "eyebrow": "पहचानें",
+    "title": "डेटा वॉल्ट",
+    "description": "स्मार्ट ऑटोफ़िल इंजन के लिए पहचानों का दोबारा इस्तेमाल होने वाला वॉल्ट। इन्हें हाथ से जोड़ें या स्प्रेडशीट इंपोर्ट करें; हर पहचान याद रखती है कि वह किन साइटों पर इस्तेमाल हो चुकी है।",
+    "refresh": "रीफ़्रेश करें",
+    "import": "Excel/CSV इंपोर्ट करें",
+    "addManually": "हाथ से जोड़ें"
+  },
+  "stats": {
+    "totalIdentities": "कुल पहचानें",
+    "neverUsed": "कभी इस्तेमाल नहीं",
+    "usedAtLeastOnce": "कम से कम एक बार इस्तेमाल",
+    "totalUses": "कुल इस्तेमाल",
+    "filtering": "फ़िल्टर लगा है"
+  },
+  "toolbar": {
+    "searchPlaceholder": "नाम, ईमेल, यूज़रनेम या लेबल से खोजें...",
+    "showing": "{{count}} {{kind}} दिख रही हैं",
+    "kindNeverUsed": "कभी इस्तेमाल न हुई",
+    "kindUsed": "इस्तेमाल हुई",
+    "clear": "हटाएं"
+  },
+  "bulk": {
+    "selected": "{{count}} चुनी गईं",
+    "resetUsedStatus": "इस्तेमाल की स्थिति रीसेट करें",
+    "deleteSelected": "चुनी हुई मिटाएं",
+    "clear": "हटाएं",
+    "clearSelectionTitle": "चयन हटाएं"
+  },
+  "table": {
+    "loading": "पहचानें लोड हो रही हैं...",
+    "selectAll": "सभी पहचानें चुनें",
+    "selectRow": "{{name}} चुनें",
+    "colName": "नाम",
+    "colEmail": "ईमेल",
+    "colUsername": "यूज़रनेम",
+    "colPassword": "पासवर्ड",
+    "colPhone": "फ़ोन",
+    "colAddress": "पता",
+    "colLabel": "लेबल",
+    "colTimesUsed": "कितनी बार इस्तेमाल",
+    "colCreated": "बनाई गई",
+    "colActions": "कार्रवाइयां",
+    "sitesUsed_one": "{{count}} साइट",
+    "sitesUsed_other": "{{count}} साइटें",
+    "never": "कभी नहीं",
+    "editIdentity": "पहचान एडिट करें",
+    "deleteIdentity": "पहचान मिटाएं",
+    "hidePassword": "छिपाएं",
+    "revealPassword": "दिखाएं",
+    "reuse": "♻ दोबारा इस्तेमाल · {{count}}"
+  },
+  "empty": {
+    "title": "आपका डेटा वॉल्ट खाली है",
+    "description": "अपना ऑटोफ़िल वॉल्ट बनाना शुरू करने के लिए कोई पहचान हाथ से जोड़ें या Excel/CSV शीट इंपोर्ट करें।",
+    "filteredTitle": "आपके फ़िल्टर से कोई पहचान मेल नहीं खाती",
+    "filteredDescription": "कोई दूसरी खोज आज़माएं, या फ़िल्टर हटाएं।"
+  },
+  "groups": {
+    "identity": "पहचान",
+    "account": "खाता",
+    "address": "पता",
+    "meta": "अन्य जानकारी"
+  },
+  "fields": {
+    "firstName": "पहला नाम",
+    "lastName": "उपनाम",
+    "email": "ईमेल",
+    "username": "यूज़रनेम",
+    "password": "पासवर्ड",
+    "phone": "फ़ोन",
+    "dateOfBirth": "जन्मतिथि",
+    "addressLine1": "पता पंक्ति 1",
+    "addressLine2": "पता पंक्ति 2",
+    "city": "शहर",
+    "state": "राज्य / प्रांत",
+    "zipCode": "पिन / पोस्टल कोड",
+    "country": "देश",
+    "company": "कंपनी",
+    "companyAddress": "कंपनी का पता",
+    "label": "बैच लेबल"
+  },
+  "form": {
+    "dialogTitleEdit": "पहचान एडिट करें",
+    "dialogTitleAdd": "पहचान जोड़ें",
+    "titleEdit": "पहचान एडिट करें",
+    "titleAdd": "पहचान जोड़ें",
+    "descEdit": "इस पर्सोना की जानकारी अपडेट करें।",
+    "descAdd": "अपने डेटा वॉल्ट में एक पर्सोना जोड़ें। * वाले फ़ील्ड ज़रूरी हैं।",
+    "cancel": "रद्द करें",
+    "saving": "सेव हो रहा है...",
+    "saveChanges": "बदलाव सेव करें",
+    "addIdentity": "पहचान जोड़ें",
+    "showPassword": "पासवर्ड दिखाएं",
+    "hidePassword": "पासवर्ड छिपाएं"
+  },
+  "import": {
+    "dialogTitle": "पहचानें इंपोर्ट करें",
+    "title": "Excel / CSV से इंपोर्ट करें",
+    "descStep1": ".xlsx, .xls या .csv फ़ाइल चुनें। पहली पंक्ति में कॉलम हेडर होने चाहिए। एक बार में 1000 पंक्तियों तक।",
+    "descStep2": "अपने कॉलम को पहचान के फ़ील्ड से मिलाएं। {{fileName}} में {{count}} पंक्तियां मिलीं।",
+    "yourFile": "आपकी फ़ाइल",
+    "chooseSpreadsheet": "स्प्रेडशीट चुनें",
+    "colIdentityField": "पहचान फ़ील्ड",
+    "colYourColumn": "आपका कॉलम",
+    "skipOption": "- छोड़ें -",
+    "mappedCount_one": "{{count}} फ़ील्ड मिलाया गया। बिना नाम/ईमेल/यूज़रनेम वाली पंक्तियां छोड़ दी जाती हैं।",
+    "mappedCount_other": "{{count}} फ़ील्ड मिलाए गए। बिना नाम/ईमेल/यूज़रनेम वाली पंक्तियां छोड़ दी जाती हैं।",
+    "done": "हो गया",
+    "cancel": "रद्द करें",
+    "back": "वापस",
+    "importing": "इंपोर्ट हो रहा है...",
+    "importRows_one": "{{count}} पंक्ति इंपोर्ट करें",
+    "importRows_other": "{{count}} पंक्तियां इंपोर्ट करें",
+    "result": {
+      "complete": "इंपोर्ट पूरा हुआ",
+      "addedPrefix": "जोड़ी गईं",
+      "addedSuffix_one": "पहचान वॉल्ट में।",
+      "addedSuffix_other": "पहचानें वॉल्ट में।",
+      "skipped_one": "{{count}} खाली पंक्ति छोड़ी गई।",
+      "skipped_other": "{{count}} खाली पंक्तियां छोड़ी गईं।"
+    },
+    "errors": {
+      "noRows": "इस फ़ाइल में पढ़ने लायक कोई हेडर पंक्ति या डेटा पंक्ति नहीं है।",
+      "readFile": "यह फ़ाइल पढ़ी नहीं जा सकी।",
+      "nothingMapped": "इंपोर्ट करने के लिए कोई पंक्ति नहीं - पहला नाम / उपनाम / ईमेल / यूज़रनेम में से कम से कम एक मिलाएं।",
+      "failed": "इंपोर्ट नहीं हो सका।"
+    }
+  },
+  "confirm": {
+    "fallbackName": "पर्सोना",
+    "deleteOne": "पहचान \"{{name}}\" मिटाएं? यह वापस नहीं होगा।",
+    "deleteSelected_one": "चुनी गई {{count}} पहचान मिटाएं? यह वापस नहीं होगा।",
+    "deleteSelected_other": "चुनी गई {{count}} पहचानें मिटाएं? यह वापस नहीं होगा।",
+    "resetSelected_one": "चुनी गई {{count}} पहचान का \"कहां इस्तेमाल हुई\" इतिहास रीसेट करें? यह फिर से हर साइट पर उपलब्ध हो जाएगी।",
+    "resetSelected_other": "चुनी गई {{count}} पहचानों का \"कहां इस्तेमाल हुई\" इतिहास रीसेट करें? ये फिर से हर साइट पर उपलब्ध हो जाएंगी।"
+  },
+  "errors": {
+    "load": "डेटा वॉल्ट लोड नहीं हो सका।",
+    "save": "यह पहचान सेव नहीं हो सकी।",
+    "deleteOne": "पहचान मिटाई नहीं जा सकी।",
+    "deleteSelected": "चुनी गई पहचानें मिटाई नहीं जा सकीं।",
+    "resetSelected": "चुनी गई पहचानें रीसेट नहीं हो सकीं।"
+  }
+}

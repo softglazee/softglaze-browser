@@ -1,0 +1,430 @@
+{
+  "header": {
+    "eyebrow": "ميزات Softglaze Pro",
+    "title": "الأتمتة",
+    "description": "ماكروهات بلا برمجة، وإحماء تلقائي للكوكيز، وسجل لكل مهمة تعمل في الخلفية."
+  },
+  "tabs": {
+    "macros": "ماكروهاتي",
+    "parallel": "تشغيل متوازٍ",
+    "warmer": "إحماء الكوكيز",
+    "history": "سجل المهام"
+  },
+  "clickLabels": {
+    "none": "تصفّح فقط",
+    "random": "نقرات عشوائية",
+    "links": "تصفّح الروابط"
+  },
+  "stepTypes": {
+    "goto": "الانتقال إلى URL",
+    "click": "نقر",
+    "type": "كتابة نص",
+    "keypress": "ضغط مفتاح",
+    "scroll": "تمرير",
+    "wait": "انتظار",
+    "move": "تحريك الماوس",
+    "hover": "تمرير المؤشر",
+    "select": "اختيار من قائمة منسدلة",
+    "waitFor": "انتظار عنصر",
+    "submit": "إرسال نموذج",
+    "check": "تحديد / إلغاء التحديد",
+    "clear": "مسح الحقل"
+  },
+  "stepFields": {
+    "goto": {
+      "url": "URL",
+      "urlPlaceholder": "https://example.com"
+    },
+    "click": {
+      "selector": "محدد CSS",
+      "selectorPlaceholder": "#submit, .btn"
+    },
+    "type": {
+      "selector": "المحدد",
+      "selectorPlaceholder": "input[name=\"email\"]",
+      "value": "النص المراد كتابته"
+    },
+    "keypress": {
+      "key": "المفتاح",
+      "keyPlaceholder": "Enter"
+    },
+    "scroll": {
+      "steps": "مقدار التمرير",
+      "stepsPlaceholder": "4"
+    },
+    "wait": {
+      "ms": "ملّي ثانية",
+      "msPlaceholder": "1000"
+    },
+    "move": {
+      "selector": "المحدد (أو استخدم X/Y)",
+      "selectorPlaceholder": ".target",
+      "x": "X",
+      "y": "Y"
+    },
+    "hover": {
+      "selector": "المحدد",
+      "selectorPlaceholder": ".menu",
+      "ms": "مدة البقاء (ms)",
+      "msPlaceholder": "800"
+    },
+    "select": {
+      "selector": "المحدد",
+      "selectorPlaceholder": "select[name=\"focus\"]",
+      "value": "الخيار (القيمة أو التسمية أو الترتيب)",
+      "valuePlaceholder": "سباكة",
+      "by": "المطابقة حسب"
+    },
+    "waitFor": {
+      "selector": "المحدد",
+      "selectorPlaceholder": ".dashboard",
+      "state": "الحالة",
+      "timeout": "المهلة (ms)",
+      "timeoutPlaceholder": "30000"
+    },
+    "submit": {
+      "selector": "محدد النموذج أو الحقل",
+      "selectorPlaceholder": "form#signup"
+    },
+    "check": {
+      "selector": "المحدد",
+      "selectorPlaceholder": "input[name=\"terms\"]",
+      "state": "الحالة"
+    },
+    "clear": {
+      "selector": "المحدد",
+      "selectorPlaceholder": "input[name=\"email\"]"
+    }
+  },
+  "stepSummary": {
+    "noUrl": "(بلا URL)",
+    "noSelector": "(بلا محدد)",
+    "selectorFallback": "(المحدد)",
+    "target": "(الهدف)"
+  },
+  "macros": {
+    "intro": "سجّل سير عمل قابلًا لإعادة الاستخدام بلا برمجة أو أنشئه بنفسك، ثم شغّله داخل ملف (انتقال، نقر، كتابة، انتظار)، يدويًا أو وفق جدول.",
+    "profileSelectTitle": "الملف الذي يعمل عليه التشغيل / التسجيل",
+    "noProfiles": "لا ملفات",
+    "profileFallback": "الملف {{id}}",
+    "stopAndSave": "إيقاف وحفظ",
+    "record": "تسجيل",
+    "schedule": "جدولة",
+    "createMacro": "إنشاء ماكرو",
+    "stepsBadge_zero": "لا خطوات",
+    "stepsBadge_one": "خطوة واحدة",
+    "stepsBadge_two": "خطوتان",
+    "stepsBadge_few": "{{count}} خطوات",
+    "stepsBadge_many": "{{count}} خطوة",
+    "stepsBadge_other": "{{count}} خطوة",
+    "updated": "حُدّث {{date}}",
+    "run": "تشغيل",
+    "edit": "تعديل",
+    "editSteps": "تعديل الخطوات",
+    "delete": "حذف",
+    "runTitleNoSteps": "لا خطوات في هذا الماكرو بعد، عدّله أولًا",
+    "runTitleReady": "التشغيل على الملف المحدد",
+    "emptyTitle": "لا ماكروهات بعد",
+    "emptyHint": "سجّل سير عمل أو أنشئ واحدًا للبدء.",
+    "errors": {
+      "loadMacros": "تعذّر تحميل الماكروهات.",
+      "deleteMacro": "تعذّر حذف الماكرو.",
+      "chooseProfile": "اختر ملفًا مستهدفًا أولًا.",
+      "noSteps": "لا خطوات في هذا الماكرو بعد، عدّله أولًا.",
+      "chooseProfileRecord": "اختر ملفًا مستهدفًا للتسجيل فيه.",
+      "recordingFailed": "فشل إجراء التسجيل."
+    },
+    "recordingStarted": "جارٍ التسجيل… تفاعل مع المتصفح المفتوح، ثم اضغط إيقاف للحفظ.",
+    "savedNotice": "حُفظ «{{name}}» مع {{count}} خطوة/خطوات.",
+    "stoppedNotice": "توقف التسجيل، التُقطت {{count}} خطوة/خطوات (لم تُحفظ).",
+    "deleteConfirm": "هل تريد حذف الماكرو «{{name}}» وجميع خطواته؟ لا يمكن التراجع عن ذلك."
+  },
+  "saveRecording": {
+    "ariaLabel": "حفظ الماكرو المسجَّل",
+    "title": "حفظ الماكرو المسجَّل",
+    "subtitle": "سمّه للاحتفاظ بالخطوات الملتقطة، أو تجاهلها. يبقى المتصفح مفتوحًا.",
+    "placeholder": "ماكرو مسجَّل",
+    "discard": "تجاهل",
+    "cancel": "إلغاء",
+    "save": "حفظ"
+  },
+  "scheduleModal": {
+    "ariaLabel": "جدول الماكرو",
+    "title": "جدول الماكرو",
+    "subtitle": "شغّل ماكرو تلقائيًا وفق مؤقت · Softglaze Pro",
+    "enable": "تفعيل التشغيل المجدول",
+    "macroLabel": "الماكرو",
+    "selectMacro": "اختر ماكرو…",
+    "everyMinutes": "كل (دقائق)",
+    "targetProfiles": "الملفات المستهدفة",
+    "noProfiles": "لا ملفات متاحة.",
+    "profileFallback": "الملف {{id}}",
+    "cancel": "إلغاء",
+    "save": "حفظ الجدول",
+    "errors": {
+      "save": "تعذّر حفظ الجدول."
+    }
+  },
+  "editorModal": {
+    "ariaEdit": "تعديل الماكرو",
+    "ariaCreate": "إنشاء ماكرو",
+    "titleEdit": "تعديل الماكرو",
+    "titleCreate": "إنشاء ماكرو",
+    "subtitle": "ابنِ تدفقًا بلا برمجة، واسحب المقبض لإعادة الترتيب.",
+    "nameLabel": "اسم الماكرو",
+    "namePlaceholder": "مثلًا: تسجيل الدخول اليومي",
+    "descriptionLabel": "الوصف",
+    "descriptionPlaceholder": "ماذا يفعل؟",
+    "stepsLabel": "الخطوات ({{count}})",
+    "addStep": "إضافة خطوة",
+    "noSteps": "لا خطوات بعد، اختر نوعًا وأضف خطوة.",
+    "dragToReorder": "اسحب لإعادة الترتيب",
+    "removeStep": "إزالة الخطوة",
+    "cancel": "إلغاء",
+    "save": "حفظ الماكرو",
+    "errors": {
+      "name": "أعطِ الماكرو اسمًا.",
+      "save": "تعذّر حفظ الماكرو."
+    },
+    "optional": "اختياري",
+    "optionalHint": "إذا فشلت هذه الخطوة، تُسجَّل ويستمر التشغيل بدل أن يفشل."
+  },
+  "runModal": {
+    "ariaLabel": "تشغيل الماكرو: {{name}}",
+    "runningOn": "يعمل على {{profile}}",
+    "starting": "جارٍ البدء…",
+    "logStarted": "بدأ «{{name}}» · {{total}} خطوة/خطوات على {{profile}}",
+    "logStepRunning": "▶ {{label}}: {{summary}}",
+    "logStepError": "✕ {{label}} - {{error}}",
+    "logStepFailed": "فشل",
+    "logStopped": "توقف.",
+    "logFinished": "انتهى، {{ran}}/{{total}} خطوة/خطوات.",
+    "stopped": "توقف.",
+    "finished": "انتهى.",
+    "summaryCompleted": "اكتملت {{ran}}/{{total}} خطوة/خطوات.",
+    "summaryRan": "نُفّذت {{ran}}/{{total}} خطوة/خطوات.",
+    "paused": "متوقف مؤقتًا",
+    "running": "قيد التشغيل…",
+    "resume": "استئناف",
+    "pause": "إيقاف مؤقت",
+    "stop": "إيقاف",
+    "close": "إغلاق",
+    "errors": {
+      "run": "تعذّر تشغيل الماكرو."
+    },
+    "logStepSkipped": "تخطي {{label}} (اختياري) - {{error}}"
+  },
+  "parallel": {
+    "states": {
+      "queued": "في الانتظار",
+      "launching": "جارٍ التشغيل",
+      "running": "قيد التشغيل",
+      "passed": "نجح",
+      "failed": "فشل"
+    },
+    "title": "مشغّل الماكرو المتوازي",
+    "subtitle": "شغّل ماكرو واحدًا على ملفات كثيرة دفعة واحدة، مع متابعة مباشرة للحالة.",
+    "macroLabel": "الماكرو",
+    "noMacros": "لا ماكروهات بعد",
+    "macroOption": "{{name}} · {{count}} خطوة/خطوات",
+    "concurrency": "التزامن",
+    "concurrencyCap": "تشغّل خطتك حتى {{max}} ملف في وقت واحد.",
+    "concurrencyCapUpgrade": "تشغّل خطتك حتى {{max}} ملف في وقت واحد. خطة Enterprise تشغّل حتى {{enterpriseMax}}.",
+    "dataBound_zero": "{{fileName}} · لا صفوف",
+    "dataBound_one": "{{fileName}} · صف واحد",
+    "dataBound_two": "{{fileName}} · صفان",
+    "dataBound_few": "{{fileName}} · {{count}} صفوف",
+    "dataBound_many": "{{fileName}} · {{count}} صفًا",
+    "dataBound_other": "{{fileName}} · {{count}} صف",
+    "dataHint": "اختياري: اربط جدول بيانات (صف ← ملف، بالترتيب)",
+    "clearDataBinding": "إلغاء ربط البيانات",
+    "bindData": "ربط البيانات",
+    "columnsPrefix": "الأعمدة: {{columns}} - استخدم",
+    "columnsSuffix": "في خطوات الماكرو.",
+    "profilesLabel": "الملفات ({{count}} محدد)",
+    "selectAll": "تحديد الكل",
+    "clear": "مسح",
+    "searchPlaceholder": "بحث",
+    "noProfiles": "لم يُعثر على ملفات.",
+    "rowMismatch": "{{rows}} صف/صفوف بيانات مقابل {{profiles}} ملف/ملفات، والزائد يعمل بلا متغيرات.",
+    "running": "قيد التشغيل…",
+    "runOn_zero": "لا ملفات للتشغيل",
+    "runOn_one": "التشغيل على ملف واحد",
+    "runOn_two": "التشغيل على ملفين",
+    "runOn_few": "التشغيل على {{count}} ملفات",
+    "runOn_many": "التشغيل على {{count}} ملفًا",
+    "runOn_other": "التشغيل على {{count}} ملف",
+    "runStatus": "حالة التشغيل",
+    "summaryPassed": "نجح",
+    "summaryFailed": "فشل",
+    "summaryTotal": "{{total}} إجمالًا",
+    "watchHint": "حدد الملفات وماكرو، ثم ابدأ التشغيل لمتابعة التقدم مباشرة.",
+    "steps": "{{ran}}/{{total}} خطوة",
+    "profileFallback": "الملف {{id}}",
+    "runConsole": "وحدة تحكم التشغيل",
+    "live": "مباشر",
+    "consoleIdle": "[ خامل ] لا تشغيل بعد، سيظهر التقدم هنا (لا تُضمَّن الكوكيز أو بيانات الدخول أبدًا).",
+    "logRunFinished": "انتهى التشغيل، نجح {{passed}}/{{total}}",
+    "logRunFinishedError": "انتهى التشغيل، نجح {{passed}}/{{total}} ({{error}})",
+    "errors": {
+      "readSpreadsheet": "تعذّرت قراءة جدول البيانات.",
+      "chooseMacro": "اختر ماكرو لتشغيله.",
+      "selectProfile": "حدد ملفًا واحدًا على الأقل.",
+      "startRun": "تعذّر بدء التشغيل المتوازي."
+    }
+  },
+  "warmer": {
+    "title": "إحماء الكوكيز",
+    "subtitle": "يبني كوكيز وسجل تصفح طبيعيين بتصفح مواقع حقيقية.",
+    "sitesLabel": "المواقع المراد زيارتها ({{count}})",
+    "addSuggested": "أضف موقعًا مقترحًا…",
+    "add": "إضافة",
+    "customPlaceholder": "أو الصق URL مخصصًا (مثلًا example.com)",
+    "bulkAdd": "إضافة مجمّعة",
+    "importFile": "استيراد .txt/.csv",
+    "clearAll": "مسح الكل",
+    "bulkPlaceholder": "الصق URL واحدًا في كل سطر، مثلًا:\nexample.com\nhttps://news.site\nshop.site, 45, links",
+    "addList": "إضافة القائمة",
+    "bulkHint": "URL واحد في كل سطر. أعمدة CSV اختيارية: url, seconds, behaviour (none/random/links).",
+    "addSecondsTitle": "الثواني الافتراضية للروابط التي تضيفها",
+    "addBehaviorTitle": "السلوك الافتراضي للروابط التي تضيفها",
+    "saveList": "حفظ القائمة",
+    "saveListPrompt": "سمِّ قائمة الروابط هذه (لإعادة استخدامها لاحقًا):",
+    "loadListTitle": "تحميل هذه القائمة المحفوظة",
+    "deleteListTitle": "حذف هذه القائمة المحفوظة",
+    "selectRows": "تحديد الصفوف",
+    "nSelected": "{{count}} محدد",
+    "bulkSetSeconds": "ضبط الثواني للصفوف المحددة",
+    "bulkSetBehavior": "ضبط السلوك للصفوف المحددة",
+    "setBehavior": "ضبط السلوك…",
+    "deleteSelected": "حذف",
+    "noSites": "لا مواقع بعد، أضف موقعًا أعلاه.",
+    "secondsTitle": "الثواني التي تُقضى في هذا الموقع",
+    "secondsUnit": "ث",
+    "behaviourTitle": "ما يُفعل في هذا الموقع",
+    "remove": "إزالة",
+    "loopUntilStopped": "التكرار حتى الإيقاف",
+    "keepOpen": "إبقاء الجلسات مفتوحة بعد الانتهاء",
+    "hidden": "تشغيل مخفي (بلا نوافذ)",
+    "hiddenTitle": "إحماء بلا واجهة، دون فتح أي نافذة متصفح. تُحفظ الكوكيز وذاكرة التخزين المؤقت في كل ملف كالمعتاد.",
+    "cookieNote": "تُحفظ الكوكيز وذاكرة التخزين المؤقت في كل ملف تلقائيًا، وتعرض وحدة التحكم عدد الكوكيز وحجم الذاكرة المؤقتة المحفوظة على القرص. التشغيل العادي لاحقًا يعيد استخدامها.",
+    "startWarmup": "بدء الإحماء",
+    "warming": "جارٍ الإحماء…",
+    "stop": "إيقاف",
+    "forceStop": "إيقاف إجباري",
+    "profilesLabel": "الملفات ({{count}} محدد)",
+    "searchPlaceholder": "بحث",
+    "selectAll": "الكل",
+    "selectNone": "لا شيء",
+    "invert": "عكس التحديد",
+    "addGroup": "إضافة مجموعة…",
+    "addTag": "إضافة وسم…",
+    "pasteIdsPlaceholder": "الصق معرّفات الملفات أو أسماءها (مفصولة بفاصلة / مسافة)",
+    "selectPaste": "تحديد",
+    "noProfiles": "لم يُعثر على ملفات.",
+    "profileFallback": "الملف {{id}}",
+    "warmupConsole": "وحدة تحكم الإحماء",
+    "live": "مباشر",
+    "progressTitle": "تقدم الإحماء",
+    "modeQueue": "طابور · واحد في كل مرة",
+    "modeBulk": "مجمّع · {{n}} في كل مرة",
+    "consoleIdle": "[ خامل ] حدد الملفات، واضبط المدة، وابدأ الإحماء لمتابعة التقدم مباشرة.",
+    "errors": {
+      "selectProfile": "حدد ملفًا واحدًا على الأقل للإحماء.",
+      "addSite": "أضف موقعًا واحدًا على الأقل للزيارة.",
+      "startWarmup": "تعذّر بدء الإحماء.",
+      "stopWarmup": "تعذّر إيقاف الإحماء.",
+      "importFile": "تعذّرت قراءة هذا الملف."
+    },
+    "queueTitle": "إحماء ملف واحد في كل مرة (طابور صارم): يُفتح متصفح، ويُترك حتى ينتهي ويُغلق، ثم التالي. يمنع فتح كل المتصفحات المحددة دفعة واحدة، مما قد يستنفد الذاكرة والمعالج ويُعطّل التطبيق.",
+    "queueMode": "تشغيل واحد في كل مرة (طابور)",
+    "parallelTitle": "عدد الملفات التي تُحمّى في الوقت نفسه. الأعلى أسرع لكنه أثقل على الذاكرة والمعالج.",
+    "parallelLabel": "في كل مرة:"
+  },
+  "counter": {
+    "total": "الإجمالي",
+    "running": "قيد التشغيل",
+    "done": "منتهٍ",
+    "queued": "في الانتظار"
+  },
+  "console": {
+    "copy": "نسخ",
+    "copied": "تم النسخ",
+    "export": "تصدير",
+    "clear": "مسح"
+  },
+  "history": {
+    "emptyTitle": "لم تُشغَّل أي مهام بعد",
+    "emptyHint": "ستظهر هنا عمليات الإحماء وتشغيل الماكرو والتشغيل المتوازي.",
+    "columns": {
+      "task": "المهمة",
+      "profiles": "الملفات",
+      "detail": "التفاصيل",
+      "status": "الحالة",
+      "when": "الوقت"
+    },
+    "emptyDetail": "-",
+    "parallelRun": "تشغيل متوازٍ",
+    "macroRun": "تشغيل ماكرو",
+    "cookieWarmup": "إحماء الكوكيز",
+    "minutes": "{{count}} د",
+    "sites_zero": "لا مواقع",
+    "sites_one": "موقع واحد",
+    "sites_two": "موقعان",
+    "sites_few": "{{count}} مواقع",
+    "sites_many": "{{count}} موقعًا",
+    "sites_other": "{{count}} موقع"
+  },
+  "stepFieldOptions": {
+    "auto": "تلقائي",
+    "value": "القيمة",
+    "label": "التسمية",
+    "index": "الترتيب",
+    "visible": "ظاهر",
+    "hidden": "مخفي",
+    "checked": "محدد",
+    "unchecked": "غير محدد"
+  },
+  "autopilot": {
+    "title": "الطيار الآلي للإحماء",
+    "subtitle": "يُحمّي الملفات ببضعة مواقع كل يوم، لتبني سجل تصفح حقيقيًا.",
+    "toggle": "تشغيل الطيار الآلي للإحماء أو إيقافه",
+    "target": "الملفات",
+    "targetAll": "كل الملفات",
+    "targetGroup": "مجموعة واحدة",
+    "group": "المجموعة",
+    "runsPerDay": "مرات التشغيل يوميًا",
+    "runsPerDayTitle": "عدد مرات إحماء كل ملف في اليوم",
+    "sitesPerRun": "المواقع في كل تشغيل",
+    "sitesPerRunTitle": "مواقع عشوائية من القائمة المقترحة، من 20 إلى 45 ثانية لكل موقع",
+    "activeHours": "ساعات النشاط",
+    "startHour": "ساعة البدء",
+    "endHour": "ساعة الانتهاء",
+    "hoursTo": "إلى",
+    "atATime": "في كل مرة",
+    "atATimeTitle": "الملفات التي تُحمّى معًا. العدد الأكبر أسرع لكنه يستهلك ذاكرة أكثر.",
+    "hidden": "تشغيل مخفي (بلا نوافذ)",
+    "hint": "يُحمّى الملف عندما يكون آخر إحماء له أقدم من 24 ساعة مقسومة على مرات التشغيل يوميًا. تُتخطى الملفات المفتوحة أو المقفلة أو المشغولة.",
+    "ownedByOther": "فعّل عضو آخر هذه الميزة. لا يمكن تغييرها إلا له أو لمن هو أعلى منه.",
+    "status": {
+      "off": "متوقف",
+      "nextSoon": "التشغيل التالي خلال دقيقة",
+      "nextAt": "التشغيل التالي {{time}}",
+      "nothingDue": "لا ملفات للإحماء",
+      "warmedToday": "أُحمي {{done}} من {{total}} اليوم",
+      "warmingNow": "{{n}} قيد الإحماء الآن",
+      "lastError": "آخر خطأ، {{time}}: {{error}}"
+    },
+    "errors": {
+      "load": "تعذّر تحميل إعدادات الطيار الآلي.",
+      "save": "تعذّر حفظ إعدادات الطيار الآلي.",
+      "noGroups": "لا مجموعات بعد. أنشئ واحدة في صفحة الملفات أولًا.",
+      "owner-missing": "العضو الذي فعّل الطيار الآلي لم يعد موجودًا. يمكن لمالك مساحة العمل إيقافه ثم تشغيله مجددًا ليتولاه.",
+      "owner-inactive": "العضو الذي فعّل الطيار الآلي موقوف أو محجوب.",
+      "owner-no-permission": "العضو الذي فعّل الطيار الآلي لم يعد مسموحًا له بتشغيل الأتمتة.",
+      "warm-failed": "{{profile}}: {{error}}",
+      "warmFailedHidden": "فشل إحماء ملف لا يمكنك رؤيته.",
+      "tick-failed": "{{error}}"
+    }
+  }
+}

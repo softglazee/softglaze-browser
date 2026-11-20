@@ -1,0 +1,31 @@
+{
+  "brandSelect": {
+    "presentAs": "Bu profili {{brand}} olarak göster"
+  },
+  "versionSelect": {
+    "auto": "Otomatik",
+    "loadingVersions": "Sürümler yükleniyor…",
+    "ready": "Hazır",
+    "readyTitle": "Kurulu ve kullanıma hazır",
+    "noVersions": "Sürüm bulunamadı.",
+    "offlineError": "Çevrimdışı - sürüm kataloğuna ulaşılamıyor.",
+    "downloadFailed": "İndirme başarısız oldu.",
+    "resumeFailed": "Sürdürme başarısız oldu.",
+    "paused": "Duraklatıldı",
+    "interrupted": "Kesildi",
+    "resumeTitle": "%{{percent}} noktasında {{state}} - sürdür",
+    "statusInstalling": "kur",
+    "statusQueued": "…",
+    "retryTitle": "Tekrar dene - {{error}}",
+    "downloadFailedShort": "indirme başarısız",
+    "downloadInstallTitle": "Bu sürümü indir ve kur"
+  },
+  "pager": {
+    "showing": "{{total}} kayıttan {{from}}-{{to}} gösteriliyor",
+    "perPage": "Sayfa başına",
+    "all": "Tümü",
+    "prev": "Önceki",
+    "next": "Sonraki",
+    "pageOf": "Sayfa {{page}} / {{total}}"
+  }
+}

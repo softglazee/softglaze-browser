@@ -1,0 +1,97 @@
+{
+  "upgrade": {
+    "title": {
+      "profiles": "Vous avez atteint les {{limit}} profils du forfait Free",
+      "running": "Free lance {{limit}} profil à la fois",
+      "openable": "Ce profil ne fait pas partie de vos {{limit}} profils sur Free",
+      "seats": "Les membres d'équipe sont inclus dans Pro",
+      "ai": "Les {{limit}} actions IA du jour sont épuisées",
+      "sync": "La synchronisation cloud est incluse dans Pro",
+      "phone": "Ouvrir des profils depuis votre téléphone est inclus dans Pro",
+      "generic": "Cette fonction est incluse dans Pro"
+    },
+    "body": {
+      "profiles": "Vos {{used}} profils sont conservés. Passez à Pro pour des profils illimités, ou supprimez-en un pour libérer de la place.",
+      "running": "Fermez le profil ouvert pour en lancer un autre, ou passez à Pro pour en exécuter 3 à la fois.",
+      "openable": "Tous les profils sont conservés. Sur Free, vous choisissez lesquels ({{limit}}) peuvent être ouverts ; Pro les ouvre tous.",
+      "seats": "Le forfait Free est pour une seule personne. Pro inclut 3 membres d'équipe, Enterprise 25.",
+      "ai": "Free inclut {{limit}} actions IA par jour ; elles se réinitialisent demain. Pro offre des actions IA illimitées.",
+      "sync": "Pro synchronise vos profils entre vos ordinateurs et votre téléphone.",
+      "phone": "Sur Free, votre téléphone et l'application web peuvent afficher les profils et approuver les demandes de l'IA. Pro permet aussi de les ouvrir et de les arrêter.",
+      "generic": "Passez à Pro pour l'utiliser."
+    },
+    "price": "Pro coûte {{price}} par mois.",
+    "priceFallback": "Pro à partir de US$5 par mois.",
+    "upgradeButton": "Passer à Pro",
+    "chooseProfiles": "Choisir les profils",
+    "notNow": "Plus tard"
+  },
+  "welcome": {
+    "title": "Votre essai Pro est terminé. Vous êtes maintenant sur le forfait Free.",
+    "keepTitle": "Vous conservez",
+    "keep": "Tous vos profils ({{limit}} peuvent être ouverts), vos proxys et empreintes, l'application mobile et l'application web.",
+    "proTitle": "Pro ajoute",
+    "pro": "Profils illimités, 3 exécutés à la fois, sièges d'équipe, synchronisation cloud et actions IA illimitées, pour {{price}} par mois.",
+    "upgrade": "Passer à Pro",
+    "stay": "Rester sur Free"
+  },
+  "counter": {
+    "freeBadge": "Forfait Free",
+    "profiles": "{{used}} sur {{limit}} profils",
+    "running": "{{used}} sur {{limit}} en cours",
+    "ai": "{{used}} sur {{limit}} actions IA aujourd'hui",
+    "upgrade": "Mettre à niveau"
+  },
+  "choose": {
+    "title": "Choisir les profils pouvant s'ouvrir",
+    "body": "Sur le forfait Free, {{limit}} de vos {{total}} profils peuvent être ouverts. Tous les profils sont conservés ; passez à Pro pour tous les ouvrir.",
+    "selected": "{{count}} sur {{limit}} choisis",
+    "search": "Rechercher des profils",
+    "save": "Enregistrer",
+    "cancel": "Annuler",
+    "saved": "Enregistré. Ces profils peuvent s'ouvrir sur Free."
+  },
+  "billing": {
+    "currentFree": "Forfait Free",
+    "currentFreeBody": "Gratuit pour toujours, sans carte bancaire. Passez à un forfait supérieur à tout moment pour plus de profils, des équipes et des actions IA illimitées.",
+    "currentBadge": "Forfait actuel",
+    "compareTitle": "Comparer les forfaits",
+    "colFeature": "Fonction",
+    "colFree": "Free",
+    "colPro": "Pro",
+    "colEnterprise": "Enterprise",
+    "rows": {
+      "profiles": "Profils enregistrés",
+      "running": "Profils exécutés à la fois",
+      "seats": "Sièges (membres d'équipe)",
+      "pcs": "PC par compte",
+      "fingerprints": "Vos proxys, tous les réglages d'empreinte",
+      "ai": "Automatisation IA et MCP",
+      "phone": "Application mobile et web",
+      "sync": "Synchronisation cloud entre PC",
+      "support": "Assistance"
+    },
+    "values": {
+      "unlimited": "Illimité",
+      "unlimitedAudit": "Illimité + export d'audit",
+      "yes": "Oui",
+      "no": "Non",
+      "aiPerDay": "{{count}} actions par jour",
+      "viewApprove": "Voir + approuver les demandes IA",
+      "openStop": "+ ouvrir et arrêter les profils",
+      "teamApprovals": "+ approbations d'équipe",
+      "helpCentre": "Centre d'aide",
+      "email": "E-mail",
+      "priorityEmail": "E-mail prioritaire"
+    }
+  },
+  "deals": {
+    "title": "Offres de proxys recommandées",
+    "disclosure": "Offre partenaire. SoftGlaze peut percevoir une commission.",
+    "code": "Code {{code}}",
+    "copyCode": "Copier le code",
+    "copied": "Copié",
+    "open": "Voir l'offre",
+    "hidden": "Pro et Enterprise n'affichent jamais d'offres partenaires."
+  }
+}

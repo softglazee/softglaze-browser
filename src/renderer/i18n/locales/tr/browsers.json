@@ -1,0 +1,70 @@
+{
+  "header": {
+    "eyebrow": "Motorlar",
+    "title": "Tarayıcılar",
+    "subtitle": "Gerçek Chrome ve Firefox sürümlerini istediğiniz zaman indirin - otomatik kurulur ve başlatmaya hazır olur.",
+    "refresh": "Yenile"
+  },
+  "stats": {
+    "chromeInstalled": "Kurulu Chrome",
+    "chromeAvailable": "Mevcut Chrome",
+    "firefoxInstalled": "Kurulu Firefox",
+    "firefoxAvailable": "Mevcut Firefox"
+  },
+  "counts": {
+    "installedAvailable": "· {{installed}} kurulu · {{available}} mevcut"
+  },
+  "engine": {
+    "heading": "Parmak izi motoru",
+    "installed": "Kurulu",
+    "notInstalled": "Kurulu değil",
+    "description": "fingerprint-chromium - canvas / WebGL / UA / platform / saat dilimini doğrudan motor içinde ayarlar, webdriver'ı gizler, WebRTC sızıntısını engeller. Ayarlar → Tarayıcı bölümünden açın.",
+    "progressInstalling": "kuruluyor",
+    "progressVerifying": "doğrulanıyor",
+    "installing": "Kuruluyor",
+    "verifying": "Doğrulanıyor",
+    "downloading": "İndiriliyor",
+    "download": "İndir (~180 MB)"
+  },
+  "firefox": {
+    "heading": "Firefox",
+    "ready": "Hazır",
+    "notDetected": "Bulunamadı",
+    "detectedDesc": "Hazır. {{path}} konumunda bulundu. Firefox profilleri gerçek Firefox'u proxy, UA, dil, saat dilimi ayarlarıyla ve WebRTC kapalı olarak başlatır.",
+    "notDetectedDesc": "Sistemde Firefox bulunamadı. Aşağıdan bir sürüm indirin - uygulamanın içine kurulur ve Firefox profilleri gerçek Firefox'u proxy, UA, dil, saat dilimi ayarlarıyla ve WebRTC kapalı olarak başlatır.",
+    "fetching": "Firefox sürüm kataloğu alınıyor…",
+    "empty": "Kullanılabilir Firefox sürümü yok (çevrimdışı mısınız?)."
+  },
+  "chromium": {
+    "heading": "Chromium (Chrome for Testing)",
+    "subtitle": "Gerçek sürümler - UA, Client-Hints, TLS ve worker'lar sürümle gerçekten eşleşir.",
+    "fetching": "Chrome for Testing kataloğu alınıyor…",
+    "empty": "Kullanılabilir sürüm yok (çevrimdışı mısınız?)."
+  },
+  "row": {
+    "versionLabel": "{{brand}} {{major}}",
+    "ready": "Hazır",
+    "paused": "Duraklatıldı",
+    "interrupted": "Kesildi",
+    "resume": "Sürdür",
+    "download": "İndir",
+    "retry": "Tekrar dene",
+    "downloading": "İndiriliyor",
+    "installing": "Kuruluyor…",
+    "installingShort": "Kuruluyor",
+    "queued": "Sırada…",
+    "pauseDownload": "İndirmeyi duraklat",
+    "pausedPercent": "Duraklatıldı · %{{percent}}",
+    "interruptedPercent": "Kesildi · %{{percent}}"
+  },
+  "errors": {
+    "catalogUnreachable": "Tarayıcı kataloğuna ulaşılamadı. İnternet bağlantınızı kontrol edin.",
+    "downloadFailed": "İndirme başarısız oldu.",
+    "pauseFailed": "Duraklatma başarısız oldu.",
+    "resumeFailed": "Sürdürme başarısız oldu."
+  },
+  "browsers": {
+    "showAll": "{{n}} sürümün tümünü göster",
+    "showLess": "Daha az göster"
+  }
+}

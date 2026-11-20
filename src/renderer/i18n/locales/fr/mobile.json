@@ -1,0 +1,116 @@
+{
+  "title": "Téléphones",
+  "description": "Utilisez l'application mobile SoftGlaze avec cet ordinateur : consultez vos profils, lancez-les et arrêtez-les, et répondez aux demandes de l'IA depuis votre téléphone. Tout ce qui passe entre le téléphone et cet ordinateur est chiffré de bout en bout.",
+  "enable": "Activer le compagnon mobile",
+  "loading": "Chargement",
+  "offOwner": "Activez cette option pour associer un téléphone. Cet ordinateur garde alors une connexion sécurisée avec le relais SoftGlaze, qui ne fait que transmettre des messages chiffrés.",
+  "offOther": "Le propriétaire n'a pas activé le compagnon mobile.",
+  "copy": "Copier",
+  "cancel": "Annuler",
+  "relay": {
+    "connected": "Connecté au relais",
+    "connecting": "Connexion au relais",
+    "authFailed": "Le relais a refusé cet ordinateur. Vérifiez l'adresse du relais dans « Avancé »."
+  },
+  "pair": {
+    "title": "Associer un téléphone",
+    "help": "Installez SoftGlaze sur votre téléphone, puis scannez un code affiché sur cet écran.",
+    "start": "Associer un téléphone",
+    "qrAlt": "Code d'association pour l'application mobile SoftGlaze",
+    "scanTitle": "Scannez ce code avec l'application mobile SoftGlaze",
+    "step1": "Ouvrez SoftGlaze sur votre téléphone.",
+    "step2": "Allez dans Paramètres, Associer à un PC, puis scannez ce code.",
+    "step3": "Vérifiez que les deux écrans affichent les mêmes six chiffres.",
+    "expiresIn": "Le code fonctionne une seule fois et expire dans {{time}}.",
+    "textTitle": "Impossible de scanner ? Copiez le code sous forme de texte",
+    "attemptFailed": "Un téléphone a essayé un code erroné ou abîmé. Le code reste valide."
+  },
+  "confirm": {
+    "title": "{{name}} veut s'associer",
+    "help": "Ne continuez que si votre téléphone affiche exactement ces six chiffres.",
+    "helpBrowser": "Ne continuez que si le navigateur affiche exactement ces six chiffres. Un navigateur peut voir les profils et répondre aux demandes de l'IA ; cochez « Lancer et arrêter les profils » seulement si vous le souhaitez aussi.",
+    "codeLabel": "Code {{code}}",
+    "name": "Nom du téléphone",
+    "member": "Agit en tant que",
+    "scopes": "Ce que ce téléphone peut faire",
+    "match": "Les codes correspondent, associer",
+    "noMatch": "Les codes ne correspondent pas"
+  },
+  "scopes": {
+    "view": {
+      "label": "Voir les profils et leur statut",
+      "help": "Toujours actif. Uniquement les profils que le membre peut voir."
+    },
+    "control_profiles": {
+      "label": "Lancer et arrêter les profils",
+      "help": "Mêmes règles que sur cet ordinateur."
+    },
+    "approve_ai": {
+      "label": "Répondre aux demandes de l'IA",
+      "help": "Autoriser ou refuser les actions des applications d'IA, pour les jetons auxquels ce membre peut répondre."
+    },
+    "approve_team": {
+      "label": "Répondre aux demandes de l'équipe",
+      "help": "Approuver les demandes d'accès des membres de l'équipe."
+    },
+    "totp": {
+      "label": "Afficher les codes 2FA",
+      "help": "Codes de validation en deux étapes enregistrés dans les profils."
+    },
+    "phone_profiles_linked": {
+      "label": "Synchroniser les profils",
+      "help": "Les profils que vous choisissez ci-dessous s'ouvrent aussi sur ce téléphone."
+    }
+  },
+  "roles": {
+    "OWNER": "Propriétaire",
+    "ADMIN": "Admin",
+    "MANAGER": "Manager",
+    "OPERATOR": "Opérateur"
+  },
+  "devices": {
+    "title": "Téléphones et navigateurs",
+    "kindPhone": "Téléphone",
+    "kindBrowser": "Navigateur",
+    "empty": "Aucun téléphone pour l'instant.",
+    "online": "En ligne",
+    "offline": "Hors ligne",
+    "lastSeen": "Vu pour la dernière fois {{when}}",
+    "actsAs": "agit en tant que {{name}}",
+    "edit": "Modifier {{name}}",
+    "remove": "Retirer {{name}}",
+    "removeConfirm": "Retirer {{name}} ? Il cesse immédiatement de fonctionner avec cet ordinateur et devra être associé de nouveau.",
+    "rename": "Renommer",
+    "saveScopes": "Enregistrer les autorisations"
+  },
+  "sync": {
+    "title": "Synchronisation des profils",
+    "help": "Les profils choisis s'ouvrent aussi dans l'application mobile. Les paramètres, pages de démarrage et cookies suivent le profil ; un profil ne s'ouvre que sur un appareil à la fois.",
+    "noPhone": "Aucun téléphone ne peut encore synchroniser. Donnez à un téléphone l'autorisation « Synchroniser les profils » ci-dessus.",
+    "now": "Synchroniser maintenant",
+    "search": "Trouver un profil",
+    "toggle": "Synchroniser {{name}} avec les téléphones",
+    "proxyPassword": "Mot de passe du proxy",
+    "offConfirm": "Arrêter la synchronisation de {{name}} ? Les téléphones gardent leur copie.",
+    "removeAll": "Supprimer toutes les données synchronisées du relais",
+    "removeAllConfirm": "Supprimer chaque profil synchronisé du relais ? Les profils sur cet ordinateur et sur les téléphones restent tels quels.",
+    "lastOk": "Dernière synchronisation {{when}}",
+    "lastError": "La dernière synchronisation a échoué ({{code}}). Nouvel essai chaque minute.",
+    "limits": "Le stockage des sites, les extensions, les mots de passe enregistrés et les téléchargements ne sont pas synchronisés. Les mots de passe de proxy ne le sont que là où vous l'autorisez."
+  },
+  "advanced": {
+    "title": "Avancé",
+    "pcName": "Nom de cet ordinateur sur les téléphones",
+    "relay": "Adresse du relais",
+    "relayFromEnv": "Défini par SG_RELAY_URL pour les tests.",
+    "save": "Enregistrer",
+    "reset": "Réinitialiser les clés des téléphones",
+    "resetConfirm": "Réinitialiser les clés des téléphones de cet ordinateur ? Chaque téléphone associé est retiré et devra être associé de nouveau.",
+    "protocol": "Protocole {{version}}"
+  },
+  "errors": {
+    "load": "Impossible de charger les paramètres des téléphones.",
+    "generic": "Cela n'a pas fonctionné. Réessayez.",
+    "unavailable": "Les téléphones ne sont pas disponibles dans ce build."
+  }
+}

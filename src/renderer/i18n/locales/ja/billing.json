@@ -1,0 +1,337 @@
+{
+  "common": {
+    "cancel": "キャンセル",
+    "save": "保存",
+    "edit": "編集",
+    "delete": "削除"
+  },
+  "header": {
+    "title": "請求とプラン",
+    "description": "サブスクリプションの管理、プランの比較、アップグレードをまとめて行えます。"
+  },
+  "status": {
+    "loading": "読み込み中…",
+    "sourceOwner": "ソースオーナー",
+    "active": "有効",
+    "activeRenews": "有効 · {{date}}に更新",
+    "trial": "トライアル",
+    "trialDaysLeft": "トライアル · 残り{{days}}日",
+    "graceDaysLeft": "猶予 · 残り{{days}}日",
+    "subscriptionEnded": "サブスクリプション終了",
+    "free": "無料プラン"
+  },
+  "backend": {
+    "licensedVerified": "ライセンス認証済み",
+    "renews": "{{date}}に更新",
+    "noLicense": "ライセンス機能は有効です。このインストールにはまだ有料ライセンスがありません。",
+    "trialVerified": "無料トライアル（認証済み）",
+    "trialEnds": "{{date}}に終了"
+  },
+  "current": {
+    "title": "現在のプラン",
+    "sourceOwnerAllFeatures": "ソースオーナー · 全機能",
+    "paid": "有料",
+    "freeTrial": "無料トライアル",
+    "freeForever": "無料プラン · ずっと無料"
+  },
+  "grace": {
+    "message_other": "{{kind}}が終了しました。猶予期間は残り{{count}}日です。アクセスを失わないよう、下から更新してください。",
+    "kindTrial": "無料トライアル",
+    "kindSubscription": "サブスクリプション"
+  },
+  "banned": {
+    "message": "サブスクリプションが終了したため、プロファイルの起動がロックされています。アクセスを復元するには、購読するか購入コードを入力してください。"
+  },
+  "trialRemaining": {
+    "message_other": "無料トライアル：残り{{count}}日。"
+  },
+  "seats": {
+    "label": "チームの席数",
+    "usage": "{{used}} / {{total}} 使用中",
+    "upgradeToAddMore": "· アップグレードで追加"
+  },
+  "exempt": {
+    "note": "あなたはソースオーナーのため、サブスクリプションの対象外です。すべての機能を利用できます。"
+  },
+  "checkout": {
+    "waiting": "お支払いを待っています…",
+    "waitingForPlan": "お支払いを待っています · {{plan}}…",
+    "opened": "ブラウザで支払いページが開きました。お支払い後、この画面は自動で更新されます。",
+    "reopen": "支払いページを再度開く"
+  },
+  "plans": {
+    "chooseHeading": "プランを選択",
+    "bestValue": "最もお得",
+    "current": "現在",
+    "footerNote": "お支払いは管理者が有効にした方法で処理されます。ブラウザでお支払い後、このページでプランが自動的に有効になります。"
+  },
+  "period": {
+    "label": "請求期間",
+    "monthly": "月払い",
+    "yearly": "年払い",
+    "billedYearly": "年払い、月あたり約{{perMonth}}",
+    "monthsFree_other": "{{count}}か月分無料、{{saving}}お得",
+    "monthsFreeShort_other": "{{count}}か月分無料",
+    "save": "年間{{saving}}お得"
+  },
+  "cta": {
+    "included": "含まれています",
+    "onPaidPlan": "有料プラン利用中",
+    "trialActiveDaysLeft": "トライアル中 · 残り{{days}}日",
+    "startFreeTrial": "無料トライアルを開始",
+    "trialUsed": "無料トライアル使用済み",
+    "currentPlan": "現在のプラン",
+    "upgradeEnterprise": "Enterpriseにアップグレード",
+    "downgradePro": "Proにダウングレード",
+    "choosePlan": "{{name}}を選択"
+  },
+  "trial": {
+    "started": "無料トライアルが有効になり、すべての機能を利用できます。どうぞお楽しみください！",
+    "startedWithDays": "無料トライアルが有効になりました。{{days}}日間すべての機能を利用できます。どうぞお楽しみください！",
+    "errors": {
+      "failed": "トライアルを開始できませんでした。"
+    }
+  },
+  "redeem": {
+    "label": "購入コードをお持ちですか？",
+    "apply": "適用",
+    "success": "購入コードを適用しました。ありがとうございます！",
+    "errors": {
+      "empty": "購入コードを入力してください。",
+      "failed": "このコードを適用できませんでした。"
+    }
+  },
+  "pay": {
+    "received": "お支払いを受け付けました。プランが有効になりました！",
+    "errors": {
+      "noMethods": "新しい決済プロバイダーの追加中のため、アプリ内での購入を一時停止しています。請求書での購入は support@softglaze.com までメールでご連絡のうえ、下に購入コードを入力してください。",
+      "checkoutFailed": "チェックアウトを開始できませんでした。",
+      "submitFailed": "お支払い情報を送信できませんでした。"
+    }
+  },
+  "payModal": {
+    "title": "{{name}}のお支払い",
+    "manualSubmitted": "お支払い情報を送信しました。管理者が確認後、まもなくプランが有効になります。",
+    "manualBadge": "手動",
+    "continueTo": "{{method}}に進む",
+    "openPayLink": "支払いリンクを開く",
+    "referencePlaceholder": "支払い参照番号 / 取引ID",
+    "notePlaceholder": "メモ（任意）",
+    "submitForApproval": "支払い済み：承認を申請",
+    "manualActivationNote": "管理者がお支払いを確認すると、プランが有効になります。"
+  },
+  "admin": {
+    "configureMethods": "設定で支払い方法を構成"
+  },
+  "invoices": {
+    "title": "請求書",
+    "subtitleAdmin": "全オーナーのお支払い（自動取得 + 手動）。",
+    "subtitleUser": "お支払いの領収書。",
+    "add": "追加",
+    "empty": "請求書はまだありません。",
+    "manualSuffix": "手動",
+    "confirmDelete": "この請求書を削除しますか？",
+    "cols": {
+      "date": "日付",
+      "owner": "オーナー",
+      "amount": "金額",
+      "method": "方法",
+      "status": "ステータス",
+      "reference": "参照番号"
+    },
+    "errors": {
+      "loadFailed": "請求書を読み込めませんでした。",
+      "deleteFailed": "削除できませんでした。"
+    }
+  },
+  "invoiceForm": {
+    "addTitle": "請求書を追加",
+    "editTitle": "請求書を編集",
+    "ownerMemberId": "オーナーのメンバーID",
+    "optionalPlaceholder": "（任意）",
+    "amount": "金額",
+    "currency": "通貨",
+    "method": "方法",
+    "status": "ステータス",
+    "tier": "ティア",
+    "months": "月数",
+    "reference": "参照番号",
+    "referencePlaceholder": "取引 / コード",
+    "note": "メモ",
+    "errors": {
+      "invalidAmount": "有効な金額を入力してください。",
+      "saveFailed": "請求書を保存できませんでした。"
+    }
+  },
+  "planManager": {
+    "title": "プランとパッケージ",
+    "subtitle": "価格の設定、詳細の編集、新しいパッケージの作成ができます。変更はチェックアウトに即時反映されます。",
+    "newPackage": "新規パッケージ",
+    "activeBadge": "有効",
+    "hiddenBadge": "非表示",
+    "termMeta": "{{months}}か月 · {{tier}}",
+    "hide": "非表示",
+    "show": "表示",
+    "hideTitle": "チェックアウトに表示しない",
+    "showTitle": "チェックアウトに表示する",
+    "deleteTitle": "プランを削除",
+    "confirmDelete": "「{{name}}」プランを削除しますか？購入者には表示されなくなります。",
+    "errors": {
+      "loadFailed": "プランを読み込めませんでした。",
+      "updateFailed": "プランを更新できませんでした。",
+      "deleteFailed": "プランを削除できませんでした。"
+    }
+  },
+  "planForm": {
+    "newTitle": "新規パッケージ",
+    "editTitle": "{{name}}を編集",
+    "editTitleAria": "パッケージを編集",
+    "packageName": "パッケージ名",
+    "planType": "プランの種類",
+    "typePaid": "有料",
+    "typeTrial": "無料トライアル",
+    "trialLength": "トライアル期間（日）",
+    "price": "価格",
+    "currency": "通貨",
+    "shownAs": "表示",
+    "trialShownValue": "{{days}}日間 · 無料",
+    "billedPer": "請求単位",
+    "term": "期間（付与する月数）",
+    "featureTier": "機能ティア",
+    "bestValue": "最もお得",
+    "active": "有効",
+    "tagline": "キャッチコピー",
+    "taglinePlaceholder": "個人で運用するのに必要なものがすべて揃っています。",
+    "features": "機能（1行に1つ）",
+    "featuresPlaceholder": "ブラウザプロファイル無制限\nフル機能のフィンガープリントエンジン\nプロキシプールとローテーション",
+    "savePackage": "パッケージを保存",
+    "errors": {
+      "nameRequired": "パッケージ名を入力してください。",
+      "invalidPrice": "有効な価格を入力してください。",
+      "saveFailed": "プランを保存できませんでした。"
+    }
+  },
+  "subscribers": {
+    "title": "購読者",
+    "subtitle": "すべてのアカウントの登録日、プラン、有効期限。合計{{count}}件。",
+    "assignPlan": "プランを割り当て",
+    "empty": "オーナーアカウントはまだありません。",
+    "trialSuffix": "トライアル",
+    "daysLeftShort": "{{days}}日",
+    "assign": "割り当て",
+    "assignTitle": "プランの割り当て / 付与",
+    "state": {
+      "ended": "終了",
+      "grace": "猶予",
+      "active": "有効",
+      "trial": "トライアル"
+    },
+    "cols": {
+      "account": "アカウント",
+      "joined": "登録日",
+      "plan": "プラン",
+      "state": "状態",
+      "expires": "有効期限",
+      "team": "チーム"
+    },
+    "errors": {
+      "loadFailed": "購読者を読み込めませんでした。"
+    }
+  },
+  "assignForm": {
+    "title": "プランを割り当て",
+    "account": "アカウント",
+    "plan": "プラン",
+    "months": "月数",
+    "monthsWithDefault": "月数（既定 {{default}}）",
+    "recordAsPaid": "有料販売として記録",
+    "noteOptional": "メモ（任意）",
+    "notePlaceholder": "付与した理由",
+    "grantNote": "期間を即時に付与し、サブスクリプションによるブロックを解除します。",
+    "grantNotePaid": "有料の請求書が記録されます。",
+    "grantNoteFree": "$0の付与として記録されます。",
+    "fallbackAccount": "アカウント",
+    "fallbackPlan": "プラン",
+    "success_other": "{{name}}に{{plan}}を割り当てました（{{count}}か月）。",
+    "errors": {
+      "chooseAccount": "アカウントを選択してください。",
+      "choosePlan": "プランを選択してください。",
+      "assignFailed": "プランを割り当てられませんでした。"
+    }
+  },
+  "planText": {
+    "trialTagline": "すべての機能を無料でお試しいただけます。フルアクセス、カード登録不要。",
+    "trialFullAccess": "すべての機能にフルアクセス",
+    "trialTools": "フィンガープリント、プロキシ、リーク対策のすべてのツール",
+    "trialMacros": "マクロ、Cookieウォーマー、モバイルプロファイル",
+    "trialBackupSeats": "暗号化バックアップとチームの席",
+    "trialNoCard": "クレジットカード不要",
+    "trialUpgrade": "いつでも有料プランにアップグレード可能",
+    "proTagline": "個人でプロファイルを大規模に運用するのに必要なものがすべて揃っています。",
+    "proProfiles": "ローカルのブラウザプロファイル無制限",
+    "proFingerprint": "フル機能のフィンガープリントエンジン + リークチェック",
+    "proProxies": "プロキシプール、ローテーションポリシー、地域の自動一致",
+    "proMacros": "マクロレコーダー、スケジューラー、データ駆動の実行",
+    "proCookieWarmer": "Cookieウォーマー",
+    "proMobile": "モバイル / Androidデバイスのプロファイル",
+    "proBackup": "ワークスペースの暗号化バックアップと復元",
+    "proDbEncryption": "データベースの完全な保存時暗号化",
+    "proPalette": "コマンドパレット + オンボーディング",
+    "proSeats": "チームメンバー最大3人",
+    "proParallel": "並列実行（最大3プロファイル同時、ライブ実行コンソール付き）",
+    "entTagline": "チーム向け：最大25人のメンバー、10プロファイル同時実行、監査ログのエクスポート。",
+    "entEverythingInPro": "Proのすべての機能に加えて：",
+    "entSeats": "チームメンバー最大25人",
+    "entParallel": "並列実行（最大10プロファイル同時、ライブ実行コンソール付き）",
+    "entAuditExport": "監査ログのエクスポート（CSV / JSON）",
+    "entSupport": "優先メールサポート"
+  },
+  "serverErrors": {
+    "SIGNUP_INVALID_EMAIL": "有効なメールアドレスを入力してください。",
+    "SIGNUP_DISPOSABLE_EMAIL": "恒久的に使えるメールアドレスを使用してください。",
+    "SIGNUP_NO_MX": "このアドレスのメールサーバーが見つかりませんでした。",
+    "SIGNUP_BAD_CODE": "コードが正しくないか、期限切れです。メールを確認するか、新しいコードをリクエストしてください。",
+    "SIGNUP_OFFLINE": "アカウントを作成するにはインターネットに接続してください。",
+    "SIGNUP_FAILED": "現在このメールアドレスを確認できません。数分後にもう一度お試しください。",
+    "RATE_LIMITED": "試行回数が多すぎます。数分後にもう一度お試しください。",
+    "TRIAL_USED": "このコンピューターまたはメールアドレスでは、無料トライアルをすでに使用済みです。プランを選択するか、購入コードを入力してください。",
+    "TRIAL_OFFLINE": "無料トライアルを開始するにはインターネットに接続してください。",
+    "TRIAL_VERIFY_EMAIL": "無料トライアルを開始するには、メールアドレスを確認してください。6桁のコードをお送りしました。",
+    "TRIAL_NO_EMAIL": "まずオーナーアカウントにメールアドレスを追加してから、無料トライアルを開始してください。",
+    "TRIAL_FAILED": "現在無料トライアルを開始できません。数分後にもう一度お試しください。",
+    "SERVER_UNAVAILABLE": "ライセンスサーバーが現在応答していません。数分後にもう一度お試しください。",
+    "MACHINE_MISMATCH": "このライセンスは別のコンピューターに登録されています。このPCに移行するか、管理者にリセットを依頼してください。",
+    "SIGNUP_INVALID_PHONE": "電話番号は + と国番号を付けて入力するか、空欄のままにしてください。",
+    "SIGNUP_USE_CASE": "SoftGlazeの用途を選択してください。",
+    "SIGNUP_USE_CASE_OTHER": "SoftGlazeの用途を簡単に教えてください。",
+    "CONFIRM_OFFLINE": "メールアドレスを確認するにはインターネットに接続してください。"
+  },
+  "store": {
+    "cardTitle": "Microsoft Storeのサブスクリプション",
+    "processedBy": "このバージョンでは、Microsoftが決済を処理します。お支払いはMicrosoftアカウントで行い、サブスクリプションはMicrosoftから毎月（年間プランの場合は毎年）請求されます。",
+    "upgradeNote": "ProからEnterpriseに移行すると、2つ目のサブスクリプションが開始されます。更新が止まるよう、MicrosoftアカウントでProをキャンセルしてください。",
+    "periodNote": "月払いと年払いを切り替える場合も、2つ目のサブスクリプションが開始されます。更新が止まるよう、Microsoftアカウントで古いほうをキャンセルしてください。",
+    "downgradeNote": "EnterpriseからProに移行するには、MicrosoftアカウントでEnterpriseをキャンセルし、終了後にProを購入してください。",
+    "buyWith": "Microsoft Storeで購入",
+    "buyWithPrice": "Microsoft Storeで購入 · {{price}}",
+    "priceFrom": "Microsoft Storeの価格（お使いの通貨）",
+    "restore": "Microsoft Storeの購入を復元",
+    "moveHere": "このコンピューターに移行",
+    "manage": "Microsoftアカウントで管理またはキャンセル",
+    "result": {
+      "active": "ありがとうございます。{{plan}}プランが有効になりました。",
+      "cancelled": "購入をキャンセルしました。料金は発生していません。",
+      "pending": "Microsoftで購入を受け付けました。確認中です。1分ほどかかる場合があります。",
+      "pendingLong": "購入はまだ確認されていません。数分後に「Microsoft Storeの購入を復元」をクリックするか、support@softglaze.com までメールでご連絡ください。",
+      "pendingOffline": "購入情報はこのコンピューターに保存されています。アプリがサーバーに接続でき次第、有効になります。",
+      "pendingReview": "購入を受け付け、確認しています。承認され次第、プランが有効になります。",
+      "none": "このMicrosoftアカウントで、このアプリの有効なMicrosoft Storeサブスクリプションが見つかりませんでした。",
+      "inUse": "このサブスクリプションは別のコンピューターで使用中です。このコンピューターに移行できます。",
+      "moveLimit": "このサブスクリプションは、過去30日間にすでに2回別のコンピューターへ移行されています。サポートが必要な場合は support@softglaze.com までメールでご連絡ください。",
+      "unavailable": "現在Microsoft Storeでの購入はご利用いただけません。後でもう一度お試しください。",
+      "productMissing": "このプランはまだMicrosoft Storeで提供されていません。",
+      "network": "Microsoft Storeに接続できませんでした。インターネット接続を確認して、もう一度お試しください。",
+      "error": "購入を完了できませんでした：{{message}}"
+    }
+  }
+}

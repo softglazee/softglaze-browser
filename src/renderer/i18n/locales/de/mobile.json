@@ -1,0 +1,116 @@
+{
+  "title": "Handys",
+  "description": "Nutzen Sie die SoftGlaze-Handy-App mit diesem Computer: Sehen Sie Ihre Profile, starten und stoppen Sie sie und beantworten Sie KI-Anfragen vom Handy aus. Alles zwischen Handy und diesem Computer ist Ende-zu-Ende-verschlüsselt.",
+  "enable": "Handy-Begleiter einschalten",
+  "loading": "Lädt",
+  "offOwner": "Schalten Sie dies ein, um ein Handy zu koppeln. Dieser Computer hält dann eine sichere Verbindung zum SoftGlaze-Relay, das nur verschlüsselte Nachrichten weiterleitet.",
+  "offOther": "Der Inhaber hat den Handy-Begleiter nicht eingeschaltet.",
+  "copy": "Kopieren",
+  "cancel": "Abbrechen",
+  "relay": {
+    "connected": "Mit dem Relay verbunden",
+    "connecting": "Verbindung zum Relay…",
+    "authFailed": "Das Relay hat diesen Computer abgelehnt. Prüfen Sie die Relay-Adresse unter „Erweitert“."
+  },
+  "pair": {
+    "title": "Handy koppeln",
+    "help": "Installieren Sie SoftGlaze auf Ihrem Handy und scannen Sie dann einen Code auf diesem Bildschirm.",
+    "start": "Handy koppeln",
+    "qrAlt": "Kopplungscode für die SoftGlaze-Handy-App",
+    "scanTitle": "Scannen Sie diesen Code mit der SoftGlaze-Handy-App",
+    "step1": "Öffnen Sie SoftGlaze auf Ihrem Handy.",
+    "step2": "Gehen Sie zu Einstellungen, Mit PC koppeln, und scannen Sie diesen Code.",
+    "step3": "Prüfen Sie, ob beide Bildschirme dieselben sechs Ziffern zeigen.",
+    "expiresIn": "Der Code funktioniert einmal und läuft in {{time}} ab.",
+    "textTitle": "Scannen klappt nicht? Code als Text kopieren",
+    "attemptFailed": "Ein Handy hat einen falschen oder beschädigten Code versucht. Der Code ist weiterhin gültig."
+  },
+  "confirm": {
+    "title": "{{name}} möchte sich koppeln",
+    "help": "Fahren Sie nur fort, wenn Ihr Handy genau diese sechs Ziffern zeigt.",
+    "helpBrowser": "Fahren Sie nur fort, wenn der Browser genau diese sechs Ziffern zeigt. Ein Browser kann Profile sehen und KI-Anfragen beantworten; haken Sie „Profile starten und stoppen“ nur an, wenn Sie das auch möchten.",
+    "codeLabel": "Code {{code}}",
+    "name": "Name des Handys",
+    "member": "Handelt als",
+    "scopes": "Was dieses Handy darf",
+    "match": "Codes stimmen überein, koppeln",
+    "noMatch": "Codes stimmen nicht überein"
+  },
+  "scopes": {
+    "view": {
+      "label": "Profile und Status sehen",
+      "help": "Immer an. Nur Profile, die das Mitglied sehen darf."
+    },
+    "control_profiles": {
+      "label": "Profile starten und stoppen",
+      "help": "Dieselben Regeln wie auf diesem Computer."
+    },
+    "approve_ai": {
+      "label": "KI-Anfragen beantworten",
+      "help": "Aktionen von KI-Apps erlauben oder ablehnen, für Tokens, die dieses Mitglied beantworten darf."
+    },
+    "approve_team": {
+      "label": "Team-Anfragen beantworten",
+      "help": "Zugriffsanfragen von Teammitgliedern freigeben."
+    },
+    "totp": {
+      "label": "2FA-Codes anzeigen",
+      "help": "In Profilen gespeicherte Zwei-Faktor-Codes."
+    },
+    "phone_profiles_linked": {
+      "label": "Profile synchronisieren",
+      "help": "Profile, die Sie unten wählen, öffnen sich auch auf diesem Handy."
+    }
+  },
+  "roles": {
+    "OWNER": "Inhaber",
+    "ADMIN": "Admin",
+    "MANAGER": "Manager",
+    "OPERATOR": "Operator"
+  },
+  "devices": {
+    "title": "Handys und Browser",
+    "kindPhone": "Handy",
+    "kindBrowser": "Browser",
+    "empty": "Noch keine Handys.",
+    "online": "Online",
+    "offline": "Offline",
+    "lastSeen": "Zuletzt online {{when}}",
+    "actsAs": "handelt als {{name}}",
+    "edit": "{{name}} bearbeiten",
+    "remove": "{{name}} entfernen",
+    "removeConfirm": "{{name}} entfernen? Es funktioniert sofort nicht mehr mit diesem Computer und muss neu gekoppelt werden.",
+    "rename": "Umbenennen",
+    "saveScopes": "Berechtigungen speichern"
+  },
+  "sync": {
+    "title": "Profil-Sync",
+    "help": "Gewählte Profile öffnen sich auch in der Handy-App. Einstellungen, Startseiten und Cookies folgen dem Profil; ein Profil ist immer nur auf einem Gerät gleichzeitig geöffnet.",
+    "noPhone": "Noch darf kein Handy synchronisieren. Geben Sie oben einem Handy die Berechtigung „Profile synchronisieren“.",
+    "now": "Jetzt synchronisieren",
+    "search": "Profil suchen",
+    "toggle": "{{name}} mit Handys synchronisieren",
+    "proxyPassword": "Proxy-Passwort",
+    "offConfirm": "Synchronisierung von {{name}} beenden? Handys behalten ihre Kopie.",
+    "removeAll": "Alle synchronisierten Daten vom Relay entfernen",
+    "removeAllConfirm": "Jedes synchronisierte Profil vom Relay entfernen? Profile auf diesem Computer und auf Handys bleiben unverändert.",
+    "lastOk": "Letzte Synchronisierung {{when}}",
+    "lastError": "Letzte Synchronisierung fehlgeschlagen ({{code}}). Neuer Versuch jede Minute.",
+    "limits": "Website-Speicher, Erweiterungen, gespeicherte Passwörter und Downloads werden nicht synchronisiert. Proxy-Passwörter nur dort, wo Sie es erlauben."
+  },
+  "advanced": {
+    "title": "Erweitert",
+    "pcName": "Name dieses Computers auf Handys",
+    "relay": "Relay-Adresse",
+    "relayFromEnv": "Zum Testen über SG_RELAY_URL gesetzt.",
+    "save": "Speichern",
+    "reset": "Handy-Schlüssel zurücksetzen",
+    "resetConfirm": "Handy-Schlüssel dieses Computers zurücksetzen? Jedes gekoppelte Handy wird entfernt und muss neu gekoppelt werden.",
+    "protocol": "Protokoll {{version}}"
+  },
+  "errors": {
+    "load": "Die Handy-Einstellungen konnten nicht geladen werden.",
+    "generic": "Das hat nicht geklappt. Versuchen Sie es erneut.",
+    "unavailable": "Handys sind in diesem Build nicht verfügbar."
+  }
+}

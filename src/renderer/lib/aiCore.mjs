@@ -1,5 +1,6 @@
 // SoftGlaze AI page logic that does not need React: permissions, error states, connect snippets,
 // the create-token flow, settings validation and formatting. Framework-free (.mjs) for node:test.
+import { intlLocale } from './intl.mjs';
 
 // ---- Who may see what -----------------------------------------------------------------------
 
@@ -568,7 +569,7 @@ export function relativeTime(value, now = Date.now(), lang = 'en') {
   const abs = Math.abs(diff);
   const units = [['day', DAY], ['hour', 3600000], ['minute', 60000], ['second', 1000]];
   let fmt;
-  try { fmt = new Intl.RelativeTimeFormat(lang, { numeric: 'auto' }); } catch (e) { fmt = new Intl.RelativeTimeFormat('en', { numeric: 'auto' }); }
+  try { fmt = new Intl.RelativeTimeFormat(intlLocale(lang), { numeric: 'auto' }); } catch (e) { fmt = new Intl.RelativeTimeFormat('en', { numeric: 'auto' }); }
   if (abs < 45000) return fmt.format(0, 'second');
   for (const [unit, size] of units) {
     if (abs >= size || unit === 'second') return fmt.format(Math.round(diff / size), unit);

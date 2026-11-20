@@ -720,9 +720,9 @@ test('renderer rules and texts (en and es)', async () => {
   for (const code of f.SIGNIN_ERROR_CODES) assert.ok(en.errors[code] && es.errors[code], code);
   for (const s of [JSON.stringify(en), JSON.stringify(es)]) assert.ok(!/[–—]/.test(s), 'no em or en dashes');
   const idx = read('src', 'renderer', 'i18n', 'index.js');
-  assert.match(idx, /signin: signinEn/);
-  assert.match(idx, /signin: signinEs/);
-  assert.match(idx, /'signin',/);
+  // i18n/index.js registers every locales/<code>/signin.json (English eager, others lazy).
+  assert.match(idx, /import\.meta\.glob\('\.\/locales\/en\/\*\.json', \{ eager: true/);
+  assert.match(idx, /import\.meta\.glob\(\['\.\/locales\/\*\/\*\.json'/);
   // The billing texts the move uses exist in both languages.
   for (const lang of ['en', 'es']) {
     const b = JSON.parse(read('src', 'renderer', 'i18n', 'locales', lang, 'billing.json'));

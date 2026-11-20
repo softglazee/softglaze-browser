@@ -1,0 +1,97 @@
+{
+  "upgrade": {
+    "title": {
+      "profiles": "Sie haben die {{limit}} Profile des Free-Tarifs erreicht",
+      "running": "Free startet {{limit}} Profil gleichzeitig",
+      "openable": "Dieses Profil gehört nicht zu Ihren {{limit}} im Free-Tarif",
+      "seats": "Teammitglieder gehören zu Pro",
+      "ai": "Die {{limit}} KI-Aktionen für heute sind verbraucht",
+      "sync": "Cloud-Sync gehört zu Pro",
+      "phone": "Profile vom Handy aus öffnen gehört zu Pro",
+      "generic": "Das gehört zu Pro"
+    },
+    "body": {
+      "profiles": "Ihre {{used}} Profile sind sicher. Wechseln Sie zu Pro für unbegrenzte Profile oder löschen Sie eines, um Platz zu schaffen.",
+      "running": "Schließen Sie das geöffnete Profil, um ein anderes zu starten, oder wechseln Sie zu Pro, um 3 gleichzeitig zu nutzen.",
+      "openable": "Jedes Profil bleibt erhalten. Im Free-Tarif wählen Sie, welche {{limit}} sich öffnen lassen; Pro öffnet alle.",
+      "seats": "Der Free-Tarif ist für eine Person. Pro enthält 3 Teammitglieder, Enterprise 25.",
+      "ai": "Free enthält {{limit}} KI-Aktionen pro Tag; sie werden morgen zurückgesetzt. Pro hat unbegrenzte KI-Aktionen.",
+      "sync": "Pro hält Ihre Profile zwischen Ihren Computern und Ihrem Handy synchron.",
+      "phone": "Im Free-Tarif können Handy und Web-App Profile ansehen und KI-Anfragen freigeben. Pro kann sie außerdem öffnen und stoppen.",
+      "generic": "Wechseln Sie zu Pro, um das zu nutzen."
+    },
+    "price": "Pro kostet {{price}} pro Monat.",
+    "priceFallback": "Pro gibt es ab US$5 pro Monat.",
+    "upgradeButton": "Auf Pro upgraden",
+    "chooseProfiles": "Profile wählen",
+    "notNow": "Nicht jetzt"
+  },
+  "welcome": {
+    "title": "Ihre Pro-Testphase ist beendet. Sie nutzen jetzt den Free-Tarif.",
+    "keepTitle": "Sie behalten",
+    "keep": "Alle Ihre Profile ({{limit}} lassen sich öffnen), Ihre Proxys und Fingerprints, die Handy- und die Web-App.",
+    "proTitle": "Pro bietet zusätzlich",
+    "pro": "Unbegrenzte Profile, 3 gleichzeitig aktiv, Teamplätze, Cloud-Sync und unbegrenzte KI-Aktionen für {{price}} pro Monat.",
+    "upgrade": "Auf Pro upgraden",
+    "stay": "Weiter mit Free"
+  },
+  "counter": {
+    "freeBadge": "Free-Tarif",
+    "profiles": "{{used}} von {{limit}} Profilen",
+    "running": "{{used}} von {{limit}} aktiv",
+    "ai": "{{used}} von {{limit}} KI-Aktionen heute",
+    "upgrade": "Upgraden"
+  },
+  "choose": {
+    "title": "Wählen Sie, welche Profile sich öffnen lassen",
+    "body": "Im Free-Tarif lassen sich {{limit}} Ihrer {{total}} Profile öffnen. Jedes Profil bleibt erhalten; mit Pro öffnen Sie alle.",
+    "selected": "{{count}} von {{limit}} gewählt",
+    "search": "Profile suchen",
+    "save": "Speichern",
+    "cancel": "Abbrechen",
+    "saved": "Gespeichert. Diese Profile lassen sich im Free-Tarif öffnen."
+  },
+  "billing": {
+    "currentFree": "Free-Tarif",
+    "currentFreeBody": "Für immer kostenlos, keine Karte nötig. Jederzeit upgraden für mehr Profile, Teams und unbegrenzte KI-Aktionen.",
+    "currentBadge": "Aktueller Tarif",
+    "compareTitle": "Tarife vergleichen",
+    "colFeature": "Funktion",
+    "colFree": "Free",
+    "colPro": "Pro",
+    "colEnterprise": "Enterprise",
+    "rows": {
+      "profiles": "Gespeicherte Profile",
+      "running": "Gleichzeitig aktive Profile",
+      "seats": "Plätze (Teammitglieder)",
+      "pcs": "PCs pro Konto",
+      "fingerprints": "Eigene Proxys, alle Fingerprint-Einstellungen",
+      "ai": "KI- und MCP-Automatisierung",
+      "phone": "Handy und Web-App",
+      "sync": "Cloud-Sync zwischen PCs",
+      "support": "Support"
+    },
+    "values": {
+      "unlimited": "Unbegrenzt",
+      "unlimitedAudit": "Unbegrenzt + Audit-Export",
+      "yes": "Ja",
+      "no": "Nein",
+      "aiPerDay": "{{count}} Aktionen pro Tag",
+      "viewApprove": "Ansehen + KI-Anfragen freigeben",
+      "openStop": "+ Profile öffnen und stoppen",
+      "teamApprovals": "+ Team-Freigaben",
+      "helpCentre": "Hilfecenter",
+      "email": "E-Mail",
+      "priorityEmail": "Bevorzugter E-Mail-Support"
+    }
+  },
+  "deals": {
+    "title": "Empfohlene Proxy-Angebote",
+    "disclosure": "Partnerangebot. SoftGlaze erhält eventuell eine Provision.",
+    "code": "Code {{code}}",
+    "copyCode": "Code kopieren",
+    "copied": "Kopiert",
+    "open": "Angebot holen",
+    "hidden": "Pro und Enterprise zeigen nie Partnerangebote."
+  }
+}

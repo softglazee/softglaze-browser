@@ -43,6 +43,7 @@ const {
   getAutomationPage,
   reapplyScreenMetrics
 } = require('./browserEngine');
+const i18nMain = require('./i18nMain');
 const blockDetect = require('./blockDetect');
 const dnsbl = require('./dnsbl');
 const browserDownloader = require('./browserDownloader');
@@ -1001,9 +1002,9 @@ async function exportProfileArchive(payload) {
   const safeName = (String(profile.title || 'profile').replace(/[^a-z0-9._-]+/gi, '_').slice(0, 60)) || 'profile';
 
   const save = await dialog.showSaveDialog({
-    title: 'Export encrypted profile archive',
+    title: i18nMain.t('dialogs.exportArchiveTitle'),
     defaultPath: `${safeName}.sgz`,
-    filters: [{ name: 'Softglaze encrypted archive', extensions: ['sgz'] }]
+    filters: [{ name: i18nMain.t('dialogs.archiveFilter'), extensions: ['sgz'] }]
   });
   if (save.canceled || !save.filePath) return { cancelled: true };
 
@@ -9179,9 +9180,9 @@ async function checkMemoryPressure() {
 
 async function previewProfilesViaDialog() {
   const selection = await dialog.showOpenDialog({
-    title: 'Select a Softglaze profile spreadsheet to import',
+    title: i18nMain.t('dialogs.importProfilesTitle'),
     properties: ['openFile'],
-    filters: [{ name: 'Spreadsheet files', extensions: ['xlsx', 'xls', 'csv'] }]
+    filters: [{ name: i18nMain.t('dialogs.spreadsheetFilter'), extensions: ['xlsx', 'xls', 'csv'] }]
   });
 
   if (selection.canceled || selection.filePaths.length === 0) return { cancelled: true };
@@ -9655,11 +9656,11 @@ async function exportProfilesToFile(payload) {
 
   const stamp = new Date().toISOString().slice(0, 10);
   const res = await dialog.showSaveDialog({
-    title: 'Export Softglaze profiles',
+    title: i18nMain.t('dialogs.exportProfilesTitle'),
     defaultPath: `softglaze-profiles-export-${stamp}.${format}`,
     filters: format === 'csv'
       ? [{ name: 'CSV', extensions: ['csv'] }]
-      : [{ name: 'Excel Workbook', extensions: ['xlsx'] }, { name: 'CSV', extensions: ['csv'] }]
+      : [{ name: i18nMain.t('dialogs.excelFilter'), extensions: ['xlsx'] }, { name: 'CSV', extensions: ['csv'] }]
   });
   if (res.canceled || !res.filePath) return { saved: false, cancelled: true };
 
@@ -11051,9 +11052,9 @@ async function updatePersona(payload) {
 // and rows for column mapping, capped at parseDataRows' 1000-row limit.
 async function previewPersonaFile() {
   const selection = await dialog.showOpenDialog({
-    title: 'Select a spreadsheet of identities to import',
+    title: i18nMain.t('dialogs.importIdentitiesTitle'),
     properties: ['openFile'],
-    filters: [{ name: 'Spreadsheet files', extensions: ['xlsx', 'xls', 'csv'] }]
+    filters: [{ name: i18nMain.t('dialogs.spreadsheetFilter'), extensions: ['xlsx', 'xls', 'csv'] }]
   });
   if (selection.canceled || selection.filePaths.length === 0) return { cancelled: true };
   const filePath = selection.filePaths[0];
@@ -12502,9 +12503,9 @@ async function workspaceBackup(payload) {
   } catch (e) { settings = []; }
   const stamp = new Date().toISOString().slice(0, 10);
   const save = await dialog.showSaveDialog({
-    title: 'Back up workspace',
+    title: i18nMain.t('dialogs.backupTitle'),
     defaultPath: `softglaze-workspace-${stamp}.sgzw`,
-    filters: [{ name: 'Softglaze Workspace Backup', extensions: ['sgzw'] }]
+    filters: [{ name: i18nMain.t('dialogs.backupFilter'), extensions: ['sgzw'] }]
   });
   if (save.canceled || !save.filePath) return { cancelled: true };
   const res = await profileArchive.exportWorkspaceArchive({ dbPath, settings, password, outPath: save.filePath });
@@ -12522,9 +12523,9 @@ async function workspaceRestore(payload) {
   const password = String(input.password || '');
   if (!password) throw new Error('Enter the password for this backup.');
   const selection = await dialog.showOpenDialog({
-    title: 'Restore workspace backup',
+    title: i18nMain.t('dialogs.restoreTitle'),
     properties: ['openFile'],
-    filters: [{ name: 'Softglaze Workspace Backup', extensions: ['sgzw'] }]
+    filters: [{ name: i18nMain.t('dialogs.backupFilter'), extensions: ['sgzw'] }]
   });
   if (selection.canceled || !selection.filePaths || !selection.filePaths.length) return { cancelled: true };
   const filePath = selection.filePaths[0];
@@ -13521,7 +13522,7 @@ async function exportTeamActivity(payload) {
 
   const stamp = new Date().toISOString().slice(0, 10);
   const save = await dialog.showSaveDialog({
-    title: 'Export activity log',
+    title: i18nMain.t('dialogs.exportActivityTitle'),
     defaultPath: `softglaze-activity-${stamp}.${isJson ? 'json' : 'csv'}`,
     filters: [isJson ? { name: 'JSON', extensions: ['json'] } : { name: 'CSV', extensions: ['csv'] }]
   });
@@ -16091,9 +16092,9 @@ const dataRowsCache = new Map();
 
 async function pickDataFile() {
   const selection = await dialog.showOpenDialog({
-    title: 'Select a spreadsheet to bind to this parallel run',
+    title: i18nMain.t('dialogs.bindSpreadsheetTitle'),
     properties: ['openFile'],
-    filters: [{ name: 'Spreadsheet files', extensions: ['xlsx', 'xls', 'csv'] }]
+    filters: [{ name: i18nMain.t('dialogs.spreadsheetFilter'), extensions: ['xlsx', 'xls', 'csv'] }]
   });
   if (selection.canceled || selection.filePaths.length === 0) return { cancelled: true };
 

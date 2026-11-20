@@ -21,7 +21,7 @@ export function DialogContent({ className, children, title = 'Dialog', ...props 
       >
         <DialogPrimitive.Title className="sr-only">{title}</DialogPrimitive.Title>
         {children}
-        <DialogPrimitive.Close className="absolute right-4 top-4 rounded-md p-1 text-muted-foreground transition hover:bg-secondary hover:text-foreground">
+        <DialogPrimitive.Close className="absolute inset-e-4 top-4 rounded-md p-1 text-muted-foreground transition hover:bg-secondary hover:text-foreground">
           <X className="h-4 w-4" />
           <span className="sr-only">Close</span>
         </DialogPrimitive.Close>
@@ -31,7 +31,7 @@ export function DialogContent({ className, children, title = 'Dialog', ...props 
 }
 
 export function DialogHeader({ className, ...props }) {
-  return <div className={cn('border-b border-border p-5 pr-12', className)} {...props} />;
+  return <div className={cn('border-b border-border p-5 pe-12', className)} {...props} />;
 }
 export function DialogTitle({ className, ...props }) {
   return <h2 className={cn('text-base font-semibold text-foreground', className)} {...props} />;

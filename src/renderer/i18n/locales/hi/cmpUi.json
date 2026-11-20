@@ -1,0 +1,31 @@
+{
+  "brandSelect": {
+    "presentAs": "इस प्रोफ़ाइल को {{brand}} के रूप में दिखाएं"
+  },
+  "versionSelect": {
+    "auto": "ऑटो",
+    "loadingVersions": "वर्शन लोड हो रहे हैं…",
+    "ready": "तैयार",
+    "readyTitle": "इंस्टॉल है और इस्तेमाल के लिए तैयार",
+    "noVersions": "कोई वर्शन नहीं मिला।",
+    "offlineError": "ऑफ़लाइन - वर्शन कैटलॉग तक नहीं पहुंच पा रहे।",
+    "downloadFailed": "डाउनलोड नहीं हो सका।",
+    "resumeFailed": "दोबारा शुरू नहीं हो सका।",
+    "paused": "रुका हुआ",
+    "interrupted": "बीच में रुका",
+    "resumeTitle": "{{percent}}% पर {{state}} - दोबारा शुरू करें",
+    "statusInstalling": "इंस्टॉल",
+    "statusQueued": "…",
+    "retryTitle": "फिर से कोशिश करें - {{error}}",
+    "downloadFailedShort": "डाउनलोड फ़ेल",
+    "downloadInstallTitle": "यह वर्शन डाउनलोड और इंस्टॉल करें"
+  },
+  "pager": {
+    "showing": "{{total}} में से {{from}}-{{to}} दिख रहे हैं",
+    "perPage": "प्रति पेज",
+    "all": "सभी",
+    "prev": "पिछला",
+    "next": "अगला",
+    "pageOf": "पेज {{page}} / {{total}}"
+  }
+}

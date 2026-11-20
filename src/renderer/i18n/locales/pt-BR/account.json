@@ -1,0 +1,62 @@
+{
+  "header": {
+    "eyebrow": "Sua conta",
+    "title": "Configurações da conta",
+    "description": "Gerencie sua foto de perfil, nome, e-mail e senha."
+  },
+  "notice": {
+    "superAdmin": "Esta é uma sessão de Super-Admin / dono do código: não há registro de membro editável para alterar aqui."
+  },
+  "fields": {
+    "fullName": "Nome completo",
+    "fullNamePlaceholder": "Seu nome",
+    "email": "E-mail",
+    "newPassword": "Nova senha",
+    "newPasswordPlaceholder": "Deixe em branco para manter a atual",
+    "confirmPassword": "Confirmar nova senha",
+    "confirmPasswordPlaceholder": "Repita a nova senha",
+    "verificationRequired": "verificação necessária"
+  },
+  "avatar": {
+    "alt": "avatar",
+    "changeTitle": "Trocar foto",
+    "newSelected": "Nova foto selecionada: salve para aplicar.",
+    "notImage": "Escolha um arquivo de imagem.",
+    "tooLarge": "Essa imagem tem mais de 2 MB. Escolha uma menor.",
+    "readFailed": "Não foi possível ler essa imagem."
+  },
+  "verification": {
+    "banner": "Para alterar seu e-mail ou senha, é preciso um código de 6 dígitos enviado ao seu e-mail atual"
+  },
+  "actions": {
+    "save": "Salvar alterações",
+    "saving": "Salvando…",
+    "verifyAndSave": "Verificar e salvar",
+    "discard": "Descartar"
+  },
+  "validation": {
+    "nameEmpty": "O nome não pode ficar vazio.",
+    "emailInvalid": "Digite um endereço de e-mail válido.",
+    "passwordTooShort": "A nova senha precisa ter pelo menos 8 caracteres.",
+    "passwordMismatch": "As senhas não coincidem."
+  },
+  "messages": {
+    "profileUpdated": "Perfil atualizado.",
+    "accountUpdated": "Conta atualizada com sucesso."
+  },
+  "errors": {
+    "loadFailed": "Não foi possível carregar sua conta.",
+    "saveFailed": "Não foi possível salvar suas alterações."
+  },
+  "verify": {
+    "title": "Confirme que é você",
+    "codeSentTo": "Código enviado para {{email}}",
+    "codeLabel": "Código de 6 dígitos",
+    "devMode": "Modo dev: nenhum e-mail configurado. Seu código é",
+    "apply": "Verificar e aplicar",
+    "resend": "Reenviar",
+    "enterCode": "Digite o código de 6 dígitos.",
+    "failed": "Falha na verificação.",
+    "resendFailed": "Não foi possível reenviar o código."
+  }
+}

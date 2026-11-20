@@ -1,0 +1,281 @@
+{
+  "common": {
+    "back": "返回",
+    "redeem": "兌換",
+    "go": "前往"
+  },
+  "remember": {
+    "label": "在此裝置上保持登入",
+    "unavailable": "此裝置無法安全地儲存登入資訊（作業系統加密不可用），因此下次啟動時需要重新登入。"
+  },
+  "brand": {
+    "tagline": "多設定檔",
+    "bullets": {
+      "fingerprints": "每個設定檔都有獨特且一致的指紋",
+      "proxy": "每個身分都有專屬代理",
+      "localFirst": "本機優先：你的工作區儲存在此裝置上"
+    },
+    "heroLine1": "執行數百個身分。",
+    "heroLine2": "讓每個身分彼此獨立。",
+    "heroBody": "面向團隊的本機優先多設定檔瀏覽器。每個設定檔都有自己的 Cookie、儲存、代理和指紋設定。",
+    "footer": "© {{year}} SoftGlaze · 本機工作區",
+    "trust": {
+      "local": "本機優先",
+      "encrypted": "工作區鎖定",
+      "private": "零遙測"
+    },
+    "slides": {
+      "security": {
+        "title": "可靠的資料安全",
+        "body": "你的設定檔、Cookie 和瀏覽資料都保留在此裝置上，雙重驗證種子和供應商金鑰使用系統鑰匙串密封儲存。"
+      },
+      "fingerprint": {
+        "title": "一致的指紋",
+        "body": "每個設定檔都帶有獨特且一致的指紋：canvas、WebGL、字型、音訊和硬體。"
+      },
+      "proxy": {
+        "title": "每個身分一個代理",
+        "body": "為每個設定檔繫結專屬的網路身分，放心輪換。"
+      },
+      "automation": {
+        "title": "節省時間的自動化",
+        "body": "預熱 Cookie、批次產生設定檔，並規模化編排一切。"
+      }
+    }
+  },
+  "license": {
+    "machineMismatch": "此授權已註冊到另一台電腦。請將其轉移到這台電腦，或請管理員重設。"
+  },
+  "pay": {
+    "noMethods": "我們正在接入新的支付供應商，應用程式內購買暫停中。如需透過發票購買，請傳送郵件至 support@softglaze.com，然後輸入您的購買碼。",
+    "submitted": "付款已提交，管理員稽核後會儘快啟用你的方案。",
+    "manualBadge": "手動",
+    "continueTo": "繼續前往 {{label}}",
+    "openPaymentLink": "開啟付款連結",
+    "referencePlaceholder": "付款參考號/交易 ID",
+    "submitForApproval": "我已付款，提交稽核"
+  },
+  "banned": {
+    "blockedHeading": "您的帳號已被阻擋",
+    "endedHeading": "你的訂閱已結束",
+    "blockedBodyNamed": "{{name}}，您的帳號已被管理員阻擋。請聯絡管理員恢復存取，您的資料是安全的。",
+    "blockedBody": "您的帳號已被管理員阻擋。請聯絡管理員恢復存取，您的資料是安全的。",
+    "endedBodyNamed": "{{name}}，此授權已失效（已退款、已撤銷或已註冊到其他電腦）。請選擇一個方案以解鎖工作區。你的設定檔和資料都安全地保留著。",
+    "endedBody": "此授權已失效（已退款、已撤銷或已註冊到其他電腦）。請選擇一個方案以解鎖工作區。你的設定檔和資料都安全地保留著。",
+    "haveCode": "有購買碼？",
+    "needHelp": "需要幫助？請聯絡您的管理員。",
+    "signOut": "登出"
+  },
+  "register": {
+    "title": "建立你的帳號",
+    "subtitle": "這是你的主帳號，也就是工作區的擁有者。",
+    "firstName": "名",
+    "lastName": "姓",
+    "email": "電子郵件",
+    "emailPlaceholder": "you@workspace.com",
+    "phone": "電話號碼",
+    "phonePlaceholder": "+31 6 12345678",
+    "password": "密碼",
+    "passwordPlaceholder": "至少 8 個字元",
+    "confirm": "確認",
+    "confirmPlaceholder": "再次輸入",
+    "continue": "繼續",
+    "storedLocally": "在此裝置上本機加密儲存",
+    "haveAccount": "已有帳號？",
+    "logIn": "登入",
+    "consent": "透過郵件接收產品資訊和使用技巧",
+    "consentNote": "驗證碼、試用提醒和帳號郵件始終會傳送。只有勾選此項才會傳送產品資訊。",
+    "checkedByServer": "我們會向你傳送驗證碼以確認此電子郵件。你的設定檔和資料會保留在此裝置上。",
+    "phoneOptional": "電話號碼（可選）",
+    "phoneIntlPlaceholder": "+44 20 7946 0958",
+    "phoneHint": "以 + 和國家/地區代碼開頭。"
+  },
+  "verify": {
+    "title": "驗證你的電子郵件",
+    "subtitlePrefix": "請輸入傳送到以下電子郵件的 6 位驗證碼：",
+    "subtitleSuffix": "。",
+    "devModePrefix": "開發模式：目前不會實際傳送郵件。你的驗證碼是",
+    "devModeSuffix": "。",
+    "verifyCreate": "驗證並建立帳號",
+    "resendIn": "{{count}} 秒後可重新傳送",
+    "resend": "重新傳送驗證碼",
+    "checkSpam": "驗證碼可能需要一分鐘才能送達。如果沒有收到，請檢查垃圾郵件資料夾。"
+  },
+  "lead": {
+    "useCase": "你打算用 SoftGlaze 做什麼？",
+    "useCasePlaceholder": "請選擇",
+    "useCases": {
+      "ecommerce": "電商店鋪和交易平台",
+      "social_media": "社交媒體帳號",
+      "affiliate_marketing": "聯盟營銷和媒體採購",
+      "agency": "為客戶提供代理服務",
+      "web_research": "網路調研和品質測試",
+      "other": "其他用途"
+    },
+    "useCaseOther": "請簡單描述",
+    "useCaseOtherPlaceholder": "例如：按國家/地區檢視價格",
+    "company": "公司或網站（可選）",
+    "companyPlaceholder": "Acme Ltd 或 acme.com"
+  },
+  "confirm": {
+    "title": "確認你的電子郵件",
+    "subtitle": "現在每個 SoftGlaze 工作區都需要一個已確認的電子郵件。請檢查你的資訊，我們會向你傳送 6 位驗證碼。",
+    "sendCode": "傳送驗證碼",
+    "codeTitle": "輸入驗證碼",
+    "codeBody": "我們已向 {{email}} 傳送 6 位驗證碼。輸入後即可確認此工作區的電子郵件。",
+    "confirmContinue": "確認並繼續",
+    "changeDetails": "修改資訊",
+    "dataNote": "你的設定檔和資料會保留在這台電腦上。我們儲存這些資訊是為了維護你的帳號。",
+    "later": "暫時繼續",
+    "laterNote": "無法連線到我們的伺服器。你現在可以使用應用程式，下次啟動時我們會再次詢問。",
+    "memberTitle": "擁有者需要確認此工作區",
+    "memberBody": "此工作區在使用前，需要其擁有者確認電子郵件。請讓擁有者登入並完成確認，或以擁有者身分登入。",
+    "signInAsOwner": "以擁有者身分登入"
+  },
+  "plan": {
+    "title": "一切就緒",
+    "subtitlePrefix": "你的帳號已準備好，附帶",
+    "trialHighlight": "7 天免費試用",
+    "subtitleSuffix": "。立即開始，或啟用付費方案。",
+    "startTrialTitle": "開始 7 天免費試用",
+    "startTrialSubtitle": "現在無需付款，暢享全部功能。",
+    "activatePaid": "立即啟用付費方案",
+    "haveCode": "有購買碼？",
+    "skip": "跳過，開始試用",
+    "tenantTitle": "你的帳號已準備好",
+    "tenantSubtitle": "開始免費試用，或選擇一個方案。",
+    "tenantTrialSubtitle": "完整存取，無需付款。每台電腦和每個電子郵件限一次免費試用。",
+    "choosePlan": "或選擇一個方案",
+    "verifyTitle": "確認你的電子郵件",
+    "verifyBody": "我們已向 {{email}} 傳送 6 位驗證碼。輸入後即可開始免費試用。",
+    "verifyStart": "確認並開始試用",
+    "continueFreeTitle": "繼續使用免費方案",
+    "continueFreeSubtitle": "永久免費：25 個設定檔，同時執行 1 個。隨時可以升級。",
+    "trialUsedFree": "這台電腦或該電子郵件已使用過免費試用。你可以繼續使用免費方案。"
+  },
+  "login": {
+    "welcomeBackNamed": "歡迎回來，{{name}}",
+    "welcomeBack": "歡迎回來",
+    "subtitle": "登入以解鎖你的工作區。",
+    "email": "電子郵件",
+    "password": "密碼",
+    "forgot": "忘記密碼？",
+    "passwordPlaceholder": "主密碼",
+    "forgotBody": "本機安裝的主密碼無法找回，它永遠不會離開此裝置。如果丟失，需要在「設定」中重設工作區。",
+    "signIn": "登入",
+    "noAccount": "還沒有帳號？",
+    "newHere": "初次使用 SoftGlaze？",
+    "createOne": "建立你的帳號",
+    "haveInvite": "有邀請碼？",
+    "teamSignIn": "團隊成員登入"
+  },
+  "invite": {
+    "title": "兌換邀請",
+    "subtitle": "輸入你收到的邀請碼，併為你的帳號設定密碼。",
+    "code": "邀請碼",
+    "codePlaceholder": "SG-XXXX-XXXX",
+    "yourName": "你的姓名",
+    "optional": "（可選）",
+    "namePlaceholder": "姓名",
+    "setPassword": "設定密碼",
+    "passwordPlaceholder": "至少 6 個字元",
+    "join": "加入工作區"
+  },
+  "member": {
+    "title": "團隊成員登入",
+    "subtitle": "使用兌換邀請時設定的電子郵件/名稱和密碼。",
+    "identifier": "電子郵件或名稱",
+    "identifierPlaceholder": "you@workspace.com",
+    "password": "密碼",
+    "passwordPlaceholder": "你的密碼",
+    "signIn": "登入",
+    "haveInviteInstead": "有邀請碼？",
+    "redeemIt": "去兌換"
+  },
+  "super": {
+    "title": "超級管理員",
+    "access": "超級管理員存取",
+    "setupSubtitlePrefix": "首次執行設定。為",
+    "setupSubtitleHighlight": "此安裝",
+    "setupSubtitleSuffix": "建立超級管理員憑據。它以雜湊形式儲存在此裝置上，是唯一的登入方式，請妥善保管。",
+    "username": "使用者名稱",
+    "usernamePlaceholder": "superadmin",
+    "password": "密碼",
+    "setupPasswordPlaceholder": "至少 8 個字元",
+    "confirmPassword": "確認密碼",
+    "confirmPasswordPlaceholder": "再次輸入密碼",
+    "createCredentials": "建立憑據",
+    "loginSubtitle": "原始碼擁有者存取。跳過註冊並解鎖完整工作區。",
+    "usernameOrEmail": "使用者名稱或電子郵件",
+    "loginPasswordPlaceholder": "密碼",
+    "enterWorkspace": "進入工作區"
+  },
+  "pick": {
+    "title": "誰在使用？",
+    "subtitle": "選擇你的成員資料以繼續。",
+    "pin": "PIN",
+    "suspended": "已暫停",
+    "pinPlaceholder": "輸入 PIN",
+    "haveInvite": "有邀請碼？",
+    "teamSignIn": "團隊成員登入"
+  },
+  "db": {
+    "title": "解鎖資料庫",
+    "subtitle": "此工作區的資料庫已加密。請輸入工作區密碼以解密並開啟。",
+    "workspacePassword": "工作區密碼",
+    "passwordPlaceholder": "工作區密碼",
+    "unlock": "解鎖",
+    "corrupted": "如果您確定密碼正確，資料庫檔案可能已損壞。您可以重新安裝並還原工作區備份（設定 → 工作區備份和還原）來還原資料。密碼無法重設，只有使用正確的密碼才能開啟資料。"
+  },
+  "errors": {
+    "enterFirstLast": "請輸入你的名和姓。",
+    "validEmail": "請輸入有效的電子郵件地址。",
+    "validPhone": "請輸入有效的電話號碼。",
+    "password8": "密碼至少需要 8 個字元。",
+    "passwordsNoMatch": "兩次輸入的密碼不一致。",
+    "couldNotSendCode": "無法傳送驗證碼。",
+    "couldNotResendCode": "無法重新傳送驗證碼。",
+    "enter6Digit": "請輸入 6 位驗證碼。",
+    "verificationFailed": "驗證失敗。",
+    "incorrectPassword": "密碼不正確。",
+    "couldNotSignIn": "無法登入。",
+    "superSetupRequired": "尚未設定超級管理員憑據，請在下方建立。",
+    "invalidSuperCredentials": "超級管理員憑據無效。",
+    "couldNotCreateSuper": "無法建立超級管理員憑據。",
+    "enterInviteCode": "請輸入你的邀請碼。",
+    "password6": "密碼至少需要 6 個字元。",
+    "couldNotRedeemInvite": "無法兌換該邀請碼。",
+    "enterEmailNamePassword": "請輸入你的電子郵件/名稱和密碼。",
+    "enterPurchaseCode": "請輸入你的購買碼。",
+    "invalidPurchaseCode": "該購買碼無效。",
+    "noPaymentMethod": "暫無可用的付款方式。",
+    "paymentNotStarted": "無法開始付款。",
+    "couldNotSubmitPayment": "無法提交你的付款。",
+    "enterWorkspacePassword": "請輸入工作區密碼。",
+    "dbStillLocked": "資料庫仍處於鎖定狀態，請重試。",
+    "dbMissing": "加密的資料庫檔案丟失。請從工作區備份還原。",
+    "dbUnlockFailed": "密碼不正確，或檔案已損壞。",
+    "couldNotUnlockDb": "無法解鎖資料庫。",
+    "trialFailed": "無法開始免費試用。"
+  },
+  "serverErrors": {
+    "SIGNUP_INVALID_EMAIL": "請輸入有效的電子郵件地址。",
+    "SIGNUP_DISPOSABLE_EMAIL": "請使用長期有效的電子郵件地址。",
+    "SIGNUP_NO_MX": "找不到該地址的郵件伺服器。",
+    "SIGNUP_BAD_CODE": "驗證碼不正確或已過期。請檢查郵件或重新取得驗證碼。",
+    "SIGNUP_OFFLINE": "請連線網際網路以建立帳號。",
+    "SIGNUP_FAILED": "目前無法驗證該電子郵件，請過幾分鐘再試。",
+    "RATE_LIMITED": "嘗試次數過多，請過幾分鐘再試。",
+    "TRIAL_USED": "這台電腦或該電子郵件已使用過免費試用。請選擇方案或輸入購買碼。",
+    "TRIAL_OFFLINE": "請連線網際網路以開始免費試用。",
+    "TRIAL_VERIFY_EMAIL": "請確認您的電子郵件地址以開始免費試用。我們已向您傳送 6 位驗證碼。",
+    "TRIAL_NO_EMAIL": "請先為擁有者帳號新增電子郵件地址，然後再開始免費試用。",
+    "TRIAL_FAILED": "目前無法開始免費試用，請過幾分鐘再試。",
+    "SERVER_UNAVAILABLE": "我們的授權伺服器暫時沒有回應，請過幾分鐘再試。",
+    "MACHINE_MISMATCH": "此授權已註冊到另一台電腦。請將其轉移到這台電腦，或請管理員重設。",
+    "SIGNUP_INVALID_PHONE": "請輸入帶 + 和國家/地區代碼的電話號碼，或留空。",
+    "SIGNUP_USE_CASE": "請選擇你將用 SoftGlaze 做什麼。",
+    "SIGNUP_USE_CASE_OTHER": "請簡單告訴我們你將用 SoftGlaze 做什麼。",
+    "CONFIRM_OFFLINE": "請連線網際網路以確認您的電子郵件。"
+  }
+}

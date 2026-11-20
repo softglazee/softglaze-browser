@@ -1,0 +1,342 @@
+{
+  "header": {
+    "eyebrow": "Zespół",
+    "title": "Członkowie",
+    "manageCount_one": "Zarządzasz {{count}} członkiem",
+    "manageCount_few": "Zarządzasz {{count}} członkami",
+    "manageCount_many": "Zarządzasz {{count}} członkami",
+    "manageCount_other": "Zarządzasz {{count}} członka",
+    "workspaceStats": "Profile: {{profiles}} · proxy: {{proxies}} w obszarze roboczym"
+  },
+  "tabs": {
+    "members": "Członkowie",
+    "activity": "Aktywność",
+    "licenses": "Licencje"
+  },
+  "memberCount_one": "{{count}} członek",
+  "memberCount_few": "{{count}} członków",
+  "memberCount_many": "{{count}} członków",
+  "memberCount_other": "{{count}} członka",
+  "roles": {
+    "SUPER_ADMIN": "Super Admin",
+    "OWNER": "Właściciel",
+    "ADMIN": "Administrator",
+    "MANAGER": "Menedżer",
+    "OPERATOR": "Operator"
+  },
+  "roleDesc": {
+    "OWNER": "Pełna kontrola, w tym nad członkami i sejfem.",
+    "ADMIN": "Zarządza profilami, proxy, grupami oraz utworzonymi przez siebie menedżerami/operatorami.",
+    "MANAGER": "Tworzy, edytuje i uruchamia profile oraz dodaje operatorów.",
+    "OPERATOR": "Tylko uruchamia i używa przypisanych profili."
+  },
+  "actionCategories": {
+    "Profiles": "Profile",
+    "Proxies": "Proxy",
+    "Automation": "Automatyzacja",
+    "Workspace": "Obszar roboczy",
+    "Team": "Zespół"
+  },
+  "actionLabels": {
+    "profiles_launch": "Uruchamianie profili",
+    "profiles_create": "Tworzenie profili",
+    "profiles_edit": "Edycja profili",
+    "profiles_export": "Eksport profili",
+    "profiles_share": "Udostępnianie profili członkom",
+    "profiles_delete": "Usuwanie profili (do kosza)",
+    "profiles_purge": "Trwałe usuwanie profili",
+    "proxies_manage": "Dodawanie / edycja / usuwanie proxy",
+    "proxies_reveal": "Podgląd surowych danych logowania proxy",
+    "automation_run": "Uruchamianie automatyzacji / makr",
+    "extensions_manage": "Zarządzanie rozszerzeniami zespołu",
+    "settings_manage": "Zmiana ustawień obszaru roboczego",
+    "vault_manage": "Zarządzanie Sejfem tożsamości",
+    "members_manage": "Zarządzanie członkami zespołu",
+    "members_delete": "Usuwanie członków / zmiana ról"
+  },
+  "features": {
+    "dashboard": "Pulpit (tylko strona)",
+    "profiles": "Profile",
+    "groups": "Grupy",
+    "proxies": "Pula proxy",
+    "browsers": "Przeglądarki",
+    "extensions": "Rozszerzenia",
+    "batchImport": "Import masowy",
+    "trash": "Kosz",
+    "members": "Członkowie",
+    "settings": "Ustawienia"
+  },
+  "caps": {
+    "maxAdmins": "Administratorzy",
+    "maxManagers": "Menedżerowie",
+    "maxOperators": "Operatorzy"
+  },
+  "labels": {
+    "profiles": "Profile",
+    "proxies": "Proxy",
+    "browsers": "Przeglądarki"
+  },
+  "status": {
+    "active": "Aktywny",
+    "suspended": "Zawieszony",
+    "banned": "Zablokowany"
+  },
+  "actions": {
+    "inviteMember": "Zaproś członka",
+    "inviteTeamMember": "Zaproś członka zespołu",
+    "remove": "Usuń",
+    "removeMember": "Usuń członka",
+    "assignProfiles": "Przypisz profile",
+    "cancel": "Anuluj",
+    "close": "Zamknij",
+    "clear": "Wyczyść",
+    "save": "Zapisz",
+    "createInvite": "Utwórz zaproszenie",
+    "done": "Gotowe",
+    "copy": "Kopiuj",
+    "copied": "Skopiowano"
+  },
+  "empty": {
+    "title": "Brak członków",
+    "canCreate": "Zaproś pierwszego członka zespołu, aby zacząć delegować pracę.",
+    "noMembers": "Nie masz jeszcze żadnych podległych członków."
+  },
+  "member": {
+    "you": "Ty",
+    "noEmail": "Brak e-maila",
+    "invitePending": "Zaproszenie oczekuje",
+    "loginSet": "Logowanie ustawione",
+    "subMembers_one": "{{count}} podczłonek",
+    "subMembers_few": "{{count}} podczłonków",
+    "subMembers_many": "{{count}} podczłonków",
+    "subMembers_other": "{{count}} podczłonka"
+  },
+  "time": {
+    "neverActive": "Nigdy nieaktywny",
+    "activeJustNow": "Aktywny przed chwilą",
+    "activeMinutes": "Aktywny {{count}} min temu",
+    "activeHours": "Aktywny {{count}} godz. temu",
+    "activeDays": "Aktywny {{count}} dn. temu"
+  },
+  "errors": {
+    "loadMembers": "Nie udało się wczytać członków.",
+    "changeStatus": "Nie udało się zmienić stanu.",
+    "nameRequired": "Imię jest wymagane.",
+    "saveMember": "Nie udało się zapisać członka.",
+    "resetPerms": "Nie udało się zresetować uprawnień.",
+    "removeMember": "Nie udało się usunąć członka.",
+    "loadProfiles": "Nie udało się wczytać profili.",
+    "reassignProfiles": "Nie udało się ponownie przypisać profili."
+  },
+  "confirm": {
+    "revertPerms": "Przywrócić limity i funkcje członka {{name}} do domyślnych dla jego roli?"
+  },
+  "modal": {
+    "inviteTitle": "Zaproś członka",
+    "editTitle": "Edytuj: {{name}}",
+    "noCreatableRoles": "Nie możesz tworzyć podczłonków.",
+    "invitePendingCode": "Zaproszenie oczekuje - kod"
+  },
+  "fields": {
+    "name": "Imię",
+    "namePlaceholder": "Imię i nazwisko",
+    "email": "E-mail",
+    "role": "Rola",
+    "color": "Kolor",
+    "instructions": "Instrukcje",
+    "optional": "(opcjonalnie)",
+    "instructionsPlaceholder": "Za co odpowiada ten członek…"
+  },
+  "invite": {
+    "createdTitle": "Utworzono zaproszenie",
+    "sharePrefix": "Przekaż ten kod: ",
+    "shareSuffix": ". Otwiera SoftGlaze Browser → „Masz kod zaproszenia?”, wpisuje go i ustawia hasło.",
+    "code": "Kod zaproszenia",
+    "link": "Link z zaproszeniem",
+    "emailedTo": "Wysłano e-mailem na {{email}}.",
+    "emailNotSent": "Nie wysłano e-maila (skonfiguruj SMTP w Ustawienia → E-mail). Przekaż kod ręcznie."
+  },
+  "alloc": {
+    "heading_one": "Przydzielone {{count}} podczłonkowi",
+    "heading_few": "Przydzielone {{count}} podczłonkom",
+    "heading_many": "Przydzielone {{count}} podczłonkom",
+    "heading_other": "Przydzielone {{count}} podczłonka",
+    "allocated": "Przydzielono {{allocated}} z {{cap}}",
+    "left": "· zostało {{remaining}}"
+  },
+  "perms": {
+    "title": "Uprawnienia i limity",
+    "resourceLimits": "Limity zasobów",
+    "subMemberCaps": "Limity podczłonków",
+    "visibleFeatures": "Widoczne funkcje",
+    "actionPermissions": "Uprawnienia do akcji",
+    "actionHint": "Domyślnie włączone dla tej roli. Wyłącz, aby odebrać uprawnienie tylko temu członkowi.",
+    "revertDefaults": "Przywróć domyślne dla roli",
+    "max": "(maks. {{max}})",
+    "canInvite": {
+      "canCreateAdmins": "Może zapraszać administratorów",
+      "canCreateManagers": "Może zapraszać menedżerów",
+      "canCreateOperators": "Może zapraszać operatorów"
+    },
+    "featuresHint": "Wyłączona funkcja jest ukryta na pasku bocznym, a jej akcje są wszędzie odrzucane (np. dodawanie proxy, przywracanie z kosza czy pobieranie przeglądarek). Listy potrzebne innym stronom, np. wybór proxy lub grupy w edytorze profilu, nadal się wczytują."
+  },
+  "accountStatus": {
+    "title": "Stan konta",
+    "reason": "Powód: {{reason}}",
+    "unban": "Odblokuj członka",
+    "banHint": "Edycja pól powyżej zachowuje blokadę - użyj Odblokuj, aby przywrócić dostęp.",
+    "suspendToggle": "Zawieś tego członka (blokuje logowanie)",
+    "ban": "Zablokuj członka"
+  },
+  "delete": {
+    "title": "Usuń: {{name}}",
+    "warnPrefix": "To usuwa: ",
+    "warnMiddle": " i przenosi podległych członków do Ciebie. Wybierz, co stanie się z danymi -",
+    "profilesWord_one": "profil",
+    "profilesWord_few": "profile",
+    "profilesWord_many": "profili",
+    "profilesWord_other": "profilu",
+    "proxiesWord_one": "proxy",
+    "proxiesWord_few": "proxy",
+    "proxiesWord_many": "proxy",
+    "proxiesWord_other": "proxy",
+    "options": {
+      "reassignMe": {
+        "label": "Zachowaj i przypisz do mnie",
+        "desc": "Zostajesz właścicielem jego profili i proxy."
+      },
+      "reassignOther": {
+        "label": "Zachowaj i przypisz innemu członkowi",
+        "desc": "Przekaż dane wybranej osobie z zespołu."
+      },
+      "delete": {
+        "label": "Usuń wszystkie powiązane dane",
+        "desc": "Proxy i grupy proxy zostaną usunięte; profile trafią do kosza (do odzyskania)."
+      }
+    },
+    "pickTarget": "Wybierz członka, który otrzyma dane.",
+    "reassignTo": "Przypisz do",
+    "noOtherMembers": "Brak innych członków - wybierz inną opcję."
+  },
+  "assign": {
+    "title": "Przypisz profile · {{name}}",
+    "searchPlaceholder": "Szukaj profili",
+    "noProfiles": "Nie znaleziono profili.",
+    "memberFallback": "członek #{{id}}",
+    "updated": "Zaktualizowano - przypisano {{assigned}}, odpięto {{unassigned}}.",
+    "save": "Zapisz przypisanie"
+  },
+  "activity": {
+    "title": "Aktywność zespołu",
+    "subtitle": "kto co zrobił w tym obszarze roboczym",
+    "exported": "Wyeksportowano wiersze ({{count}}) → {{path}}",
+    "exportError": "Nie udało się wyeksportować dziennika aktywności.",
+    "filterByMember": "Filtruj wg członka",
+    "filterByAction": "Filtruj wg akcji",
+    "allMembers": "Wszyscy członkowie",
+    "allActions": "Wszystkie akcje",
+    "fromDate": "Od daty",
+    "toDate": "Do daty",
+    "empty": "Brak zarejestrowanej aktywności.",
+    "noMatch": "Żadna aktywność nie pasuje do filtrów.",
+    "enterpriseFeature": "Funkcja Enterprise",
+    "seeBilling": "Zobacz Płatności",
+    "exportEnterpriseOnly": "Eksport dziennika audytu (CSV / JSON) to funkcja Enterprise. Przejdź na wyższy plan na stronie Płatności, aby eksportować dziennik aktywności."
+  },
+  "activityActions": {
+    "launched": "uruchomił",
+    "stopped": "zatrzymał",
+    "created": "utworzył",
+    "edited": "edytował",
+    "deleted": "usunął",
+    "restored": "przywrócił",
+    "imported": "zaimportował",
+    "assigned": "przypisał",
+    "reassigned": "przepisał",
+    "parallel_run": "uruchomienie równoległe",
+    "macro_run": "uruchomienie makra",
+    "member_added": "dodano członka",
+    "member_edited": "edytowano członka",
+    "member_removed": "usunięto członka",
+    "permissions_changed": "zmieniono uprawnienia",
+    "status_changed": "zmieniono stan",
+    "signed_in": "zalogował się",
+    "signed_out": "wylogował się",
+    "invite_accepted": "przyjęto zaproszenie",
+    "proxies_copied_for_extension": "skopiowano proxy dla rozszerzenia",
+    "devtools_address_shown": "pokazano adres DevTools"
+  },
+  "feedTime": {
+    "justNow": "przed chwilą",
+    "minutes": "{{count}} min temu",
+    "hours": "{{count}} godz. temu",
+    "days": "{{count}} dn. temu"
+  },
+  "license": {
+    "intro": "Stan subskrypcji dla każdego obszaru roboczego właściciela. Lokalnie i w miarę możliwości - zdeterminowany użytkownik może nadal edytować lokalną bazę lub zegar; trwałe egzekwowanie wymaga serwera licencji.",
+    "noOwners": "Brak obszarów roboczych właścicieli.",
+    "editTitle": "Licencja · {{name}}",
+    "setState": "Ustaw stan",
+    "grantPlan": "Nadaj plan",
+    "lifecycle": "Cykl życia",
+    "state": {
+      "paid": "Opłacona",
+      "trialing": "Okres próbny",
+      "grace": "Karencja",
+      "banned": "Zablokowana"
+    },
+    "type": {
+      "trial": "próbna",
+      "paid": "płatna"
+    },
+    "tier": {
+      "pro": "pro",
+      "enterprise": "enterprise"
+    },
+    "fields": {
+      "type": "Typ",
+      "tier": "Poziom",
+      "expiry": "Wygasa",
+      "plan": "Plan",
+      "months": "Miesiące"
+    },
+    "detail": {
+      "trial": "Dni próbne do końca: {{count}}",
+      "grace": "Karencja: zostało dni: {{count}}",
+      "paid": "Opłacona do {{date}}",
+      "clockAnomaly": "⚠ anomalia zegara"
+    },
+    "actions": {
+      "grantMonth": "Nadaj 1 mies.",
+      "extend7": "+7 dni",
+      "startTrial": "Rozpocznij okres próbny",
+      "resetTrial": "Resetuj okres próbny",
+      "edit": "Edytuj",
+      "terminate": "Zakończ",
+      "unblock": "Odblokuj",
+      "block": "Zablokuj",
+      "saveState": "Zapisz stan",
+      "grantPlan": "Nadaj plan",
+      "startFreeTrial": "Rozpocznij bezpłatny okres próbny",
+      "terminateNow": "Zakończ teraz"
+    },
+    "confirm": {
+      "terminate": "Zakończyć teraz subskrypcję: {{name}}? Profile zostaną zablokowane, dopóki ponownie nie nadasz dostępu.",
+      "terminateModal": "Zakończyć teraz tę subskrypcję? Profile zostaną zablokowane, dopóki ponownie nie nadasz dostępu.",
+      "resetTrial": "Zresetować okres próbny: {{name}}? Licznik okresu próbnego zacznie od nowa, a obecny stan licencji zostanie zastąpiony.",
+      "block": "Zablokować: {{name}}? Ta osoba i wszyscy jej podczłonkowie zostaną wylogowani i nie będą mogli korzystać z aplikacji, dopóki ich nie odblokujesz."
+    },
+    "errors": {
+      "load": "Nie udało się wczytać licencji.",
+      "action": "Akcja nie powiodła się."
+    }
+  },
+  "seats": {
+    "usage": "{{used}} z {{total}} członków",
+    "fullNotice": "Wszystkie miejsca w zespole ({{total}}) w Twoim planie są zajęte, więc nie można dodać nikogo nowego. Zawieś członka, aby zwolnić miejsce, lub przejdź na Enterprise, aby mieć do {{enterpriseSeats}} członków zespołu.",
+    "fullNoticeTop": "Wszystkie miejsca w zespole ({{total}}) w Twoim planie są zajęte, więc nie można dodać nikogo nowego. Zawieś członka, aby zwolnić miejsce.",
+    "overNotice": "Ten zespół ma {{used}} członków, a Twój plan obejmuje {{total}}. Wszyscy zachowują dostęp; nowych członków można dodać, gdy zespół zmieści się w limicie.",
+    "seeBilling": "Zobacz Płatności",
+    "limitError": "Wszystkie miejsca w zespole w Twoim planie są zajęte. Zawieś członka, aby zwolnić miejsce, lub sprawdź opcje planu w Płatnościach."
+  }
+}

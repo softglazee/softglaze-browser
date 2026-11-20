@@ -1,0 +1,106 @@
+{
+  "palette": {
+    "dialogLabel": "コマンドパレット",
+    "searchPlaceholder": "ページ、プロファイル、プロキシ、メンバーを検索…",
+    "searchAriaLabel": "ページ、プロファイル、プロキシ、メンバーを検索",
+    "resultsLabel": "結果",
+    "esc": "Esc",
+    "noMatches": "一致する項目はありません。",
+    "nav": {
+      "dashboard": "ダッシュボード",
+      "ai": "SoftGlaze AI",
+      "profiles": "プロファイル",
+      "groups": "グループ",
+      "proxies": "プロキシプール",
+      "freeProxies": "無料プロキシ",
+      "proxyProviders": "プロキシプロバイダー",
+      "browsers": "ブラウザ",
+      "extensions": "拡張機能",
+      "batchImport": "一括インポート",
+      "trash": "ゴミ箱",
+      "automation": "自動化",
+      "members": "メンバー",
+      "account": "アカウント",
+      "settings": "設定"
+    },
+    "hint": {
+      "page": "ページ",
+      "profile": "プロファイル",
+      "proxy": "プロキシ",
+      "member": "メンバー",
+      "action": "アクション"
+    },
+    "fallback": {
+      "profile": "プロファイル #{{id}}",
+      "proxy": "プロキシ #{{id}}",
+      "member": "メンバー #{{id}}"
+    },
+    "action": {
+      "stopAi": "すべてのAIを停止"
+    }
+  },
+  "wizard": {
+    "skipTitle": "セットアップをスキップ",
+    "back": "戻る",
+    "skip": "スキップ",
+    "saveAndContinue": "保存して次へ",
+    "saveAndFinish": "保存して完了",
+    "msg": {
+      "smtpSaved": "SMTPを保存しました。",
+      "proxySaved": "プロキシを保存しました。"
+    },
+    "err": {
+      "smtpSaveFailed": "SMTP設定を保存できませんでした。",
+      "proxySaveFailed": "プロキシを保存できませんでした。",
+      "profileCreateFailed": "プロファイルを作成できませんでした。"
+    },
+    "welcome": {
+      "title": "SoftGlazeへようこそ",
+      "subtitle": "3ステップの簡単なセットアップで最初のプロファイルを作成できます。どのステップもスキップできます。",
+      "subtitleShort_other": "{{count}}ステップの簡単なセットアップです。どのステップもスキップできます。",
+      "unavailable": "グレー表示のステップはスキップされます。お使いのアカウントでは実行できません。",
+      "getStarted": "始める",
+      "stepEmail": "メール（SMTP）- 任意、ワンタイムコード用",
+      "stepProxy": "最初のプロキシ - 任意",
+      "stepProfile": "最初のブラウザプロファイル"
+    },
+    "smtp": {
+      "title": "メール（SMTP）",
+      "subtitle": "任意 - アプリから確認コードを送信できるようにします。後から設定で変更できます。",
+      "host": "SMTPホスト",
+      "hostPlaceholder": "smtp.example.com",
+      "port": "ポート",
+      "portPlaceholder": "587",
+      "username": "ユーザー名",
+      "usernamePlaceholder": "you@example.com",
+      "password": "パスワード",
+      "passwordPlaceholder": "••••••••"
+    },
+    "proxy": {
+      "title": "最初のプロキシを追加",
+      "subtitle": "任意 - アイデンティティごとに専用のネットワークを用意します。プロキシプールで追加できます。",
+      "type": "種類",
+      "host": "ホスト",
+      "hostPlaceholder": "1.2.3.4",
+      "port": "ポート",
+      "portPlaceholder": "8080",
+      "user": "ユーザー",
+      "userPlaceholder": "任意",
+      "password": "パスワード",
+      "passwordPlaceholder": "任意"
+    },
+    "profile": {
+      "title": "最初のプロファイルを作成",
+      "subtitle": "一貫性のある固有のフィンガープリントが自動で生成されます。",
+      "createAndFinish": "作成して完了",
+      "name": "プロファイル名",
+      "namePlaceholder": "最初のプロファイル",
+      "defaultName": "最初のプロファイル",
+      "deviceType": "デバイスの種類",
+      "desktop": "デスクトップ",
+      "mobile": "モバイル（Android）",
+      "mobileNote": "Androidはデスクトップエンジン上でエミュレートされます。UA、タッチ、画面、GPUは整合していますが、実機ではありません。",
+      "proxyAttached": "新しいプロキシがこのプロファイルに割り当てられます。"
+    }
+  }
+}

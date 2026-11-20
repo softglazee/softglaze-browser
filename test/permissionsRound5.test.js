@@ -232,6 +232,7 @@ test('1/2: a profile archive (.sgz) carries the proxy address only as the profil
     getPrisma: () => db, path,
     requirePermission: async () => {}, assertCanAccessProfile: async () => {}, assertCanRevealKind: async () => {},
     getRuntimeConfig: () => ({ profileRoot: 'C:/profiles' }),
+    i18nMain: require('../src/main/i18nMain.js'),
     dialog: { showSaveDialog: async () => ({ canceled: false, filePath: 'C:/out/x.sgz' }) },
     profileArchive: { exportProfileArchive: async (o) => { config = o.config; return { plainBytes: 1 }; } },
     logAudit: async () => {},

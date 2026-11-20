@@ -1,0 +1,516 @@
+{
+  "header": {
+    "eyebrow": "Ağ",
+    "title": "Proxy Havuzu",
+    "description": "Yeniden kullanılabilir HTTP ve SOCKS5 proxy'lerini yerel olarak saklayın veya satın aldığınız havuzları entegre sağlayıcılardan doğrudan eşitleyin."
+  },
+  "rotation": {
+    "label": "Döndürme:",
+    "tooltip": "Bir profilin döndürme havuzunun başlatmada nasıl uygulanacağı",
+    "eachLaunch": "Her başlatmada döndür",
+    "sticky": "Sticky (sabit proxy)",
+    "failover": "Sağlıklı olana geç",
+    "latencyOptimized": "En hızlı (gecikme)",
+    "failoverMaxTooltip": "Bu kadar ms'den yavaş proxy'leri atla (0 = sınır yok; hiçbiri uymazsa tüm havuz kullanılır)",
+    "maxMsPlaceholder": "en fazla ms",
+    "topNTooltip": "En hızlı N proxy arasında sırayla",
+    "topNPlaceholder": "ilk N"
+  },
+  "actions": {
+    "testAll": "Tümünü test et",
+    "testAllTooltip": "Her proxy'nin eşzamanlı sağlık testi",
+    "testAllSummary": "{{ok}}/{{total}} tamam",
+    "checkAll": "Tümünü kontrol et",
+    "refresh": "Yenile",
+    "batchAdd": "Toplu ekle",
+    "newProxy": "Yeni proxy",
+    "checkNew": "Yenileri kontrol et",
+    "checkNewTooltip": "Yalnızca yeni eklenen, hiç kontrol edilmemiş proxy'leri kontrol et."
+  },
+  "free": {
+    "button": "Ücretsiz proxy'ler",
+    "buttonTooltip": "Ücretsiz herkese açık proxy'leri ücretli proxy'lerinizden ayrı, kendi sayfalarında bulun, test edin ve saklayın",
+    "title": "Ücretsiz herkese açık proxy'ler",
+    "description": "SoftGlaze, ücretsiz proxy projelerinin yayınladığı herkese açık listeleri indirir, her proxy'yi test eder ve yalnızca çalışanları bu sayfada, ücretli proxy'lerinizden ayrı olarak tutar.",
+    "warn": {
+      "strangers": "Ücretsiz proxy'leri tanımadığınız kişiler işletir. Bunları hesaplara giriş yapmak, parola girmek veya ödeme yapmak için kullanmayın: proxy sahibi şifrelenmemiş trafiği görebilir.",
+      "quality": "Yavaştırlar, genellikle birkaç saat içinde çalışmayı bırakırlar ve çoğu kara listelerdedir; bu yüzden ücretli bir proxy'ye göre daha fazla CAPTCHA bekleyin. Gerçek hesap işleri için bir proxy sağlayıcısı kullanın.",
+      "legal": "Yalnızca izin verilen yerlerde kullanın. Hızlı oluşturma, proxy kaynağı olarak \"Ücretsiz proxy'ler\" seçmedikçe asla ücretsiz proxy seçmez."
+    },
+    "checks": "Her proxy canlı test edilir ve gerçek IP'nizi web sitelerine aktaran HTTP proxy'leri reddedilir.",
+    "protocol": "Protokol",
+    "country": "Ülke (isteğe bağlı)",
+    "countryPlaceholder": "örn. TR",
+    "limit": "Kaç tane eklensin",
+    "start": "Ücretsiz proxy bul",
+    "again": "Daha fazla bul",
+    "cancel": "Durdur",
+    "close": "Kapat",
+    "done": "Bitti",
+    "progress": {
+      "fetching": "Herkese açık listeler indiriliyor…",
+      "checking": "{{total}} içinden {{checked}} test edildi · {{found}} iyi"
+    },
+    "result": {
+      "added": "İstenen {{requested}} içinden {{added}} eklendi.",
+      "checked": "{{total}} adaydan {{checked}} test edildi",
+      "rejected": "{{dead}} çalışmıyor, {{leak}} IP'nizi sızdırdı, {{country}} yanlış ülke",
+      "planLimit": "Planınızın proxy sınırına ulaşıldı, bu yüzden bazı iyi proxy'ler eklenmedi."
+    },
+    "stopped": {
+      "limit": "Durduruldu: istediğiniz sayıya ulaşıldı.",
+      "time": "3 dakika sonra durduruldu. Daha fazlasını bulmak için tekrar çalıştırın.",
+      "cancelled": "Sizin tarafınızdan durduruldu.",
+      "exhausted": "Listelerdeki her aday test edildi."
+    },
+    "errors": {
+      "country": "US veya DE gibi iki harfli bir ülke kodu kullanın.",
+      "failed": "Arama tamamlanamadı."
+    }
+  },
+  "freePage": {
+    "eyebrow": "Proxy'ler",
+    "title": "Ücretsiz proxy'ler",
+    "description": "Ücretsiz herkese açık proxy'ler burada, ücretli proxy'lerinizden ayrı durur. Proxy havuzunda, sayılarında veya gruplarında asla görünmezler ve bir profil yalnızca siz seçtiğinizde birini kullanır.",
+    "openPool": "Proxy havuzu",
+    "refresh": "Yenile",
+    "warnTitle": "Ücretsiz proxy kullanmadan önce bunu okuyun",
+    "searchTitle": "Ücretsiz proxy bul",
+    "busy": "Zaten bir ücretsiz proxy araması çalışıyor.",
+    "stopIt": "Durdur",
+    "listTitle": "Kayıtlı ücretsiz proxy'ler",
+    "listCount": "{{total}} içinden {{shown}}",
+    "filters": {
+      "protocol": "Protokol",
+      "protocolAll": "Herhangi bir protokol",
+      "country": "Ülke",
+      "countryAll": "Herhangi bir ülke",
+      "countryUnknown": "Ülke bilinmiyor",
+      "status": "Durum",
+      "statusAll": "Herhangi bir durum",
+      "reset": "Filtreleri sıfırla"
+    },
+    "status": {
+      "working": "Çalışıyor",
+      "dead": "Çalışmıyor",
+      "unchecked": "Kontrol edilmedi",
+      "checking": "Kontrol ediliyor…"
+    },
+    "table": {
+      "address": "Adres",
+      "protocol": "Protokol",
+      "country": "Ülke",
+      "speed": "Hız",
+      "lastCheck": "Son kontrol",
+      "status": "Durum",
+      "usedBy": "Kullanan",
+      "actions": "İşlemler",
+      "selectAll": "Gösterilenlerin tümünü seç",
+      "selectRow": "{{address}} seç",
+      "loading": "Ücretsiz proxy'ler yükleniyor…",
+      "never": "Hiç",
+      "notUsed": "Profil yok",
+      "usedByCount_one": "{{count}} profil",
+      "usedByCount_other": "{{count}} profil"
+    },
+    "actions": {
+      "check": "Şimdi kontrol et",
+      "checkAria": "{{address}} adresini şimdi kontrol et",
+      "delete": "Sil",
+      "deleteAria": "{{address}} sil",
+      "checkAll": "Gösterilenlerin tümünü kontrol et",
+      "deleteDead": "Çalışmayanları sil",
+      "checkSelected": "Seçilenleri kontrol et",
+      "deleteSelected": "Seçilenleri sil",
+      "clear": "Temizle",
+      "selected": "{{count}} seçili"
+    },
+    "confirm": {
+      "delete": "{{address}} ücretsiz proxy'si silinsin mi?",
+      "deleteUsed_one": "{{address}} ücretsiz proxy'si silinsin mi? {{count}} profil onu kullanıyor ve proxy'sini kaybedecek.",
+      "deleteUsed_other": "{{address}} ücretsiz proxy'si silinsin mi? {{count}} profil onu kullanıyor ve proxy'sini kaybedecek.",
+      "deleteSelected_one": "Seçili {{count}} ücretsiz proxy silinsin mi?",
+      "deleteSelected_other": "Seçili {{count}} ücretsiz proxy silinsin mi?",
+      "deleteDead_one": "Son kontrolü geçemeyen {{count}} ücretsiz proxy silinsin mi?",
+      "deleteDead_other": "Son kontrolü geçemeyen {{count}} ücretsiz proxy silinsin mi?"
+    },
+    "checkRun": {
+      "running": "{{total}} içinden {{done}} kontrol ediliyor · {{ok}} çalışıyor, {{fail}} çalışmıyor",
+      "done": "{{total}} kontrol edildi · {{ok}} çalışıyor, {{fail}} çalışmıyor",
+      "stop": "Durdur"
+    },
+    "empty": {
+      "title": "Henüz ücretsiz proxy yok",
+      "description": "Ücretsiz herkese açık proxy'leri bulmak, test etmek ve kaydetmek için yukarıdaki aramayı kullanın. Yalnızca çalışan ve IP'nizi gizleyenler tutulur."
+    },
+    "noMatch": {
+      "title": "Bu filtrelerle eşleşen ücretsiz proxy yok",
+      "description": "Diğerlerini görmek için filtreleri değiştirin veya sıfırlayın."
+    },
+    "errors": {
+      "load": "Ücretsiz proxy'ler yüklenemedi.",
+      "delete": "Ücretsiz proxy'ler silinemedi.",
+      "check": "Ücretsiz proxy'ler kontrol edilemedi."
+    }
+  },
+  "tabs": {
+    "custom": "Özel proxy'ler",
+    "providers": "Proxy sağlayıcıları",
+    "integrated": "Entegre",
+    "history": "Kontrol geçmişi",
+    "groups": "Gruplar ve ülkeler"
+  },
+  "stats": {
+    "totalProxies": "Toplam proxy",
+    "totalTip": "Tüm havuzu göster",
+    "splitSub": "{{verified}} doğrulandı · {{unchecked}} kontrol edilmedi",
+    "proxyTypes": "Proxy türleri",
+    "verified": "Doğrulandı",
+    "verifiedTip": "Tabloyu doğrulanan proxy'lere göre filtrele",
+    "pctOfPool": "Havuzun %{{pct}}'i",
+    "failed": "Başarısız",
+    "failedTip": "Tabloyu başarısız proxy'lere göre filtrele",
+    "uncheckedSub": "{{count}} henüz kontrol edilmedi",
+    "nonVerified": "Doğrulanmamış",
+    "protocols": "HTTP / SOCKS",
+    "protocolsTip": "Havuzdaki protokol dağılımı",
+    "protocolsSub": "{{http}} HTTP · {{socks}} SOCKS",
+    "countries": "Ülkeler",
+    "countriesTip": "Ülke dağılımını aç",
+    "topCountry": "{{country}} önde · {{count}}",
+    "countriesEmpty": "Konumları algılamak için bir kontrol çalıştırın",
+    "lastCheck": "Son kontrol",
+    "lastCheckTip": "Otomatik sağlık kontrollerini aç",
+    "autoEvery": "Her {{n}} dk'da otomatik kontrol",
+    "autoOff": "Otomatik kontrol kapalı",
+    "justNow": "az önce",
+    "minAgo": "{{n}} dk önce",
+    "hrAgo": "{{n}} sa önce",
+    "dayAgo": "{{n}} gün önce",
+    "filtering": "filtreleniyor",
+    "noProxies": "Proxy yok",
+    "total": "toplam"
+  },
+  "search": {
+    "placeholder": "Proxy adı, sunucu veya kullanıcı adına göre ara..."
+  },
+  "deleteFiltered": {
+    "tooltip": "Geçerli filtreyle eşleşen her proxy'yi sil",
+    "button": "Tümünü sil: {{scope}} ({{count}})",
+    "confirm_one": "{{scope}} {{count}} proxy'nin tümü silinsin mi? Bu işlem geri alınamaz - onu kullanan profiller proxy'sini kaybeder ve siz başka bir proxy atayana kadar başlatılamaz.",
+    "confirm_other": "{{scope}} {{count}} proxy'nin tümü silinsin mi? Bu işlem geri alınamaz - onları kullanan profiller proxy'sini kaybeder ve siz başka bir proxy atayana kadar başlatılamaz.",
+    "scope": {
+      "all": "tüm",
+      "filtered": "filtrelenmiş",
+      "matching": "eşleşen",
+      "verified": "doğrulanmış",
+      "failed": "başarısız"
+    }
+  },
+  "filters": {
+    "all": "Tümü",
+    "ungrouped": "Grupsuz",
+    "byProvider": "Sağlayıcıya göre"
+  },
+  "groups": {
+    "chipTooltip": "Filtrelemek için tıklayın · eklemek için proxy'leri buraya sürükleyin",
+    "renameRecolor": "Yeniden adlandır / renk değiştir",
+    "deleteGroup": "Grubu sil",
+    "newGroup": "Yeni grup",
+    "deleteConfirm": "\"{{name}}\" grubu silinsin mi? Proxy'ler havuzda kalır - yalnızca grupsuz olurlar."
+  },
+  "autoGroup": {
+    "granularityTooltip": "Otomatik gruplama ayrıntı düzeyi",
+    "country": "Ülke",
+    "state": "Bölge",
+    "city": "Şehir",
+    "buttonTooltip": "Her proxy'nin doğrulanmış ülke/bölge/şehrinden gruplar oluşturun. Proxy'lerin algılanmış konumu olması için önce Tümünü test et'i çalıştırın.",
+    "button": "Otomatik grupla",
+    "result_one": "+{{count}} grup · {{assigned}} atandı",
+    "result_other": "+{{count}} grup · {{assigned}} atandı"
+  },
+  "sort": {
+    "tooltip": "Gecikmeye göre sırala",
+    "default": "Sırala: varsayılan",
+    "fastest": "En hızlı önce",
+    "slowest": "En yavaş önce"
+  },
+  "geo": {
+    "toggleTooltip": "Konum dağılımını aç/kapat",
+    "button": "Konum",
+    "byCountry": "Ülkeye göre proxy'ler",
+    "summary": "{{countries}} ülke · {{proxies}} proxy",
+    "unknown": "Bilinmiyor"
+  },
+  "scheduler": {
+    "tooltip": "Her proxy'yi bir zamanlamayla otomatik yeniden test et",
+    "autoCheckEvery": "Otomatik kontrol sıklığı",
+    "min": "dk"
+  },
+  "selection": {
+    "count": "{{count}} seçili",
+    "checkSelected": "Seçilenleri kontrol et",
+    "moveToGroup": "Gruba taşı",
+    "noGroupsYet": "Henüz grup yok - önce bir tane oluşturun.",
+    "removeFromGroup": "Gruptan çıkar",
+    "deleteSelected": "Seçilenleri sil",
+    "clear": "Temizle",
+    "clearTooltip": "Seçimi temizle",
+    "copyForExtension": "SoftGlaze Proxy için kopyala",
+    "copyForExtensionTooltip": "Seçili proxy'leri SoftGlaze Proxy tarayıcı uzantısının Toplu içe aktarma özelliği için kopyala"
+  },
+  "copyForExtension": {
+    "title": "SoftGlaze Proxy için kopyala",
+    "description": "Seçili proxy'leri, SoftGlaze Proxy tarayıcı uzantısının Toplu içe aktarma kutusunda okuduğu satırlar olarak kopyalar. Her satır türünü belirtir (http, https, socks5 veya socks4), böylece bir SOCKS5 proxy asla HTTP olarak okunmaz.",
+    "loading": "Seçili proxy'ler sayılıyor…",
+    "count": "Kopyalanacak proxy'ler: {{count}}",
+    "skipped": "Dışarıda bırakılan: {{count}} (uzantının okumadığı bir tür, adres veya port).",
+    "includeCredentials": "Kullanıcı adlarını ve parolaları dahil et",
+    "credsNoRole": "Rolünüz proxy kullanıcı adlarını ve parolalarını göremez. Bir sahip veya yöneticiye sorun.",
+    "credsNone": "Seçili proxy'lerin hiçbirinde kullanıcı adı veya parola yok.",
+    "socks5Note": "Girişli SOCKS5 proxy'ler: {{count}}. Chrome ve Edge SOCKS5 proxy'lerinde oturum açamaz, bu yüzden uzantı bu satırları orada kabul etmez. Firefox bunları kullanabilir.",
+    "socks4Note": "Girişli SOCKS4 proxy'ler: {{count}}. Giriş bilgisi olmadan kopyalanırlar, çünkü SOCKS4'te parola yoktur ve uzantı parola almaz.",
+    "clipboardWarning": "Bu bilgisayardaki diğer programlar panoyu okuyabilir. Uygulama, pano hâlâ bu listeyi içeriyorsa 2 dakika sonra temizler.",
+    "copy": "Kopyala",
+    "copying": "Kopyalanıyor…",
+    "cancel": "İptal",
+    "close": "Kapat",
+    "copied": "{{count}} proxy kullanıcı adı ve parola olmadan kopyalandı. Uzantıda Proxies'i açın, Bulk import'u seçin ve yapıştırın.",
+    "copiedWithCredentials": "{{count}} proxy kullanıcı adları ve parolalarıyla kopyalandı. Uzantıda Proxies'i açın, Bulk import'u seçin ve yapıştırın.",
+    "getExtension": "SoftGlaze Proxy uzantısını edinin",
+    "loadError": "Seçili proxy'ler okunamadı.",
+    "copyError": "Proxy'ler kopyalanamadı."
+  },
+  "table": {
+    "loading": "Proxy'ler yükleniyor...",
+    "emptyTitle": "Proxy bulunamadı",
+    "emptyDescription": "Elle bir proxy ekleyin veya toplu proxy satırları yapıştırın.",
+    "selectAll": "Tüm proxy'leri seç",
+    "selectRow": "{{name}} seç",
+    "colName": "Ad",
+    "colType": "Tür",
+    "colEndpoint": "Uç nokta",
+    "colUsername": "Kullanıcı adı",
+    "colGroup": "Grup",
+    "colProfiles": "Profiller",
+    "colCreated": "Oluşturulma",
+    "colSpeed": "Hız",
+    "colBlocklist": "Kara liste",
+    "colStatus": "Durum",
+    "colActions": "İşlemler",
+    "profileCount_one": "{{count}} profil",
+    "profileCount_other": "{{count}} profil",
+    "defaultProxyName": "Proxy"
+  },
+  "rowActions": {
+    "testProxy": "Proxy'yi test et",
+    "healthHistory": "Sağlık geçmişi",
+    "editProxy": "Proxy'yi düzenle",
+    "deleteProxy": "Proxy'yi sil",
+    "copyEndpoint": "host:port kopyala",
+    "check": "Kontrol et",
+    "rotateIp": "IP değiştir",
+    "rotateIpTitle": "Bu proxy'de yeni bir çıkış IP'si al"
+  },
+  "status": {
+    "checking": "Kontrol ediliyor…",
+    "failed": "Başarısız",
+    "ok": "Tamam"
+  },
+  "checker": {
+    "running": "Proxy'ler kontrol ediliyor…",
+    "done": "Kontrol tamamlandı",
+    "healthy": "{{n}} sağlıklı",
+    "failed": "{{n}} başarısız",
+    "eta": "Kalan süre",
+    "stop": "Durdur",
+    "dismiss": "Kapat",
+    "idle": "Başlamayı bekliyor…",
+    "health": "Sağlık",
+    "blacklisted": "Kara listede",
+    "blacklistShort": "kara listede",
+    "notBlacklisted": "Kontrol edilen hiçbir kara listede değil",
+    "clean": "temiz",
+    "residential": "Ev IP aralığı",
+    "residentialTip": "Ev IP aralığı (Spamhaus PBL), spam kaydı değil. Ev ve mobil proxy'ler için normaldir; sağlık puanını düşürmez.",
+    "hideLog": "Günlüğü gizle",
+    "showLog": "Günlüğü göster",
+    "speed": {
+      "fast": "hızlı",
+      "good": "iyi",
+      "ok": "orta",
+      "slow": "yavaş"
+    }
+  },
+  "blacklistFilter": {
+    "all": "Tümü",
+    "clean": "Temiz",
+    "blacklisted": "Kara listede",
+    "cleanTip": "Yalnızca kontrol edilen hiçbir kara listede olmayan proxy'leri göster",
+    "blacklistedTip": "Yalnızca bir DNS kara listesinde işaretli proxy'leri göster"
+  },
+  "speedFilter": {
+    "all": "Tümü",
+    "fast": "Hızlı",
+    "slow": "Yavaş",
+    "fastTip": "Yalnızca 2 sn veya daha hızlı ölçülen proxy'leri göster",
+    "slowTip": "Yalnızca 2 sn'den yavaş ölçülen proxy'leri göster"
+  },
+  "bulkDelete": {
+    "confirm_one": "Seçili {{count}} proxy silinsin mi? Onu kullanan profiller proxy'sini kaybeder ve siz başka bir proxy atayana kadar başlatılamaz.",
+    "confirm_other": "Seçili {{count}} proxy silinsin mi? Onları kullanan profiller proxy'sini kaybeder ve siz başka bir proxy atayana kadar başlatılamaz."
+  },
+  "delete": {
+    "confirm": "\"{{name}}\" proxy'si silinsin mi?",
+    "profilesNeedProxy": "Silinen proxy'yi kullanan profiller: {{count}}. Artık proxy'leri yok ve siz bir tane atayana kadar başlatılamazlar (profil düzenleyicide veya Profiller sayfasındaki Proxy ile).",
+    "dismissNotice": "Kapat"
+  },
+  "history": {
+    "dialogTitle": "Proxy sağlık geçmişi",
+    "title": "Sağlık geçmişi",
+    "empty": "Henüz geçmiş yok. Bir sağlık kontrolü çalıştırın (veya Otomatik kontrolü açın), gecikme/durum zaman çizelgesi burada oluşur.",
+    "latencyOverTime": "Zaman içinde gecikme (ms)",
+    "ok": "tamam",
+    "fail": "başarısız",
+    "checks_one": "{{count}} kontrol",
+    "checks_other": "{{count}} kontrol",
+    "close": "Kapat"
+  },
+  "historyCards": {
+    "title": "Son kontrol geçmişi",
+    "openDetail": "Tam geçmişi aç",
+    "regressed": "Önce doğrulandı, sonra başarısız oldu",
+    "regressedCount_one": "{{count}} doğrulandı, sonra başarısız oldu",
+    "regressedCount_other": "{{count}} doğrulandı, sonra başarısız oldu",
+    "empty": "Henüz kontrol yok. Proxy'ler sayfasında Tümünü kontrol et veya Tümünü test et'i çalıştırın, sonuçlar burada görünür."
+  },
+  "form": {
+    "dialogTitleEdit": "Proxy'yi düzenle",
+    "dialogTitleCreate": "Proxy oluştur",
+    "titleEdit": "Proxy'yi Düzenle",
+    "titleCreate": "Proxy Oluştur",
+    "descriptionEdit": "Mevcut bir proxy'yi güncelleyin. Mevcut değeri korumak için maskelenmiş parolayı değiştirmeyin.",
+    "descriptionCreate": "Yerel SQLite havuzuna tek bir yapılandırılmış proxy ekleyin.",
+    "tipPrefix": "İpucu: tüm alanları otomatik doldurmak için proxy'nizi",
+    "tipSuffix": "Sunucu alanına yapıştırın.",
+    "proxyName": "Proxy adı",
+    "proxyNamePlaceholder": "Ev US 01",
+    "type": "Tür",
+    "host": "Sunucu",
+    "port": "Port",
+    "username": "Kullanıcı adı",
+    "password": "Parola",
+    "optional": "İsteğe bağlı",
+    "cancel": "İptal",
+    "saving": "Kaydediliyor...",
+    "saveChanges": "Değişiklikleri kaydet",
+    "createProxy": "Proxy oluştur",
+    "socks4Note": "SOCKS4, Firefox profillerinde çalışır. Chromium profilleri bununla açılmaz: Chromium DNS sorgularını SOCKS4 üzerinden gönderemez, bu yüzden her site proxy dışında sorgulanır. Chromium profilleri için SOCKS5 veya HTTP kullanın."
+  },
+  "batch": {
+    "dialogTitle": "Toplu proxy ekle",
+    "title": "Toplu Proxy Ekle",
+    "descriptionPrefix": "Her satıra bir proxy yapıştırın. Desteklenen biçim:",
+    "defaultType": "Varsayılan tür",
+    "providerLabel": "Sağlayıcı (isteğe bağlı)",
+    "providerNone": "Yok",
+    "providerHint": "Bu proxy'leri geldikleri sağlayıcıyla etiketler; böylece burada onun altında gruplanır ve Proxy sağlayıcıları sayfasında sayılırlar.",
+    "proxyLines": "Proxy satırları",
+    "resultTitle": "Toplu ekleme sonucu",
+    "total": "Toplam",
+    "created": "Oluşturuldu",
+    "skipped": "Atlandı",
+    "errors": "Hatalar",
+    "lineError": "Satır {{line}}: {{message}}",
+    "close": "Kapat",
+    "importing": "İçe aktarılıyor...",
+    "addProxies": "Proxy'leri ekle"
+  },
+  "groupModal": {
+    "dialogTitleEdit": "Grubu düzenle",
+    "dialogTitleNew": "Yeni grup",
+    "titleEdit": "Proxy Grubunu Düzenle",
+    "titleNew": "Yeni Proxy Grubu",
+    "description": "Proxy'leri ülkeye veya amaca göre gruplayın (örn. ABD, İngiltere, Japonya). Toplu profil oluştururken bir grubu hedefleyebilirsiniz.",
+    "groupName": "Grup adı",
+    "groupNamePlaceholder": "ABD proxy'leri",
+    "color": "Renk",
+    "colorLabel": "Renk {{color}}",
+    "cancel": "İptal",
+    "saveChanges": "Değişiklikleri kaydet",
+    "createGroup": "Grup oluştur"
+  },
+  "errors": {
+    "deleteProxies": "Proxy'ler silinemedi.",
+    "loadProxies": "Proxy'ler yüklenemedi.",
+    "copyClipboard": "Panoya kopyalanamadı.",
+    "deleteSelected": "Seçili proxy'ler silinemedi.",
+    "saveProxy": "Proxy kaydedilemedi.",
+    "batchAdd": "Proxy'ler toplu eklenemedi.",
+    "bulkTest": "Toplu test başarısız oldu.",
+    "savePolicy": "Proxy politikası kaydedilemedi.",
+    "saveSchedule": "Zamanlama kaydedilemedi.",
+    "enterGroupName": "Bir grup adı girin.",
+    "saveGroup": "Grup kaydedilemedi.",
+    "deleteGroup": "Grup silinemedi.",
+    "moveProxies": "Proxy'ler taşınamadı.",
+    "autoGroup": "Otomatik gruplama başarısız oldu. Proxy'lerin algılanmış ülkesi olması için önce Tümünü test et'i çalıştırın.",
+    "deleteProxy": "Proxy silinemedi. Önce bağlı profilleri kaldırın veya proxy atamalarını değiştirin.",
+    "rotate": "IP değiştirilemedi.",
+    "rotateStatus": "Döndürme isteği HTTP {{status}} döndürdü."
+  },
+  "groupsPage": {
+    "groupsTitle": "Gruplar ve ülkeler",
+    "openGroup": "Bu proxy'leri göster",
+    "noGeo": "Her proxy'nin ülkesini algılamak için Proxy'ler sayfasında Tümünü kontrol et'i çalıştırın.",
+    "noProviders": "Henüz sağlayıcı proxy'si yok. Proxy sağlayıcılarından çekin.",
+    "scheduleTitle": "Otomatik sağlık kontrolleri"
+  },
+  "filterBar": {
+    "statusTip": "Kontrol durumu",
+    "statusAll": "Herhangi bir durum",
+    "blocklistAll": "Herhangi bir liste",
+    "speedAll": "Herhangi bir hız",
+    "groupTip": "Grup veya ülke",
+    "groupAll": "Tüm gruplar",
+    "providerAll": "Tüm sağlayıcılar",
+    "reset": "Filtreleri sıfırla"
+  },
+  "providerAccount": {
+    "title": "Hesap",
+    "check": "Hesabı kontrol et",
+    "checkedAt": "Kontrol edildi {{time}}",
+    "notChecked": "Henüz kontrol edilmedi. Hesabı kontrol et, bu sağlayıcı için kayıtlı anahtarla planı, bitiş tarihini, trafiği ve bakiyeyi okur.",
+    "notSupported": "Bu sağlayıcının API'si hesap ayrıntılarını bildirmiyor.",
+    "openDashboard": "Paneli aç",
+    "status": "Durum",
+    "statusActive": "Etkin",
+    "statusExpired": "Süresi doldu",
+    "statusSuspended": "Askıya alındı",
+    "statusUnknown": "Bilinmiyor",
+    "plan": "Plan",
+    "expires": "Bitiş",
+    "daysLeft_one": "{{count}} gün kaldı",
+    "daysLeft_other": "{{count}} gün kaldı",
+    "endsToday": "bugün bitiyor",
+    "endedAgo_one": "{{count}} gün önce bitti",
+    "endedAgo_other": "{{count}} gün önce bitti",
+    "traffic": "Trafik",
+    "trafficLeft": "{{left}} kaldı",
+    "trafficUsedOf": "{{total}} içinden {{used}} kullanıldı",
+    "trafficUsed": "{{used}} kullanıldı",
+    "trafficTotal": "{{total}} plan",
+    "balance": "Bakiye",
+    "noDetails": "Sağlayıcı yanıt verdi ancak plan, bitiş tarihi, trafik veya bakiye bildirmedi.",
+    "error": "Hesap kontrol edilemedi: {{message}}",
+    "note": {
+      "firstToExpire": "Gösterilen bitiş tarihi, proxy'leriniz veya planlarınız arasında ilk sona erecek olandır.",
+      "summedPlans": "Rakamlar tüm etkin planlarınızın toplamıdır.",
+      "noActivePlans": "Bu hesapta etkin plan yok.",
+      "noActiveProxies": "Bu hesapta etkin proxy yok.",
+      "planSizeOnly": "API, kalan trafiği değil plan boyutunu bildirir.",
+      "firstPageOnly": "İlk 1000 proxy'nizden hesaplandı.",
+      "usedLast7Days": "Son 7 günde kullanılan trafik; API kalan miktarı bildirmez."
+    }
+  }
+}

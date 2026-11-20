@@ -1,0 +1,97 @@
+{
+  "upgrade": {
+    "title": {
+      "profiles": "Bạn đã đạt giới hạn {{limit}} hồ sơ của gói Miễn phí",
+      "running": "Gói Miễn phí chạy {{limit}} hồ sơ mỗi lần",
+      "openable": "Hồ sơ này không nằm trong {{limit}} hồ sơ của bạn ở gói Miễn phí",
+      "seats": "Thành viên nhóm có trong gói Pro",
+      "ai": "Đã dùng hết {{limit}} thao tác AI hôm nay",
+      "sync": "Đồng bộ đám mây có trong gói Pro",
+      "phone": "Mở hồ sơ từ điện thoại có trong gói Pro",
+      "generic": "Tính năng này có trong gói Pro"
+    },
+    "body": {
+      "profiles": "{{used}} hồ sơ của bạn vẫn an toàn. Nâng cấp lên Pro để có hồ sơ không giới hạn, hoặc xóa một hồ sơ để có chỗ.",
+      "running": "Hãy đóng hồ sơ đang mở để mở hồ sơ khác, hoặc nâng cấp lên Pro để chạy 3 hồ sơ cùng lúc.",
+      "openable": "Mọi hồ sơ đều được giữ. Ở gói Miễn phí bạn chọn {{limit}} hồ sơ được mở; Pro mở được tất cả.",
+      "seats": "Gói Miễn phí dành cho một người. Pro có 3 thành viên nhóm, Enterprise có 25.",
+      "ai": "Gói Miễn phí có {{limit}} thao tác AI mỗi ngày; số lượt được đặt lại vào ngày mai. Pro có thao tác AI không giới hạn.",
+      "sync": "Pro đồng bộ hồ sơ giữa các máy tính và điện thoại của bạn.",
+      "phone": "Ở gói Miễn phí, điện thoại và ứng dụng web xem được hồ sơ và phê duyệt yêu cầu AI. Pro còn mở và dừng được hồ sơ.",
+      "generic": "Nâng cấp lên Pro để dùng tính năng này."
+    },
+    "price": "Pro có giá {{price}} mỗi tháng.",
+    "priceFallback": "Pro chỉ từ US$5 mỗi tháng.",
+    "upgradeButton": "Nâng cấp lên Pro",
+    "chooseProfiles": "Chọn hồ sơ",
+    "notNow": "Để sau"
+  },
+  "welcome": {
+    "title": "Bản dùng thử Pro của bạn đã kết thúc. Bạn đang dùng gói Miễn phí.",
+    "keepTitle": "Bạn vẫn giữ",
+    "keep": "Tất cả hồ sơ (mở được {{limit}} hồ sơ), proxy và dấu vân tay, ứng dụng điện thoại và ứng dụng web.",
+    "proTitle": "Pro có thêm",
+    "pro": "Hồ sơ không giới hạn, chạy 3 hồ sơ cùng lúc, chỗ cho thành viên nhóm, đồng bộ đám mây và thao tác AI không giới hạn, với {{price}} mỗi tháng.",
+    "upgrade": "Nâng cấp lên Pro",
+    "stay": "Tiếp tục với gói Miễn phí"
+  },
+  "counter": {
+    "freeBadge": "Gói Miễn phí",
+    "profiles": "{{used}} / {{limit}} hồ sơ",
+    "running": "{{used}} / {{limit}} đang chạy",
+    "ai": "{{used}} / {{limit}} thao tác AI hôm nay",
+    "upgrade": "Nâng cấp"
+  },
+  "choose": {
+    "title": "Chọn hồ sơ được mở",
+    "body": "Ở gói Miễn phí, {{limit}} trong {{total}} hồ sơ của bạn được mở. Mọi hồ sơ đều được giữ; nâng cấp lên Pro để mở tất cả.",
+    "selected": "Đã chọn {{count}} / {{limit}}",
+    "search": "Tìm hồ sơ",
+    "save": "Lưu",
+    "cancel": "Hủy",
+    "saved": "Đã lưu. Các hồ sơ này mở được ở gói Miễn phí."
+  },
+  "billing": {
+    "currentFree": "Gói Miễn phí",
+    "currentFreeBody": "Miễn phí mãi mãi, không cần thẻ. Nâng cấp bất cứ lúc nào để có thêm hồ sơ, nhóm và thao tác AI không giới hạn.",
+    "currentBadge": "Gói hiện tại",
+    "compareTitle": "So sánh các gói",
+    "colFeature": "Tính năng",
+    "colFree": "Miễn phí",
+    "colPro": "Pro",
+    "colEnterprise": "Enterprise",
+    "rows": {
+      "profiles": "Hồ sơ được lưu",
+      "running": "Hồ sơ chạy cùng lúc",
+      "seats": "Chỗ (thành viên nhóm)",
+      "pcs": "Số PC mỗi tài khoản",
+      "fingerprints": "Proxy riêng, mọi cài đặt dấu vân tay",
+      "ai": "Tự động hóa AI và MCP",
+      "phone": "Ứng dụng điện thoại và web",
+      "sync": "Đồng bộ đám mây giữa các PC",
+      "support": "Hỗ trợ"
+    },
+    "values": {
+      "unlimited": "Không giới hạn",
+      "unlimitedAudit": "Không giới hạn + xuất nhật ký kiểm tra",
+      "yes": "Có",
+      "no": "Không",
+      "aiPerDay": "{{count}} thao tác mỗi ngày",
+      "viewApprove": "Xem + phê duyệt yêu cầu AI",
+      "openStop": "+ mở và dừng hồ sơ",
+      "teamApprovals": "+ phê duyệt của nhóm",
+      "helpCentre": "Trung tâm trợ giúp",
+      "email": "Email",
+      "priorityEmail": "Email ưu tiên"
+    }
+  },
+  "deals": {
+    "title": "Ưu đãi proxy đề xuất",
+    "disclosure": "Ưu đãi từ đối tác. SoftGlaze có thể nhận hoa hồng.",
+    "code": "Mã {{code}}",
+    "copyCode": "Sao chép mã",
+    "copied": "Đã sao chép",
+    "open": "Nhận ưu đãi",
+    "hidden": "Pro và Enterprise không bao giờ hiện ưu đãi từ đối tác."
+  }
+}

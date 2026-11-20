@@ -233,7 +233,7 @@
       "title": "Language",
       "description": "Choose the display language for the SoftGlaze interface.",
       "label": "Display language",
-      "hint": "More languages are on the way. Changes apply instantly across the app."
+      "hint": "Changes apply instantly across the app."
     }
   },
   "startLinks": {
@@ -273,5 +273,15 @@
     "settingsHidden": "Settings is turned off for your account by an administrator.",
     "proxiesHidden": "Proxies is turned off for your account by an administrator.",
     "profilesHidden": "Profiles is turned off for your account by an administrator."
+  },
+  "promo": {
+    "bf2026": {
+      "text": "Black Friday: Pro Lifetime {{pro}} or Enterprise Lifetime {{enterprise}}, one payment. Ends 1 Dec, 23:59 UTC."
+    },
+    "xmas2026": {
+      "text": "Christmas batch: Pro Lifetime {{pro}} or Enterprise Lifetime {{enterprise}}, one payment. Ends 31 Dec, 23:59 UTC."
+    },
+    "cta": "See the offer",
+    "dismiss": "Hide this offer"
   }
 }

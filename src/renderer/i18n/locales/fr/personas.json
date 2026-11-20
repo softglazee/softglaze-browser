@@ -1,0 +1,153 @@
+{
+  "header": {
+    "eyebrow": "Identités",
+    "title": "Coffre de données",
+    "description": "Un coffre réutilisable d'identités pour le moteur Smart Autofill. Ajoutez-les à la main ou importez un tableur ; chacune mémorise les sites sur lesquels elle a déjà été utilisée.",
+    "refresh": "Actualiser",
+    "import": "Importer Excel/CSV",
+    "addManually": "Ajouter à la main"
+  },
+  "stats": {
+    "totalIdentities": "Identités au total",
+    "neverUsed": "Jamais utilisées",
+    "usedAtLeastOnce": "Utilisées au moins une fois",
+    "totalUses": "Utilisations au total",
+    "filtering": "filtre actif"
+  },
+  "toolbar": {
+    "searchPlaceholder": "Rechercher par nom, e-mail, nom d'utilisateur ou étiquette...",
+    "showing": "{{count}} affichées ({{kind}})",
+    "kindNeverUsed": "jamais utilisées",
+    "kindUsed": "utilisées",
+    "clear": "effacer"
+  },
+  "bulk": {
+    "selected": "{{count}} sélectionnées",
+    "resetUsedStatus": "Réinitialiser le statut d'utilisation",
+    "deleteSelected": "Supprimer la sélection",
+    "clear": "Effacer",
+    "clearSelectionTitle": "Effacer la sélection"
+  },
+  "table": {
+    "loading": "Chargement des identités...",
+    "selectAll": "Sélectionner toutes les identités",
+    "selectRow": "Sélectionner {{name}}",
+    "colName": "Nom",
+    "colEmail": "E-mail",
+    "colUsername": "Nom d'utilisateur",
+    "colPassword": "Mot de passe",
+    "colPhone": "Téléphone",
+    "colAddress": "Adresse",
+    "colLabel": "Étiquette",
+    "colTimesUsed": "Utilisations",
+    "colCreated": "Créée",
+    "colActions": "Actions",
+    "sitesUsed_one": "{{count}} site",
+    "sitesUsed_other": "{{count}} sites",
+    "sitesUsed_many": "{{count}} sites",
+    "never": "Jamais",
+    "editIdentity": "Modifier l'identité",
+    "deleteIdentity": "Supprimer l'identité",
+    "hidePassword": "Masquer",
+    "revealPassword": "Afficher",
+    "reuse": "♻ Réutiliser · {{count}}"
+  },
+  "empty": {
+    "title": "Votre coffre de données est vide",
+    "description": "Ajoutez une identité à la main ou importez un fichier Excel/CSV pour constituer votre coffre de saisie automatique.",
+    "filteredTitle": "Aucune identité ne correspond à votre filtre",
+    "filteredDescription": "Essayez une autre recherche ou effacez le filtre."
+  },
+  "groups": {
+    "identity": "Identité",
+    "account": "Compte",
+    "address": "Adresse",
+    "meta": "Méta"
+  },
+  "fields": {
+    "firstName": "Prénom",
+    "lastName": "Nom",
+    "email": "E-mail",
+    "username": "Nom d'utilisateur",
+    "password": "Mot de passe",
+    "phone": "Téléphone",
+    "dateOfBirth": "Date de naissance",
+    "addressLine1": "Adresse ligne 1",
+    "addressLine2": "Adresse ligne 2",
+    "city": "Ville",
+    "state": "Région / Province",
+    "zipCode": "Code postal",
+    "country": "Pays",
+    "company": "Entreprise",
+    "companyAddress": "Adresse de l'entreprise",
+    "label": "Étiquette du lot"
+  },
+  "form": {
+    "dialogTitleEdit": "Modifier l'identité",
+    "dialogTitleAdd": "Ajouter une identité",
+    "titleEdit": "Modifier l'identité",
+    "titleAdd": "Ajouter une identité",
+    "descEdit": "Mettez à jour les informations de cette persona.",
+    "descAdd": "Ajoutez une persona à votre coffre de données. Les champs marqués * sont obligatoires.",
+    "cancel": "Annuler",
+    "saving": "Enregistrement...",
+    "saveChanges": "Enregistrer les modifications",
+    "addIdentity": "Ajouter l'identité",
+    "showPassword": "Afficher le mot de passe",
+    "hidePassword": "Masquer le mot de passe"
+  },
+  "import": {
+    "dialogTitle": "Importer des identités",
+    "title": "Importer depuis Excel / CSV",
+    "descStep1": "Choisissez un fichier .xlsx, .xls ou .csv. La première ligne doit contenir vos en-têtes de colonnes. Jusqu'à 1000 lignes par import.",
+    "descStep2": "Associez vos colonnes aux champs d'identité. {{count}} ligne(s) détectée(s) dans {{fileName}}.",
+    "yourFile": "votre fichier",
+    "chooseSpreadsheet": "Choisir un tableur",
+    "colIdentityField": "Champ d'identité",
+    "colYourColumn": "Votre colonne",
+    "skipOption": "— ignorer —",
+    "mappedCount_one": "{{count}} champ associé. Les lignes sans nom/e-mail/nom d'utilisateur sont ignorées.",
+    "mappedCount_other": "{{count}} champs associés. Les lignes sans nom/e-mail/nom d'utilisateur sont ignorées.",
+    "mappedCount_many": "{{count}} champs associés. Les lignes sans nom/e-mail/nom d'utilisateur sont ignorées.",
+    "done": "Terminé",
+    "cancel": "Annuler",
+    "back": "Retour",
+    "importing": "Import en cours...",
+    "importRows_one": "Importer {{count}} ligne",
+    "importRows_other": "Importer {{count}} lignes",
+    "importRows_many": "Importer {{count}} lignes",
+    "result": {
+      "complete": "Import terminé",
+      "addedPrefix": "Ajouté(s) :",
+      "addedSuffix_one": "identité au coffre.",
+      "addedSuffix_other": "identités au coffre.",
+      "addedSuffix_many": "identités au coffre.",
+      "skipped_one": "{{count}} ligne vide ignorée.",
+      "skipped_other": "{{count}} lignes vides ignorées.",
+      "skipped_many": "{{count}} lignes vides ignorées."
+    },
+    "errors": {
+      "noRows": "Ce fichier n'a pas de ligne d'en-tête ni de lignes de données lisibles.",
+      "readFile": "Impossible de lire ce fichier.",
+      "nothingMapped": "Aucune ligne à importer : associez au moins Prénom / Nom / E-mail / Nom d'utilisateur.",
+      "failed": "L'import a échoué."
+    }
+  },
+  "confirm": {
+    "fallbackName": "persona",
+    "deleteOne": "Supprimer l'identité « {{name}} » ? Cette action est irréversible.",
+    "deleteSelected_one": "Supprimer {{count}} identité sélectionnée ? Cette action est irréversible.",
+    "deleteSelected_other": "Supprimer {{count}} identités sélectionnées ? Cette action est irréversible.",
+    "deleteSelected_many": "Supprimer {{count}} identités sélectionnées ? Cette action est irréversible.",
+    "resetSelected_one": "Réinitialiser l'historique « utilisée sur » de {{count}} identité sélectionnée ? Elle redevient disponible sur tous les sites.",
+    "resetSelected_other": "Réinitialiser l'historique « utilisée sur » de {{count}} identités sélectionnées ? Elles redeviennent disponibles sur tous les sites.",
+    "resetSelected_many": "Réinitialiser l'historique « utilisée sur » de {{count}} identités sélectionnées ? Elles redeviennent disponibles sur tous les sites."
+  },
+  "errors": {
+    "load": "Impossible de charger le coffre de données.",
+    "save": "Impossible d'enregistrer cette identité.",
+    "deleteOne": "Impossible de supprimer l'identité.",
+    "deleteSelected": "Impossible de supprimer les identités sélectionnées.",
+    "resetSelected": "Impossible de réinitialiser les identités sélectionnées."
+  }
+}

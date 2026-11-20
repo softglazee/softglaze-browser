@@ -152,7 +152,7 @@ export default function TemplatesModal({ onClose, onProfilesChanged }) {
                         className="flex-1 bg-secondary border border-border rounded-md px-3 py-1.5 text-[12px] text-foreground outline-none focus:border-blue-500"
                       />
                       <GuardedButton deny={denyCreate} size="sm" disabled={busy} onClick={() => handleCreate(tpl)} className="bg-secondary hover:bg-elevated text-foreground border border-border shrink-0">
-                        <Plus className="w-3.5 h-3.5 mr-1.5" /> {t('templates.newProfileButton')}
+                        <Plus className="w-3.5 h-3.5 me-1.5" /> {t('templates.newProfileButton')}
                       </GuardedButton>
                     </div>
                   </div>

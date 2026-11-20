@@ -1,0 +1,84 @@
+{
+  "header": {
+    "eyebrow": "Automatyzacja",
+    "title": "Masowe tworzenie profili",
+    "description": "Szybko twórz wiele środowisk przeglądarki z arkusza lub przez generowanie sekwencyjne.",
+    "exportProfiles": "Eksportuj profile"
+  },
+  "exportNotice_one": "Wyeksportowano {{count}} profil do {{path}}",
+  "exportNotice_few": "Wyeksportowano {{count}} profile do {{path}}",
+  "exportNotice_many": "Wyeksportowano {{count}} profili do {{path}}",
+  "exportNotice_other": "Wyeksportowano {{count}} profilu do {{path}}",
+  "tabs": {
+    "importFromFile": "Import z pliku",
+    "quickGenerate": "Szybkie generowanie"
+  },
+  "step1": {
+    "title": "Pobierz szablon",
+    "description": "Aby plik został poprawnie odczytany, użyj naszego standardowego szablonu Excel lub CSV. Wpisz nazwy profili, proxy i reguły odcisku przeglądarki.",
+    "downloadButton": "Pobierz szablon .CSV"
+  },
+  "step2": {
+    "title": "Prześlij i podejrzyj",
+    "description": "Wybierz wypełniony arkusz. Odczytamy go lokalnie i sprawdzimy błędy formatowania przed zapisem.",
+    "selectButton": "Wybierz plik"
+  },
+  "step3": {
+    "title": "Podgląd i zapis danych"
+  },
+  "awaiting": {
+    "title": "Oczekiwanie na dane",
+    "description": "Wybierz plik, aby zobaczyć tu podgląd profili."
+  },
+  "preview": {
+    "file": "Plik:",
+    "validRows": "Poprawne wiersze:",
+    "errors": "Błędy:"
+  },
+  "processing": {
+    "importing": "Importowanie… {{index}}/{{total}}",
+    "backendLog": "Dziennik przetwarzania",
+    "connecting": "Łączenie z mechanizmem importu…"
+  },
+  "table": {
+    "row": "Wiersz",
+    "title": "Nazwa",
+    "group": "Grupa",
+    "proxyMethod": "Metoda proxy",
+    "dataDir": "Katalog danych",
+    "auto": "Auto"
+  },
+  "autoBind": {
+    "label": "Automatycznie przypisz proxy wg kraju",
+    "descPrefix": "- dla wierszy bez własnego proxy przypisz zapisane proxy, którego sprawdzony kraj zgadza się z kolumną",
+    "descSuffix": "wiersza (rotacyjnie wśród dopasowań).",
+    "sourceLabel": "Przypisz z",
+    "sourcePaid": "Twoje proxy",
+    "sourceFree": "Darmowe proxy (tylko działające)",
+    "freeWarn": "Darmowe proxy prowadzą obce osoby: nigdy nie loguj się do kont ani nie płać w tych profilach."
+  },
+  "commitButton_one": "Zapisz {{count}} profil",
+  "commitButton_few": "Zapisz {{count}} profile",
+  "commitButton_many": "Zapisz {{count}} profili",
+  "commitButton_other": "Zapisz {{count}} profilu",
+  "success": {
+    "title": "Import zakończony",
+    "importedPrefix": "Zaimportowano",
+    "importedMiddle": "profili i przypisano",
+    "importedSuffix": "nowych proxy",
+    "autoBoundPrefix": "· automatycznie przypisano",
+    "autoBoundSuffix": "wg kraju",
+    "importAnother": "Importuj kolejny"
+  },
+  "quick": {
+    "engineTitle": "Mechanizm generowania sekwencyjnego",
+    "description": "Twórz od razu wiele profili bez arkusza - unikalne odciski przeglądarki, kolejne nazwy, docelowa grupa (można ją utworzyć na miejscu) i przypisanie proxy z wybranej grupy lub dostawcy. Używa dokładnie tego samego mechanizmu co strona Profile.",
+    "openButton": "Otwórz szybkie generowanie"
+  },
+  "errors": {
+    "parse": "Nie udało się odczytać pliku. Upewnij się, że to poprawny arkusz.",
+    "commit": "Nie udało się zapisać profili w bazie danych.",
+    "importFailed": "Import nie powiódł się.",
+    "export": "Nie udało się wyeksportować profili."
+  }
+}

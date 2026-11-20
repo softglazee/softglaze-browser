@@ -2,14 +2,6 @@ import { useEffect, useRef, useState, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 import { ChevronDown, Download, Check, Loader2, Play } from 'lucide-react';
 import { softglazeApi } from '@/lib/softglazeApi.js';
-import i18n from '@/i18n/index.js';
-import cmpUiEn from '@/i18n/locales/en/cmpUi.json';
-import cmpUiEs from '@/i18n/locales/es/cmpUi.json';
-
-// Registers the shared cmpUi namespace without touching the central i18n config; the guard keeps
-// it safe across hot reloads and other components that register it.
-if (!i18n.hasResourceBundle('en', 'cmpUi')) i18n.addResourceBundle('en', 'cmpUi', cmpUiEn);
-if (!i18n.hasResourceBundle('es', 'cmpUi')) i18n.addResourceBundle('es', 'cmpUi', cmpUiEs);
 
 // Each version row has its own install control: installed ones show Ready, missing ones stream
 // an inline progress bar. Covers Chromium (Chrome-for-Testing) and Firefox.
@@ -108,14 +100,14 @@ export default function BrowserVersionSelect({ core, value, onChange }) {
       <button
         type="button"
         onClick={() => setOpen((o) => !o)}
-        className="appearance-none bg-transparent outline-none text-muted hover:text-foreground pl-3 pr-2 py-2 text-sm cursor-pointer flex items-center gap-1"
+        className="appearance-none bg-transparent outline-none text-muted hover:text-foreground ps-3 pe-2 py-2 text-sm cursor-pointer flex items-center gap-1"
       >
         {isAuto ? t('versionSelect.auto') : value}
         <ChevronDown className={`w-4 h-4 text-muted transition-transform ${open ? 'rotate-180' : ''}`} />
       </button>
 
       {open && (
-        <div className="absolute z-50 right-0 top-full mt-1.5 w-64 max-h-[19rem] overflow-y-auto rounded-lg border border-border bg-card shadow-2xl py-1">
+        <div className="absolute z-50 inset-e-0 top-full mt-1.5 w-64 max-h-[19rem] overflow-y-auto rounded-lg border border-border bg-card shadow-2xl py-1">
           <button
             type="button"
             onClick={(e) => pick('Auto', e)}
@@ -165,7 +157,7 @@ export default function BrowserVersionSelect({ core, value, onChange }) {
                     <span className="h-1.5 w-12 rounded-full bg-border overflow-hidden">
                       <span className="block h-full bg-primary transition-all duration-300" style={{ width: `${d.percent || 0}%` }} />
                     </span>
-                    <span className="text-[10px] text-muted tabular-nums w-9 text-right">
+                    <span className="text-[10px] text-muted tabular-nums w-9 text-end">
                       {d.state === 'installing' || d.state === 'extracting' || d.state === 'verifying' ? t('versionSelect.statusInstalling') : d.state === 'queued' ? t('versionSelect.statusQueued') : `${d.percent || 0}%`}
                     </span>
                   </span>

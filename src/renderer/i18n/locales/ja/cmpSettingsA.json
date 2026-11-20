@@ -1,0 +1,156 @@
+{
+  "billing": {
+    "status": {
+      "loading": "読み込み中…",
+      "sourceOwner": "ソースオーナー",
+      "active": "有効",
+      "activeUntil": "有効 · {{date}}まで",
+      "trialDaysLeft_other": "トライアル · 残り{{count}}日",
+      "graceDaysLeft_other": "猶予期間 · 残り{{count}}日",
+      "subscriptionEnded": "サブスクリプション終了"
+    },
+    "subscription": {
+      "title": "サブスクリプション",
+      "planLine": "SoftGlaze Browser · {{tier}}プラン",
+      "manageButton": "サブスクリプションとプランを管理"
+    },
+    "seats": {
+      "label": "チームシート",
+      "usage": "{{used}} / {{total}} 使用中"
+    },
+    "gateway": {
+      "title": "支払い方法",
+      "description": "スーパー管理者のみ。チェックアウト時にオーナーに表示する支払い方法を有効にし、各プロバイダーのキーを保存します。",
+      "loadError": "支払い設定を読み込めませんでした。",
+      "footnote": "キーはこのコンピューター上で暗号化して保存され、外部に送信されることはありません。チェックアウトはポーリング方式（Webhookなし）のため、インストール間での適用にはライセンスバックエンドが必要です。WiseとManualは、下の「保留中の支払い」であなたが承認します。",
+      "retry": "再試行"
+    },
+    "provider": {
+      "kindManual": "手動",
+      "kindAutomated": "自動",
+      "on": "オン",
+      "enabled": "有効",
+      "disabled": "無効",
+      "enableAria": "{{provider}}を有効にする",
+      "documentation": "ドキュメント",
+      "secretStoredPlaceholder": "••••••••（現在の値を維持する場合は空欄）",
+      "secretPlaceholder": "キーを貼り付け",
+      "save": "保存",
+      "testConnection": "接続をテスト",
+      "enabledMsg": "有効にしました。",
+      "disabledMsg": "無効にしました。",
+      "updateError": "更新できませんでした。",
+      "savedMsg": "保存しました。",
+      "saveError": "保存できませんでした。",
+      "connectionOk": "接続は正常です ✓",
+      "validationFailedKeys": "検証に失敗しました。キーを確認してください。",
+      "validationFailed": "検証に失敗しました。"
+    },
+    "manual": {
+      "title": "保留中の支払い",
+      "description": "承認待ちの手動（Wise / 銀行振込）の申請です。",
+      "loadError": "手動の支払いを読み込めませんでした。",
+      "resolveError": "この支払いを更新できませんでした。",
+      "ownerFallback": "オーナー #{{id}}",
+      "refPrefix": "参照:",
+      "approve": "承認",
+      "reject": "却下",
+      "statusLabel": {
+        "pending": "保留中",
+        "approved": "承認済み",
+        "rejected": "却下"
+      }
+    }
+  },
+  "monetization": {
+    "heading": "収益化",
+    "affiliate": {
+      "title": "アフィリエイトと紹介リンク",
+      "ownerOnly": "オーナーのみ",
+      "description": "プロキシマーケットプレイスの「購入」ボタンに使うパートナーURLです。空欄の場合はSoftglazeのデフォルトを使用します。",
+      "loadError": "アフィリエイトリンクを読み込めませんでした。",
+      "saveError": "アフィリエイトリンクを保存できませんでした。",
+      "savedMsg": "保存しました。マーケットプレイスのボタンにあなたのリンクが使われます。",
+      "customLink": "カスタムリンク",
+      "defaultLink": "デフォルトのリンク",
+      "openLinkTitle": "{{provider}}のリンクを開く",
+      "saving": "保存中…",
+      "saveButton": "リンクを保存",
+      "footnote": "これらのリンクは、プロキシプール → プロバイダータブの「…で購入」/「ダッシュボードを開く」ボタンに使われます。公開の紹介URLのみで、プロキシのトークンや認証情報には一切影響しません。"
+    }
+  },
+  "developerApi": {
+    "title": "開発者APIアクセス",
+    "description": "APIキーを生成し、ローカルRESTサーバーを実行してSoftglazeをプログラムから操作できます。",
+    "copy": "コピー",
+    "errors": {
+      "load": "開発者API設定を読み込めませんでした。",
+      "nameRequired": "キーに名前を付けてください（例: \"CI server\"）。",
+      "generate": "APIキーを生成できませんでした。",
+      "revoke": "キーを取り消せませんでした。",
+      "toggleServer": "ローカルサーバーの状態を変更できませんでした。"
+    },
+    "keys": {
+      "title": "APIキー",
+      "namePlaceholder": "キー名（例: CI server）",
+      "generate": "新しいAPIキーを生成",
+      "copyOnce": "このキーを今すぐコピーしてください。表示されるのは一度だけで、復元できません。",
+      "empty": "APIキーはまだありません。",
+      "lastUsed": "最終使用 {{when}}",
+      "neverUsed": "未使用",
+      "never": "なし",
+      "revoke": "取り消す",
+      "revokeConfirm": "APIキー「{{name}}」を取り消しますか？このキーを使用しているスクリプトはすぐに動作しなくなります。この操作は元に戻せません。"
+    },
+    "server": {
+      "title": "ローカルREST API",
+      "runningAt": "実行中:",
+      "stoppedPrefix": "停止中 · バインド先:",
+      "loopbackOnly": "（ループバックのみ）",
+      "disableTitle": "ローカルAPIを無効にする",
+      "enableTitle": "ローカルAPIを有効にする",
+      "curlExample": "例: cURLでプロファイルを起動",
+      "footnote": "サーバーはこのコンピューターからのリクエストのみを受け付け、有効なBearerキーが必要です。"
+    }
+  },
+  "migration": {
+    "title": "プロファイルの移行",
+    "ownerOnly": "オーナーのみ",
+    "description": "他のマルチプロファイルブラウザから、APIを使って既存のプロファイルをインポートします。",
+    "sourcePlatform": "移行元のプラットフォーム",
+    "noteLabel": "注意:",
+    "instructions": "手順",
+    "tokenSectionTitle": "{{platform}} APIトークン",
+    "transferring": "移行中…",
+    "startTransfer": "移行を開始",
+    "tokenFootnote": "トークンはこの移行で一度だけ使用され、保存されることはありません。ローカル型のプラットフォーム（AdsPower、ixBrowser）は、Local APIを有効にした状態で起動している必要があります。",
+    "errors": {
+      "tokenRequired": "{{platform}}の{{placeholder}}を入力してください。",
+      "transferFailed": "移行に失敗しました。"
+    },
+    "log": {
+      "title": "移行ログ",
+      "imported": "{{created}}/{{total}}件インポート済み",
+      "errors_other": "{{count}}件のエラー",
+      "waiting": "プラットフォームの応答を待っています…"
+    },
+    "platforms": {
+      "dolphin": {
+        "placeholder": "Dolphin_Token",
+        "warning": "Dolphinの無料プランから移行する場合、Cookieは移行されません。"
+      },
+      "gologin": {
+        "placeholder": "GoLogin APIトークン"
+      },
+      "multilogin": {
+        "placeholder": "Multilogin自動化トークン"
+      },
+      "adspower": {
+        "placeholder": "AdsPower Local APIキー"
+      },
+      "ixbrowser": {
+        "placeholder": "ixBrowser Local APIキー"
+      }
+    }
+  }
+}

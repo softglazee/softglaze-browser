@@ -1,0 +1,43 @@
+{
+  "title": "Anbieter-Rangliste",
+  "note": "Aus Ihren eigenen Proxy-Prüfungen der letzten {{days}} Tage.",
+  "refresh": "Aktualisieren",
+  "show": "Anbieter-Rangliste anzeigen",
+  "hide": "Anbieter-Rangliste ausblenden",
+  "loading": "Rangliste wird geladen...",
+  "loadError": "Rangliste konnte nicht geladen werden: {{message}}",
+  "empty": "Noch keine Proxys. Holen Sie welche von einem Anbieter oder fügen Sie eigene hinzu und prüfen Sie sie, um zu sehen, wie jeder Anbieter abschneidet.",
+  "truncated": "Nur die neuesten {{max}} Prüfungen wurden gezählt.",
+  "scoreHelp": "Punktzahl von 100. Am stärksten zählt der Prüferfolg, dann wie wenige Proxys auf einer Sperrliste stehen, dann die Geschwindigkeit, dann Website-Sperren pro Proxy. Zeilen mit weniger als {{min}} Prüfungen werden nicht bewertet.",
+  "own": "Ihre eigenen Proxys",
+  "free": "Kostenlose Proxys",
+  "col": {
+    "vendor": "Anbieter",
+    "score": "Punkte",
+    "success": "Prüferfolg",
+    "speed": "Median-Tempo",
+    "blocklisted": "Auf Sperrliste",
+    "datacenter": "Rechenzentrum",
+    "blocks": "Website-Sperren",
+    "proxies": "Proxys",
+    "lastChecked": "Zuletzt geprüft"
+  },
+  "sortBy": "Sortieren nach {{column}}",
+  "notEnough": "Zu wenige Daten",
+  "notEnoughTitle_one": "Nur {{count}} Prüfung in den letzten {{days}} Tagen. Für eine Bewertung sind {{min}} nötig.",
+  "notEnoughTitle_other": "Nur {{count}} Prüfungen in den letzten {{days}} Tagen. Für eine Bewertung sind {{min}} nötig.",
+  "level": {
+    "good": "Gut",
+    "fair": "Mittel",
+    "poor": "Schwach"
+  },
+  "scoreTitle": "{{level}}: {{score}} von 100",
+  "checks_one": "{{count}} Prüfung",
+  "checks_other": "{{count}} Prüfungen",
+  "ms": "{{ms}} ms",
+  "working": "{{pct}} funktionieren",
+  "noData": "Keine Daten",
+  "never": "Nie",
+  "openProvider": "{{name}} öffnen",
+  "topSites": "Meiste Sperren: {{sites}}"
+}

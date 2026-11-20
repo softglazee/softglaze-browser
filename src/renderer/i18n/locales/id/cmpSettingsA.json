@@ -1,0 +1,156 @@
+{
+  "billing": {
+    "status": {
+      "loading": "Memuat…",
+      "sourceOwner": "Pemilik kode sumber",
+      "active": "Aktif",
+      "activeUntil": "Aktif · hingga {{date}}",
+      "trialDaysLeft_other": "Uji coba · sisa {{count}} hr",
+      "graceDaysLeft_other": "Masa tenggang · sisa {{count}} hr",
+      "subscriptionEnded": "Langganan berakhir"
+    },
+    "subscription": {
+      "title": "Langganan",
+      "planLine": "SoftGlaze Browser · paket {{tier}}",
+      "manageButton": "Kelola langganan & paket"
+    },
+    "seats": {
+      "label": "Kursi tim",
+      "usage": "{{used}} / {{total}} terpakai"
+    },
+    "gateway": {
+      "title": "Metode pembayaran",
+      "description": "Khusus Super Admin. Aktifkan metode yang ditampilkan ke pemilik saat checkout dan simpan kunci tiap penyedia.",
+      "loadError": "Tidak bisa memuat pengaturan pembayaran.",
+      "footnote": "Kunci disimpan terenkripsi di mesin ini dan tidak pernah keluar darinya. Checkout berbasis polling (tanpa webhook), jadi penegakan lintas instalasi tetap memerlukan backend lisensi. Wise & Manual disetujui oleh Anda di “Pembayaran tertunda” di bawah.",
+      "retry": "Coba lagi"
+    },
+    "provider": {
+      "kindManual": "Manual",
+      "kindAutomated": "Otomatis",
+      "on": "aktif",
+      "enabled": "Aktif",
+      "disabled": "Nonaktif",
+      "enableAria": "Aktifkan {{provider}}",
+      "documentation": "Dokumentasi",
+      "secretStoredPlaceholder": "•••••••• (kosongkan untuk tetap memakai yang lama)",
+      "secretPlaceholder": "Tempel kunci",
+      "save": "Simpan",
+      "testConnection": "Uji koneksi",
+      "enabledMsg": "Diaktifkan.",
+      "disabledMsg": "Dinonaktifkan.",
+      "updateError": "Tidak bisa memperbarui.",
+      "savedMsg": "Tersimpan.",
+      "saveError": "Tidak bisa menyimpan.",
+      "connectionOk": "Koneksi terlihat baik ✓",
+      "validationFailedKeys": "Validasi gagal: periksa kuncinya.",
+      "validationFailed": "Validasi gagal."
+    },
+    "manual": {
+      "title": "Pembayaran tertunda",
+      "description": "Kiriman manual (Wise / transfer bank) yang menunggu persetujuan Anda.",
+      "loadError": "Tidak bisa memuat pembayaran manual.",
+      "resolveError": "Tidak bisa memperbarui pembayaran itu.",
+      "ownerFallback": "Pemilik #{{id}}",
+      "refPrefix": "ref:",
+      "approve": "Setujui",
+      "reject": "Tolak",
+      "statusLabel": {
+        "pending": "tertunda",
+        "approved": "disetujui",
+        "rejected": "ditolak"
+      }
+    }
+  },
+  "monetization": {
+    "heading": "Monetisasi",
+    "affiliate": {
+      "title": "Tautan afiliasi & referral",
+      "ownerOnly": "Khusus pemilik",
+      "description": "URL mitra Anda untuk tombol “Beli” di marketplace proxy. Kosongkan untuk memakai bawaan Softglaze.",
+      "loadError": "Tidak bisa memuat tautan afiliasi.",
+      "saveError": "Tidak bisa menyimpan tautan afiliasi.",
+      "savedMsg": "Tersimpan. Tombol marketplace sekarang memakai tautan Anda.",
+      "customLink": "Tautan kustom",
+      "defaultLink": "Tautan bawaan",
+      "openLinkTitle": "Buka tautan {{provider}}",
+      "saving": "Menyimpan…",
+      "saveButton": "Simpan tautan",
+      "footnote": "Tautan ini dipakai tombol “Beli di…” / “Kunjungi dasbor” di Kumpulan proxy → tab Penyedia. Ini hanya URL referral publik: token dan kredensial proxy tidak pernah terpengaruh."
+    }
+  },
+  "developerApi": {
+    "title": "Akses API developer",
+    "description": "Buat kunci API dan jalankan server REST lokal untuk mengontrol Softglaze lewat kode.",
+    "copy": "Salin",
+    "errors": {
+      "load": "Tidak bisa memuat pengaturan API developer.",
+      "nameRequired": "Beri nama kunci (mis. \"Server CI\").",
+      "generate": "Tidak bisa membuat kunci API.",
+      "revoke": "Tidak bisa mencabut kunci.",
+      "toggleServer": "Tidak bisa mengubah status server lokal."
+    },
+    "keys": {
+      "title": "Kunci API",
+      "namePlaceholder": "Nama kunci (mis. server CI)",
+      "generate": "Buat kunci API baru",
+      "copyOnce": "Salin kunci ini sekarang: hanya ditampilkan sekali dan tidak bisa dipulihkan.",
+      "empty": "Belum ada kunci API.",
+      "lastUsed": "terakhir dipakai {{when}}",
+      "neverUsed": "belum pernah dipakai",
+      "never": "belum pernah",
+      "revoke": "Cabut",
+      "revokeConfirm": "Cabut kunci API \"{{name}}\"? Skrip apa pun yang memakainya langsung berhenti berfungsi. Ini tidak bisa dibatalkan."
+    },
+    "server": {
+      "title": "REST API lokal",
+      "runningAt": "Berjalan di",
+      "stoppedPrefix": "Berhenti · akan memakai",
+      "loopbackOnly": "(hanya loopback)",
+      "disableTitle": "Nonaktifkan API lokal",
+      "enableTitle": "Aktifkan API lokal",
+      "curlExample": "Contoh: membuka profil lewat cURL",
+      "footnote": "Server hanya menerima permintaan dari mesin ini dan memerlukan kunci Bearer yang valid."
+    }
+  },
+  "migration": {
+    "title": "Pindahkan profil",
+    "ownerOnly": "Khusus pemilik",
+    "description": "Impor profil Anda dari browser multi-profil lain lewat API-nya.",
+    "sourcePlatform": "Platform asal",
+    "noteLabel": "Catatan:",
+    "instructions": "Petunjuk",
+    "tokenSectionTitle": "Token API {{platform}}",
+    "transferring": "Memindahkan…",
+    "startTransfer": "Mulai pemindahan",
+    "tokenFootnote": "Token Anda dipakai sekali untuk pemindahan ini dan tidak pernah disimpan. Platform lokal (AdsPower, ixBrowser) harus berjalan dengan Local API aktif.",
+    "errors": {
+      "tokenRequired": "Masukkan {{placeholder}} {{platform}} Anda.",
+      "transferFailed": "Pemindahan gagal."
+    },
+    "log": {
+      "title": "Log migrasi",
+      "imported": "{{created}}/{{total}} diimpor",
+      "errors_other": "{{count}} kesalahan",
+      "waiting": "Menunggu respons platform…"
+    },
+    "platforms": {
+      "dolphin": {
+        "placeholder": "Dolphin_Token",
+        "warning": "Cookie tidak akan dipindahkan jika Anda pindah dari paket gratis Dolphin."
+      },
+      "gologin": {
+        "placeholder": "Token API GoLogin"
+      },
+      "multilogin": {
+        "placeholder": "Token otomatisasi Multilogin"
+      },
+      "adspower": {
+        "placeholder": "Kunci Local API AdsPower"
+      },
+      "ixbrowser": {
+        "placeholder": "Kunci Local API ixBrowser"
+      }
+    }
+  }
+}

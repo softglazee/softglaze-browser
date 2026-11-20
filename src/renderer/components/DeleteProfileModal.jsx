@@ -4,6 +4,7 @@ import { Trash2, X, Loader2, AlertTriangle, HardDrive } from 'lucide-react';
 import Button from '@/components/ui/Button.jsx';
 import { useDialog } from '@/lib/useDialog.js';
 import { softglazeApi } from '@/lib/softglazeApi.js';
+import { fmtNumber } from '@/lib/intl.mjs';
 
 function formatBytes(n) {
   if (!n) return '0 B';
@@ -59,7 +60,7 @@ export default function DeleteProfileModal({ profile, onClose, onDeleted }) {
             {loading ? (
               <span className="text-muted flex items-center gap-2"><Loader2 className="w-3.5 h-3.5 animate-spin" /> {t('deleteProfile.readingData')}</span>
             ) : info && info.exists ? (
-              <span className="text-foreground">{t('deleteProfile.storedData')} <strong>{formatBytes(info.bytes)}</strong> <span className="text-muted">{t('deleteProfile.storedFiles', { count: info.files, files: info.files.toLocaleString() })}</span></span>
+              <span className="text-foreground">{t('deleteProfile.storedData')} <strong>{formatBytes(info.bytes)}</strong> <span className="text-muted">{t('deleteProfile.storedFiles', { count: info.files, files: fmtNumber(info.files) })}</span></span>
             ) : (
               <span className="text-muted">{t('deleteProfile.noData')}</span>
             )}
@@ -85,7 +86,7 @@ export default function DeleteProfileModal({ profile, onClose, onDeleted }) {
         <div className="flex items-center justify-end gap-3 px-5 py-4 border-t border-border bg-surface">
           <Button size="sm" variant="ghost" onClick={onClose} disabled={busy}>{t('deleteProfile.cancel')}</Button>
           <Button size="sm" variant="danger" onClick={confirm} disabled={busy}>
-            {busy ? <Loader2 className="w-4 h-4 mr-1.5 animate-spin" /> : <Trash2 className="w-4 h-4 mr-1.5" />}
+            {busy ? <Loader2 className="w-4 h-4 me-1.5 animate-spin" /> : <Trash2 className="w-4 h-4 me-1.5" />}
             {wipe ? t('deleteProfile.confirmWipe') : t('deleteProfile.confirmMove')}
           </Button>
         </div>

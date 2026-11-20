@@ -1,0 +1,107 @@
+{
+  "palette": {
+    "dialogLabel": "命令面板",
+    "searchPlaceholder": "搜索页面、配置文件、代理、成员…",
+    "searchAriaLabel": "搜索页面、配置文件、代理和成员",
+    "resultsLabel": "结果",
+    "esc": "Esc",
+    "noMatches": "没有匹配项。",
+    "nav": {
+      "dashboard": "仪表板",
+      "ai": "SoftGlaze AI",
+      "profiles": "配置文件",
+      "groups": "分组",
+      "proxies": "代理池",
+      "freeProxies": "免费代理",
+      "proxyProviders": "代理服务商",
+      "browsers": "浏览器",
+      "extensions": "扩展程序",
+      "batchImport": "批量导入",
+      "trash": "回收站",
+      "automation": "自动化",
+      "members": "成员",
+      "account": "账号",
+      "settings": "设置"
+    },
+    "hint": {
+      "page": "页面",
+      "profile": "配置文件",
+      "proxy": "代理",
+      "member": "成员",
+      "action": "操作"
+    },
+    "fallback": {
+      "profile": "配置文件 #{{id}}",
+      "proxy": "代理 #{{id}}",
+      "member": "成员 #{{id}}"
+    },
+    "action": {
+      "stopAi": "停止所有 AI"
+    }
+  },
+  "wizard": {
+    "skipTitle": "跳过设置",
+    "back": "返回",
+    "skip": "跳过",
+    "saveAndContinue": "保存并继续",
+    "saveAndFinish": "保存并完成",
+    "msg": {
+      "smtpSaved": "SMTP 已保存。",
+      "proxySaved": "代理已保存。"
+    },
+    "err": {
+      "smtpSaveFailed": "无法保存 SMTP 设置。",
+      "proxySaveFailed": "无法保存该代理。",
+      "profileCreateFailed": "无法创建配置文件。"
+    },
+    "welcome": {
+      "title": "欢迎使用 SoftGlaze",
+      "subtitle": "只需 3 个简单步骤即可创建第一个配置文件。任何步骤都可以跳过。",
+      "subtitleShort_one": "只需一个简单步骤，也可以跳过。",
+      "subtitleShort_other": "只需 {{count}} 个简单步骤。任何步骤都可以跳过。",
+      "unavailable": "灰色的步骤会被跳过：你的账号无法执行这些操作。",
+      "getStarted": "开始",
+      "stepEmail": "邮件（SMTP）：可选，用于发送一次性验证码",
+      "stepProxy": "你的第一个代理：可选",
+      "stepProfile": "你的第一个浏览器配置文件"
+    },
+    "smtp": {
+      "title": "邮件（SMTP）",
+      "subtitle": "可选：让应用可以发送验证码。之后也可以在“设置”中配置。",
+      "host": "SMTP 主机",
+      "hostPlaceholder": "smtp.example.com",
+      "port": "端口",
+      "portPlaceholder": "587",
+      "username": "用户名",
+      "usernamePlaceholder": "you@example.com",
+      "password": "密码",
+      "passwordPlaceholder": "••••••••"
+    },
+    "proxy": {
+      "title": "添加你的第一个代理",
+      "subtitle": "可选：为每个身份提供独立的网络。之后可以在“代理池”中添加更多代理。",
+      "type": "类型",
+      "host": "主机",
+      "hostPlaceholder": "1.2.3.4",
+      "port": "端口",
+      "portPlaceholder": "8080",
+      "user": "用户名",
+      "userPlaceholder": "可选",
+      "password": "密码",
+      "passwordPlaceholder": "可选"
+    },
+    "profile": {
+      "title": "创建你的第一个配置文件",
+      "subtitle": "系统会为你生成一个独特且内部一致的指纹。",
+      "createAndFinish": "创建并完成",
+      "name": "配置文件名称",
+      "namePlaceholder": "我的第一个配置文件",
+      "defaultName": "我的第一个配置文件",
+      "deviceType": "设备类型",
+      "desktop": "桌面",
+      "mobile": "移动设备（Android）",
+      "mobileNote": "Android 是在桌面引擎上模拟的：UA、触控、屏幕和 GPU 保持一致，但并非真实设备。",
+      "proxyAttached": "你的新代理将附加到此配置文件。"
+    }
+  }
+}

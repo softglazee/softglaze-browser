@@ -1,0 +1,25 @@
+{
+  "contextMenu": {
+    "undo": "Desfazer",
+    "redo": "Refazer",
+    "cut": "Recortar",
+    "copy": "Copiar",
+    "paste": "Colar",
+    "selectAll": "Selecionar tudo",
+    "copyLink": "Copiar link"
+  },
+  "dialogs": {
+    "exportArchiveTitle": "Exportar arquivo de perfis criptografado",
+    "archiveFilter": "Arquivo criptografado do SoftGlaze",
+    "importProfilesTitle": "Selecione uma planilha de perfis do SoftGlaze para importar",
+    "spreadsheetFilter": "Planilhas",
+    "exportProfilesTitle": "Exportar perfis do SoftGlaze",
+    "excelFilter": "Pasta de trabalho do Excel",
+    "importIdentitiesTitle": "Selecione uma planilha de identidades para importar",
+    "backupTitle": "Fazer backup do espaço de trabalho",
+    "backupFilter": "Backup do espaço de trabalho SoftGlaze",
+    "restoreTitle": "Restaurar backup do espaço de trabalho",
+    "exportActivityTitle": "Exportar log de atividade",
+    "bindSpreadsheetTitle": "Selecione uma planilha para vincular a esta execução paralela"
+  }
+}

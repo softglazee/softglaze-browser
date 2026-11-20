@@ -243,11 +243,11 @@ test('the scoreboard namespace is registered and English and Spanish match', () 
   assert.deepEqual(keys(es).sort(), keys(en).sort(), 'Spanish has exactly the English keys');
   for (const k of keys(es)) assert.ok(String(k.split('.').reduce((o, p) => o[p], es)).trim(), `es ${k} is empty`);
 
-  assert.match(I18N, /import scoreboardEn from '\.\/locales\/en\/scoreboard\.json';/);
-  assert.match(I18N, /import scoreboardEs from '\.\/locales\/es\/scoreboard\.json';/);
-  assert.match(I18N, /'captcha', 'scoreboard',/);
-  assert.match(I18N, /scoreboard: scoreboardEn/);
-  assert.match(I18N, /scoreboard: scoreboardEs/);
+  // Every locales/<code>/<ns>.json is registered by i18n/index.js: English eagerly, other
+  // languages as lazy chunks, the namespace list from the English file names.
+  assert.match(I18N, /import\.meta\.glob\('\.\/locales\/en\/\*\.json', \{ eager: true/);
+  assert.match(I18N, /import\.meta\.glob\(\['\.\/locales\/\*\/\*\.json'/);
+  assert.match(I18N, /export const NAMESPACES = Object\.keys\(EN_FILES\)/);
 
   const columns = [...COMPONENT.matchAll(/\{ key: '(\w+)', value:/g)].map((m) => m[1]);
   assert.equal(columns.length, 9);

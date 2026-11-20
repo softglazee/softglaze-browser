@@ -178,7 +178,7 @@
     "quicDisableTitle": "Desactivar HTTP/3 (QUIC)",
     "quicEnableTitle": "Activar HTTP/3 (QUIC)",
     "quicLabel": "Activar HTTP/3 (compatibilidad con QUIC)",
-    "quicWarning": "⚠️ Advertencia: Actívalo solo en proxies premium de alta calidad que admitan por completo el aislamiento del seguimiento UDP. Activar QUIC desbloquea las velocidades de HTTP/3 pero puede causar fugas de red en configuraciones deficientes. Por defecto está desactivado (máximo sigilo).",
+    "quicWarning": "⚠️ Advertencia: Actívalo solo en proxies premium de alta calidad que admitan por completo el aislamiento del seguimiento UDP. Activar QUIC desbloquea las velocidades de HTTP/3 pero puede causar fugas de red en configuraciones deficientes. Por defecto está desactivado (máximo aislamiento).",
     "showPassword": "Mostrar contraseña",
     "hidePassword": "Ocultar contraseña",
     "typeLocal": "Local (este PC)",

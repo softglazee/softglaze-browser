@@ -1,0 +1,635 @@
+{
+  "title": "SoftGlaze AI",
+  "beta": "Beta",
+  "description": "Cho phép các ứng dụng AI như Claude, Cursor và ChatGPT làm việc với hồ sơ của bạn. Bạn chọn mức độ thường xuyên thay đổi cần bạn phê duyệt, và mọi thứ đều được ghi lại.",
+  "loading": "Đang tải SoftGlaze AI…",
+  "refresh": "Làm mới",
+  "retry": "Thử lại",
+  "learnMore": "Đọc hướng dẫn",
+  "opensInBrowser": "(mở trong trình duyệt)",
+  "copy": "Sao chép",
+  "copied": "Đã sao chép",
+  "copyFailed": "Không sao chép được. Hãy chọn văn bản và sao chép thủ công.",
+  "cancel": "Hủy",
+  "close": "Đóng",
+  "save": "Lưu",
+  "saving": "Đang lưu…",
+  "saved": "Đã lưu",
+  "saveFailed": "Chưa lưu",
+  "never": "Chưa bao giờ",
+  "unknown": "Không rõ",
+  "roles": {
+    "OWNER": "Chủ sở hữu",
+    "ADMIN": "Quản trị",
+    "MANAGER": "Quản lý",
+    "OPERATOR": "Nhân viên",
+    "SUPER_ADMIN": "Super Admin"
+  },
+  "states": {
+    "unavailableTitle": "Bản dựng này chưa có SoftGlaze AI",
+    "unavailableBody": "Phiên bản SoftGlaze Browser này chưa có máy chủ AI. Tính năng sẽ có trong một bản cập nhật. Không gian làm việc của bạn không có vấn đề gì.",
+    "forbiddenTitle": "Chỉ Chủ sở hữu hoặc Quản trị mới quản lý được SoftGlaze AI",
+    "forbiddenBody": "Hãy xin quyền truy cập từ Chủ sở hữu không gian làm việc. Khi một ứng dụng AI dùng token hoạt động với tư cách bạn, các yêu cầu của nó vẫn hiện lên để bạn cho phép hoặc từ chối, ở bất kỳ trang nào.",
+    "errorTitle": "Không tải được SoftGlaze AI"
+  },
+  "header": {
+    "switchLabel": "Máy chủ SoftGlaze AI",
+    "switchShort": "Máy chủ AI",
+    "on": "Bật",
+    "off": "Tắt",
+    "turningOn": "Đang bật…",
+    "turningOff": "Đang tắt…",
+    "stopAll": "Dừng toàn bộ AI",
+    "toggleError": "Không thay đổi được máy chủ AI: {{message}}"
+  },
+  "status": {
+    "server": "Máy chủ AI",
+    "running": "Đang chạy",
+    "error": "Không chạy",
+    "off": "Tắt",
+    "offHint": "Bật để các ứng dụng AI kết nối được.",
+    "errorHint": "Đã bật nhưng không chạy: {{message}}",
+    "errorHintNoMessage": "Đã bật nhưng không chạy. Có thể cổng đang được dùng; hãy đổi cổng trong Cài đặt.",
+    "apps": "Ứng dụng đã kết nối",
+    "appsNone": "Chưa có ứng dụng nào kết nối",
+    "appSeen": "{{name}} · {{when}}",
+    "appsMore_one": "và {{count}} ứng dụng khác",
+    "appsMore_other": "và {{count}} ứng dụng khác",
+    "waiting": "Đang chờ bạn",
+    "waitingNone": "Không có gì cần trả lời",
+    "waitingSome_one": "{{count}} yêu cầu cần trả lời",
+    "waitingSome_other": "{{count}} yêu cầu cần trả lời",
+    "openApprovals": "mở Phê duyệt",
+    "sessions": "Phiên AI đang chạy",
+    "sessionsHint": "Do ứng dụng AI khởi động"
+  },
+  "tabs": {
+    "label": "Các mục SoftGlaze AI",
+    "connect": "Kết nối",
+    "tokens": "Token",
+    "approvals": "Phê duyệt",
+    "activity": "Hoạt động",
+    "memory": "Ghi nhớ",
+    "prompts": "Prompt",
+    "settings": "Cài đặt",
+    "waiting": "đang chờ"
+  },
+  "stop": {
+    "title": "Dừng toàn bộ AI?",
+    "body": "Dùng khi một ứng dụng AI làm điều bạn không mong muốn.",
+    "point1": "Mọi lượt chạy và hồ sơ do ứng dụng AI khởi động sẽ dừng ngay.",
+    "point2": "Mọi ứng dụng AI đã kết nối sẽ bị ngắt kết nối, và các lệnh đang chạy bị hủy.",
+    "point3": "Mọi yêu cầu đang chờ bạn trả lời sẽ bị từ chối.",
+    "point4": "SoftGlaze AI sẽ tắt. Token vẫn còn hiệu lực; hãy bật lại khi bạn sẵn sàng.",
+    "confirm": "Dừng toàn bộ AI",
+    "error": "Không dừng được mọi thứ: {{message}}",
+    "result": "Xong. Lượt chạy đã dừng: {{runs}}. Hồ sơ đã dừng: {{profiles}}. Lệnh đã hủy: {{calls}}. Phiên đã kết thúc: {{sessions}}. Yêu cầu đã từ chối: {{approvals}}.",
+    "nowOff": "SoftGlaze AI đang tắt. Ứng dụng AI không kết nối được cho đến khi bạn bật lại.",
+    "turnOn": "Bật"
+  },
+  "start": {
+    "title": "Bắt đầu với ba bước",
+    "step1": "Bật máy chủ AI",
+    "step2": "Tạo token cho ứng dụng AI",
+    "step3": "Kết nối ứng dụng AI",
+    "done": "Xong",
+    "turnOn": "Bật"
+  },
+  "connect": {
+    "loadError": "Không tải được hướng dẫn thiết lập cho ứng dụng AI: {{message}}",
+    "empty": "Chưa có hướng dẫn thiết lập",
+    "emptyOn": "Máy chủ AI không gửi hướng dẫn thiết lập. Hãy thử Làm mới.",
+    "emptyBody": "Bật máy chủ AI để xem cách kết nối từng ứng dụng.",
+    "appsLabel": "Ứng dụng AI",
+    "guide": "Hướng dẫn đầy đủ",
+    "appDocs": "Tài liệu của ứng dụng",
+    "where": "Đặt ở đâu",
+    "steps": "Cách kết nối",
+    "kind": {
+      "command": "Lệnh",
+      "json": "JSON",
+      "toml": "TOML",
+      "n8n": "Quy trình"
+    },
+    "snippet": "Thiết lập cho {{app}}",
+    "placeholderHint": "<YOUR_TOKEN> là chỗ đặt token của bạn. Bạn chỉ thấy token một lần, khi tạo nó.",
+    "noSnippet": "Ứng dụng này chưa có thiết lập sẵn. Hãy làm theo các bước ở trên.",
+    "createToken": "Tạo token cho ứng dụng này",
+    "createTokenHint": "Hãy cho mỗi ứng dụng một token riêng. Khi đó bạn thấy được từng ứng dụng làm gì và tắt một ứng dụng mà không ảnh hưởng các ứng dụng khác.",
+    "installGuide": "Hướng dẫn cài đặt",
+    "mcpb": {
+      "title": "Cài trong Claude Desktop: tải softglaze-browser.mcpb",
+      "download": "Tải softglaze-browser.mcpb",
+      "body": "Bấm đúp vào tệp, hoặc trong Claude Desktop mở Settings > Extensions > Advanced settings > Install Extension. Claude Desktop sẽ hỏi token và cổng; hãy giữ cổng hiện trên trang này. Cả trò chuyện Claude Desktop và Cowork đều dùng nó."
+    },
+    "claudeCode": {
+      "pluginTitle": "Cài plugin SoftGlaze (khuyên dùng)",
+      "pluginBody": "Chạy từng lệnh một trong Claude Code. softglaze-browser thêm các kỹ năng; softglaze-browser-connector thêm công cụ SoftGlaze và hỏi token cùng cổng. Connector cần Node.js 18 trở lên.",
+      "desktopNote": "Trò chuyện Claude Desktop và Cowork thì dùng softglaze-browser.mcpb (xem Claude Desktop).",
+      "manualTitle": "Hoặc tự thêm máy chủ (không cần Node.js)"
+    },
+    "envVar": {
+      "title": "Lưu token cho Codex",
+      "body": "Codex đọc token từ biến môi trường tên SOFTGLAZE_TOKEN. Chạy lệnh này một lần với token của bạn, rồi mở terminal mới.",
+      "windows": "Windows (Command Prompt hoặc PowerShell)",
+      "unix": "macOS hoặc Linux (thêm vào shell profile)"
+    },
+    "bridge": {
+      "title": "Cầu nối cho ứng dụng khởi chạy chương trình cục bộ",
+      "body": "Một số ứng dụng không kết nối được với địa chỉ web. Thay vào đó chúng khởi chạy cầu nối SoftGlaze, và cầu nối chuyển mọi thứ đến máy chủ AI trên PC này. Cùng token, cùng phê duyệt.",
+      "unavailable": "Bản dựng này không có cầu nối.",
+      "mcpb": "Tệp cài đặt một chạm cho Claude Desktop",
+      "command": "Lệnh",
+      "args": "Tham số",
+      "env": "Biến môi trường"
+    },
+    "clients": {
+      "claude-desktop": {
+        "where": "Settings > Developer > Edit Config (claude_desktop_config.json), rồi khởi động lại Claude Desktop. Claude Desktop chạy máy chủ cục bộ qua stdio, nên cách này sẽ khởi chạy cầu nối SoftGlaze. Dễ hơn: cài softglaze-browser.mcpb ({{mcpb}}), tệp này hỏi token và cổng, đồng thời phục vụ cả Cowork.",
+        "title": "Claude Desktop",
+        "step1": "Tạo token cho Claude Desktop bằng nút bên dưới.",
+        "step2": "Dễ nhất: tải softglaze-browser.mcpb bằng nút bên dưới, bấm đúp và dán token khi Claude Desktop hỏi. Hoặc mở Settings > Developer > Edit Config và dán thiết lập vào claude_desktop_config.json, thay <YOUR_TOKEN> bằng token của bạn.",
+        "step2NoMcpb": "Mở Settings > Developer > Edit Config và dán thiết lập vào claude_desktop_config.json, thay <YOUR_TOKEN> bằng token của bạn. Nó khởi chạy cầu nối SoftGlaze, vì Claude Desktop chạy máy chủ cục bộ.",
+        "step3": "Nếu bạn đã sửa tệp cấu hình, hãy thoát và mở lại Claude Desktop. SoftGlaze sẽ hiện dưới nút + bên dưới ô trò chuyện, trong Connectors."
+      },
+      "claude-code": {
+        "where": "Không dùng plugin: chạy trong terminal. Thêm --scope user để dùng SoftGlaze trong mọi dự án. Dùng plugin hoặc lệnh này, không dùng cả hai.",
+        "title": "Claude Code",
+        "step1": "Tạo token cho Claude Code bằng nút bên dưới.",
+        "step2": "Cài plugin SoftGlaze bằng các lệnh bên dưới và dán token khi Claude Code hỏi. Hoặc chạy lệnh ở phía dưới, thay <YOUR_TOKEN> bằng token của bạn. Chỉ dùng một cách, không dùng cả hai.",
+        "step3": "Gõ /mcp trong Claude Code. SoftGlaze sẽ hiện là đã kết nối (plugin:softglaze-browser-connector:softglaze khi dùng plugin)."
+      },
+      "cursor": {
+        "where": "~/.cursor/mcp.json (mọi dự án) hoặc .cursor/mcp.json trong một dự án. Để không lưu token trong tệp, dùng \"Bearer ${env:SOFTGLAZE_TOKEN}\".",
+        "title": "Cursor",
+        "step1": "Tạo token cho Cursor bằng nút bên dưới.",
+        "step2": "Mở ~/.cursor/mcp.json (hoặc .cursor/mcp.json trong một dự án) và dán thiết lập, thay <YOUR_TOKEN> bằng token của bạn.",
+        "step3": "Trong cài đặt của Cursor, kiểm tra SoftGlaze có trong danh sách và đã bật. Sau đó yêu cầu khung trò chuyện liệt kê hồ sơ SoftGlaze của bạn."
+      },
+      "vscode": {
+        "where": ".vscode/mcp.json trong workspace, hoặc chạy \"MCP: Open User Configuration\". VS Code hỏi token một lần và lưu an toàn, nên token không bao giờ nằm trong tệp.",
+        "title": "VS Code (Copilot)",
+        "step1": "Tạo token cho VS Code bằng nút bên dưới.",
+        "step2": "Thêm thiết lập vào .vscode/mcp.json trong workspace (hoặc chạy MCP: Open User Configuration). Lần đầu SoftGlaze khởi động, VS Code hỏi token và lưu an toàn, nên token không bao giờ nằm trong tệp.",
+        "step3": "Mở Copilot Chat và yêu cầu liệt kê hồ sơ SoftGlaze của bạn. Cho phép công cụ khi VS Code hỏi."
+      },
+      "gemini-cli": {
+        "where": "~/.gemini/settings.json (gộp vào tệp), hoặc chạy: gemini mcp add --transport http -s user --header \"Authorization: Bearer <YOUR_TOKEN>\" softglaze {{mcp}}",
+        "title": "Gemini CLI",
+        "step1": "Tạo token cho Gemini CLI bằng nút bên dưới.",
+        "step2": "Thêm thiết lập vào trong \"mcpServers\" ở ~/.gemini/settings.json, thay <YOUR_TOKEN> bằng token của bạn. Để \"trust\" tắt: dù sao SoftGlaze cũng hỏi bạn trước mọi thay đổi.",
+        "step3": "Khởi động gemini và gõ /mcp. SoftGlaze và các công cụ của nó sẽ hiện trong danh sách."
+      },
+      "codex": {
+        "where": "~/.codex/config.toml (dùng chung cho ứng dụng ChatGPT desktop, Codex CLI và tiện ích IDE). Đặt biến môi trường SOFTGLAZE_TOKEN thành token của bạn trước (Windows: setx SOFTGLAZE_TOKEN \"<YOUR_TOKEN>\"), rồi khởi động lại ứng dụng.",
+        "title": "ChatGPT desktop / Codex",
+        "step1": "Tạo token cho Codex bằng nút bên dưới, rồi lưu vào biến môi trường SOFTGLAZE_TOKEN (lệnh bên dưới).",
+        "step2": "Thêm thiết lập vào ~/.codex/config.toml. Codex đọc token từ SOFTGLAZE_TOKEN, nên tệp không bao giờ chứa token.",
+        "step3": "Mở terminal mới, khởi động Codex và gõ /mcp. SoftGlaze sẽ hiện trong danh sách."
+      },
+      "windsurf": {
+        "where": "~/.codeium/windsurf/mcp_config.json, rồi làm mới các máy chủ MCP. Devin Desktop (tên mới của Windsurf) dùng ~/.config/devin/mcp_config.json với \"url\" và \"transport\": \"http\" thay vì \"serverUrl\".",
+        "title": "Windsurf",
+        "step1": "Tạo token cho Windsurf bằng nút bên dưới.",
+        "step2": "Dán thiết lập vào tệp cấu hình MCP của Windsurf (xem Đặt ở đâu), thay <YOUR_TOKEN> bằng token của bạn.",
+        "step3": "Làm mới các máy chủ MCP trong Windsurf và kiểm tra SoftGlaze có trong danh sách."
+      },
+      "cline": {
+        "where": "Cline: MCP Servers > Configure (cline_mcp_settings.json).",
+        "title": "Cline",
+        "step1": "Tạo token cho Cline bằng nút bên dưới.",
+        "step2": "Trong Cline, mở MCP Servers > Configure và dán thiết lập vào cline_mcp_settings.json, thay <YOUR_TOKEN> bằng token của bạn.",
+        "step3": "Kiểm tra SoftGlaze hiện là đã kết nối trong danh sách MCP Servers của Cline."
+      },
+      "n8n": {
+        "where": "Trong node MCP Client Tool: SSE Endpoint như bên dưới, Authentication \"Bearer\", và token của bạn làm thông tin xác thực. Nếu n8n chạy trong Docker Desktop, hãy dùng host.docker.internal thay cho 127.0.0.1 và thêm host.docker.internal vào Extra allowed hosts trong cài đặt SoftGlaze AI. Với quy trình chạy không cần người trông, hãy dùng token tự động hóa (công cụ được phê duyệt trước, giới hạn theo nhóm).",
+        "title": "n8n"
+      },
+      "other": {
+        "where": "Bất kỳ ứng dụng MCP nào hỗ trợ Streamable HTTP có header. Ứng dụng chỉ dùng giao thức HTTP+SSE cũ thì dùng URL SSE. Ứng dụng chỉ chạy lệnh cục bộ thì dùng cầu nối SoftGlaze (xem Claude Desktop).",
+        "title": "Ứng dụng khác",
+        "step1": "Tạo token cho ứng dụng bằng nút bên dưới.",
+        "step2": "Mở cài đặt MCP của ứng dụng và thêm một máy chủ với địa chỉ này và header Authorization: Bearer, một dấu cách, rồi token của bạn.",
+        "step3": "Nếu ứng dụng chỉ khởi chạy được chương trình cục bộ (stdio), hãy dùng cầu nối SoftGlaze bên dưới thay cho địa chỉ."
+      },
+      "custom": {
+        "step1": "Tạo token cho ứng dụng này bằng nút bên dưới.",
+        "step2": "Dán thiết lập vào nơi ứng dụng lưu máy chủ MCP, thay <YOUR_TOKEN> bằng token của bạn.",
+        "step3": "Khởi động lại ứng dụng và kiểm tra SoftGlaze có trong cài đặt MCP hoặc công cụ của nó."
+      }
+    },
+    "n8n": {
+      "subtitle": "Chạy SoftGlaze từ quy trình n8n trên PC này.",
+      "selfHosted": "n8n phải chạy trên PC này (npx hoặc Docker). n8n Cloud chưa kết nối được tới PC của bạn.",
+      "noPort": "Bật máy chủ AI để xem địa chỉ cho n8n.",
+      "a": {
+        "title": "Cho AI Agent của n8n dùng SoftGlaze",
+        "step1": "Thêm node AI Agent, rồi thêm node MCP Client Tool làm một trong các công cụ của nó.",
+        "step2": "Đặt SSE Endpoint là địa chỉ bên dưới. Nếu n8n chạy trong Docker, hãy dùng địa chỉ Docker.",
+        "step3": "Đặt Authentication là Bearer và dán token. Ở Tools to Include, chọn All hoặc chỉ các công cụ bạn cần.",
+        "sse": "SSE endpoint (n8n trên PC này)",
+        "sseDocker": "SSE endpoint (n8n trong Docker)",
+        "dockerNote": "Với Docker, hãy thêm host.docker.internal vào Tên máy chủ được phép thêm ở thẻ Cài đặt."
+      },
+      "b": {
+        "title": "Các bước cố định với node HTTP Request",
+        "body": "Với các bước không bao giờ thay đổi, như mở một hồ sơ lúc 9:00, node HTTP Request có thể gọi trực tiếp Local API. Gửi token trong header Authorization.",
+        "kind": "HTTP Request"
+      },
+      "c": {
+        "title": "Dùng token Tự động hóa cho quy trình theo lịch",
+        "body": "Quy trình chạy theo lịch không có ai bấm Cho phép. Token Tự động hóa chỉ phê duyệt trước những công cụ bạn chọn, chỉ cho các nhóm bạn chọn, có giới hạn mỗi lệnh và mỗi giờ. Mọi thứ khác vẫn hỏi.",
+        "create": "Tạo token Tự động hóa",
+        "ownerOnly": "Chỉ Chủ sở hữu mới tạo được token Tự động hóa."
+      }
+    },
+    "devtools": {
+      "title": "Dùng hồ sơ với Playwright MCP hoặc Chrome DevTools MCP (nâng cao)",
+      "subtitle": "Giao một hồ sơ Chromium đang chạy cho ứng dụng DevTools bên ngoài.",
+      "ownerOnly": "Chỉ Chủ sở hữu",
+      "warning": "Trang web có thể nhận ra trình gỡ lỗi bên ngoài. Playwright MCP và Chrome DevTools MCP gắn vào như một ứng dụng DevTools thứ hai và gửi lệnh riêng, điều mà các script chống bot có thể nhận thấy. Hồ sơ có thể bị gắn cờ hoặc bị chặn. Các công cụ trang của chính SoftGlaze không làm vậy. Bất kỳ ai trên máy tính này có địa chỉ bên dưới đều điều khiển được hồ sơ khi nó đang chạy.",
+      "intro": "Dùng cho những việc công cụ trang của SoftGlaze không làm, như theo dõi hiệu năng hoặc nhật ký mạng và console trên trang web của chính bạn, và hãy dùng hồ sơ thử nghiệm. Đây là bạn thao tác trong ứng dụng, tách biệt với Chế độ chuyên gia, chế độ quyết định ứng dụng AI được yêu cầu gì.",
+      "profile": "Hồ sơ đang chạy",
+      "loading": "Đang tải hồ sơ đang chạy…",
+      "loadError": "Không tải được hồ sơ đang chạy: {{message}}",
+      "choose": "Chọn hồ sơ đang chạy",
+      "option": "{{name}} (#{{id}}) · Chromium",
+      "optionFirefox": "{{name}} (#{{id}}) · Firefox: hồ sơ Firefox không có DevTools endpoint",
+      "empty": "Hãy mở một hồ sơ Chromium trước.",
+      "openProfiles": "Mở Hồ sơ",
+      "stopped": "Hồ sơ này ({{name}}) đã dừng. Địa chỉ của nó không còn dùng được.",
+      "address": "Địa chỉ DevTools",
+      "hiddenLabel": "Địa chỉ DevTools, ẩn cho đến khi bạn bấm Hiện",
+      "show": "Hiện",
+      "showLabel": "Hiện địa chỉ DevTools của {{name}}",
+      "hide": "Ẩn",
+      "addressNote": "Mới mỗi lần hồ sơ khởi động. Chỉ dùng được trên máy tính này khi hồ sơ đang chạy.",
+      "noAddress": "SoftGlaze không nhận được địa chỉ DevTools cho hồ sơ này. Hãy dừng rồi mở lại, sau đó thử lại.",
+      "setup": "Thiết lập",
+      "toolsLabel": "Máy chủ MCP",
+      "clientsLabel": "Ứng dụng AI",
+      "where": {
+        "claude-code": "Chạy trong terminal ở thư mục dự án. Địa chỉ thay đổi mỗi lần hồ sơ khởi động, nên hãy chạy claude mcp remove {{name}} trước, rồi chạy lại lệnh này.",
+        "claude-desktop": "Settings > Developer > Edit Config (claude_desktop_config.json): thêm phần này vào \"mcpServers\", rồi thoát và mở lại Claude Desktop. Cập nhật địa chỉ sau mỗi lần khởi động.",
+        "cursor": "~/.cursor/mcp.json (mọi dự án) hoặc .cursor/mcp.json trong một dự án. Cập nhật địa chỉ sau mỗi lần khởi động.",
+        "vscode": ".vscode/mcp.json trong workspace, hoặc chạy MCP: Open User Configuration. Cập nhật địa chỉ sau mỗi lần khởi động."
+      },
+      "snippet": "Thiết lập {{tool}} cho {{app}}",
+      "pressShow": "Bấm Hiện để xem thiết lập với địa chỉ của hồ sơ này.",
+      "usageStats": "Tắt thống kê sử dụng của Chrome DevTools MCP",
+      "usageStatsHint": "Thêm --no-usage-statistics. Nếu không, Chrome DevTools MCP sẽ gửi thống kê sử dụng đến Google.",
+      "footer": "Khi xong, hãy đóng máy chủ MCP, rồi dừng hồ sơ.",
+      "guide": "Hướng dẫn: Playwright MCP và Chrome DevTools MCP"
+    }
+  },
+  "scope": {
+    "read": {
+      "title": "Chỉ đọc",
+      "body": "Xem được hồ sơ, proxy, nhóm và hoạt động. Không thay đổi hay khởi chạy được gì."
+    },
+    "operate": {
+      "title": "Vận hành",
+      "body": "Còn tạo và mở được hồ sơ, chạy macro và thao tác trong trang. Thay đổi vẫn hỏi bạn trước, theo cài đặt trong Cài đặt. Hãy chọn mức này một cách có chủ đích."
+    },
+    "full": {
+      "title": "Toàn quyền",
+      "body": "Mọi thứ trong Vận hành, cộng công cụ chuyên gia khi Chế độ chuyên gia bật. Chỉ dành cho ứng dụng bạn hoàn toàn tin tưởng."
+    }
+  },
+  "create": {
+    "title": "Tạo token",
+    "titleFor": "Tạo token cho {{app}}",
+    "description": "Token cho phép một ứng dụng AI kết nối. Nó hoạt động với tư cách một thành viên trong nhóm và chỉ làm được những gì thành viên đó được phép.",
+    "revealTitle": "Token mới của bạn",
+    "revealDescription": "Sao chép vào ứng dụng AI ngay bây giờ.",
+    "name": "Tên",
+    "nameHint": "Ghi rõ ứng dụng và máy tính nào, để bạn nhận ra sau này.",
+    "namePlaceholder": "Claude Desktop trên PC của tôi",
+    "member": "Với tư cách",
+    "memberHint": "AI làm việc với tư cách thành viên này, với quyền và hồ sơ của thành viên này.",
+    "you": "bạn",
+    "scope": "Được làm gì",
+    "expiry": "Hết hạn sau",
+    "expiryNever": "Không bao giờ",
+    "expiryDays_one": "{{count}} ngày",
+    "expiryDays_other": "{{count}} ngày",
+    "expiryNeverWarn": "Token không bao giờ hết hạn sẽ còn hiệu lực cho đến khi bạn thu hồi.",
+    "profiles": "Hồ sơ được dùng",
+    "profilesAll": "Tất cả",
+    "profilesSome": "Chỉ một số nhóm",
+    "profilesAllHint": "Mọi hồ sơ thành viên đó mở được.",
+    "profilesSomeHint": "Chỉ hồ sơ trong các nhóm bạn đánh dấu.",
+    "noGroups": "Chưa có nhóm nào. Hãy tạo nhóm ở trang Nhóm trước.",
+    "pickGroups": "Nhóm",
+    "submit": "Tạo token",
+    "onceWarning": "Hãy sao chép token này ngay. SoftGlaze chỉ hiện nó một lần này. Nếu làm mất, hãy thu hồi và tạo token mới.",
+    "yourToken": "Token",
+    "filledSetup": "Thiết lập cho {{app}}, đã điền sẵn token của bạn",
+    "n8nHint": "Trong n8n, đặt Authentication là Bearer và dán token này.",
+    "claudeCodeHint": "Đang cài plugin SoftGlaze? Hãy dán token này khi Claude Code hỏi trong lúc cài softglaze-browser-connector. Lệnh ở trên là cách không dùng plugin.",
+    "claudeDesktopHint": "Đang cài softglaze-browser.mcpb? Hãy dán token này khi Claude Desktop hỏi. Thiết lập ở trên là cách không dùng tiện ích.",
+    "acknowledge": "Tôi đã lưu token này ở nơi an toàn",
+    "closeWarning": "Hãy sao chép token hoặc đánh dấu ô trước. Bạn không thể xem lại token này.",
+    "done": "Xong"
+  },
+  "errors": {
+    "nameRequired": "Hãy nhập tên.",
+    "nameTooLong": "Tên tối đa {{max}} ký tự.",
+    "memberRequired": "Hãy chọn một thành viên.",
+    "scopeRequired": "Hãy chọn token được làm gì.",
+    "expiryRequired": "Hãy chọn thời điểm hết hạn.",
+    "groupsRequired": "Hãy đánh dấu ít nhất một nhóm, hoặc chọn Tất cả.",
+    "groupsRequiredAutomation": "Token Tự động hóa phải giới hạn theo nhóm. Hãy đánh dấu ít nhất một nhóm.",
+    "toolNotAllowed": "Một trong các công cụ không thể được phê duyệt trước.",
+    "limitRange": "Hãy nhập số nguyên từ {{min}} đến {{max}}.",
+    "create": "Chưa tạo được token.",
+    "noToken": "Máy chủ AI không trả về token. Hãy thử lại.",
+    "createFailed": "Chưa tạo được token: {{message}}"
+  },
+  "automation": {
+    "title": "Token tự động hóa (cho n8n, lịch chạy và script)",
+    "ownerOnly": "Chỉ Chủ sở hữu",
+    "count_one": "{{count}} công cụ được phê duyệt trước",
+    "count_other": "{{count}} công cụ được phê duyệt trước",
+    "intro": "Với quy trình chạy khi không có bạn, hãy chọn các công cụ được chạy mà không cần hỏi.",
+    "needsOperate": "Hãy chọn Vận hành hoặc Toàn quyền ở trên để phê duyệt trước công cụ.",
+    "warning": "Các công cụ này sẽ chạy mà không hỏi bạn. Chúng vẫn chỉ giới hạn trong các nhóm đã chọn, được ghi lại, và dừng khi bấm Dừng toàn bộ AI.",
+    "tools": "Công cụ chạy không cần hỏi",
+    "destructive": "Không thể hoàn tác",
+    "groups": {
+      "profiles": "Hồ sơ",
+      "sessions": "Mở và dừng",
+      "proxies": "Proxy",
+      "groups": "Nhóm",
+      "automation": "Tự động hóa",
+      "page": "Trong trang",
+      "other": "Khác"
+    },
+    "maxProfiles": "Số hồ sơ tối đa mỗi lệnh",
+    "maxProfilesHint": "Mặc định 5, tối đa 50.",
+    "maxCalls": "Số lệnh tối đa mỗi giờ",
+    "maxCallsHint": "Mặc định 60, tối đa 1000.",
+    "groupsNote": "Công cụ được phê duyệt trước chỉ hoạt động trên các nhóm đã đánh dấu ở Hồ sơ được dùng. Mọi công cụ khác vẫn hỏi bạn."
+  },
+  "tools": {
+    "create_profile": "Tạo hồ sơ",
+    "update_profile": "Thay đổi hồ sơ (tên, nhóm, nhãn, ghi chú, trang khởi động, proxy)",
+    "batch_generate_profiles": "Tạo nhiều hồ sơ cùng lúc",
+    "start_profile": "Mở hồ sơ",
+    "stop_profile": "Dừng hồ sơ",
+    "assign_proxy": "Gán proxy cho hồ sơ",
+    "rotate_proxy_ip": "Lấy IP mới từ proxy",
+    "find_free_proxies": "Tìm và kiểm tra proxy miễn phí",
+    "create_group": "Tạo nhóm",
+    "move_profiles_to_group": "Chuyển hồ sơ vào nhóm",
+    "save_macro": "Lưu macro",
+    "run_macro": "Chạy macro",
+    "stop_run": "Dừng lượt chạy",
+    "start_warmer": "Bắt đầu làm nóng",
+    "page_navigate": "Mở trang web",
+    "page_snapshot": "Đọc bố cục trang",
+    "page_click": "Bấm trên trang",
+    "page_type": "Nhập trên trang",
+    "page_press_key": "Nhấn phím trên trang",
+    "page_scroll": "Cuộn trang",
+    "page_screenshot": "Chụp ảnh màn hình",
+    "page_extract_text": "Sao chép văn bản từ trang",
+    "page_wait_for": "Chờ một phần tử trên trang"
+  },
+  "tokens": {
+    "search": "Tìm token",
+    "showRevoked": "Hiện token đã thu hồi",
+    "showRevokedCount_one": "Hiện {{count}} token đã thu hồi",
+    "showRevokedCount_other": "Hiện {{count}} token đã thu hồi",
+    "create": "Tạo token",
+    "intro": "Mỗi ứng dụng AI kết nối bằng token riêng. Một token hoạt động với tư cách một thành viên và có thể giới hạn trong một số nhóm. Thu hồi token để cắt quyền của ứng dụng đó ngay lập tức.",
+    "loadError": "Không tải được token: {{message}}",
+    "emptyTitle": "Chưa có token nào",
+    "emptyBody": "Tạo một token, rồi dán vào ứng dụng AI. Thẻ Kết nối cho biết nơi đặt token.",
+    "caption": "Token AI",
+    "colName": "Tên",
+    "colMember": "Với tư cách",
+    "colScope": "Quyền",
+    "colGroups": "Hồ sơ",
+    "colExpires": "Hết hạn",
+    "colLastUsed": "Dùng lần cuối",
+    "colActions": "Thao tác",
+    "state": {
+      "revoked": "Đã thu hồi",
+      "expired": "Đã hết hạn",
+      "expiring": "Sắp hết hạn"
+    },
+    "automation_one": "Tự động hóa · {{count}} được phê duyệt trước",
+    "automation_other": "Tự động hóa · {{count}} được phê duyệt trước",
+    "allProfiles": "Tất cả hồ sơ",
+    "groupsMore_one": "{{names}} và {{count}} nhóm khác",
+    "groupsMore_other": "{{names}} và {{count}} nhóm khác",
+    "neverUsed": "Chưa dùng",
+    "revoke": "Thu hồi",
+    "revokeAria": "Thu hồi {{name}}",
+    "noMatch": "Không có token nào khớp.",
+    "revokeTitle": "Thu hồi “{{name}}”?",
+    "revokeBody": "Ứng dụng AI dùng token này sẽ mất quyền truy cập ngay. Không thể hoàn tác.",
+    "revokeError": "Không thu hồi được token: {{message}}"
+  },
+  "approval": {
+    "eyebrow": "Yêu cầu từ AI",
+    "eyebrowMany": "Yêu cầu từ AI {{position}} / {{total}}",
+    "title": "{{app}} đang xin phép",
+    "tokenOnly": "Token: {{token}}",
+    "tokenAndMember": "Token: {{token}} · với tư cách {{member}}",
+    "noSummary": "Chạy công cụ {{tool}}",
+    "unknownApp": "Một ứng dụng AI",
+    "timeLeft": "còn lại để trả lời. Nếu không trả lời, yêu cầu sẽ bị từ chối.",
+    "timeLeftHint": "Thời gian còn lại trước khi yêu cầu bị từ chối",
+    "timeLeftSr": "Còn {{time}} trước khi yêu cầu bị từ chối",
+    "secondsLeftAnnounce": "Còn {{seconds}} giây để trả lời yêu cầu từ AI",
+    "showDetails": "Hiện chi tiết",
+    "hideDetails": "Ẩn chi tiết",
+    "tool": "Công cụ",
+    "token": "Token",
+    "argsLabel": "Chi tiết yêu cầu",
+    "noArgs": "Yêu cầu này không có chi tiết bổ sung.",
+    "redactedNote": "Mật khẩu và các bí mật khác được ẩn ở đây.",
+    "deny": "Từ chối",
+    "allowHour": "Cho phép trong 1 giờ",
+    "allowHourHint": "Không hỏi lại loại thao tác này từ {{token}} trong một giờ tới.",
+    "allowOnce": "Cho phép một lần",
+    "footnote": "SoftGlaze hỏi ngay trong ứng dụng, bất kể cài đặt riêng của ứng dụng AI. Mọi câu trả lời đều được ghi lại trong Hoạt động.",
+    "later": "Quyết định sau (sẽ bị từ chối khi hết giờ)",
+    "respondError": "Câu trả lời của bạn chưa được lưu: {{message}}",
+    "waitingChip_one": "{{count}} yêu cầu từ AI đang chờ",
+    "waitingChip_other": "{{count}} yêu cầu từ AI đang chờ",
+    "timedOut": "Yêu cầu từ {{app}} đã hết giờ và bị từ chối.",
+    "gone": "Yêu cầu đó đã được trả lời hoặc đã bị hủy."
+  },
+  "approvals": {
+    "intro": "Mọi thao tác thay đổi dữ liệu đều chờ ở đây cho đến khi bạn trả lời. Yêu cầu không được trả lời sẽ bị từ chối sau 2 phút. Yêu cầu cũng hiện lên ở bất kỳ trang nào.",
+    "changeRules": "Đổi thời điểm SoftGlaze hỏi",
+    "emptyTitle": "Không có gì đang chờ bạn",
+    "emptyBody": "Khi một ứng dụng AI muốn thay đổi điều gì đó, yêu cầu sẽ hiện ở đây và dưới dạng cửa sổ bật lên ở bất kỳ trang nào.",
+    "listLabel": "Yêu cầu đang chờ bạn",
+    "meta": "{{app}} · token {{token}} · {{when}}",
+    "actsAs": "với tư cách {{member}}"
+  },
+  "activity": {
+    "search": "Tìm công cụ, yêu cầu hoặc token",
+    "outcome": "Kết quả",
+    "all": "Tất cả",
+    "outcomes": {
+      "ok": "Ổn",
+      "denied": "Bị từ chối",
+      "error": "Lỗi",
+      "pending": "Đang chờ"
+    },
+    "app": "Ứng dụng",
+    "allApps": "Tất cả ứng dụng",
+    "loadError": "Không tải được hoạt động: {{message}}",
+    "noMatchTitle": "Không có gì khớp bộ lọc",
+    "noMatchBody": "Hãy thử kết quả, ứng dụng hoặc từ khóa khác.",
+    "emptyTitle": "Chưa có hoạt động AI nào",
+    "emptyBody": "Mọi việc ứng dụng AI làm qua SoftGlaze đều được liệt kê ở đây: nó yêu cầu gì, bạn trả lời thế nào và kết quả ra sao.",
+    "caption": "Hoạt động AI",
+    "colTime": "Thời gian",
+    "colApp": "Ứng dụng và token",
+    "colTool": "Công cụ",
+    "colSummary": "Điều đã xảy ra",
+    "colOutcome": "Kết quả",
+    "colDuration": "Thời lượng",
+    "approval": {
+      "none": "Không cần phê duyệt",
+      "asked": "Đã hỏi bạn",
+      "pre-approved": "Được phê duyệt trước",
+      "allow-once": "Cho phép một lần",
+      "allow-hour": "Bạn đã cho phép trong 1 giờ",
+      "hour-grant": "Được phép trong 1 giờ",
+      "deny": "Bạn đã từ chối",
+      "timeout": "Không có trả lời trong 2 phút",
+      "cancelled": "Đã dừng bởi Dừng toàn bộ AI",
+      "started-by-this-token": "Hồ sơ do ứng dụng này mở",
+      "developer-token": "Token API cho nhà phát triển"
+    },
+    "pageEmpty": "Không còn mục nào.",
+    "runId": "Lượt chạy",
+    "pageInfo": "Trang {{page}} · {{size}} mục mỗi trang",
+    "newer": "Mới hơn",
+    "older": "Cũ hơn"
+  },
+  "memory": {
+    "title": "Ghi nhớ không gian làm việc",
+    "description": "Ghi chú mà mọi ứng dụng AI đọc trước khi bắt đầu: cách bạn đặt tên, mỗi nhóm dùng để làm gì, quy tắc proxy, giờ làm việc và những điều không bao giờ được làm. Markdown thuần.",
+    "updated": "Đã lưu {{when}}",
+    "loadError": "Không tải được ghi nhớ: {{message}}",
+    "editorLabel": "Ghi nhớ không gian làm việc (Markdown)",
+    "placeholder": "Viết ghi chú cho ứng dụng AI ở đây, bằng Markdown.",
+    "usage": "{{used}} KB / {{limit}} KB · {{chars}} ký tự",
+    "over": "Đã vượt giới hạn. Hãy rút ngắn để lưu.",
+    "discard": "Bỏ thay đổi",
+    "reset": "Đặt lại mặc định",
+    "unsaved": "Thay đổi chưa lưu",
+    "tip": "Mẹo: nhấn Ctrl+S để lưu. Hãy viết ngắn gọn và cụ thể: ứng dụng AI đọc toàn bộ mỗi lần.",
+    "guidesTitle": "Hướng dẫn có sẵn",
+    "guidesDescription": "SoftGlaze cũng gửi các hướng dẫn này cho mọi ứng dụng AI. Chúng chỉ đọc.",
+    "resetTitle": "Đặt lại ghi nhớ về mặc định?",
+    "resetBody": "Ghi chú của bạn sẽ được thay bằng mẫu của SoftGlaze. Không thể hoàn tác.",
+    "guides": {
+      "howItWorks": {
+        "title": "SoftGlaze hoạt động thế nào",
+        "body": "Hồ sơ, dấu vân tay, proxy, nhóm, phiên, macro và giới hạn gói, và cách dùng tốt các công cụ."
+      },
+      "acceptableUse": {
+        "title": "Sử dụng được chấp nhận",
+        "body": "SoftGlaze được và không được dùng vào việc gì. Ứng dụng AI được yêu cầu từ chối mọi việc bị nghiêm cấm."
+      }
+    },
+    "readGuide": "Đọc hướng dẫn",
+    "hideGuide": "Ẩn",
+    "guideReadOnly": "Chỉ đọc. SoftGlaze luôn cập nhật nội dung này."
+  },
+  "prompts": {
+    "loadError": "Không tải được prompt: {{message}}",
+    "emptyTitle": "Chưa có prompt nào",
+    "emptyBody": "Các prompt có sẵn sẽ hiện ở đây khi máy chủ AI khả dụng.",
+    "search": "Tìm prompt",
+    "listLabel": "Prompt",
+    "noMatch": "Không có prompt nào khớp.",
+    "inClaudeCode": "Trong Claude Code:",
+    "arguments": "Thông tin bạn điền",
+    "noArguments": "Prompt này không cần thông tin.",
+    "argName": "Tên",
+    "argRequired": "Bắt buộc",
+    "argDescription": "Ý nghĩa",
+    "required": "Bắt buộc",
+    "optional": "Không bắt buộc",
+    "text": "Nội dung prompt",
+    "howTitle": "Cách dùng prompt",
+    "howIntro": "Prompt là các tác vụ có sẵn. Ứng dụng AI điền thông tin và thực hiện chúng bằng SoftGlaze.",
+    "howClaudeCode": "gõ / và chọn một prompt softglaze.",
+    "howClaudeDesktop": "bấm + bên dưới ô trò chuyện và tìm SoftGlaze.",
+    "howVsCode": "gõ / trong Copilot Chat và chọn một prompt SoftGlaze.",
+    "howCursor": "nếu prompt không có trong danh sách, hãy sao chép văn bản bên dưới.",
+    "howOther": "Ứng dụng bất kỳ: sao chép nội dung prompt, dán vào khung trò chuyện và điền thông tin."
+  },
+  "settings": {
+    "loadError": "Không tải được cài đặt: {{message}}",
+    "ownerOnly": "Chỉ Chủ sở hữu",
+    "ownerOnlyHint": "Chỉ Chủ sở hữu không gian làm việc mới đổi được mục này.",
+    "remove": "Gỡ {{value}}",
+    "approvals": {
+      "title": "Khi nào SoftGlaze hỏi bạn",
+      "description": "SoftGlaze hỏi ngay trong ứng dụng trước khi một ứng dụng AI làm gì đó, bất kể cài đặt riêng của ứng dụng AI.",
+      "read": {
+        "title": "Công cụ chỉ đọc",
+        "body": "Xem hồ sơ, proxy, nhóm và hoạt động."
+      },
+      "operate": {
+        "title": "Công cụ vận hành",
+        "body": "Tạo và mở hồ sơ, chạy macro, thao tác trong trang."
+      },
+      "full": {
+        "title": "Công cụ toàn quyền",
+        "body": "Công cụ chuyên gia, chỉ khi Chế độ chuyên gia bật."
+      },
+      "alwaysAsk": "Một số thao tác luôn hỏi mỗi lần, như mở hoặc dừng nhiều hồ sơ cùng lúc, và công cụ chuyên gia."
+    },
+    "modes": {
+      "never": "Không bao giờ hỏi",
+      "ask-hour": "Hỏi mỗi giờ một lần",
+      "ask-always": "Hỏi mỗi lần"
+    },
+    "domains": {
+      "title": "Trang web AI được làm việc",
+      "description": "Công cụ trang (mở trang, bấm, nhập, đọc văn bản) chỉ hoạt động trên các trang web trong danh sách này và tên miền con của chúng.",
+      "placeholder": "example.com",
+      "invalid": "Hãy nhập tên trang web như example.com.",
+      "empty": "Chưa có trang nào. Công cụ trang có thể mở mọi trang web, và bạn vẫn được hỏi trước.",
+      "add": "Thêm trang"
+    },
+    "hosts": {
+      "title": "Tên máy chủ được phép thêm",
+      "description": "Máy chủ AI chỉ trả lời các yêu cầu gửi đến 127.0.0.1. Với n8n hoặc công cụ khác chạy trong Docker, hãy thêm host.docker.internal.",
+      "invalid": "Hãy nhập tên máy chủ như host.docker.internal, không kèm cổng hay đường dẫn.",
+      "empty": "Không có. Chỉ cho phép 127.0.0.1.",
+      "add": "Thêm máy chủ"
+    },
+    "expert": {
+      "title": "Chế độ chuyên gia",
+      "description": "Cho phép ứng dụng AI tiếp quản một hồ sơ đang chạy bằng Playwright, Puppeteer hoặc Chrome DevTools.",
+      "warning": "Có thể bị nhận ra. Công cụ bên ngoài điều khiển trình duyệt theo cách trang web nhận biết được, nên hồ sơ có thể bị gắn cờ hoặc bị chặn. Mặc định tắt. Chỉ Chủ sở hữu.",
+      "switch": "Chế độ chuyên gia",
+      "isOn": "Bật. Ứng dụng AI có token Toàn quyền có thể xin tiếp quản hồ sơ đang chạy. Mỗi lần đều hỏi bạn.",
+      "isOff": "Tắt. Không ứng dụng AI nào tiếp quản được hồ sơ đang chạy.",
+      "confirmTitle": "Bật Chế độ chuyên gia?",
+      "confirmBody": "Khi đó ứng dụng AI có token Toàn quyền có thể xin điều khiển trực tiếp hồ sơ đang chạy. Trang web có thể nhận ra điều này, và tài khoản trong các hồ sơ đó có thể bị gắn cờ.",
+      "confirm": "Bật",
+      "ack": "Tôi hiểu rằng điều này có thể bị nhận ra và khiến hồ sơ bị gắn cờ."
+    },
+    "port": {
+      "title": "Cổng máy chủ",
+      "description": "Ứng dụng AI kết nối đến http://127.0.0.1 qua cổng này.",
+      "label": "Cổng",
+      "invalid": "Hãy dùng số từ {{min}} đến {{max}}.",
+      "hint": "Sau khi đổi, hãy cập nhật địa chỉ trong mọi ứng dụng AI đã kết nối. Thẻ Kết nối hiện thiết lập mới."
+    }
+  }
+}

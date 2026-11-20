@@ -1,0 +1,330 @@
+{
+  "header": {
+    "eyebrow": "Team",
+    "title": "Mitglieder",
+    "manageCount_one": "{{count}} Mitglied, das Sie verwalten",
+    "manageCount_other": "{{count}} Mitglieder, die Sie verwalten",
+    "workspaceStats": "{{profiles}} Profile · {{proxies}} Proxys im Arbeitsbereich"
+  },
+  "tabs": {
+    "members": "Mitglieder",
+    "activity": "Aktivität",
+    "licenses": "Lizenzen"
+  },
+  "memberCount_one": "{{count}} Mitglied",
+  "memberCount_other": "{{count}} Mitglieder",
+  "roles": {
+    "SUPER_ADMIN": "Super-Admin",
+    "OWNER": "Inhaber",
+    "ADMIN": "Admin",
+    "MANAGER": "Manager",
+    "OPERATOR": "Operator"
+  },
+  "roleDesc": {
+    "OWNER": "Volle Kontrolle, inklusive Mitglieder und Tresor.",
+    "ADMIN": "Verwaltet Profile, Proxys, Gruppen und die Manager/Operatoren, die er anlegt.",
+    "MANAGER": "Erstellt, bearbeitet und startet Profile und fügt Operatoren hinzu.",
+    "OPERATOR": "Startet und nutzt nur zugewiesene Profile."
+  },
+  "actionCategories": {
+    "Profiles": "Profile",
+    "Proxies": "Proxys",
+    "Automation": "Automatisierung",
+    "Workspace": "Arbeitsbereich",
+    "Team": "Team"
+  },
+  "actionLabels": {
+    "profiles_launch": "Profile starten",
+    "profiles_create": "Profile erstellen",
+    "profiles_edit": "Profile bearbeiten",
+    "profiles_export": "Profile exportieren",
+    "profiles_share": "Profile mit Mitgliedern teilen",
+    "profiles_delete": "Profile löschen (in den Papierkorb)",
+    "profiles_purge": "Profile endgültig löschen",
+    "proxies_manage": "Proxys hinzufügen / bearbeiten / löschen",
+    "proxies_reveal": "Proxy-Zugangsdaten im Klartext anzeigen",
+    "automation_run": "Automatisierung / Makros ausführen",
+    "extensions_manage": "Team-Erweiterungen verwalten",
+    "settings_manage": "Einstellungen des Arbeitsbereichs ändern",
+    "vault_manage": "Identitätstresor verwalten",
+    "members_manage": "Teammitglieder verwalten",
+    "members_delete": "Mitglieder löschen / Rollen ändern"
+  },
+  "features": {
+    "dashboard": "Dashboard (nur Seite)",
+    "profiles": "Profile",
+    "groups": "Gruppen",
+    "proxies": "Proxy-Pool",
+    "browsers": "Browser",
+    "extensions": "Erweiterungen",
+    "batchImport": "Serienimport",
+    "trash": "Papierkorb",
+    "members": "Mitglieder",
+    "settings": "Einstellungen"
+  },
+  "caps": {
+    "maxAdmins": "Admins",
+    "maxManagers": "Manager",
+    "maxOperators": "Operatoren"
+  },
+  "labels": {
+    "profiles": "Profile",
+    "proxies": "Proxys",
+    "browsers": "Browser"
+  },
+  "status": {
+    "active": "Aktiv",
+    "suspended": "Suspendiert",
+    "banned": "Gesperrt"
+  },
+  "actions": {
+    "inviteMember": "Mitglied einladen",
+    "inviteTeamMember": "Teammitglied einladen",
+    "remove": "Entfernen",
+    "removeMember": "Mitglied entfernen",
+    "assignProfiles": "Profile zuweisen",
+    "cancel": "Abbrechen",
+    "close": "Schließen",
+    "clear": "Leeren",
+    "save": "Speichern",
+    "createInvite": "Einladung erstellen",
+    "done": "Fertig",
+    "copy": "Kopieren",
+    "copied": "Kopiert"
+  },
+  "empty": {
+    "title": "Noch keine Mitglieder",
+    "canCreate": "Laden Sie Ihr erstes Teammitglied ein, um Arbeit zu delegieren.",
+    "noMembers": "Ihnen sind noch keine Mitglieder unterstellt."
+  },
+  "member": {
+    "you": "Sie",
+    "noEmail": "Keine E-Mail",
+    "invitePending": "Einladung offen",
+    "loginSet": "Login eingerichtet",
+    "subMembers_one": "{{count}} Untermitglied",
+    "subMembers_other": "{{count}} Untermitglieder"
+  },
+  "time": {
+    "neverActive": "Nie aktiv",
+    "activeJustNow": "Gerade aktiv",
+    "activeMinutes": "Aktiv vor {{count}} Min.",
+    "activeHours": "Aktiv vor {{count}} Std.",
+    "activeDays": "Aktiv vor {{count}} T."
+  },
+  "errors": {
+    "loadMembers": "Mitglieder konnten nicht geladen werden.",
+    "changeStatus": "Status konnte nicht geändert werden.",
+    "nameRequired": "Name ist erforderlich.",
+    "saveMember": "Mitglied konnte nicht gespeichert werden.",
+    "resetPerms": "Berechtigungen konnten nicht zurückgesetzt werden.",
+    "removeMember": "Mitglied konnte nicht entfernt werden.",
+    "loadProfiles": "Profile konnten nicht geladen werden.",
+    "reassignProfiles": "Profile konnten nicht neu zugewiesen werden."
+  },
+  "confirm": {
+    "revertPerms": "Limits und Funktionen von {{name}} auf die Standardwerte der Rolle zurücksetzen?"
+  },
+  "modal": {
+    "inviteTitle": "Mitglied einladen",
+    "editTitle": "{{name}} bearbeiten",
+    "noCreatableRoles": "Sie dürfen keine Untermitglieder anlegen.",
+    "invitePendingCode": "Einladung offen – Code"
+  },
+  "fields": {
+    "name": "Name",
+    "namePlaceholder": "Vollständiger Name",
+    "email": "E-Mail",
+    "role": "Rolle",
+    "color": "Farbe",
+    "instructions": "Anweisungen",
+    "optional": "(optional)",
+    "instructionsPlaceholder": "Wofür dieses Mitglied zuständig ist…"
+  },
+  "invite": {
+    "createdTitle": "Einladung erstellt",
+    "sharePrefix": "Teilen Sie diesen Code mit ",
+    "shareSuffix": ". Die Person öffnet SoftGlaze Browser → „Einladungscode?“, gibt ihn ein und legt ihr Passwort fest.",
+    "code": "Einladungscode",
+    "link": "Einladungslink",
+    "emailedTo": "Per E-Mail an {{email}} gesendet.",
+    "emailNotSent": "E-Mail nicht gesendet (SMTP unter Einstellungen → E-Mail einrichten). Teilen Sie den Code manuell."
+  },
+  "alloc": {
+    "heading_one": "Zugeteilt an {{count}} Untermitglied",
+    "heading_other": "Zugeteilt an {{count}} Untermitglieder",
+    "allocated": "{{allocated}} von {{cap}} zugeteilt",
+    "left": "· {{remaining}} übrig"
+  },
+  "perms": {
+    "title": "Berechtigungen & Limits",
+    "resourceLimits": "Ressourcenlimits",
+    "subMemberCaps": "Limits für Untermitglieder",
+    "visibleFeatures": "Sichtbare Funktionen",
+    "actionPermissions": "Aktionsberechtigungen",
+    "actionHint": "Für diese Rolle standardmäßig an. Schalten Sie eine aus, um sie nur diesem Mitglied zu entziehen.",
+    "revertDefaults": "Auf Rollenstandard zurücksetzen",
+    "max": "(max. {{max}})",
+    "canInvite": {
+      "canCreateAdmins": "Darf Admins einladen",
+      "canCreateManagers": "Darf Manager einladen",
+      "canCreateOperators": "Darf Operatoren einladen"
+    },
+    "featuresHint": "Eine ausgeschaltete Funktion ist in der Seitenleiste verborgen, und ihre Aktionen werden überall abgelehnt (zum Beispiel Proxys hinzufügen, aus dem Papierkorb wiederherstellen oder Browser herunterladen). Listen, die andere Seiten brauchen, etwa die Auswahl eines Proxys oder einer Gruppe im Profil-Editor, laden weiterhin."
+  },
+  "accountStatus": {
+    "title": "Kontostatus",
+    "reason": "Grund: {{reason}}",
+    "unban": "Mitglied entsperren",
+    "banHint": "Änderungen an den Feldern oben behalten die Sperre – nutzen Sie „Entsperren“, um den Zugriff wiederherzustellen.",
+    "suspendToggle": "Dieses Mitglied suspendieren (blockiert die Anmeldung)",
+    "ban": "Mitglied sperren"
+  },
+  "delete": {
+    "title": "{{name}} entfernen",
+    "warnPrefix": "Dies entfernt ",
+    "warnMiddle": " und verschiebt alle Untermitglieder zu Ihnen. Wählen Sie, was mit den Daten passiert –",
+    "profilesWord_one": "Profil",
+    "profilesWord_other": "Profile",
+    "proxiesWord_one": "Proxy",
+    "proxiesWord_other": "Proxys",
+    "options": {
+      "reassignMe": {
+        "label": "Behalten & mir zuweisen",
+        "desc": "Sie werden Inhaber seiner Profile und Proxys."
+      },
+      "reassignOther": {
+        "label": "Behalten & einem anderen Mitglied zuweisen",
+        "desc": "Daten an ein bestimmtes Teammitglied übergeben."
+      },
+      "delete": {
+        "label": "Alle zugehörigen Daten löschen",
+        "desc": "Proxys & Proxy-Gruppen werden gelöscht; Profile kommen in den Papierkorb (wiederherstellbar)."
+      }
+    },
+    "pickTarget": "Wählen Sie ein Mitglied, das die Daten erhält.",
+    "reassignTo": "Neu zuweisen an",
+    "noOtherMembers": "Keine anderen Mitglieder verfügbar – wählen Sie eine andere Option."
+  },
+  "assign": {
+    "title": "Profile zuweisen · {{name}}",
+    "searchPlaceholder": "Profile suchen",
+    "noProfiles": "Keine Profile gefunden.",
+    "memberFallback": "Mitglied #{{id}}",
+    "updated": "Aktualisiert – {{assigned}} zugewiesen, {{unassigned}} entfernt.",
+    "save": "Zuweisung speichern"
+  },
+  "activity": {
+    "title": "Team-Aktivität",
+    "subtitle": "wer was in diesem Arbeitsbereich getan hat",
+    "exported": "{{count}} Zeile(n) exportiert → {{path}}",
+    "exportError": "Das Aktivitätsprotokoll konnte nicht exportiert werden.",
+    "filterByMember": "Nach Mitglied filtern",
+    "filterByAction": "Nach Aktion filtern",
+    "allMembers": "Alle Mitglieder",
+    "allActions": "Alle Aktionen",
+    "fromDate": "Von Datum",
+    "toDate": "Bis Datum",
+    "empty": "Noch keine Aktivität erfasst.",
+    "noMatch": "Keine Aktivität passt zu diesen Filtern.",
+    "enterpriseFeature": "Enterprise-Funktion",
+    "seeBilling": "Zur Abrechnung",
+    "exportEnterpriseOnly": "Der Export des Audit-Protokolls (CSV / JSON) ist eine Enterprise-Funktion. Upgraden Sie auf der Seite „Abrechnung“, um das Aktivitätsprotokoll zu exportieren."
+  },
+  "activityActions": {
+    "launched": "gestartet",
+    "stopped": "gestoppt",
+    "created": "erstellt",
+    "edited": "bearbeitet",
+    "deleted": "gelöscht",
+    "restored": "wiederhergestellt",
+    "imported": "importiert",
+    "assigned": "zugewiesen",
+    "reassigned": "neu zugewiesen",
+    "parallel_run": "Parallellauf",
+    "macro_run": "Makrolauf",
+    "member_added": "Mitglied hinzugefügt",
+    "member_edited": "Mitglied bearbeitet",
+    "member_removed": "Mitglied entfernt",
+    "permissions_changed": "Berechtigungen geändert",
+    "status_changed": "Status geändert",
+    "signed_in": "angemeldet",
+    "signed_out": "abgemeldet",
+    "invite_accepted": "Einladung angenommen",
+    "proxies_copied_for_extension": "Proxys für Erweiterung kopiert",
+    "devtools_address_shown": "DevTools-Adresse angezeigt"
+  },
+  "feedTime": {
+    "justNow": "gerade eben",
+    "minutes": "vor {{count}} Min.",
+    "hours": "vor {{count}} Std.",
+    "days": "vor {{count}} T."
+  },
+  "license": {
+    "intro": "Abostatus pro Inhaber-Arbeitsbereich. Lokal und nach bestem Bemühen – ein entschlossener Nutzer kann die lokale DB oder die Uhr dennoch ändern; eine dauerhafte Durchsetzung braucht das Lizenz-Backend.",
+    "noOwners": "Noch keine Inhaber-Arbeitsbereiche.",
+    "editTitle": "Lizenz · {{name}}",
+    "setState": "Status setzen",
+    "grantPlan": "Tarif gewähren",
+    "lifecycle": "Lebenszyklus",
+    "state": {
+      "paid": "Bezahlt",
+      "trialing": "Testphase",
+      "grace": "Kulanz",
+      "banned": "Gesperrt"
+    },
+    "type": {
+      "trial": "Test",
+      "paid": "bezahlt"
+    },
+    "tier": {
+      "pro": "pro",
+      "enterprise": "enterprise"
+    },
+    "fields": {
+      "type": "Typ",
+      "tier": "Stufe",
+      "expiry": "Ablauf",
+      "plan": "Tarif",
+      "months": "Monate"
+    },
+    "detail": {
+      "trial": "Noch {{count}} Testtag(e)",
+      "grace": "Kulanz: noch {{count}} Tag(e)",
+      "paid": "Bezahlt bis {{date}}",
+      "clockAnomaly": "⚠ Uhr-Unstimmigkeit"
+    },
+    "actions": {
+      "grantMonth": "1 Monat gewähren",
+      "extend7": "+7 Tage",
+      "startTrial": "Testphase starten",
+      "resetTrial": "Testphase zurücksetzen",
+      "edit": "Bearbeiten",
+      "terminate": "Beenden",
+      "unblock": "Entsperren",
+      "block": "Sperren",
+      "saveState": "Status speichern",
+      "grantPlan": "Tarif gewähren",
+      "startFreeTrial": "Kostenlose Testphase starten",
+      "terminateNow": "Jetzt beenden"
+    },
+    "confirm": {
+      "terminate": "Abonnement von {{name}} jetzt beenden? Die Profile werden gesperrt, bis Sie wieder Zugriff gewähren.",
+      "terminateModal": "Dieses Abonnement jetzt beenden? Profile werden gesperrt, bis Sie wieder Zugriff gewähren.",
+      "resetTrial": "Testphase von {{name}} zurücksetzen? Die Testphase beginnt von vorn, und der aktuelle Lizenzstatus wird ersetzt.",
+      "block": "{{name}} sperren? Die Person und alle Untermitglieder werden abgemeldet und können die App nicht nutzen, bis Sie sie entsperren."
+    },
+    "errors": {
+      "load": "Lizenzen konnten nicht geladen werden.",
+      "action": "Aktion fehlgeschlagen."
+    }
+  },
+  "seats": {
+    "usage": "{{used}} von {{total}} Mitgliedern",
+    "fullNotice": "Alle {{total}} Teamplätze Ihres Tarifs sind belegt, daher kann niemand Neues hinzugefügt werden. Suspendieren Sie ein Mitglied, um einen Platz freizugeben, oder wechseln Sie zu Enterprise für bis zu {{enterpriseSeats}} Teammitglieder.",
+    "fullNoticeTop": "Alle {{total}} Teamplätze Ihres Tarifs sind belegt, daher kann niemand Neues hinzugefügt werden. Suspendieren Sie ein Mitglied, um einen Platz freizugeben.",
+    "overNotice": "Dieses Team hat {{used}} Mitglieder, Ihr Tarif enthält {{total}}. Alle behalten den Zugriff; neue Mitglieder können hinzugefügt werden, sobald das Team unter dem Limit liegt.",
+    "seeBilling": "Zur Abrechnung",
+    "limitError": "Alle Teamplätze Ihres Tarifs sind belegt. Suspendieren Sie ein Mitglied, um einen Platz freizugeben, oder sehen Sie sich unter „Abrechnung“ Ihre Tarifoptionen an."
+  }
+}

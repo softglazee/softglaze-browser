@@ -1,0 +1,635 @@
+{
+  "title": "SoftGlaze AI",
+  "beta": "Beta",
+  "description": "讓 Claude、Cursor 和 ChatGPT 等 AI 應用程式操作你的設定檔。由你決定更改需要核准的頻率，所有操作都有記錄。",
+  "loading": "正在載入 SoftGlaze AI…",
+  "refresh": "重新整理",
+  "retry": "重試",
+  "learnMore": "閱讀指南",
+  "opensInBrowser": "（在瀏覽器中開啟）",
+  "copy": "複製",
+  "copied": "已複製",
+  "copyFailed": "無法複製。請選中文字後手動複製。",
+  "cancel": "取消",
+  "close": "關閉",
+  "save": "儲存",
+  "saving": "正在儲存…",
+  "saved": "已儲存",
+  "saveFailed": "未儲存",
+  "never": "從未",
+  "unknown": "未知",
+  "roles": {
+    "OWNER": "擁有者",
+    "ADMIN": "管理員",
+    "MANAGER": "經理",
+    "OPERATOR": "操作員",
+    "SUPER_ADMIN": "超級管理員"
+  },
+  "states": {
+    "unavailableTitle": "此版本不提供 SoftGlaze AI",
+    "unavailableBody": "此版本的 SoftGlaze Browser 尚未包含 AI 伺服器，它將隨更新提供。你的工作區一切正常。",
+    "forbiddenTitle": "只有擁有者或管理員可以管理 SoftGlaze AI",
+    "forbiddenBody": "請向工作區擁有者申請存取權限。當 AI 應用程式使用以你的身分操作的權杖時，其請求仍會在任意頁面跳出，由你允許或拒絕。",
+    "errorTitle": "SoftGlaze AI 無法載入"
+  },
+  "header": {
+    "switchLabel": "SoftGlaze AI 伺服器",
+    "switchShort": "AI 伺服器",
+    "on": "開",
+    "off": "關",
+    "turningOn": "正在開啟…",
+    "turningOff": "正在關閉…",
+    "stopAll": "停止所有 AI",
+    "toggleError": "無法更改 AI 伺服器狀態：{{message}}"
+  },
+  "status": {
+    "server": "AI 伺服器",
+    "running": "執行中",
+    "error": "未執行",
+    "off": "關閉",
+    "offHint": "開啟後 AI 應用程式才能連線。",
+    "errorHint": "已開啟但未執行：{{message}}",
+    "errorHintNoMessage": "已開啟但未執行。連接埠可能已被佔用，請在「設定」中更改。",
+    "apps": "已連線的應用程式",
+    "appsNone": "還沒有已連線的應用程式",
+    "appSeen": "{{name}} · {{when}}",
+    "appsMore_one": "以及另外 {{count}} 個",
+    "appsMore_other": "以及另外 {{count}} 個",
+    "waiting": "等待你處理",
+    "waitingNone": "沒有待處理的請求",
+    "waitingSome_one": "{{count}} 個請求待處理",
+    "waitingSome_other": "{{count}} 個請求待處理",
+    "openApprovals": "開啟「核准」",
+    "sessions": "執行中的 AI 工作階段",
+    "sessionsHint": "由 AI 應用程式啟動"
+  },
+  "tabs": {
+    "label": "SoftGlaze AI 分割槽",
+    "connect": "連線",
+    "tokens": "權杖",
+    "approvals": "核准",
+    "activity": "活動",
+    "memory": "記憶",
+    "prompts": "提示詞",
+    "settings": "設定",
+    "waiting": "待處理"
+  },
+  "stop": {
+    "title": "停止所有 AI？",
+    "body": "當 AI 應用程式正在執行你意料之外的操作時，請使用此功能。",
+    "point1": "AI 應用程式啟動的所有執行和設定檔都會立即停止。",
+    "point2": "所有已連線的 AI 應用程式都會斷開連線，正在進行的呼叫會被取消。",
+    "point3": "所有等待你處理的請求都會被拒絕。",
+    "point4": "SoftGlaze AI 會被關閉。權杖仍然有效；準備好後可以重新開啟。",
+    "confirm": "停止所有 AI",
+    "error": "無法全部停止：{{message}}",
+    "result": "完成。已停止的執行：{{runs}}。已停止的設定檔：{{profiles}}。已取消的呼叫：{{calls}}。已結束的工作階段：{{sessions}}。已拒絕的請求：{{approvals}}。",
+    "nowOff": "SoftGlaze AI 已關閉。在你重新開啟之前，AI 應用程式無法連線。",
+    "turnOn": "開啟"
+  },
+  "start": {
+    "title": "三步即可開始",
+    "step1": "開啟 AI 伺服器",
+    "step2": "為你的 AI 應用程式建立權杖",
+    "step3": "連線你的 AI 應用程式",
+    "done": "完成",
+    "turnOn": "開啟"
+  },
+  "connect": {
+    "loadError": "無法載入 AI 應用程式的設定：{{message}}",
+    "empty": "暫無可顯示的設定",
+    "emptyOn": "AI 伺服器未返回任何設定。請嘗試重新整理。",
+    "emptyBody": "開啟 AI 伺服器後即可檢視如何連線各個應用程式。",
+    "appsLabel": "AI 應用程式",
+    "guide": "完整指南",
+    "appDocs": "應用程式自己的說明文件",
+    "where": "填寫位置",
+    "steps": "連線方法",
+    "kind": {
+      "command": "指令",
+      "json": "JSON",
+      "toml": "TOML",
+      "n8n": "工作流程"
+    },
+    "snippet": "{{app}} 的設定",
+    "placeholderHint": "<YOUR_TOKEN> 處填寫你的權杖。權杖只在建立時顯示一次。",
+    "noSnippet": "此應用程式沒有現成的設定，請按照上方步驟操作。",
+    "createToken": "為此應用程式建立權杖",
+    "createTokenHint": "為每個應用程式單獨建立權杖。這樣你可以看到每個應用程式的操作，並單獨關閉某一個而不影響其他應用程式。",
+    "installGuide": "安裝指南",
+    "mcpb": {
+      "title": "在 Claude Desktop 中安裝：下載 softglaze-browser.mcpb",
+      "download": "下載 softglaze-browser.mcpb",
+      "body": "按兩下該檔案，或在 Claude Desktop 中開啟 Settings > Extensions > Advanced settings > Install Extension。Claude Desktop 會詢問你的權杖和連接埠；請使用此頁面上顯示的連接埠。Claude Desktop 聊天和 Cowork 都會使用它。"
+    },
+    "claudeCode": {
+      "pluginTitle": "安裝 SoftGlaze 外掛程式（推薦）",
+      "pluginBody": "在 Claude Code 中逐條執行這些指令。softglaze-browser 會新增技能；softglaze-browser-connector 會新增 SoftGlaze 工具，並詢問你的權杖和連接埠。連接器需要 Node.js 18 或更高版本。",
+      "desktopNote": "Claude Desktop 聊天和 Cowork 改用 softglaze-browser.mcpb（參見 Claude Desktop）。",
+      "manualTitle": "或者自行新增伺服器（無需 Node.js）"
+    },
+    "envVar": {
+      "title": "為 Codex 儲存權杖",
+      "body": "Codex 從名為 SOFTGLAZE_TOKEN 的環境變數中讀取權杖。使用你的權杖執行一次此指令，然後開啟新的終端機。",
+      "windows": "Windows（命令提示字元或 PowerShell）",
+      "unix": "macOS 或 Linux（新增到你的 shell 設定檔中）"
+    },
+    "bridge": {
+      "title": "適用於啟動本機程式的應用程式的橋接程式",
+      "body": "有些應用程式無法連線網址，它們會改為啟動 SoftGlaze 橋接程式，由橋接程式將所有內容轉發給這台電腦上的 AI 伺服器。使用相同的權杖和相同的核准。",
+      "unavailable": "此版本不包含橋接程式。",
+      "mcpb": "Claude Desktop 的一鍵安裝檔案",
+      "command": "指令",
+      "args": "參數",
+      "env": "環境變數"
+    },
+    "clients": {
+      "claude-desktop": {
+        "where": "Settings > Developer > Edit Config（claude_desktop_config.json），然後重啟 Claude Desktop。Claude Desktop 透過 stdio 執行本機伺服器，因此這會啟動 SoftGlaze 橋接程式。更簡單的方法：安裝 softglaze-browser.mcpb（{{mcpb}}），它會詢問你的權杖和連接埠，並同樣適用於 Cowork。",
+        "title": "Claude Desktop",
+        "step1": "使用下方按鈕為 Claude Desktop 建立權杖。",
+        "step2": "最簡單的方法：使用下方按鈕下載 softglaze-browser.mcpb，按兩下後在 Claude Desktop 詢問時貼上你的權杖。或者開啟 Settings > Developer > Edit Config，將設定貼上到 claude_desktop_config.json 中，並用你的權杖替換 <YOUR_TOKEN>。",
+        "step2NoMcpb": "開啟 Settings > Developer > Edit Config，將設定貼上到 claude_desktop_config.json 中，並用你的權杖替換 <YOUR_TOKEN>。由於 Claude Desktop 執行本機伺服器，這會啟動 SoftGlaze 橋接程式。",
+        "step3": "如果你編輯了設定檔，請結束並重新開啟 Claude Desktop。SoftGlaze 會顯示在聊天框下方 + 按鈕的 Connectors 中。"
+      },
+      "claude-code": {
+        "where": "不使用外掛程式時：在終端機中執行。新增 --scope user 即可在所有專案中使用 SoftGlaze。請使用外掛程式或此指令，不要兩者都用。",
+        "title": "Claude Code",
+        "step1": "使用下方按鈕為 Claude Code 建立權杖。",
+        "step2": "使用下方指令安裝 SoftGlaze 外掛程式，並在 Claude Code 詢問時貼上你的權杖。或者執行更下方的指令，並用你的權杖替換 <YOUR_TOKEN>。只用其中一種方式，不要兩者都用。",
+        "step3": "在 Claude Code 中輸入 /mcp。SoftGlaze 應顯示為已連線（使用外掛程式時為 plugin:softglaze-browser-connector:softglaze）。"
+      },
+      "cursor": {
+        "where": "~/.cursor/mcp.json（所有專案）或專案中的 .cursor/mcp.json。如需避免將權杖寫入檔案，請使用 \"Bearer ${env:SOFTGLAZE_TOKEN}\"。",
+        "title": "Cursor",
+        "step1": "使用下方按鈕為 Cursor 建立權杖。",
+        "step2": "開啟 ~/.cursor/mcp.json（或某個專案中的 .cursor/mcp.json），貼上設定，並用你的權杖替換 <YOUR_TOKEN>。",
+        "step3": "在 Cursor 的設定中，確認 SoftGlaze 已列出並已開啟。然後讓聊天列出你的 SoftGlaze 設定檔。"
+      },
+      "vscode": {
+        "where": "工作區中的 .vscode/mcp.json，或執行 \"MCP: Open User Configuration\"。VS Code 會詢問一次權杖並安全儲存，因此權杖永遠不會寫在檔案中。",
+        "title": "VS Code（Copilot）",
+        "step1": "使用下方按鈕為 VS Code 建立權杖。",
+        "step2": "將設定新增到工作區的 .vscode/mcp.json 中（或執行 MCP: Open User Configuration）。SoftGlaze 首次啟動時，VS Code 會詢問你的權杖並安全儲存，因此權杖永遠不會寫在檔案中。",
+        "step3": "開啟 Copilot Chat，讓它列出你的 SoftGlaze 設定檔。VS Code 詢問時允許使用該工具。"
+      },
+      "gemini-cli": {
+        "where": "~/.gemini/settings.json（合併到檔案中），或執行：gemini mcp add --transport http -s user --header \"Authorization: Bearer <YOUR_TOKEN>\" softglaze {{mcp}}",
+        "title": "Gemini CLI",
+        "step1": "使用下方按鈕為 Gemini CLI 建立權杖。",
+        "step2": "將設定新增到 ~/.gemini/settings.json 的 \"mcpServers\" 中，並用你的權杖替換 <YOUR_TOKEN>。保持 \"trust\" 關閉：SoftGlaze 無論如何都會在每次更改前詢問你。",
+        "step3": "啟動 gemini 並輸入 /mcp。應能看到 SoftGlaze 及其工具。"
+      },
+      "codex": {
+        "where": "~/.codex/config.toml（由 ChatGPT 桌面應用程式、Codex CLI 和 IDE 擴展共用）。請先將環境變數 SOFTGLAZE_TOKEN 設定為你的權杖（Windows：setx SOFTGLAZE_TOKEN \"<YOUR_TOKEN>\"），然後重啟應用程式。",
+        "title": "ChatGPT 桌面版 / Codex",
+        "step1": "使用下方按鈕為 Codex 建立權杖，然後將其儲存到 SOFTGLAZE_TOKEN 環境變數中（指令見下方）。",
+        "step2": "將設定新增到 ~/.codex/config.toml 中。Codex 從 SOFTGLAZE_TOKEN 讀取權杖，因此檔案中永遠不會儲存權杖。",
+        "step3": "開啟新的終端機，啟動 Codex 並輸入 /mcp。應能看到 SoftGlaze。"
+      },
+      "windsurf": {
+        "where": "~/.codeium/windsurf/mcp_config.json，然後重新整理 MCP 伺服器。Devin Desktop（Windsurf 的新名稱）使用 ~/.config/devin/mcp_config.json，並以 \"url\" 和 \"transport\": \"http\" 代替 \"serverUrl\"。",
+        "title": "Windsurf",
+        "step1": "使用下方按鈕為 Windsurf 建立權杖。",
+        "step2": "將設定貼上到 Windsurf 的 MCP 設定檔中（參見「填寫位置」），並用你的權杖替換 <YOUR_TOKEN>。",
+        "step3": "在 Windsurf 中重新整理 MCP 伺服器，並確認已列出 SoftGlaze。"
+      },
+      "cline": {
+        "where": "Cline：MCP Servers > Configure（cline_mcp_settings.json）。",
+        "title": "Cline",
+        "step1": "使用下方按鈕為 Cline 建立權杖。",
+        "step2": "在 Cline 中開啟 MCP Servers > Configure，將設定貼上到 cline_mcp_settings.json 中，並用你的權杖替換 <YOUR_TOKEN>。",
+        "step3": "確認 SoftGlaze 在 Cline 的 MCP Servers 清單中顯示為已連線。"
+      },
+      "n8n": {
+        "where": "在 MCP Client Tool 節點中：SSE Endpoint 按下方填寫，Authentication 選擇「Bearer」，並將你的權杖作為憑據。如果 n8n 執行在 Docker Desktop 中，請使用 host.docker.internal 代替 127.0.0.1，並在 SoftGlaze AI 設定的「額外允許的主機名稱」中新增 host.docker.internal。對於無人值守的工作流程，請使用自動化權杖（預先核准的工具，僅限指定群組）。",
+        "title": "n8n"
+      },
+      "other": {
+        "where": "任何支援帶請求頭的 Streamable HTTP 的 MCP 客戶端。只支援舊版 HTTP+SSE 傳輸的客戶端請使用 SSE URL。只能執行本機指令的客戶端請使用 SoftGlaze 橋接程式（參見 Claude Desktop）。",
+        "title": "其他應用程式",
+        "step1": "使用下方按鈕為該應用程式建立權杖。",
+        "step2": "開啟應用程式的 MCP 設定，新增一個伺服器，填寫此位址和 Authorization 請求頭：Bearer、一個空格，然後是你的權杖。",
+        "step3": "如果該應用程式只能啟動本機程式（stdio），請使用下方的 SoftGlaze 橋接程式，而不是此位址。"
+      },
+      "custom": {
+        "step1": "使用下方按鈕為此應用程式建立權杖。",
+        "step2": "將設定貼上到應用程式儲存 MCP 伺服器的位置，並用你的權杖替換 <YOUR_TOKEN>。",
+        "step3": "重啟應用程式，並確認 SoftGlaze 已列在其 MCP 或工具設定中。"
+      }
+    },
+    "n8n": {
+      "subtitle": "在這台電腦上透過 n8n 工作流程執行 SoftGlaze。",
+      "selfHosted": "n8n 必須在這台電腦上執行（npx 或 Docker）。n8n Cloud 目前還無法存取你的電腦。",
+      "noPort": "開啟 AI 伺服器後即可檢視 n8n 位址。",
+      "a": {
+        "title": "讓 n8n AI Agent 使用 SoftGlaze",
+        "step1": "新增一個 AI Agent 節點，然後新增一個 MCP Client Tool 節點作為它的工具之一。",
+        "step2": "將 SSE Endpoint 設定為下方位址。如果 n8n 執行在 Docker 中，請使用 Docker 位址。",
+        "step3": "將 Authentication 設定為 Bearer 並貼上你的權杖。在 Tools to Include 下選擇 All，或只選擇你需要的工具。",
+        "sse": "SSE 端點（n8n 在這台電腦上）",
+        "sseDocker": "SSE 端點（n8n 在 Docker 中）",
+        "dockerNote": "使用 Docker 時，還需在「設定」分頁的「額外允許的主機名稱」中新增 host.docker.internal。"
+      },
+      "b": {
+        "title": "使用 HTTP Request 節點執行固定步驟",
+        "body": "對於永遠不變的步驟（例如在 9:00 啟動某個設定檔），HTTP Request 節點可以直接呼叫 Local API。請在 Authorization 請求頭中傳送權杖。",
+        "kind": "HTTP Request"
+      },
+      "c": {
+        "title": "為排程工作流程使用自動化權杖",
+        "body": "按排程執行的工作流程沒有人點選「允許」。自動化權杖只預先核准你選擇的工具，僅限你選擇的群組，並有每次呼叫和每小時的上限。其他所有操作仍會詢問。",
+        "create": "建立自動化權杖",
+        "ownerOnly": "只有擁有者可以建立自動化權杖。"
+      }
+    },
+    "devtools": {
+      "title": "透過 Playwright MCP 或 Chrome DevTools MCP 使用設定檔（進階）",
+      "subtitle": "將執行中的 Chromium 設定檔交給外部 DevTools 客戶端。",
+      "ownerOnly": "僅限擁有者",
+      "warning": "網站可以偵測到外部偵錯工具。Playwright MCP 和 Chrome DevTools MCP 會作為第二個 DevTools 客戶端連線併傳送自己的指令，反機器人指令碼可能會注意到這一點。設定檔可能會被標記或攔截。SoftGlaze 自己的頁面工具不會這樣做。在設定檔執行期間，這台電腦上任何擁有下方位址的人都可以控制該設定檔。",
+      "intro": "用於 SoftGlaze 頁面工具無法完成的工作，例如在你自己的網站上進行效能追蹤或檢視網路和控制台記錄，並請使用測試設定檔。這是你在應用程式中的操作，與決定 AI 應用程式可以請求什麼的專家模式無關。",
+      "profile": "執行中的設定檔",
+      "loading": "正在載入執行中的設定檔…",
+      "loadError": "無法載入執行中的設定檔：{{message}}",
+      "choose": "選擇一個執行中的設定檔",
+      "option": "{{name}}（#{{id}}）· Chromium",
+      "optionFirefox": "{{name}}（#{{id}}）· Firefox：Firefox 設定檔沒有 DevTools 端點",
+      "empty": "請先啟動一個 Chromium 設定檔。",
+      "openProfiles": "開啟「設定檔」",
+      "stopped": "此設定檔（{{name}}）已停止，其位址已失效。",
+      "address": "DevTools 位址",
+      "hiddenLabel": "DevTools 位址，點選「顯示」前處於隱藏狀態",
+      "show": "顯示",
+      "showLabel": "顯示 {{name}} 的 DevTools 位址",
+      "hide": "隱藏",
+      "addressNote": "每次啟動設定檔時都會更新。僅在設定檔執行期間、在這台電腦上有效。",
+      "noAddress": "SoftGlaze 未獲得此設定檔的 DevTools 位址。請停止並重新啟動它，然後重試。",
+      "setup": "設定",
+      "toolsLabel": "MCP 伺服器",
+      "clientsLabel": "AI 應用程式",
+      "where": {
+        "claude-code": "在專案資料夾的終端機中執行。位址在每次設定檔啟動時都會變化，因此請先執行 claude mcp remove {{name}}，然後再次執行此指令。",
+        "claude-desktop": "Settings > Developer > Edit Config（claude_desktop_config.json）：將此內容新增到 \"mcpServers\" 下，然後結束並重新開啟 Claude Desktop。每次啟動後請更新位址。",
+        "cursor": "~/.cursor/mcp.json（所有專案）或某個專案中的 .cursor/mcp.json。每次啟動後請更新位址。",
+        "vscode": "工作區中的 .vscode/mcp.json，或執行 MCP: Open User Configuration。每次啟動後請更新位址。"
+      },
+      "snippet": "{{app}} 的 {{tool}} 設定",
+      "pressShow": "點選「顯示」以檢視包含此設定檔位址的設定。",
+      "usageStats": "關閉 Chrome DevTools MCP 使用情況統計",
+      "usageStatsHint": "新增 --no-usage-statistics。否則 Chrome DevTools MCP 會向 Google 傳送使用情況統計。",
+      "footer": "完成後，先關閉 MCP 伺服器，再停止設定檔。",
+      "guide": "指南：Playwright MCP 和 Chrome DevTools MCP"
+    }
+  },
+  "scope": {
+    "read": {
+      "title": "只讀",
+      "body": "可以檢視設定檔、代理、群組和活動。無法更改或啟動任何內容。"
+    },
+    "operate": {
+      "title": "操作",
+      "body": "還可以建立和啟動設定檔、執行巨集以及在頁面內操作。更改仍會按「設定」中的規定先詢問你。請慎重選擇。"
+    },
+    "full": {
+      "title": "完全",
+      "body": "包含「操作」的全部權限，開啟專家模式時還可使用專家工具。僅適用於你完全信任的應用程式。"
+    }
+  },
+  "create": {
+    "title": "建立權杖",
+    "titleFor": "為 {{app}} 建立權杖",
+    "description": "一個權杖供一個 AI 應用程式連線。它以團隊成員的身分操作，只能執行該成員有權執行的操作。",
+    "revealTitle": "你的新權杖",
+    "revealDescription": "請立即將其複製到你的 AI 應用程式中。",
+    "name": "名稱",
+    "nameHint": "註明是哪個應用程式和哪台電腦，便於日後識別。",
+    "namePlaceholder": "我電腦上的 Claude Desktop",
+    "member": "身分",
+    "memberHint": "AI 以該成員的身分工作，擁有該成員的權限和設定檔。",
+    "you": "你",
+    "scope": "可執行的操作",
+    "expiry": "有效期",
+    "expiryNever": "永不過期",
+    "expiryDays_one": "{{count}} 天",
+    "expiryDays_other": "{{count}} 天",
+    "expiryNeverWarn": "永不過期的權杖在你撤銷之前一直有效。",
+    "profiles": "可使用的設定檔",
+    "profilesAll": "全部",
+    "profilesSome": "僅部分群組",
+    "profilesAllHint": "該成員可以開啟的所有設定檔。",
+    "profilesSomeHint": "僅限你勾選的群組中的設定檔。",
+    "noGroups": "還沒有群組。請先在「群組」頁面建立一個。",
+    "pickGroups": "群組",
+    "submit": "建立權杖",
+    "onceWarning": "請立即複製此權杖。SoftGlaze 只顯示這一次。如果丟失，請撤銷它並建立新的權杖。",
+    "yourToken": "權杖",
+    "filledSetup": "{{app}} 的設定（已填入你的權杖）",
+    "n8nHint": "在 n8n 中，將 Authentication 設定為 Bearer 並貼上此權杖。",
+    "claudeCodeHint": "正在安裝 SoftGlaze 外掛程式？在安裝 softglaze-browser-connector 過程中 Claude Code 詢問時貼上此權杖。上方的指令是不使用外掛程式時的方法。",
+    "claudeDesktopHint": "正在安裝 softglaze-browser.mcpb？在 Claude Desktop 詢問時貼上此權杖。上方的設定是不使用擴展時的方法。",
+    "acknowledge": "我已將此權杖儲存在安全的地方",
+    "closeWarning": "請先複製權杖或勾選此框。你將無法再次檢視此權杖。",
+    "done": "完成"
+  },
+  "errors": {
+    "nameRequired": "請輸入名稱。",
+    "nameTooLong": "名稱不能超過 {{max}} 個字元。",
+    "memberRequired": "請選擇一位成員。",
+    "scopeRequired": "請選擇權杖可執行的操作。",
+    "expiryRequired": "請選擇有效期。",
+    "groupsRequired": "請至少勾選一個群組，或選擇「全部」。",
+    "groupsRequiredAutomation": "自動化權杖必須限定於群組。請至少勾選一個群組。",
+    "toolNotAllowed": "其中一個工具無法預先核准。",
+    "limitRange": "請輸入 {{min}} 到 {{max}} 之間的整數。",
+    "create": "權杖未建立。",
+    "noToken": "AI 伺服器沒有返回權杖，請重試。",
+    "createFailed": "權杖未建立：{{message}}"
+  },
+  "automation": {
+    "title": "自動化權杖（用於 n8n、排程工作和指令碼）",
+    "ownerOnly": "僅限擁有者",
+    "count_one": "{{count}} 個已預先核准",
+    "count_other": "{{count}} 個已預先核准",
+    "intro": "對於無需你在場的工作流程，請選擇可以不經詢問直接執行的工具。",
+    "needsOperate": "請在上方選擇「操作」或「完全」以預先核准工具。",
+    "warning": "這些工具將在不詢問你的情況下執行。它們仍僅限於所選群組，會被記錄，並且會被「停止所有 AI」停止。",
+    "tools": "無需詢問即可執行的工具",
+    "destructive": "無法復原",
+    "groups": {
+      "profiles": "設定檔",
+      "sessions": "啟動和停止",
+      "proxies": "代理",
+      "groups": "群組",
+      "automation": "自動化",
+      "page": "頁面內",
+      "other": "其他"
+    },
+    "maxProfiles": "每次呼叫的最多設定檔數",
+    "maxProfilesHint": "預設 5，最多 50。",
+    "maxCalls": "每小時最多呼叫次數",
+    "maxCallsHint": "預設 60，最多 1000。",
+    "groupsNote": "預先核准的工具只對「可使用的設定檔」下勾選的群組有效。其他所有工具仍會詢問你。"
+  },
+  "tools": {
+    "create_profile": "建立設定檔",
+    "update_profile": "更改設定檔（名稱、群組、標籤、備註、起始頁、代理）",
+    "batch_generate_profiles": "一次建立多個設定檔",
+    "start_profile": "啟動設定檔",
+    "stop_profile": "停止設定檔",
+    "assign_proxy": "為設定檔分配代理",
+    "rotate_proxy_ip": "從代理取得新 IP",
+    "find_free_proxies": "查詢並測試免費代理",
+    "create_group": "建立群組",
+    "move_profiles_to_group": "將設定檔移到群組",
+    "save_macro": "儲存巨集",
+    "run_macro": "執行巨集",
+    "stop_run": "停止執行",
+    "start_warmer": "開始預熱",
+    "page_navigate": "開啟網頁",
+    "page_snapshot": "讀取頁面佈局",
+    "page_click": "在頁面上點選",
+    "page_type": "在頁面上輸入",
+    "page_press_key": "在頁面上按鍵",
+    "page_scroll": "滾動頁面",
+    "page_screenshot": "截圖",
+    "page_extract_text": "從頁面複製文字",
+    "page_wait_for": "等待頁面上的內容"
+  },
+  "tokens": {
+    "search": "搜尋權杖",
+    "showRevoked": "顯示已撤銷的權杖",
+    "showRevokedCount_one": "顯示 {{count}} 個已撤銷的權杖",
+    "showRevokedCount_other": "顯示 {{count}} 個已撤銷的權杖",
+    "create": "建立權杖",
+    "intro": "每個 AI 應用程式使用自己的權杖連線。一個權杖以一位成員的身分操作，並可以限定於部分群組。撤銷權杖即可立即切斷該應用程式的存取。",
+    "loadError": "無法載入權杖：{{message}}",
+    "emptyTitle": "還沒有權杖",
+    "emptyBody": "建立一個權杖，然後將其貼上到你的 AI 應用程式中。「連線」分頁會顯示填寫位置。",
+    "caption": "AI 權杖",
+    "colName": "名稱",
+    "colMember": "身分",
+    "colScope": "存取權限",
+    "colGroups": "設定檔",
+    "colExpires": "到期時間",
+    "colLastUsed": "上次使用",
+    "colActions": "操作",
+    "state": {
+      "revoked": "已撤銷",
+      "expired": "已過期",
+      "expiring": "即將過期"
+    },
+    "automation_one": "自動化 · {{count}} 個已預先核准",
+    "automation_other": "自動化 · {{count}} 個已預先核准",
+    "allProfiles": "所有設定檔",
+    "groupsMore_one": "{{names}} 以及另外 {{count}} 個",
+    "groupsMore_other": "{{names}} 以及另外 {{count}} 個",
+    "neverUsed": "尚未使用",
+    "revoke": "撤銷",
+    "revokeAria": "撤銷 {{name}}",
+    "noMatch": "沒有匹配的權杖。",
+    "revokeTitle": "撤銷「{{name}}」？",
+    "revokeBody": "使用此權杖的 AI 應用程式將立即失去存取權限。此操作無法復原。",
+    "revokeError": "無法復原權杖：{{message}}"
+  },
+  "approval": {
+    "eyebrow": "AI 請求",
+    "eyebrowMany": "AI 請求 {{position}}/{{total}}",
+    "title": "{{app}} 正在請求權限",
+    "tokenOnly": "權杖：{{token}}",
+    "tokenAndMember": "權杖：{{token}} · 身分為 {{member}}",
+    "noSummary": "執行工具 {{tool}}",
+    "unknownApp": "某個 AI 應用程式",
+    "timeLeft": "內需作答。如未作答，請求將被拒絕。",
+    "timeLeftHint": "請求被拒絕前的剩餘時間",
+    "timeLeftSr": "請求將在 {{time}} 後被拒絕",
+    "secondsLeftAnnounce": "還剩 {{seconds}} 秒回應 AI 請求",
+    "showDetails": "顯示詳情",
+    "hideDetails": "隱藏詳情",
+    "tool": "工具",
+    "token": "權杖",
+    "argsLabel": "請求詳情",
+    "noArgs": "此請求沒有其他詳情。",
+    "redactedNote": "密碼和其他機密資訊在此處已隱藏。",
+    "deny": "拒絕",
+    "allowHour": "允許 1 小時",
+    "allowHourHint": "在接下來的一小時內，{{token}} 的此類操作不再詢問。",
+    "allowOnce": "允許一次",
+    "footnote": "無論 AI 應用程式自身的設定如何，SoftGlaze 都會在應用程式內詢問。每次回應都會記錄在「活動」中。",
+    "later": "稍後決定（超時後將被拒絕）",
+    "respondError": "你的回應未儲存：{{message}}",
+    "waitingChip_one": "{{count}} 個 AI 請求待處理",
+    "waitingChip_other": "{{count}} 個 AI 請求待處理",
+    "timedOut": "來自 {{app}} 的請求已超時並被拒絕。",
+    "gone": "該請求已被回應或已取消。"
+  },
+  "approvals": {
+    "intro": "每個會更改內容的操作都會在這裡等待你回應。未回應的請求會在 2 分鐘後被拒絕。同一請求也會在任意頁面跳出。",
+    "changeRules": "更改 SoftGlaze 詢問的時機",
+    "emptyTitle": "沒有待處理的請求",
+    "emptyBody": "當 AI 應用程式想要更改內容時，請求會顯示在這裡，並在任意頁面以彈出視窗形式出現。",
+    "listLabel": "待你處理的請求",
+    "meta": "{{app}} · 權杖 {{token}} · {{when}}",
+    "actsAs": "身分為 {{member}}"
+  },
+  "activity": {
+    "search": "搜尋工具、請求或權杖",
+    "outcome": "結果",
+    "all": "全部",
+    "outcomes": {
+      "ok": "成功",
+      "denied": "已拒絕",
+      "error": "錯誤",
+      "pending": "等待中"
+    },
+    "app": "應用程式",
+    "allApps": "所有應用程式",
+    "loadError": "無法載入活動：{{message}}",
+    "noMatchTitle": "沒有符合這些篩選條件的內容",
+    "noMatchBody": "請嘗試其他結果、應用程式或搜尋詞。",
+    "emptyTitle": "還沒有 AI 活動",
+    "emptyBody": "AI 應用程式透過 SoftGlaze 執行的所有操作都會列在這裡：它請求了什麼、你的回應以及執行結果。",
+    "caption": "AI 活動",
+    "colTime": "時間",
+    "colApp": "應用程式和權杖",
+    "colTool": "工具",
+    "colSummary": "發生了什麼",
+    "colOutcome": "結果",
+    "colDuration": "耗時",
+    "approval": {
+      "none": "無需核准",
+      "asked": "已詢問你",
+      "pre-approved": "已預先核准",
+      "allow-once": "已允許一次",
+      "allow-hour": "你已允許 1 小時",
+      "hour-grant": "已允許 1 小時",
+      "deny": "已被你拒絕",
+      "timeout": "2 分鐘內未回應",
+      "cancelled": "已被「停止所有 AI」停止",
+      "started-by-this-token": "此應用程式啟動的設定檔",
+      "developer-token": "開發者 API 權杖"
+    },
+    "pageEmpty": "沒有更多條目。",
+    "runId": "執行",
+    "pageInfo": "第 {{page}} 頁 · 每頁 {{size}} 條",
+    "newer": "較新",
+    "older": "較早"
+  },
+  "memory": {
+    "title": "工作區記憶",
+    "description": "每個 AI 應用程式開始工作前都會閱讀的備註：你的命名方式、每個群組的用途、代理規則、工作時間以及絕不能做的事情。純 Markdown 格式。",
+    "updated": "儲存於 {{when}}",
+    "loadError": "無法載入記憶：{{message}}",
+    "editorLabel": "工作區記憶（Markdown）",
+    "placeholder": "在這裡用 Markdown 為 AI 應用程式撰寫備註。",
+    "usage": "{{used}} KB / {{limit}} KB · {{chars}} 個字元",
+    "over": "已超出上限。請縮短後再儲存。",
+    "discard": "放棄更改",
+    "reset": "還原預設",
+    "unsaved": "未儲存的更改",
+    "tip": "提示：按 Ctrl+S 儲存。請保持簡短具體：AI 應用程式每次都會讀取全部內容。",
+    "guidesTitle": "內建指南",
+    "guidesDescription": "SoftGlaze 也會向每個 AI 應用程式提供這些指南。它們是隻讀的。",
+    "resetTitle": "將記憶還原為預設內容？",
+    "resetBody": "你的備註將被替換為 SoftGlaze 範本。此操作無法復原。",
+    "guides": {
+      "howItWorks": {
+        "title": "SoftGlaze 的工作原理",
+        "body": "設定檔、指紋、代理、群組、工作階段、巨集和方案限額，以及如何用好這些工具。"
+      },
+      "acceptableUse": {
+        "title": "可接受的使用",
+        "body": "SoftGlaze 可以和不可以用於哪些用途。AI 應用程式會被告知拒絕任何被禁止的操作。"
+      }
+    },
+    "readGuide": "閱讀指南",
+    "hideGuide": "隱藏",
+    "guideReadOnly": "只讀。由 SoftGlaze 保持更新。"
+  },
+  "prompts": {
+    "loadError": "無法載入提示詞：{{message}}",
+    "emptyTitle": "還沒有提示詞",
+    "emptyBody": "AI 伺服器可用時，現成的提示詞會顯示在這裡。",
+    "search": "搜尋提示詞",
+    "listLabel": "提示詞",
+    "noMatch": "沒有匹配的提示詞。",
+    "inClaudeCode": "在 Claude Code 中：",
+    "arguments": "需要你填寫的詳情",
+    "noArguments": "此提示詞無需填寫任何詳情。",
+    "argName": "名稱",
+    "argRequired": "是否需要",
+    "argDescription": "說明",
+    "required": "必填",
+    "optional": "可選",
+    "text": "提示詞文字",
+    "howTitle": "如何使用提示詞",
+    "howIntro": "提示詞是現成的任務。你的 AI 應用程式會填寫詳情，並透過 SoftGlaze 執行這些任務。",
+    "howClaudeCode": "輸入 / 並選擇一個 softglaze 提示詞。",
+    "howClaudeDesktop": "點選聊天框下方的 +，找到 SoftGlaze。",
+    "howVsCode": "在 Copilot Chat 中輸入 / 並選擇一個 SoftGlaze 提示詞。",
+    "howCursor": "如果沒有列出提示詞，請複製下方文字。",
+    "howOther": "任何應用程式：複製提示詞文字，貼上到聊天中並填寫詳情。"
+  },
+  "settings": {
+    "loadError": "無法載入設定：{{message}}",
+    "ownerOnly": "僅限擁有者",
+    "ownerOnlyHint": "只有工作區擁有者可以更改此項。",
+    "remove": "移除 {{value}}",
+    "approvals": {
+      "title": "SoftGlaze 何時詢問你",
+      "description": "無論 AI 應用程式自身的設定如何，SoftGlaze 都會在 AI 應用程式執行操作前在應用程式內詢問。",
+      "read": {
+        "title": "只讀工具",
+        "body": "檢視設定檔、代理、群組和活動。"
+      },
+      "operate": {
+        "title": "操作工具",
+        "body": "建立和啟動設定檔、執行巨集、在頁面內操作。"
+      },
+      "full": {
+        "title": "完全工具",
+        "body": "專家工具，僅在開啟專家模式時可用。"
+      },
+      "alwaysAsk": "有些操作每次都會詢問，例如一次啟動或停止多個設定檔，以及專家工具。"
+    },
+    "modes": {
+      "never": "從不詢問",
+      "ask-hour": "每小時詢問一次",
+      "ask-always": "每次都詢問"
+    },
+    "domains": {
+      "title": "AI 可以操作的網站",
+      "description": "頁面工具（開啟頁面、點選、輸入、讀取文字）只在此清單中的網站及其子網域上生效。",
+      "placeholder": "example.com",
+      "invalid": "請輸入網站名稱，例如 example.com。",
+      "empty": "還沒有網站。頁面工具可以開啟任何網站，但仍會先詢問你。",
+      "add": "新增網站"
+    },
+    "hosts": {
+      "title": "額外允許的主機名稱",
+      "description": "AI 伺服器只回應發往 127.0.0.1 的請求。對於在 Docker 中執行的 n8n 或其他工具，請新增 host.docker.internal。",
+      "invalid": "請輸入主機名稱，例如 host.docker.internal，不要包含連接埠或路徑。",
+      "empty": "無。僅允許 127.0.0.1。",
+      "add": "新增主機"
+    },
+    "expert": {
+      "title": "專家模式",
+      "description": "允許 AI 應用程式使用 Playwright、Puppeteer 或 Chrome DevTools 接管執行中的設定檔。",
+      "warning": "可被偵測到。外部工具控制瀏覽器的方式能被網站發現，因此設定檔可能會被標記或攔截。預設關閉。僅限擁有者。",
+      "switch": "專家模式",
+      "isOn": "已開啟。擁有「完全」權杖的 AI 應用程式可以請求接管執行中的設定檔，每次都會詢問你。",
+      "isOff": "已關閉。任何 AI 應用程式都無法接管執行中的設定檔。",
+      "confirmTitle": "開啟專家模式？",
+      "confirmBody": "之後，擁有「完全」權杖的 AI 應用程式可以請求直接控制執行中的設定檔。網站可以偵測到這一點，這些設定檔中的帳號可能會被標記。",
+      "confirm": "開啟",
+      "ack": "我瞭解這可能會被偵測到，並可能導致設定檔被標記。"
+    },
+    "port": {
+      "title": "伺服器連接埠",
+      "description": "AI 應用程式透過此連接埠連線到 http://127.0.0.1。",
+      "label": "連接埠",
+      "invalid": "請使用 {{min}} 到 {{max}} 之間的數字。",
+      "hint": "更改後，請更新每個已連線 AI 應用程式中的位址。「連線」分頁會顯示新的設定。"
+    }
+  }
+}

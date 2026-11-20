@@ -1,0 +1,139 @@
+{
+  "header": {
+    "eyebrow": "識別情報",
+    "title": "データ保管庫",
+    "description": "スマート自動入力エンジンで繰り返し使える識別情報の保管庫です。手動で追加するか、スプレッドシートからインポートできます。各識別情報は、使用済みのサイトを記憶します。",
+    "refresh": "更新",
+    "import": "Excel/CSVをインポート",
+    "addManually": "手動で追加"
+  },
+  "stats": {
+    "totalIdentities": "識別情報の合計",
+    "neverUsed": "未使用",
+    "usedAtLeastOnce": "1回以上使用",
+    "totalUses": "合計使用回数",
+    "filtering": "絞り込み中"
+  },
+  "toolbar": {
+    "searchPlaceholder": "名前、メール、ユーザー名、ラベルで検索...",
+    "showing": "{{kind}}を{{count}}件表示中",
+    "kindNeverUsed": "未使用",
+    "kindUsed": "使用済み",
+    "clear": "クリア"
+  },
+  "bulk": {
+    "selected": "{{count}}件選択中",
+    "resetUsedStatus": "使用状況をリセット",
+    "deleteSelected": "選択項目を削除",
+    "clear": "クリア",
+    "clearSelectionTitle": "選択を解除"
+  },
+  "table": {
+    "loading": "識別情報を読み込み中...",
+    "selectAll": "すべての識別情報を選択",
+    "selectRow": "{{name}}を選択",
+    "colName": "名前",
+    "colEmail": "メール",
+    "colUsername": "ユーザー名",
+    "colPassword": "パスワード",
+    "colPhone": "電話番号",
+    "colAddress": "住所",
+    "colLabel": "ラベル",
+    "colTimesUsed": "使用回数",
+    "colCreated": "作成日",
+    "colActions": "操作",
+    "sitesUsed_other": "{{count}}サイト",
+    "never": "なし",
+    "editIdentity": "識別情報を編集",
+    "deleteIdentity": "識別情報を削除",
+    "hidePassword": "隠す",
+    "revealPassword": "表示",
+    "reuse": "♻ 再利用 · {{count}}"
+  },
+  "empty": {
+    "title": "データ保管庫は空です",
+    "description": "識別情報を手動で追加するか、Excel/CSVシートをインポートして自動入力用の保管庫を作りましょう。",
+    "filteredTitle": "条件に一致する識別情報はありません",
+    "filteredDescription": "別のキーワードで検索するか、絞り込みを解除してください。"
+  },
+  "groups": {
+    "identity": "本人情報",
+    "account": "アカウント",
+    "address": "住所",
+    "meta": "メタ情報"
+  },
+  "fields": {
+    "firstName": "名",
+    "lastName": "姓",
+    "email": "メール",
+    "username": "ユーザー名",
+    "password": "パスワード",
+    "phone": "電話番号",
+    "dateOfBirth": "生年月日",
+    "addressLine1": "住所1",
+    "addressLine2": "住所2",
+    "city": "市区町村",
+    "state": "州 / 都道府県",
+    "zipCode": "郵便番号",
+    "country": "国",
+    "company": "会社",
+    "companyAddress": "会社の住所",
+    "label": "バッチラベル"
+  },
+  "form": {
+    "dialogTitleEdit": "識別情報を編集",
+    "dialogTitleAdd": "識別情報を追加",
+    "titleEdit": "識別情報を編集",
+    "titleAdd": "識別情報を追加",
+    "descEdit": "このペルソナの詳細を更新します。",
+    "descAdd": "データ保管庫にペルソナを1件追加します。* の付いた項目は必須です。",
+    "cancel": "キャンセル",
+    "saving": "保存中...",
+    "saveChanges": "変更を保存",
+    "addIdentity": "識別情報を追加",
+    "showPassword": "パスワードを表示",
+    "hidePassword": "パスワードを隠す"
+  },
+  "import": {
+    "dialogTitle": "識別情報をインポート",
+    "title": "Excel / CSVからインポート",
+    "descStep1": ".xlsx、.xls、.csvファイルを選択してください。1行目は列見出しにしてください。1回のインポートは最大1000行です。",
+    "descStep2": "列を識別情報の項目に対応付けてください。{{fileName}}に{{count}}行を検出しました。",
+    "yourFile": "ファイル",
+    "chooseSpreadsheet": "スプレッドシートを選択",
+    "colIdentityField": "識別情報の項目",
+    "colYourColumn": "ファイルの列",
+    "skipOption": "- スキップ -",
+    "mappedCount_other": "{{count}}個の項目を対応付けました。名前/メール/ユーザー名のない行はスキップされます。",
+    "done": "完了",
+    "cancel": "キャンセル",
+    "back": "戻る",
+    "importing": "インポート中...",
+    "importRows_other": "{{count}}行をインポート",
+    "result": {
+      "complete": "インポート完了",
+      "addedPrefix": "保管庫に",
+      "addedSuffix_other": "件の識別情報を追加しました。",
+      "skipped_other": "空の行を{{count}}行スキップしました。"
+    },
+    "errors": {
+      "noRows": "このファイルには読み取れる見出し行またはデータ行がありません。",
+      "readFile": "ファイルを読み込めませんでした。",
+      "nothingMapped": "インポートする行がありません。名 / 姓 / メール / ユーザー名のいずれか1つ以上を対応付けてください。",
+      "failed": "インポートに失敗しました。"
+    }
+  },
+  "confirm": {
+    "fallbackName": "ペルソナ",
+    "deleteOne": "識別情報「{{name}}」を削除しますか？この操作は元に戻せません。",
+    "deleteSelected_other": "選択した{{count}}件の識別情報を削除しますか？この操作は元に戻せません。",
+    "resetSelected_other": "選択した{{count}}件の識別情報の「使用済みサイト」履歴をリセットしますか？すべてのサイトで再び使用できるようになります。"
+  },
+  "errors": {
+    "load": "データ保管庫を読み込めませんでした。",
+    "save": "この識別情報を保存できませんでした。",
+    "deleteOne": "識別情報を削除できませんでした。",
+    "deleteSelected": "選択した識別情報を削除できませんでした。",
+    "resetSelected": "選択した識別情報をリセットできませんでした。"
+  }
+}

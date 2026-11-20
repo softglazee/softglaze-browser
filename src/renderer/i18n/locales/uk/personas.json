@@ -1,0 +1,160 @@
+{
+  "header": {
+    "eyebrow": "Особи",
+    "title": "Сховище даних",
+    "description": "Багаторазове сховище осіб для розумного автозаповнення. Додавайте їх вручну або імпортуйте таблицю; кожен запис пам'ятає сайти, на яких уже використовувався.",
+    "refresh": "Оновити",
+    "import": "Імпорт Excel/CSV",
+    "addManually": "Додати вручну"
+  },
+  "stats": {
+    "totalIdentities": "Усього осіб",
+    "neverUsed": "Не використовувалися",
+    "usedAtLeastOnce": "Використовувалися хоча б раз",
+    "totalUses": "Усього використань",
+    "filtering": "фільтр"
+  },
+  "toolbar": {
+    "searchPlaceholder": "Пошук за ім'ям, email, логіном або міткою...",
+    "showing": "Показано: {{count}} · {{kind}}",
+    "kindNeverUsed": "не використовувалися",
+    "kindUsed": "використовувалися",
+    "clear": "скинути"
+  },
+  "bulk": {
+    "selected": "Вибрано: {{count}}",
+    "resetUsedStatus": "Скинути стан використання",
+    "deleteSelected": "Видалити вибрані",
+    "clear": "Скинути",
+    "clearSelectionTitle": "Зняти виділення"
+  },
+  "table": {
+    "loading": "Завантаження осіб...",
+    "selectAll": "Вибрати всіх осіб",
+    "selectRow": "Вибрати {{name}}",
+    "colName": "Ім'я",
+    "colEmail": "Email",
+    "colUsername": "Логін",
+    "colPassword": "Пароль",
+    "colPhone": "Телефон",
+    "colAddress": "Адреса",
+    "colLabel": "Мітка",
+    "colTimesUsed": "Використань",
+    "colCreated": "Створено",
+    "colActions": "Дії",
+    "sitesUsed_one": "{{count}} сайт",
+    "sitesUsed_few": "{{count}} сайти",
+    "sitesUsed_many": "{{count}} сайтів",
+    "sitesUsed_other": "{{count}} сайту",
+    "never": "Ніколи",
+    "editIdentity": "Редагувати особу",
+    "deleteIdentity": "Видалити особу",
+    "hidePassword": "Сховати",
+    "revealPassword": "Показати",
+    "reuse": "♻ Повтор · {{count}}"
+  },
+  "empty": {
+    "title": "Сховище даних порожнє",
+    "description": "Додайте особу вручну або імпортуйте таблицю Excel/CSV, щоб почати наповнювати сховище для автозаповнення.",
+    "filteredTitle": "Немає осіб за вашим фільтром",
+    "filteredDescription": "Спробуйте інший запит або скиньте фільтр."
+  },
+  "groups": {
+    "identity": "Особа",
+    "account": "Обліковий запис",
+    "address": "Адреса",
+    "meta": "Інше"
+  },
+  "fields": {
+    "firstName": "Ім'я",
+    "lastName": "Прізвище",
+    "email": "Email",
+    "username": "Логін",
+    "password": "Пароль",
+    "phone": "Телефон",
+    "dateOfBirth": "Дата народження",
+    "addressLine1": "Адреса, рядок 1",
+    "addressLine2": "Адреса, рядок 2",
+    "city": "Місто",
+    "state": "Регіон / область",
+    "zipCode": "Індекс",
+    "country": "Країна",
+    "company": "Компанія",
+    "companyAddress": "Адреса компанії",
+    "label": "Мітка пакета"
+  },
+  "form": {
+    "dialogTitleEdit": "Редагувати особу",
+    "dialogTitleAdd": "Додати особу",
+    "titleEdit": "Редагувати особу",
+    "titleAdd": "Додати особу",
+    "descEdit": "Оновіть дані цієї персони.",
+    "descAdd": "Додайте одну персону до сховища даних. Поля із зірочкою * обов'язкові.",
+    "cancel": "Скасувати",
+    "saving": "Збереження...",
+    "saveChanges": "Зберегти зміни",
+    "addIdentity": "Додати особу",
+    "showPassword": "Показати пароль",
+    "hidePassword": "Сховати пароль"
+  },
+  "import": {
+    "dialogTitle": "Імпорт осіб",
+    "title": "Імпорт з Excel / CSV",
+    "descStep1": "Оберіть файл .xlsx, .xls або .csv. У першому рядку мають бути заголовки стовпців. До 1000 рядків за один імпорт.",
+    "descStep2": "Зіставте стовпці з полями особи. У файлі {{fileName}} знайдено рядків: {{count}}.",
+    "yourFile": "ваш файл",
+    "chooseSpreadsheet": "Вибрати таблицю",
+    "colIdentityField": "Поле особи",
+    "colYourColumn": "Ваш стовпець",
+    "skipOption": "- пропустити -",
+    "mappedCount_one": "Зіставлено {{count}} поле. Рядки без імені, email і логіна пропускаються.",
+    "mappedCount_few": "Зіставлено {{count}} поля. Рядки без імені, email і логіна пропускаються.",
+    "mappedCount_many": "Зіставлено {{count}} полів. Рядки без імені, email і логіна пропускаються.",
+    "mappedCount_other": "Зіставлено {{count}} поля. Рядки без імені, email і логіна пропускаються.",
+    "done": "Готово",
+    "cancel": "Скасувати",
+    "back": "Назад",
+    "importing": "Імпорт...",
+    "importRows_one": "Імпортувати {{count}} рядок",
+    "importRows_few": "Імпортувати {{count}} рядки",
+    "importRows_many": "Імпортувати {{count}} рядків",
+    "importRows_other": "Імпортувати {{count}} рядка",
+    "result": {
+      "complete": "Імпорт завершено",
+      "addedPrefix": "Додано",
+      "addedSuffix_one": "особу до сховища.",
+      "addedSuffix_few": "особи до сховища.",
+      "addedSuffix_many": "осіб до сховища.",
+      "addedSuffix_other": "особи до сховища.",
+      "skipped_one": "Пропущено {{count}} порожній рядок.",
+      "skipped_few": "Пропущено {{count}} порожні рядки.",
+      "skipped_many": "Пропущено {{count}} порожніх рядків.",
+      "skipped_other": "Пропущено {{count}} порожнього рядка."
+    },
+    "errors": {
+      "noRows": "У файлі немає читабельного рядка заголовків або рядків даних.",
+      "readFile": "Не вдалося прочитати файл.",
+      "nothingMapped": "Нічого імпортувати: зіставте хоча б одне з полів Ім'я / Прізвище / Email / Логін.",
+      "failed": "Не вдалося виконати імпорт."
+    }
+  },
+  "confirm": {
+    "fallbackName": "персона",
+    "deleteOne": "Видалити особу «{{name}}»? Цю дію не можна скасувати.",
+    "deleteSelected_one": "Видалити {{count}} вибрану особу? Цю дію не можна скасувати.",
+    "deleteSelected_few": "Видалити {{count}} вибрані особи? Цю дію не можна скасувати.",
+    "deleteSelected_many": "Видалити {{count}} вибраних осіб? Цю дію не можна скасувати.",
+    "deleteSelected_other": "Видалити {{count}} вибраної особи? Цю дію не можна скасувати.",
+    "resetSelected_one": "Скинути історію використання для {{count}} вибраної особи? Вона знову стане доступною на всіх сайтах.",
+    "resetSelected_few": "Скинути історію використання для {{count}} вибраних осіб? Вони знову стануть доступними на всіх сайтах.",
+    "resetSelected_many": "Скинути історію використання для {{count}} вибраних осіб? Вони знову стануть доступними на всіх сайтах.",
+    "resetSelected_other": "Скинути історію використання для {{count}} вибраної особи? Вони знову стануть доступними на всіх сайтах."
+  },
+  "errors": {
+    "load": "Не вдалося завантажити сховище даних.",
+    "save": "Не вдалося зберегти цю особу.",
+    "deleteOne": "Не вдалося видалити особу.",
+    "deleteSelected": "Не вдалося видалити вибраних осіб.",
+    "resetSelected": "Не вдалося скинути вибраних осіб."
+  }
+}

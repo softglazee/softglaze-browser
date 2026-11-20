@@ -1,0 +1,25 @@
+{
+  "contextMenu": {
+    "undo": "撤销",
+    "redo": "重做",
+    "cut": "剪切",
+    "copy": "复制",
+    "paste": "粘贴",
+    "selectAll": "全选",
+    "copyLink": "复制链接"
+  },
+  "dialogs": {
+    "exportArchiveTitle": "导出加密的配置文件存档",
+    "archiveFilter": "SoftGlaze 加密存档",
+    "importProfilesTitle": "选择要导入的 SoftGlaze 配置文件电子表格",
+    "spreadsheetFilter": "电子表格文件",
+    "exportProfilesTitle": "导出 SoftGlaze 配置文件",
+    "excelFilter": "Excel 工作簿",
+    "importIdentitiesTitle": "选择要导入的身份电子表格",
+    "backupTitle": "备份工作区",
+    "backupFilter": "SoftGlaze 工作区备份",
+    "restoreTitle": "恢复工作区备份",
+    "exportActivityTitle": "导出活动日志",
+    "bindSpreadsheetTitle": "选择要绑定到此并行运行的电子表格"
+  }
+}

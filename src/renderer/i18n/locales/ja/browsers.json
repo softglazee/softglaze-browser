@@ -1,0 +1,70 @@
+{
+  "header": {
+    "eyebrow": "エンジン",
+    "title": "ブラウザ",
+    "subtitle": "本物のChromeとFirefoxのビルドを必要なときにダウンロード。自動でインストールされ、すぐに起動できます。",
+    "refresh": "更新"
+  },
+  "stats": {
+    "chromeInstalled": "インストール済みChrome",
+    "chromeAvailable": "利用可能なChrome",
+    "firefoxInstalled": "インストール済みFirefox",
+    "firefoxAvailable": "利用可能なFirefox"
+  },
+  "counts": {
+    "installedAvailable": "· {{installed}}件インストール済み · {{available}}件利用可能"
+  },
+  "engine": {
+    "heading": "フィンガープリントエンジン",
+    "installed": "インストール済み",
+    "notInstalled": "未インストール",
+    "description": "fingerprint-chromium - canvas / WebGL / UA / プラットフォーム / タイムゾーンをネイティブに設定し、webdriverを非表示にして、WebRTCの漏えいを防ぎます。「設定 → ブラウザ」でオンにしてください。",
+    "progressInstalling": "インストール中",
+    "progressVerifying": "検証中",
+    "installing": "インストール中",
+    "verifying": "検証中",
+    "downloading": "ダウンロード中",
+    "download": "ダウンロード（約180 MB）"
+  },
+  "firefox": {
+    "heading": "Firefox",
+    "ready": "準備完了",
+    "notDetected": "未検出",
+    "detectedDesc": "準備完了。{{path}} で検出されました。Firefoxプロファイルは、プロキシ、UA、ロケール、タイムゾーンを適用し、WebRTCをオフにした本物のFirefoxで起動します。",
+    "notDetectedDesc": "システムにFirefoxが見つかりません。下からバージョンをダウンロードしてください。アプリ内にインストールされ、Firefoxプロファイルはプロキシ、UA、ロケール、タイムゾーンを適用し、WebRTCをオフにした本物のFirefoxで起動します。",
+    "fetching": "Firefoxのリリースカタログを取得中…",
+    "empty": "利用できるFirefoxのバージョンはありません（オフラインではありませんか？）。"
+  },
+  "chromium": {
+    "heading": "Chromium (Chrome for Testing)",
+    "subtitle": "本物のビルドです。UA、Client Hints、TLS、ワーカーがすべてバージョンと正確に一致します。",
+    "fetching": "Chrome for Testingのカタログを取得中…",
+    "empty": "利用できるバージョンはありません（オフラインではありませんか？）。"
+  },
+  "row": {
+    "versionLabel": "{{brand}} {{major}}",
+    "ready": "準備完了",
+    "paused": "一時停止中",
+    "interrupted": "中断",
+    "resume": "再開",
+    "download": "ダウンロード",
+    "retry": "再試行",
+    "downloading": "ダウンロード中",
+    "installing": "インストール中…",
+    "installingShort": "インストール中",
+    "queued": "待機中…",
+    "pauseDownload": "ダウンロードを一時停止",
+    "pausedPercent": "一時停止中 · {{percent}}%",
+    "interruptedPercent": "中断 · {{percent}}%"
+  },
+  "errors": {
+    "catalogUnreachable": "ブラウザのカタログに接続できませんでした。インターネット接続を確認してください。",
+    "downloadFailed": "ダウンロードに失敗しました。",
+    "pauseFailed": "一時停止に失敗しました。",
+    "resumeFailed": "再開に失敗しました。"
+  },
+  "browsers": {
+    "showAll": "全{{n}}バージョンを表示",
+    "showLess": "表示を減らす"
+  }
+}

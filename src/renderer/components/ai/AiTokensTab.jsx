@@ -62,7 +62,7 @@ export default function AiTokensTab({ tokens, state, groups, lang, onReload, onC
             {t('tokens.showRevokedCount', { count: revokedCount })}
           </label>
         )}
-        <div className="ml-auto flex items-center gap-2">
+        <div className="ms-auto flex items-center gap-2">
           <Button variant="secondary" size="sm" onClick={onReload}><RefreshCw className="h-3.5 w-3.5" /> {t('refresh')}</Button>
           <PrimaryButton size="sm" onClick={onCreate}><Plus className="h-4 w-4" /> {t('tokens.create')}</PrimaryButton>
         </div>
@@ -81,7 +81,7 @@ export default function AiTokensTab({ tokens, state, groups, lang, onReload, onC
       ) : (
         <div className="overflow-hidden rounded-xl border border-border bg-card">
           <div className="overflow-x-auto">
-            <table className="w-full border-collapse text-left text-sm">
+            <table className="w-full border-collapse text-start text-sm">
               <caption className="sr-only">{t('tokens.caption')}</caption>
               <thead className="bg-surface text-[11px] font-semibold uppercase tracking-wider text-muted-foreground shadow-[inset_0_-1px_0_var(--border)]">
                 <tr>
@@ -91,7 +91,7 @@ export default function AiTokensTab({ tokens, state, groups, lang, onReload, onC
                   <th scope="col" className="px-3 py-3">{t('tokens.colGroups')}</th>
                   <th scope="col" className="px-3 py-3">{t('tokens.colExpires')}</th>
                   <th scope="col" className="px-3 py-3">{t('tokens.colLastUsed')}</th>
-                  <th scope="col" className="px-3 py-3 text-right"><span className="sr-only">{t('tokens.colActions')}</span></th>
+                  <th scope="col" className="px-3 py-3 text-end"><span className="sr-only">{t('tokens.colActions')}</span></th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-border">
@@ -106,7 +106,7 @@ export default function AiTokensTab({ tokens, state, groups, lang, onReload, onC
                           <KeyRound className="h-3.5 w-3.5 shrink-0 text-muted-foreground" aria-hidden="true" />
                           <span className="max-w-[14rem] truncate text-[13px] font-medium text-foreground" title={tok.name}>{tok.name}</span>
                         </div>
-                        <div className="mt-1 flex flex-wrap gap-1 pl-5">
+                        <div className="mt-1 flex flex-wrap gap-1 ps-5">
                           {st !== 'active' && <TonePill tone={STATE_TONE[st]}>{t(`tokens.state.${st}`)}</TonePill>}
                           {auto && (
                             <TonePill tone="accent" title={tok.preApprovedTools.join(', ')}>
@@ -132,7 +132,7 @@ export default function AiTokensTab({ tokens, state, groups, lang, onReload, onC
                           </>
                         ) : <span className="text-muted-foreground">{t('tokens.neverUsed')}</span>}
                       </td>
-                      <td className="px-3 py-3 text-right">
+                      <td className="px-3 py-3 text-end">
                         {st !== 'revoked' && (
                           <Button size="sm" variant="danger" onClick={() => setRevoke({ token: tok, busy: false, error: '' })} aria-label={t('tokens.revokeAria', { name: tok.name })}>
                             {t('tokens.revoke')}

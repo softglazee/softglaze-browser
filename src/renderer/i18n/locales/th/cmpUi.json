@@ -1,0 +1,31 @@
+{
+  "brandSelect": {
+    "presentAs": "แสดงโปรไฟล์นี้เป็น {{brand}}"
+  },
+  "versionSelect": {
+    "auto": "อัตโนมัติ",
+    "loadingVersions": "กำลังโหลดเวอร์ชัน…",
+    "ready": "พร้อม",
+    "readyTitle": "ติดตั้งแล้วและพร้อมใช้งาน",
+    "noVersions": "ไม่พบเวอร์ชัน",
+    "offlineError": "ออฟไลน์ - เข้าถึงแค็ตตาล็อกเวอร์ชันไม่ได้",
+    "downloadFailed": "ดาวน์โหลดล้มเหลว",
+    "resumeFailed": "ดำเนินการต่อไม่สำเร็จ",
+    "paused": "หยุดชั่วคราว",
+    "interrupted": "ถูกขัดจังหวะ",
+    "resumeTitle": "{{state}} ที่ {{percent}}% - ดำเนินการต่อ",
+    "statusInstalling": "ติดตั้ง",
+    "statusQueued": "…",
+    "retryTitle": "ลองอีกครั้ง - {{error}}",
+    "downloadFailedShort": "โหลดล้มเหลว",
+    "downloadInstallTitle": "ดาวน์โหลดและติดตั้งเวอร์ชันนี้"
+  },
+  "pager": {
+    "showing": "แสดง {{from}}-{{to}} จาก {{total}}",
+    "perPage": "ต่อหน้า",
+    "all": "ทั้งหมด",
+    "prev": "ก่อนหน้า",
+    "next": "ถัดไป",
+    "pageOf": "หน้า {{page}} / {{total}}"
+  }
+}

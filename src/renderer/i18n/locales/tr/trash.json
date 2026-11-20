@@ -1,0 +1,54 @@
+{
+  "header": {
+    "eyebrow": "Çalışma alanı",
+    "title": "Çöp Kutusu ve Kurtarma",
+    "description": "Silinen profilleri geri yükleyin veya depolama alanınızdan kalıcı olarak silin."
+  },
+  "actions": {
+    "emptyTrash": "Çöpü boşalt",
+    "restore": "Geri yükle",
+    "deleteForever": "Kalıcı olarak sil",
+    "clear": "Temizle",
+    "restoreTitle": "Profili geri yükle",
+    "purgeTitle": "Kalıcı olarak sil"
+  },
+  "errors": {
+    "loadFailed": "Çöp kutusu yüklenemedi."
+  },
+  "warning": {
+    "title": "Kalıcı silme",
+    "body": "Geri yükleme, profili listenize değiştirmeden geri getirir. Kalıcı silme, profili kaldırır ve tüm tarayıcı verilerini (çerezler, önbellek, oturum bilgileri) bu bilgisayardan siler."
+  },
+  "toolbar": {
+    "searchPlaceholder": "Silinen profillerde ara..."
+  },
+  "bulk": {
+    "selected": "{{count}} seçili"
+  },
+  "table": {
+    "profileName": "Profil adı",
+    "proxy": "Proxy",
+    "deletedDate": "Silinme tarihi",
+    "actions": "İşlemler",
+    "directProxy": "Doğrudan",
+    "defaultBrowser": "Chrome"
+  },
+  "empty": {
+    "title": "Çöp kutusu boş",
+    "noMatch": "Aramanızla eşleşen silinmiş profil yok.",
+    "none": "Silinmiş profiliniz yok. Her şey temiz!"
+  },
+  "confirm": {
+    "purgeWithData": "\"{{title}}\" kalıcı olarak silinsin mi? Bu işlem geri alınamaz ve yerel tarayıcı verileri silinir.",
+    "bulkPurgeWithData_one": "{{count}} profil kalıcı olarak silinsin mi? Bu işlem geri alınamaz ve yerel tarayıcı verileri silinir.",
+    "bulkPurgeWithData_other": "{{count}} profil kalıcı olarak silinsin mi? Bu işlem geri alınamaz ve yerel tarayıcı verileri silinir.",
+    "emptyTrashWithData_one": "Çöp kutusundaki {{count}} profilin TÜMÜ kalıcı olarak silinsin mi? Bu işlem geri alınamaz ve yerel tarayıcı verileri silinir.",
+    "emptyTrashWithData_other": "Çöp kutusundaki {{count}} profilin TÜMÜ kalıcı olarak silinsin mi? Bu işlem geri alınamaz ve yerel tarayıcı verileri silinir."
+  },
+  "pager": {
+    "showing": "{{total}} kayıttan {{from}}-{{to}} gösteriliyor",
+    "prev": "Önceki",
+    "next": "Sonraki"
+  },
+  "bulkSkipped": "Değiştirilmedi: {{count}} profil. {{reason}}"
+}

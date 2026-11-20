@@ -204,7 +204,7 @@ export default function SignInPanel({ purpose, info, lockedEmail = '', onDone, o
   if (step === 'email' || step === 'code') {
     return (
       <div>
-        <button type="button" onClick={() => { setStep(step === 'code' && !lockedEmail ? 'email' : 'choose'); setErr(''); }} className="-ml-1 mb-4 min-h-[44px] px-1 inline-flex items-center gap-1.5 text-[14px] text-muted-foreground hover:text-foreground">
+        <button type="button" onClick={() => { setStep(step === 'code' && !lockedEmail ? 'email' : 'choose'); setErr(''); }} className="-ms-1 mb-4 min-h-[44px] px-1 inline-flex items-center gap-1.5 text-[14px] text-muted-foreground hover:text-foreground">
           <ArrowLeft className="w-4 h-4" aria-hidden="true" /> {step === 'code' && !lockedEmail ? t('email.change') : t('back')}
         </button>
         {step === 'email' ? (

@@ -233,7 +233,7 @@
       "title": "Idioma",
       "description": "Elige el idioma de la interfaz de SoftGlaze.",
       "label": "Idioma de la interfaz",
-      "hint": "Pronto habrá más idiomas. Los cambios se aplican al instante en toda la aplicación."
+      "hint": "Los cambios se aplican al instante en toda la aplicación."
     }
   },
   "startLinks": {
@@ -273,5 +273,15 @@
     "settingsHidden": "Un administrador desactivó Configuración para tu cuenta.",
     "proxiesHidden": "Un administrador desactivó Proxies para tu cuenta.",
     "profilesHidden": "Un administrador desactivó Perfiles para tu cuenta."
+  },
+  "promo": {
+    "bf2026": {
+      "text": "Black Friday: Pro de por vida {{pro}} o Enterprise de por vida {{enterprise}}, un solo pago. Termina el 1 de diciembre, 23:59 UTC."
+    },
+    "xmas2026": {
+      "text": "Lote de Navidad: Pro de por vida {{pro}} o Enterprise de por vida {{enterprise}}, un solo pago. Termina el 31 de diciembre, 23:59 UTC."
+    },
+    "cta": "Ver la oferta",
+    "dismiss": "Ocultar esta oferta"
   }
 }

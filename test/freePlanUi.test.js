@@ -107,8 +107,9 @@ test('every Free plan screen is mounted where it belongs', () => {
   assert.match(read('src', 'renderer', 'pages', 'FreeProxiesPage.jsx'), /<PartnerDealsCard /);
   assert.match(read('src', 'renderer', 'components', 'Gate.jsx'), /softglazeApi\.license\.chooseFree\(\)/);
   const i18n = read('src', 'renderer', 'i18n', 'index.js');
-  assert.match(i18n, /plan: planEn/);
-  assert.match(i18n, /plan: planEs/);
+  // i18n/index.js registers every locales/<code>/plan.json (English eager, others lazy).
+  assert.match(i18n, /import\.meta\.glob\('\.\/locales\/en\/\*\.json', \{ eager: true/);
+  assert.match(i18n, /import\.meta\.glob\(\['\.\/locales\/\*\/\*\.json'/);
   const card = read('src', 'renderer', 'components', 'FreePlan.jsx');
   assert.match(card, /t\('deals\.disclosure'\)/, 'the commission disclosure is always shown');
   assert.match(card, /softglazeApi\.plan\.openPartnerDeal\(d\.id\)/, 'opened by main in the system browser');

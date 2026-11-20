@@ -13,6 +13,7 @@ import { errorText } from '@/lib/signupFlow.mjs';
 import { isStoreMethod, storeOutcome, storePrice, storeDowngradeBlocked, methodsForPlan, sellablePlans, storeHasBothPeriods, STORE_POLL, MANAGE_SUBSCRIPTIONS_URL } from '@/lib/storePurchase.mjs';
 import { BILLING_PERIODS, hasBothPeriods, plansForPeriod, yearlyDeal, isCurrentPlan, initialPeriod } from '@/lib/planPeriods.mjs';
 import { FreePlanBillingSection } from '@/components/FreePlan.jsx';
+import { fmtDate } from '@/lib/intl.mjs';
 
 // The built-in plan catalog (main's DEFAULT_BILLING_PLANS) is English data. Its taglines and features
 // show in the UI language through billing.planText, matched on the exact English text; anything the
@@ -32,7 +33,7 @@ function statusTone(license, t) {
   if (!license) return { color: '#9ca3af', label: t('status.loading') };
   if (license.isExempt) return { color: '#10b981', label: t('status.sourceOwner') };
   switch (license.state) {
-    case 'paid': return { color: '#10b981', label: license.endsAt ? t('status.activeRenews', { date: new Date(license.endsAt).toLocaleDateString() }) : t('status.active') };
+    case 'paid': return { color: '#10b981', label: license.endsAt ? t('status.activeRenews', { date: fmtDate(license.endsAt) }) : t('status.active') };
     case 'free': return { color: '#3b82f6', label: t('status.free') };
     case 'trialing': return { color: '#3b82f6', label: t('status.trialDaysLeft', { days: license.daysLeftTrial }) };
     case 'grace': return { color: '#f59e0b', label: t('status.graceDaysLeft', { days: license.daysLeftGrace }) };
@@ -274,12 +275,12 @@ export default function BillingPage() {
           <ShieldCheck className="w-4 h-4 text-emerald-400 shrink-0" />
           <span className="text-[12.5px] text-foreground">
             {backend.lease && backend.lease.type === 'trial'
-              ? <>{t('backend.trialVerified')}{backend.lease.currentPeriodEnd ? ` · ${t('backend.trialEnds', { date: new Date(backend.lease.currentPeriodEnd).toLocaleDateString() })}` : ''}</>
+              ? <>{t('backend.trialVerified')}{backend.lease.currentPeriodEnd ? ` · ${t('backend.trialEnds', { date: fmtDate(backend.lease.currentPeriodEnd) })}` : ''}</>
               : backend.lease
-                ? <>{t('backend.licensedVerified')} · <span className="capitalize">{backend.lease.tier}</span>{backend.lease.currentPeriodEnd ? ` · ${t('backend.renews', { date: new Date(backend.lease.currentPeriodEnd).toLocaleDateString() })}` : ''}</>
+                ? <>{t('backend.licensedVerified')} · <span className="capitalize">{backend.lease.tier}</span>{backend.lease.currentPeriodEnd ? ` · ${t('backend.renews', { date: fmtDate(backend.lease.currentPeriodEnd) })}` : ''}</>
                 : <>{t('backend.noLicense')}</>}
           </span>
-          <span className="ml-auto text-[10.5px] text-muted-foreground font-mono">{backend.tenantId}</span>
+          <span className="ms-auto text-[10.5px] text-muted-foreground font-mono">{backend.tenantId}</span>
         </div>
       )}
 
@@ -410,7 +411,7 @@ export default function BillingPage() {
                     : { borderColor: 'var(--border)' }}
                 >
                   {plan.highlight && (
-                    <span className="absolute -top-2.5 right-4 text-[10px] font-semibold px-2 py-0.5 rounded-full bg-gradient-to-br from-violet-500 to-blue-600 text-white shadow">{t('plans.bestValue')}</span>
+                    <span className="absolute -top-2.5 inset-e-4 text-[10px] font-semibold px-2 py-0.5 rounded-full bg-gradient-to-br from-violet-500 to-blue-600 text-white shadow">{t('plans.bestValue')}</span>
                   )}
                   <div className="flex items-baseline justify-between gap-2">
                     <h3 className="text-[15px] font-semibold text-foreground flex items-center gap-1.5">
@@ -428,7 +429,7 @@ export default function BillingPage() {
                     <p className="text-[11.5px] text-muted-foreground">
                       {t('period.billedYearly', { perMonth: money(deal.perMonth, plan.currency) })}
                       {deal.saving && (
-                        <span className="ml-1.5 inline-flex items-center px-1.5 py-0.5 rounded-full text-[10.5px] font-semibold bg-emerald-500/15 text-emerald-400">
+                        <span className="ms-1.5 inline-flex items-center px-1.5 py-0.5 rounded-full text-[10.5px] font-semibold bg-emerald-500/15 text-emerald-400">
                           {deal.monthsFree ? t('period.monthsFree', { count: deal.monthsFree, saving: money(deal.saving, plan.currency) }) : t('period.save', { saving: money(deal.saving, plan.currency) })}
                         </span>
                       )}
@@ -503,7 +504,7 @@ export default function BillingPage() {
 
               {manualDone ? (
                 <div className="rounded-lg bg-emerald-500/10 border border-emerald-500/20 p-4 text-[12.5px] text-emerald-400">
-                  <Check className="w-4 h-4 inline mr-1.5" /> {t('payModal.manualSubmitted')}
+                  <Check className="w-4 h-4 inline me-1.5" /> {t('payModal.manualSubmitted')}
                 </div>
               ) : (
                 <>
@@ -515,7 +516,7 @@ export default function BillingPage() {
                         <button
                           key={m.id}
                           onClick={() => setSelMethod(m.id)}
-                          className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg border text-left transition-colors"
+                          className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg border text-start transition-colors"
                           style={active
                             ? { borderColor: 'color-mix(in srgb, var(--primary) 50%, transparent)', background: 'color-mix(in srgb, var(--primary) 8%, transparent)' }
                             : { borderColor: 'var(--border)' }}
@@ -632,28 +633,28 @@ function InvoicesSection() {
       ) : (
         <div className="overflow-x-auto">
           <table className="w-full text-[12px]">
-            <thead className="text-muted-foreground text-left">
+            <thead className="text-muted-foreground text-start">
               <tr className="border-b border-border/60">
-                <th className="py-2 pr-3 font-semibold">{t('invoices.cols.date')}</th>
-                {canEdit && <th className="py-2 pr-3 font-semibold">{t('invoices.cols.owner')}</th>}
-                <th className="py-2 pr-3 font-semibold">{t('invoices.cols.amount')}</th>
-                <th className="py-2 pr-3 font-semibold">{t('invoices.cols.method')}</th>
-                <th className="py-2 pr-3 font-semibold">{t('invoices.cols.status')}</th>
-                <th className="py-2 pr-3 font-semibold">{t('invoices.cols.reference')}</th>
+                <th className="py-2 pe-3 font-semibold">{t('invoices.cols.date')}</th>
+                {canEdit && <th className="py-2 pe-3 font-semibold">{t('invoices.cols.owner')}</th>}
+                <th className="py-2 pe-3 font-semibold">{t('invoices.cols.amount')}</th>
+                <th className="py-2 pe-3 font-semibold">{t('invoices.cols.method')}</th>
+                <th className="py-2 pe-3 font-semibold">{t('invoices.cols.status')}</th>
+                <th className="py-2 pe-3 font-semibold">{t('invoices.cols.reference')}</th>
                 {canEdit && <th className="py-2" />}
               </tr>
             </thead>
             <tbody className="divide-y divide-border/60">
               {invoices.map((inv) => (
                 <tr key={inv.id} className="text-foreground/90">
-                  <td className="py-2 pr-3 whitespace-nowrap">{inv.issuedAt ? new Date(inv.issuedAt).toLocaleDateString() : '-'}</td>
-                  {canEdit && <td className="py-2 pr-3">{inv.ownerName || (inv.ownerMemberId != null ? `#${inv.ownerMemberId}` : '-')}</td>}
-                  <td className="py-2 pr-3 whitespace-nowrap">{money(inv.amount, inv.currency)}</td>
-                  <td className="py-2 pr-3 capitalize">{inv.provider || '-'}{inv.source === 'manual' ? ` · ${t('invoices.manualSuffix')}` : ''}</td>
-                  <td className="py-2 pr-3"><span className={`capitalize ${statusCls(inv.status)}`}>{inv.status}</span></td>
-                  <td className="py-2 pr-3 font-mono text-[11px] text-muted-foreground truncate max-w-[140px]">{inv.reference || '-'}</td>
+                  <td className="py-2 pe-3 whitespace-nowrap">{inv.issuedAt ? fmtDate(inv.issuedAt) : '-'}</td>
+                  {canEdit && <td className="py-2 pe-3">{inv.ownerName || (inv.ownerMemberId != null ? `#${inv.ownerMemberId}` : '-')}</td>}
+                  <td className="py-2 pe-3 whitespace-nowrap">{money(inv.amount, inv.currency)}</td>
+                  <td className="py-2 pe-3 capitalize">{inv.provider || '-'}{inv.source === 'manual' ? ` · ${t('invoices.manualSuffix')}` : ''}</td>
+                  <td className="py-2 pe-3"><span className={`capitalize ${statusCls(inv.status)}`}>{inv.status}</span></td>
+                  <td className="py-2 pe-3 font-mono text-[11px] text-muted-foreground truncate max-w-[140px]">{inv.reference || '-'}</td>
                   {canEdit && (
-                    <td className="py-2 text-right whitespace-nowrap">
+                    <td className="py-2 text-end whitespace-nowrap">
                       <button onClick={() => setEditing(inv)} title={t('common.edit')} className="text-muted-foreground hover:text-foreground p-1"><Pencil className="w-3.5 h-3.5" /></button>
                       <button onClick={() => remove(inv.id)} disabled={busy === `del:${inv.id}`} title={t('common.delete')} className="text-muted-foreground hover:text-red-400 p-1">{busy === `del:${inv.id}` ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Trash2 className="w-3.5 h-3.5" />}</button>
                     </td>
@@ -808,7 +809,7 @@ function PlanManager({ onChange }) {
             <div className="mt-3 flex items-center gap-1.5">
               <button onClick={() => setEditing(p)} className="h-8 px-2.5 rounded-lg text-[12px] font-medium bg-secondary hover:bg-secondary/70 text-foreground inline-flex items-center gap-1.5"><Pencil className="w-3.5 h-3.5" /> {t('common.edit')}</button>
               <button onClick={() => toggleActive(p)} disabled={busy === `act:${p.id}`} title={p.active ? t('planManager.hideTitle') : t('planManager.showTitle')} className="h-8 px-2.5 rounded-lg text-[12px] font-medium bg-secondary hover:bg-secondary/70 text-foreground inline-flex items-center gap-1.5">{busy === `act:${p.id}` ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Power className="w-3.5 h-3.5" />} {p.active ? t('planManager.hide') : t('planManager.show')}</button>
-              <button onClick={() => remove(p)} disabled={busy === `del:${p.id}`} title={t('planManager.deleteTitle')} className="h-8 px-2 ml-auto rounded-lg text-muted-foreground hover:text-red-400 hover:bg-red-500/10 inline-flex items-center">{busy === `del:${p.id}` ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Trash2 className="w-3.5 h-3.5" />}</button>
+              <button onClick={() => remove(p)} disabled={busy === `del:${p.id}`} title={t('planManager.deleteTitle')} className="h-8 px-2 ms-auto rounded-lg text-muted-foreground hover:text-red-400 hover:bg-red-500/10 inline-flex items-center">{busy === `del:${p.id}` ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Trash2 className="w-3.5 h-3.5" />}</button>
             </div>
           </div>
         ))}
@@ -953,30 +954,30 @@ function SubscribersSection() {
       ) : (
         <div className="overflow-x-auto">
           <table className="w-full text-[12px]">
-            <thead className="text-muted-foreground text-left">
+            <thead className="text-muted-foreground text-start">
               <tr className="border-b border-border/60">
-                <th className="py-2 pr-3 font-semibold">{t('subscribers.cols.account')}</th>
-                <th className="py-2 pr-3 font-semibold">{t('subscribers.cols.joined')}</th>
-                <th className="py-2 pr-3 font-semibold">{t('subscribers.cols.plan')}</th>
-                <th className="py-2 pr-3 font-semibold">{t('subscribers.cols.state')}</th>
-                <th className="py-2 pr-3 font-semibold">{t('subscribers.cols.expires')}</th>
-                <th className="py-2 pr-3 font-semibold">{t('subscribers.cols.team')}</th>
+                <th className="py-2 pe-3 font-semibold">{t('subscribers.cols.account')}</th>
+                <th className="py-2 pe-3 font-semibold">{t('subscribers.cols.joined')}</th>
+                <th className="py-2 pe-3 font-semibold">{t('subscribers.cols.plan')}</th>
+                <th className="py-2 pe-3 font-semibold">{t('subscribers.cols.state')}</th>
+                <th className="py-2 pe-3 font-semibold">{t('subscribers.cols.expires')}</th>
+                <th className="py-2 pe-3 font-semibold">{t('subscribers.cols.team')}</th>
                 <th className="py-2" />
               </tr>
             </thead>
             <tbody className="divide-y divide-border/60">
               {rows.map((r) => (
                 <tr key={r.ownerId} className="text-foreground/90">
-                  <td className="py-2 pr-3">
+                  <td className="py-2 pe-3">
                     <div className="font-medium text-foreground">{r.ownerName}</div>
                     {r.ownerEmail && <div className="text-[11px] text-muted-foreground">{r.ownerEmail}</div>}
                   </td>
-                  <td className="py-2 pr-3 whitespace-nowrap">{r.joinedAt ? new Date(r.joinedAt).toLocaleDateString() : '-'}</td>
-                  <td className="py-2 pr-3 whitespace-nowrap"><span className="capitalize">{r.planName || r.tier}</span>{!r.isPaid && r.isTrial ? <span className="text-[10px] text-blue-400"> · {t('subscribers.trialSuffix')}</span> : ''}</td>
-                  <td className="py-2 pr-3"><span className={`font-semibold ${stateTone(r)}`}>{stateLabel(r)}</span>{r.isPaid && r.daysLeft != null ? '' : (r.daysLeft != null ? <span className="text-muted-foreground"> · {t('subscribers.daysLeftShort', { days: r.daysLeft })}</span> : '')}</td>
-                  <td className="py-2 pr-3 whitespace-nowrap">{r.endsAt ? new Date(r.endsAt).toLocaleDateString() : '-'}</td>
-                  <td className="py-2 pr-3 whitespace-nowrap">{r.teamSize}</td>
-                  <td className="py-2 text-right whitespace-nowrap">
+                  <td className="py-2 pe-3 whitespace-nowrap">{r.joinedAt ? fmtDate(r.joinedAt) : '-'}</td>
+                  <td className="py-2 pe-3 whitespace-nowrap"><span className="capitalize">{r.planName || r.tier}</span>{!r.isPaid && r.isTrial ? <span className="text-[10px] text-blue-400"> · {t('subscribers.trialSuffix')}</span> : ''}</td>
+                  <td className="py-2 pe-3"><span className={`font-semibold ${stateTone(r)}`}>{stateLabel(r)}</span>{r.isPaid && r.daysLeft != null ? '' : (r.daysLeft != null ? <span className="text-muted-foreground"> · {t('subscribers.daysLeftShort', { days: r.daysLeft })}</span> : '')}</td>
+                  <td className="py-2 pe-3 whitespace-nowrap">{r.endsAt ? fmtDate(r.endsAt) : '-'}</td>
+                  <td className="py-2 pe-3 whitespace-nowrap">{r.teamSize}</td>
+                  <td className="py-2 text-end whitespace-nowrap">
                     <button onClick={() => setAssigning(r)} title={t('subscribers.assignTitle')} className="h-8 px-2.5 rounded-lg text-[12px] font-medium bg-secondary hover:bg-secondary/70 text-foreground inline-flex items-center gap-1.5"><UserPlus className="w-3.5 h-3.5" /> {t('subscribers.assign')}</button>
                   </td>
                 </tr>

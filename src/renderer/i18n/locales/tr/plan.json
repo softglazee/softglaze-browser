@@ -1,0 +1,97 @@
+{
+  "upgrade": {
+    "title": {
+      "profiles": "Free planın {{limit}} profil sınırına ulaştınız",
+      "running": "Free plan aynı anda {{limit}} profil çalıştırır",
+      "openable": "Bu profil Free plandaki {{limit}} profilinizden biri değil",
+      "seats": "Ekip üyeleri Pro'ya dahildir",
+      "ai": "Bugünkü {{limit}} yapay zekâ işlemi kullanıldı",
+      "sync": "Bulut eşitleme Pro'ya dahildir",
+      "phone": "Profilleri telefondan açmak Pro'ya dahildir",
+      "generic": "Bu özellik Pro'ya dahildir"
+    },
+    "body": {
+      "profiles": "{{used}} profiliniz güvende. Sınırsız profil için Pro'ya geçin veya yer açmak için bir tane silin.",
+      "running": "Başka bir profil başlatmak için açık profili kapatın veya aynı anda 3 profil çalıştırmak için Pro'ya geçin.",
+      "openable": "Her profil korunur. Free planda hangi {{limit}} profilin açılabileceğini siz seçersiniz; Pro hepsini açar.",
+      "seats": "Free plan tek kişi içindir. Pro 3 ekip üyesi, Enterprise 25 ekip üyesi içerir.",
+      "ai": "Free plan günde {{limit}} yapay zekâ işlemi içerir; yarın sıfırlanır. Pro'da yapay zekâ işlemleri sınırsızdır.",
+      "sync": "Pro, profillerinizi bilgisayarlarınız ve telefonunuz arasında eşitler.",
+      "phone": "Free planda telefonunuz ve web uygulaması profilleri görüntüleyebilir ve yapay zekâ isteklerini onaylayabilir. Pro ayrıca bunları açıp durdurur.",
+      "generic": "Kullanmak için Pro'ya geçin."
+    },
+    "price": "Pro aylık {{price}}.",
+    "priceFallback": "Pro aylık US$5'tan başlar.",
+    "upgradeButton": "Pro'ya geç",
+    "chooseProfiles": "Profilleri seç",
+    "notNow": "Şimdi değil"
+  },
+  "welcome": {
+    "title": "Pro deneme süreniz sona erdi. Artık Free plandasınız.",
+    "keepTitle": "Koruduklarınız",
+    "keep": "Tüm profilleriniz ({{limit}} tanesi açılabilir), proxy'leriniz ve parmak izleriniz, telefon ve web uygulaması.",
+    "proTitle": "Pro ile gelenler",
+    "pro": "Sınırsız profil, aynı anda 3 çalışan profil, ekip koltukları, bulut eşitleme ve sınırsız yapay zekâ işlemi, aylık {{price}}.",
+    "upgrade": "Pro'ya geç",
+    "stay": "Free ile devam et"
+  },
+  "counter": {
+    "freeBadge": "Free plan",
+    "profiles": "{{used}} / {{limit}} profil",
+    "running": "{{used}} / {{limit}} çalışıyor",
+    "ai": "Bugün {{used}} / {{limit}} yapay zekâ işlemi",
+    "upgrade": "Yükselt"
+  },
+  "choose": {
+    "title": "Hangi profillerin açılabileceğini seçin",
+    "body": "Free planda {{total}} profilinizden {{limit}} tanesi açılabilir. Her profil korunur; hepsini açmak için Pro'ya geçin.",
+    "selected": "{{count}} / {{limit}} seçildi",
+    "search": "Profillerde ara",
+    "save": "Kaydet",
+    "cancel": "İptal",
+    "saved": "Kaydedildi. Bu profiller Free planda açılabilir."
+  },
+  "billing": {
+    "currentFree": "Free plan",
+    "currentFreeBody": "Sonsuza kadar ücretsiz, kart gerekmez. Daha fazla profil, ekip ve sınırsız yapay zekâ işlemi için istediğiniz zaman yükseltin.",
+    "currentBadge": "Mevcut plan",
+    "compareTitle": "Planları karşılaştır",
+    "colFeature": "Özellik",
+    "colFree": "Free",
+    "colPro": "Pro",
+    "colEnterprise": "Enterprise",
+    "rows": {
+      "profiles": "Kayıtlı profiller",
+      "running": "Aynı anda çalışan profiller",
+      "seats": "Koltuklar (ekip üyeleri)",
+      "pcs": "Hesap başına PC",
+      "fingerprints": "Kendi proxy'leriniz, tüm parmak izi ayarları",
+      "ai": "Yapay zekâ ve MCP otomasyonu",
+      "phone": "Telefon ve web uygulaması",
+      "sync": "PC'ler arası bulut eşitleme",
+      "support": "Destek"
+    },
+    "values": {
+      "unlimited": "Sınırsız",
+      "unlimitedAudit": "Sınırsız + denetim dışa aktarma",
+      "yes": "Evet",
+      "no": "Hayır",
+      "aiPerDay": "Günde {{count}} işlem",
+      "viewApprove": "Görüntüleme + yapay zekâ isteklerini onaylama",
+      "openStop": "+ profilleri açma ve durdurma",
+      "teamApprovals": "+ ekip onayları",
+      "helpCentre": "Yardım merkezi",
+      "email": "E-posta",
+      "priorityEmail": "Öncelikli e-posta"
+    }
+  },
+  "deals": {
+    "title": "Önerilen proxy fırsatları",
+    "disclosure": "İş ortağı teklifi. SoftGlaze komisyon kazanabilir.",
+    "code": "Kod {{code}}",
+    "copyCode": "Kodu kopyala",
+    "copied": "Kopyalandı",
+    "open": "Teklifi al",
+    "hidden": "Pro ve Enterprise iş ortağı tekliflerini asla göstermez."
+  }
+}

@@ -1,0 +1,58 @@
+{
+  "header": {
+    "eyebrow": "Obszar roboczy",
+    "title": "Kosz i odzyskiwanie",
+    "description": "Przywróć usunięte profile lub trwale usuń je z dysku."
+  },
+  "actions": {
+    "emptyTrash": "Opróżnij kosz",
+    "restore": "Przywróć",
+    "deleteForever": "Usuń na zawsze",
+    "clear": "Wyczyść",
+    "restoreTitle": "Przywróć profil",
+    "purgeTitle": "Usuń trwale"
+  },
+  "errors": {
+    "loadFailed": "Nie udało się wczytać kosza."
+  },
+  "warning": {
+    "title": "Trwałe usunięcie",
+    "body": "Przywrócenie zwraca profil na listę bez zmian. Trwałe usunięcie kasuje profil i wszystkie jego dane przeglądarki (pliki cookie, pamięć podręczną, loginy) z tego komputera."
+  },
+  "toolbar": {
+    "searchPlaceholder": "Szukaj usuniętych profili..."
+  },
+  "bulk": {
+    "selected": "Zaznaczono: {{count}}"
+  },
+  "table": {
+    "profileName": "Nazwa profilu",
+    "proxy": "Proxy",
+    "deletedDate": "Data usunięcia",
+    "actions": "Akcje",
+    "directProxy": "Bezpośrednio",
+    "defaultBrowser": "Chrome"
+  },
+  "empty": {
+    "title": "Kosz jest pusty",
+    "noMatch": "Żaden usunięty profil nie pasuje do wyszukiwania.",
+    "none": "Nie masz usuniętych profili. Czysto i bezpiecznie!"
+  },
+  "confirm": {
+    "purgeWithData": "Trwale usunąć \"{{title}}\"? Tej operacji nie można cofnąć, a lokalne dane przeglądarki zostaną skasowane.",
+    "bulkPurgeWithData_one": "Trwale usunąć {{count}} profil? Tej operacji nie można cofnąć, a lokalne dane przeglądarki zostaną skasowane.",
+    "bulkPurgeWithData_few": "Trwale usunąć {{count}} profile? Tej operacji nie można cofnąć, a lokalne dane przeglądarki zostaną skasowane.",
+    "bulkPurgeWithData_many": "Trwale usunąć {{count}} profili? Tej operacji nie można cofnąć, a lokalne dane przeglądarki zostaną skasowane.",
+    "bulkPurgeWithData_other": "Trwale usunąć {{count}} profilu? Tej operacji nie można cofnąć, a lokalne dane przeglądarki zostaną skasowane.",
+    "emptyTrashWithData_one": "Trwale usunąć WSZYSTKIE profile w koszu ({{count}})? Tej operacji nie można cofnąć, a lokalne dane przeglądarki zostaną skasowane.",
+    "emptyTrashWithData_few": "Trwale usunąć WSZYSTKIE profile w koszu ({{count}})? Tej operacji nie można cofnąć, a lokalne dane przeglądarki zostaną skasowane.",
+    "emptyTrashWithData_many": "Trwale usunąć WSZYSTKIE profile w koszu ({{count}})? Tej operacji nie można cofnąć, a lokalne dane przeglądarki zostaną skasowane.",
+    "emptyTrashWithData_other": "Trwale usunąć WSZYSTKIE profile w koszu ({{count}})? Tej operacji nie można cofnąć, a lokalne dane przeglądarki zostaną skasowane."
+  },
+  "pager": {
+    "showing": "Wyświetlanie {{from}}-{{to}} z {{total}}",
+    "prev": "Poprz.",
+    "next": "Dalej"
+  },
+  "bulkSkipped": "Bez zmian: profile ({{count}}). {{reason}}"
+}

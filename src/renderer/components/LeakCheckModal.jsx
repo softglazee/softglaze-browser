@@ -144,7 +144,7 @@ export default function LeakCheckModal({ profileId, profileName, onClose }) {
                 <Radio className="w-4 h-4 text-primary animate-pulse" /> {t('leakCheck.liveTestHeader')}
               </h3>
               <Button size="sm" variant="primary" disabled={liveLoading} onClick={runLive}>
-                {liveLoading ? <Loader2 className="w-3.5 h-3.5 mr-1.5 animate-spin" /> : null} {t('leakCheck.executeTest')}
+                {liveLoading ? <Loader2 className="w-3.5 h-3.5 me-1.5 animate-spin" /> : null} {t('leakCheck.executeTest')}
               </Button>
             </div>
             <p className="text-xs text-muted mb-4 bg-surface p-3 rounded border border-border">
@@ -173,7 +173,7 @@ export default function LeakCheckModal({ profileId, profileName, onClose }) {
 
         <div className="flex items-center justify-end gap-3 px-5 py-4 border-t border-border bg-surface">
           <Button size="sm" variant="secondary" disabled={loading} onClick={run}>
-            <RefreshCcw className="w-3.5 h-3.5 mr-1.5" /> {t('leakCheck.rerunStatic')}
+            <RefreshCcw className="w-3.5 h-3.5 me-1.5" /> {t('leakCheck.rerunStatic')}
           </Button>
           <Button size="sm" variant="primary" onClick={onClose}>{t('leakCheck.done')}</Button>
         </div>

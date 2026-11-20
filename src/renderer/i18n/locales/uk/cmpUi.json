@@ -1,0 +1,31 @@
+{
+  "brandSelect": {
+    "presentAs": "Показувати цей профіль як {{brand}}"
+  },
+  "versionSelect": {
+    "auto": "Авто",
+    "loadingVersions": "Завантаження версій…",
+    "ready": "Готово",
+    "readyTitle": "Встановлено й готово до роботи",
+    "noVersions": "Версій не знайдено.",
+    "offlineError": "Немає мережі: каталог версій недоступний.",
+    "downloadFailed": "Не вдалося завантажити.",
+    "resumeFailed": "Не вдалося відновити.",
+    "paused": "Пауза",
+    "interrupted": "Перервано",
+    "resumeTitle": "{{state}} на {{percent}}% - відновити",
+    "statusInstalling": "встан.",
+    "statusQueued": "…",
+    "retryTitle": "Повторити - {{error}}",
+    "downloadFailedShort": "помилка завантаження",
+    "downloadInstallTitle": "Завантажити й установити цю версію"
+  },
+  "pager": {
+    "showing": "Показано {{from}}-{{to}} з {{total}}",
+    "perPage": "На сторінці",
+    "all": "Усі",
+    "prev": "Назад",
+    "next": "Далі",
+    "pageOf": "Стор. {{page}} / {{total}}"
+  }
+}

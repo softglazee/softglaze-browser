@@ -1,0 +1,342 @@
+{
+  "common": {
+    "cancel": "取消",
+    "save": "保存",
+    "edit": "编辑",
+    "delete": "删除"
+  },
+  "header": {
+    "title": "账单和套餐",
+    "description": "在一个地方管理订阅、比较套餐和升级。"
+  },
+  "status": {
+    "loading": "正在加载…",
+    "sourceOwner": "源代码所有者",
+    "active": "有效",
+    "activeRenews": "有效 · {{date}} 续订",
+    "trial": "试用",
+    "trialDaysLeft": "试用 · 剩余 {{days}} 天",
+    "graceDaysLeft": "宽限期 · 剩余 {{days}} 天",
+    "subscriptionEnded": "订阅已结束",
+    "free": "免费套餐"
+  },
+  "backend": {
+    "licensedVerified": "已授权并验证",
+    "renews": "{{date}} 续订",
+    "noLicense": "许可证服务已启用：此安装尚无付费许可证。",
+    "trialVerified": "免费试用，已验证",
+    "trialEnds": "{{date}} 结束"
+  },
+  "current": {
+    "title": "当前套餐",
+    "sourceOwnerAllFeatures": "源代码所有者 · 全部功能",
+    "paid": "付费",
+    "freeTrial": "免费试用",
+    "freeForever": "免费套餐 · 永久免费"
+  },
+  "grace": {
+    "message_one": "你的{{kind}}已结束，宽限期还剩 {{count}} 天。请在下方续订，以免失去访问权限。",
+    "message_other": "你的{{kind}}已结束，宽限期还剩 {{count}} 天。请在下方续订，以免失去访问权限。",
+    "kindTrial": "免费试用",
+    "kindSubscription": "订阅"
+  },
+  "banned": {
+    "message": "你的订阅已结束，配置文件启动已被锁定。请订阅或输入购买码以恢复访问。"
+  },
+  "trialRemaining": {
+    "message_one": "免费试用：剩余 {{count}} 天。",
+    "message_other": "免费试用：剩余 {{count}} 天。"
+  },
+  "seats": {
+    "label": "团队席位",
+    "usage": "已使用 {{used}} / {{total}}",
+    "upgradeToAddMore": "· 升级以添加更多"
+  },
+  "exempt": {
+    "note": "你是源代码所有者，不受订阅系统限制。包含全部功能。"
+  },
+  "checkout": {
+    "waiting": "正在等待你的付款…",
+    "waitingForPlan": "正在等待你的付款 · {{plan}}…",
+    "opened": "已在你的浏览器中打开付款页面。付款后，此处会自动更新。",
+    "reopen": "重新打开付款页面"
+  },
+  "plans": {
+    "chooseHeading": "选择套餐",
+    "bestValue": "最超值",
+    "current": "当前",
+    "footerNote": "付款通过管理员启用的方式处理。在浏览器中完成付款后，此页面会自动激活你的套餐。"
+  },
+  "period": {
+    "label": "计费周期",
+    "monthly": "按月",
+    "yearly": "按年",
+    "billedYearly": "按年计费，约合每月 {{perMonth}}",
+    "monthsFree_one": "免费 {{count}} 个月，节省 {{saving}}",
+    "monthsFree_other": "免费 {{count}} 个月，节省 {{saving}}",
+    "monthsFreeShort_one": "免费 {{count}} 个月",
+    "monthsFreeShort_other": "免费 {{count}} 个月",
+    "save": "每年节省 {{saving}}"
+  },
+  "cta": {
+    "included": "已包含",
+    "onPaidPlan": "使用付费套餐中",
+    "trialActiveDaysLeft": "试用中 · 剩余 {{days}} 天",
+    "startFreeTrial": "开始免费试用",
+    "trialUsed": "免费试用已使用",
+    "currentPlan": "当前套餐",
+    "upgradeEnterprise": "升级到 Enterprise",
+    "downgradePro": "降级到 Pro",
+    "choosePlan": "选择 {{name}}"
+  },
+  "trial": {
+    "started": "你的免费试用已开始，可使用全部功能。祝你使用愉快！",
+    "startedWithDays": "你的免费试用已开始：{{days}} 天全部功能访问。祝你使用愉快！",
+    "errors": {
+      "failed": "无法开始试用。"
+    }
+  },
+  "redeem": {
+    "label": "有购买码？",
+    "apply": "应用",
+    "success": "购买码已应用，谢谢！",
+    "errors": {
+      "empty": "请输入你的购买码。",
+      "failed": "无法应用该购买码。"
+    }
+  },
+  "pay": {
+    "received": "已收到付款，你的套餐现已激活！",
+    "errors": {
+      "noMethods": "我们正在接入新的支付服务商，应用内购买暂停中。如需通过发票购买，请发送邮件至 support@softglaze.com，然后在下方输入您的购买码。",
+      "checkoutFailed": "无法开始结账。",
+      "submitFailed": "无法提交你的付款。"
+    }
+  },
+  "payModal": {
+    "title": "为 {{name}} 付款",
+    "manualSubmitted": "付款已提交。管理员审核后会尽快激活你的套餐。",
+    "manualBadge": "手动",
+    "continueTo": "继续前往 {{method}}",
+    "openPayLink": "打开付款链接",
+    "referencePlaceholder": "付款参考号/交易 ID",
+    "notePlaceholder": "备注（可选）",
+    "submitForApproval": "我已付款，提交审核",
+    "manualActivationNote": "管理员确认付款后，你的套餐即会激活。"
+  },
+  "admin": {
+    "configureMethods": "在“设置”中配置付款方式"
+  },
+  "invoices": {
+    "title": "发票",
+    "subtitleAdmin": "所有所有者的全部付款：自动收款 + 手动付款。",
+    "subtitleUser": "你的付款收据。",
+    "add": "添加",
+    "empty": "还没有发票。",
+    "manualSuffix": "手动",
+    "confirmDelete": "删除此发票？",
+    "cols": {
+      "date": "日期",
+      "owner": "所有者",
+      "amount": "金额",
+      "method": "方式",
+      "status": "状态",
+      "reference": "参考号"
+    },
+    "errors": {
+      "loadFailed": "无法加载发票。",
+      "deleteFailed": "无法删除。"
+    }
+  },
+  "invoiceForm": {
+    "addTitle": "添加发票",
+    "editTitle": "编辑发票",
+    "ownerMemberId": "所有者成员 ID",
+    "optionalPlaceholder": "（可选）",
+    "amount": "金额",
+    "currency": "币种",
+    "method": "方式",
+    "status": "状态",
+    "tier": "级别",
+    "months": "月数",
+    "reference": "参考号",
+    "referencePlaceholder": "交易号/代码",
+    "note": "备注",
+    "errors": {
+      "invalidAmount": "请输入有效金额。",
+      "saveFailed": "无法保存发票。"
+    }
+  },
+  "planManager": {
+    "title": "套餐和方案包",
+    "subtitle": "设置价格、编辑详情并创建新方案包。更改会立即应用到结账页面。",
+    "newPackage": "新建方案包",
+    "activeBadge": "已启用",
+    "hiddenBadge": "已隐藏",
+    "termMeta": "{{months}} 个月期限 · {{tier}}",
+    "hide": "隐藏",
+    "show": "显示",
+    "hideTitle": "在结账页面中隐藏",
+    "showTitle": "在结账页面中显示",
+    "deleteTitle": "删除套餐",
+    "confirmDelete": "删除“{{name}}”套餐？购买者将不再看到它。",
+    "errors": {
+      "loadFailed": "无法加载套餐。",
+      "updateFailed": "无法更新套餐。",
+      "deleteFailed": "无法删除套餐。"
+    }
+  },
+  "planForm": {
+    "newTitle": "新建方案包",
+    "editTitle": "编辑 {{name}}",
+    "editTitleAria": "编辑方案包",
+    "packageName": "方案包名称",
+    "planType": "套餐类型",
+    "typePaid": "付费",
+    "typeTrial": "免费试用",
+    "trialLength": "试用期（天）",
+    "price": "价格",
+    "currency": "币种",
+    "shownAs": "显示为",
+    "trialShownValue": "{{days}} 天 · 免费",
+    "billedPer": "计费单位",
+    "term": "期限（授予的月数）",
+    "featureTier": "功能级别",
+    "bestValue": "最超值",
+    "active": "已启用",
+    "tagline": "宣传语",
+    "taglinePlaceholder": "个人用户所需的一切。",
+    "features": "功能（每行一个）",
+    "featuresPlaceholder": "无限浏览器配置文件\n完整指纹引擎\n代理池和轮换",
+    "savePackage": "保存方案包",
+    "errors": {
+      "nameRequired": "请为方案包命名。",
+      "invalidPrice": "请输入有效价格。",
+      "saveFailed": "无法保存套餐。"
+    }
+  },
+  "subscribers": {
+    "title": "订阅者",
+    "subtitle": "每个账号的加入时间、套餐和到期时间。共 {{count}} 个。",
+    "assignPlan": "分配套餐",
+    "empty": "还没有所有者账号。",
+    "trialSuffix": "试用",
+    "daysLeftShort": "{{days}} 天",
+    "assign": "分配",
+    "assignTitle": "分配/授予套餐",
+    "state": {
+      "ended": "已结束",
+      "grace": "宽限期",
+      "active": "有效",
+      "trial": "试用"
+    },
+    "cols": {
+      "account": "账号",
+      "joined": "加入时间",
+      "plan": "套餐",
+      "state": "状态",
+      "expires": "到期时间",
+      "team": "团队"
+    },
+    "errors": {
+      "loadFailed": "无法加载订阅者。"
+    }
+  },
+  "assignForm": {
+    "title": "分配套餐",
+    "account": "账号",
+    "plan": "套餐",
+    "months": "月数",
+    "monthsWithDefault": "月数（默认 {{default}}）",
+    "recordAsPaid": "记录为付费销售",
+    "noteOptional": "备注（可选）",
+    "notePlaceholder": "授予原因",
+    "grantNote": "立即授予期限，并清除所有订阅锁定。",
+    "grantNotePaid": "将记录一张已付款发票。",
+    "grantNoteFree": "记录为 $0 授予。",
+    "fallbackAccount": "账号",
+    "fallbackPlan": "套餐",
+    "success_one": "已将 {{plan}} 分配给 {{name}}，期限 {{count}} 个月。",
+    "success_other": "已将 {{plan}} 分配给 {{name}}，期限 {{count}} 个月。",
+    "errors": {
+      "chooseAccount": "请选择账号。",
+      "choosePlan": "请选择套餐。",
+      "assignFailed": "无法分配套餐。"
+    }
+  },
+  "planText": {
+    "trialTagline": "免费试用全部功能：完整访问，无需银行卡。",
+    "trialFullAccess": "完整访问全部功能",
+    "trialTools": "全部指纹、代理和泄露检测工具",
+    "trialMacros": "宏、Cookie 预热和移动配置文件",
+    "trialBackupSeats": "加密备份和团队席位",
+    "trialNoCard": "无需信用卡",
+    "trialUpgrade": "随时升级到付费套餐",
+    "proTagline": "个人用户规模化运行配置文件所需的一切。",
+    "proProfiles": "无限本地浏览器配置文件",
+    "proFingerprint": "完整指纹引擎 + 泄露检测",
+    "proProxies": "代理池、轮换策略和地理位置自动匹配",
+    "proMacros": "宏录制器、计划任务和数据驱动运行",
+    "proCookieWarmer": "Cookie 预热",
+    "proMobile": "移动/Android 设备配置文件",
+    "proBackup": "加密的工作区备份和恢复",
+    "proDbEncryption": "完整的数据库静态加密",
+    "proPalette": "命令面板 + 新手引导",
+    "proSeats": "最多 3 位团队成员",
+    "proParallel": "并行运行器，最多同时运行 3 个配置文件，附带实时运行控制台",
+    "entTagline": "面向团队：最多 25 位成员，同时运行 10 个配置文件，并可导出审计日志。",
+    "entEverythingInPro": "包含 Pro 的全部功能，另外还有：",
+    "entSeats": "最多 25 位团队成员",
+    "entParallel": "并行运行器，最多同时运行 10 个配置文件，附带实时运行控制台",
+    "entAuditExport": "审计日志导出（CSV/JSON）",
+    "entSupport": "优先邮件支持"
+  },
+  "serverErrors": {
+    "SIGNUP_INVALID_EMAIL": "请输入有效的邮箱地址。",
+    "SIGNUP_DISPOSABLE_EMAIL": "请使用长期有效的邮箱地址。",
+    "SIGNUP_NO_MX": "找不到该地址的邮件服务器。",
+    "SIGNUP_BAD_CODE": "验证码不正确或已过期。请检查邮件或重新获取验证码。",
+    "SIGNUP_OFFLINE": "请连接互联网以创建账号。",
+    "SIGNUP_FAILED": "目前无法验证该邮箱，请过几分钟再试。",
+    "RATE_LIMITED": "尝试次数过多，请过几分钟再试。",
+    "TRIAL_USED": "这台电脑或该邮箱已使用过免费试用。请选择套餐或输入购买码。",
+    "TRIAL_OFFLINE": "请连接互联网以开始免费试用。",
+    "TRIAL_VERIFY_EMAIL": "请确认您的邮箱地址以开始免费试用。我们已向您发送 6 位验证码。",
+    "TRIAL_NO_EMAIL": "请先为所有者账号添加邮箱地址，然后再开始免费试用。",
+    "TRIAL_FAILED": "目前无法开始免费试用，请过几分钟再试。",
+    "SERVER_UNAVAILABLE": "我们的许可证服务器暂时没有响应，请过几分钟再试。",
+    "MACHINE_MISMATCH": "此许可证已注册到另一台电脑。请将其转移到这台电脑，或请管理员重置。",
+    "SIGNUP_INVALID_PHONE": "请输入带 + 和国家/地区代码的电话号码，或留空。",
+    "SIGNUP_USE_CASE": "请选择你将用 SoftGlaze 做什么。",
+    "SIGNUP_USE_CASE_OTHER": "请简单告诉我们你将用 SoftGlaze 做什么。",
+    "CONFIRM_OFFLINE": "请连接互联网以确认您的邮箱。"
+  },
+  "store": {
+    "cardTitle": "Microsoft Store 订阅",
+    "processedBy": "在此版本中，由 Microsoft 处理付款：你使用 Microsoft 账户付款，Microsoft 每月收取订阅费用（年度套餐则每年收取）。",
+    "upgradeNote": "从 Pro 升级到 Enterprise 会开始第二个订阅。请在你的 Microsoft 账户中取消 Pro，使其停止续订。",
+    "periodNote": "在按月和按年计费之间切换也会开始第二个订阅。请在你的 Microsoft 账户中取消旧订阅，使其停止续订。",
+    "downgradeNote": "如需从 Enterprise 降级到 Pro，请在你的 Microsoft 账户中取消 Enterprise，并在其结束后购买 Pro。",
+    "buyWith": "通过 Microsoft Store 购买",
+    "buyWithPrice": "通过 Microsoft Store 购买 · {{price}}",
+    "priceFrom": "价格来自 Microsoft Store，以你的货币显示",
+    "restore": "恢复 Microsoft Store 购买",
+    "moveHere": "转移到这台电脑",
+    "manage": "在你的 Microsoft 账户中管理或取消",
+    "result": {
+      "active": "谢谢。你的 {{plan}} 套餐已激活。",
+      "cancelled": "购买已取消，未产生任何费用。",
+      "pending": "Microsoft 已收到你的购买。我们正在确认，可能需要一分钟。",
+      "pendingLong": "你的购买尚未确认。请在几分钟后点击“恢复 Microsoft Store 购买”，或发送邮件至 support@softglaze.com。",
+      "pendingOffline": "你的购买已保存在这台电脑上。应用一旦能连接到我们的服务器，就会立即激活。",
+      "pendingReview": "我们已收到你的购买，正在核实。获得批准后，你的套餐将立即激活。",
+      "none": "在此 Microsoft 账户中未找到此应用的有效 Microsoft Store 订阅。",
+      "inUse": "此订阅正在另一台电脑上使用。你可以将其转移到这台电脑。",
+      "moveLimit": "此订阅在过去 30 天内已被转移到其他电脑两次。如需帮助，请发送邮件至 support@softglaze.com。",
+      "unavailable": "Microsoft Store 购买目前不可用，请稍后再试。",
+      "productMissing": "此套餐尚未在 Microsoft Store 上架。",
+      "network": "无法连接到 Microsoft Store。请检查网络连接后重试。",
+      "error": "无法完成购买：{{message}}"
+    }
+  }
+}

@@ -67,7 +67,7 @@ function WindowShot({ src, alt, w, h, bleed }) {
       <div aria-hidden="true" className="flex items-center gap-2 px-3 text-[11px] text-[var(--auth-shot-bar-fg)]" style={{ height: TITLE_BAR }}>
         <img src="/logos/app-source-512.png" alt="" className="w-3.5 h-3.5" draggable={false} />
         <span className="font-medium">SoftGlaze</span>
-        <span className="ml-auto flex items-center gap-3.5">
+        <span className="ms-auto flex items-center gap-3.5">
           <span className="block w-2.5 h-px bg-current" />
           <span className="block w-2.5 h-2.5 border border-current" />
           <span className="block w-3 text-center leading-none">&#x2715;</span>
@@ -124,8 +124,10 @@ export default function AuthProductPanel() {
 
   function onKeyDown(e) {
     if (e.target && /^(INPUT|TEXTAREA|SELECT)$/.test(e.target.tagName)) return;
-    if (e.key === 'ArrowRight') { e.preventDefault(); go(i + 1); }
-    if (e.key === 'ArrowLeft') { e.preventDefault(); go(i - 1); }
+    // Right to left (Arabic, Urdu): the next button sits on the left, so ArrowLeft moves forward.
+    const step = document.documentElement.dir === 'rtl' ? -1 : 1;
+    if (e.key === 'ArrowRight') { e.preventDefault(); go(i + step); }
+    if (e.key === 'ArrowLeft') { e.preventDefault(); go(i - step); }
   }
 
   const slide = SLIDES[i];
@@ -152,7 +154,7 @@ export default function AuthProductPanel() {
       <div className="auth-controls mt-5 flex items-center gap-2">
         <button type="button" onClick={() => go(i - 1)} aria-label={t('panel.prev')} className={ctrl}><ChevronLeft className="w-5 h-5" aria-hidden="true" /></button>
         <button type="button" onClick={() => go(i + 1)} aria-label={t('panel.next')} className={ctrl}><ChevronRight className="w-5 h-5" aria-hidden="true" /></button>
-        <div className="ml-2 flex items-center">
+        <div className="ms-2 flex items-center">
           {SLIDES.map((s, k) => (
             <button key={s.key} type="button" onClick={() => go(k)} aria-current={k === i ? 'true' : undefined}
               aria-label={t('panel.goTo', { n: k + 1, title: t(`panel.slides.${s.key}.title`) })}
@@ -162,14 +164,14 @@ export default function AuthProductPanel() {
           ))}
         </div>
         {!reduced && (
-          <button type="button" onClick={() => setStopped((v) => !v)} aria-label={stopped ? t('panel.play') : t('panel.pause')} className={`${ctrl} ml-auto`}>
+          <button type="button" onClick={() => setStopped((v) => !v)} aria-label={stopped ? t('panel.play') : t('panel.pause')} className={`${ctrl} ms-auto`}>
             {stopped ? <Play className="w-4 h-4" aria-hidden="true" /> : <Pause className="w-4 h-4" aria-hidden="true" />}
           </button>
         )}
       </div>
 
       {/* The screens: stacked, the current one fades in. The stage reaches the panel's right and bottom edges. */}
-      <div className="auth-stage relative flex-1 min-h-0 mt-9 -mr-10 xl:-mr-14 -mb-10">
+      <div className="auth-stage relative flex-1 min-h-0 mt-9 -me-10 xl:-me-14 -mb-10">
         {SLIDES.map((s, k) => {
           const on = k === i;
           const src = loaded.has(k) ? s[theme] : null;
@@ -177,7 +179,7 @@ export default function AuthProductPanel() {
           return (
             <div key={s.key} role="group" aria-roledescription={t('panel.slide')} aria-label={t('panel.slideOf', { n: k + 1, total: n })}
               aria-hidden={!on} inert={!on}
-              className={`absolute inset-0 flex ${s.kind === 'phone' ? 'items-start justify-center pr-10 xl:pr-14' : s.bleed ? 'items-end justify-start' : 'items-start justify-start'} [container-type:size] transition-opacity duration-700 ease-out motion-reduce:transition-none ${on ? 'opacity-100' : 'opacity-0'}`}>
+              className={`absolute inset-0 flex ${s.kind === 'phone' ? 'items-start justify-center pe-10 xl:pe-14' : s.bleed ? 'items-end justify-start' : 'items-start justify-start'} [container-type:size] transition-opacity duration-700 ease-out motion-reduce:transition-none ${on ? 'opacity-100' : 'opacity-0'}`}>
               {s.kind === 'phone' ? <PhoneShot src={src} alt={alt} w={s.w} h={s.h} /> : <WindowShot src={src} alt={alt} w={s.w} h={s.h} bleed={s.bleed} />}
             </div>
           );

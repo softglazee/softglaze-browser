@@ -1,0 +1,414 @@
+{
+  "header": {
+    "eyebrow": "Softglaze Pro فیچرز",
+    "title": "آٹومیشن",
+    "description": "بغیر کوڈ میکروز، خودکار کوکی وارم اپ، اور ہر بیک گراؤنڈ کام کا لاگ۔"
+  },
+  "tabs": {
+    "macros": "میرے میکروز",
+    "parallel": "متوازی رن",
+    "warmer": "کوکی وارمر",
+    "history": "کاموں کی ہسٹری"
+  },
+  "clickLabels": {
+    "none": "صرف براؤز کریں",
+    "random": "رینڈم کلکس",
+    "links": "لنکس براؤز کریں"
+  },
+  "stepTypes": {
+    "goto": "URL پر جائیں",
+    "click": "کلک",
+    "type": "متن لکھیں",
+    "keypress": "کی دبائیں",
+    "scroll": "اسکرول",
+    "wait": "انتظار",
+    "move": "ماؤس ہلائیں",
+    "hover": "ہوور",
+    "select": "ڈراپ ڈاؤن آپشن چنیں",
+    "waitFor": "عنصر کا انتظار",
+    "submit": "فارم جمع کریں",
+    "check": "چیک / ان چیک",
+    "clear": "فیلڈ صاف کریں"
+  },
+  "stepFields": {
+    "goto": {
+      "url": "URL",
+      "urlPlaceholder": "https://example.com"
+    },
+    "click": {
+      "selector": "CSS سلیکٹر",
+      "selectorPlaceholder": "#submit, .btn"
+    },
+    "type": {
+      "selector": "سلیکٹر",
+      "selectorPlaceholder": "input[name=\"email\"]",
+      "value": "لکھنے والا متن"
+    },
+    "keypress": {
+      "key": "کی",
+      "keyPlaceholder": "Enter"
+    },
+    "scroll": {
+      "steps": "اسکرول کی مقدار",
+      "stepsPlaceholder": "4"
+    },
+    "wait": {
+      "ms": "ملی سیکنڈ",
+      "msPlaceholder": "1000"
+    },
+    "move": {
+      "selector": "سلیکٹر (یا X/Y دیں)",
+      "selectorPlaceholder": ".target",
+      "x": "X",
+      "y": "Y"
+    },
+    "hover": {
+      "selector": "سلیکٹر",
+      "selectorPlaceholder": ".menu",
+      "ms": "رکنے کا وقت ms",
+      "msPlaceholder": "800"
+    },
+    "select": {
+      "selector": "سلیکٹر",
+      "selectorPlaceholder": "select[name=\"focus\"]",
+      "value": "آپشن (ویلیو، لیبل یا انڈیکس)",
+      "valuePlaceholder": "Plumbing",
+      "by": "کس سے ملائیں"
+    },
+    "waitFor": {
+      "selector": "سلیکٹر",
+      "selectorPlaceholder": ".dashboard",
+      "state": "حالت",
+      "timeout": "ٹائم آؤٹ ms",
+      "timeoutPlaceholder": "30000"
+    },
+    "submit": {
+      "selector": "فارم یا فیلڈ سلیکٹر",
+      "selectorPlaceholder": "form#signup"
+    },
+    "check": {
+      "selector": "سلیکٹر",
+      "selectorPlaceholder": "input[name=\"terms\"]",
+      "state": "حالت"
+    },
+    "clear": {
+      "selector": "سلیکٹر",
+      "selectorPlaceholder": "input[name=\"email\"]"
+    }
+  },
+  "stepSummary": {
+    "noUrl": "(کوئی URL نہیں)",
+    "noSelector": "(کوئی سلیکٹر نہیں)",
+    "selectorFallback": "(سلیکٹر)",
+    "target": "(ٹارگٹ)"
+  },
+  "macros": {
+    "intro": "بغیر کوڈ کے دوبارہ استعمال ہونے والے ورک فلو ریکارڈ کریں یا بنائیں، پھر انہیں کسی پروفائل کے اندر چلائیں (کھولنا، کلک، لکھنا، انتظار)، خود یا شیڈول پر۔",
+    "profileSelectTitle": "وہ پروفائل جس پر رن / ریکارڈ ہو گا",
+    "noProfiles": "کوئی پروفائل نہیں",
+    "profileFallback": "پروفائل {{id}}",
+    "stopAndSave": "روکیں اور محفوظ کریں",
+    "record": "ریکارڈ",
+    "schedule": "شیڈول",
+    "createMacro": "میکرو بنائیں",
+    "stepsBadge_one": "{{count}} قدم",
+    "stepsBadge_other": "{{count}} قدم",
+    "updated": "اپ ڈیٹ: {{date}}",
+    "run": "چلائیں",
+    "edit": "ایڈٹ کریں",
+    "editSteps": "قدم ایڈٹ کریں",
+    "delete": "ڈیلیٹ کریں",
+    "runTitleNoSteps": "اس میکرو میں ابھی کوئی قدم نہیں، پہلے اسے ایڈٹ کریں",
+    "runTitleReady": "منتخب پروفائل پر چلائیں",
+    "emptyTitle": "ابھی کوئی میکرو نہیں",
+    "emptyHint": "شروع کرنے کے لیے کوئی ورک فلو ریکارڈ کریں یا نیا بنائیں۔",
+    "errors": {
+      "loadMacros": "میکروز لوڈ نہیں ہو سکے۔",
+      "deleteMacro": "میکرو ڈیلیٹ نہیں ہو سکا۔",
+      "chooseProfile": "پہلے ٹارگٹ پروفائل چنیں۔",
+      "noSteps": "اس میکرو میں ابھی کوئی قدم نہیں، پہلے اسے ایڈٹ کریں۔",
+      "chooseProfileRecord": "ریکارڈ کرنے کے لیے ٹارگٹ پروفائل چنیں۔",
+      "recordingFailed": "ریکارڈنگ کا عمل ناکام ہو گیا۔"
+    },
+    "recordingStarted": "ریکارڈنگ جاری ہے… کھلے ہوئے براؤزر میں کام کریں، پھر محفوظ کرنے کے لیے روکیں دبائیں۔",
+    "savedNotice": "\"{{name}}\" {{count}} قدم کے ساتھ محفوظ ہو گیا۔",
+    "stoppedNotice": "ریکارڈنگ رک گئی، {{count}} قدم ریکارڈ ہوئے (محفوظ نہیں کیے گئے)۔",
+    "deleteConfirm": "میکرو \"{{name}}\" اور اس کے تمام قدم ڈیلیٹ کریں؟ یہ واپس نہیں ہو سکتا۔"
+  },
+  "saveRecording": {
+    "ariaLabel": "ریکارڈ شدہ میکرو محفوظ کریں",
+    "title": "ریکارڈ شدہ میکرو محفوظ کریں",
+    "subtitle": "ریکارڈ شدہ قدم رکھنے کے لیے نام دیں، یا انہیں چھوڑ دیں۔ براؤزر کھلا رہے گا۔",
+    "placeholder": "ریکارڈ شدہ میکرو",
+    "discard": "چھوڑ دیں",
+    "cancel": "منسوخ کریں",
+    "save": "محفوظ کریں"
+  },
+  "scheduleModal": {
+    "ariaLabel": "میکرو شیڈول",
+    "title": "میکرو شیڈول",
+    "subtitle": "ٹائمر پر میکرو خود بخود چلائیں · Softglaze Pro",
+    "enable": "شیڈول رن آن کریں",
+    "macroLabel": "میکرو",
+    "selectMacro": "میکرو منتخب کریں…",
+    "everyMinutes": "ہر (منٹ)",
+    "targetProfiles": "ٹارگٹ پروفائلز",
+    "noProfiles": "کوئی پروفائل دستیاب نہیں۔",
+    "profileFallback": "پروفائل {{id}}",
+    "cancel": "منسوخ کریں",
+    "save": "شیڈول محفوظ کریں",
+    "errors": {
+      "save": "شیڈول محفوظ نہیں ہو سکا۔"
+    }
+  },
+  "editorModal": {
+    "ariaEdit": "میکرو ایڈٹ کریں",
+    "ariaCreate": "میکرو بنائیں",
+    "titleEdit": "میکرو ایڈٹ کریں",
+    "titleCreate": "میکرو بنائیں",
+    "subtitle": "بغیر کوڈ کا فلو بنائیں، ترتیب بدلنے کے لیے ہینڈل کھینچیں۔",
+    "nameLabel": "میکرو کا نام",
+    "namePlaceholder": "مثلاً روزانہ لاگ ان",
+    "descriptionLabel": "تفصیل",
+    "descriptionPlaceholder": "یہ کیا کرتا ہے؟",
+    "stepsLabel": "قدم ({{count}})",
+    "addStep": "قدم شامل کریں",
+    "noSteps": "ابھی کوئی قدم نہیں، قسم چن کر ایک شامل کریں۔",
+    "dragToReorder": "ترتیب بدلنے کے لیے کھینچیں",
+    "removeStep": "قدم ہٹائیں",
+    "cancel": "منسوخ کریں",
+    "save": "میکرو محفوظ کریں",
+    "errors": {
+      "name": "میکرو کو نام دیں۔",
+      "save": "میکرو محفوظ نہیں ہو سکا۔"
+    },
+    "optional": "اختیاری",
+    "optionalHint": "اگر یہ قدم ناکام ہو تو رن روکنے کے بجائے اسے لاگ کر کے آگے بڑھیں۔"
+  },
+  "runModal": {
+    "ariaLabel": "میکرو رن: {{name}}",
+    "runningOn": "{{profile}} پر چل رہا ہے",
+    "starting": "شروع ہو رہا ہے…",
+    "logStarted": "\"{{name}}\" شروع ہوا · {{profile}} پر {{total}} قدم",
+    "logStepRunning": "▶ {{label}}: {{summary}}",
+    "logStepError": "✕ {{label}} - {{error}}",
+    "logStepFailed": "ناکام",
+    "logStopped": "روک دیا گیا۔",
+    "logFinished": "مکمل - {{ran}}/{{total}} قدم۔",
+    "stopped": "روک دیا گیا۔",
+    "finished": "مکمل۔",
+    "summaryCompleted": "{{ran}}/{{total}} قدم مکمل ہوئے۔",
+    "summaryRan": "{{ran}}/{{total}} قدم چلے۔",
+    "paused": "رکا ہوا",
+    "running": "چل رہا ہے…",
+    "resume": "جاری رکھیں",
+    "pause": "روکیں",
+    "stop": "بند کریں",
+    "close": "بند کریں",
+    "errors": {
+      "run": "میکرو چل نہیں سکا۔"
+    },
+    "logStepSkipped": "{{label}} چھوڑ دیا (اختیاری) - {{error}}"
+  },
+  "parallel": {
+    "states": {
+      "queued": "قطار میں",
+      "launching": "لانچ ہو رہا ہے",
+      "running": "چل رہا ہے",
+      "passed": "کامیاب",
+      "failed": "ناکام"
+    },
+    "title": "متوازی میکرو رنر",
+    "subtitle": "ایک میکرو ایک ساتھ کئی پروفائلز پر چلائیں، لائیو اسٹیٹس کے ساتھ۔",
+    "macroLabel": "میکرو",
+    "noMacros": "ابھی کوئی میکرو نہیں",
+    "macroOption": "{{name}} · {{count}} قدم",
+    "concurrency": "ایک ساتھ کتنے",
+    "concurrencyCap": "آپ کا پلان ایک وقت میں {{max}} پروفائلز تک چلاتا ہے۔",
+    "concurrencyCapUpgrade": "آپ کا پلان ایک وقت میں {{max}} پروفائلز تک چلاتا ہے۔ Enterprise میں {{enterpriseMax}} تک۔",
+    "dataBound_one": "{{fileName}} · {{count}} قطار",
+    "dataBound_other": "{{fileName}} · {{count}} قطاریں",
+    "dataHint": "اختیاری: اسپریڈ شیٹ جوڑیں (قطار ← پروفائل، ترتیب سے)",
+    "clearDataBinding": "ڈیٹا کا جوڑ ہٹائیں",
+    "bindData": "ڈیٹا جوڑیں",
+    "columnsPrefix": "کالمز: {{columns}} - میکرو کے قدموں میں",
+    "columnsSuffix": "استعمال کریں۔",
+    "profilesLabel": "پروفائلز ({{count}} منتخب)",
+    "selectAll": "سب منتخب کریں",
+    "clear": "صاف کریں",
+    "searchPlaceholder": "تلاش",
+    "noProfiles": "کوئی پروفائل نہیں ملی۔",
+    "rowMismatch": "{{rows}} ڈیٹا قطاریں اور {{profiles}} پروفائلز - اضافی پروفائلز ویری ایبلز کے بغیر چلیں گی۔",
+    "running": "چل رہا ہے…",
+    "runOn_one": "{{count}} پروفائل پر چلائیں",
+    "runOn_other": "{{count}} پروفائلز پر چلائیں",
+    "runStatus": "رن اسٹیٹس",
+    "summaryPassed": "کامیاب",
+    "summaryFailed": "ناکام",
+    "summaryTotal": "کل {{total}}",
+    "watchHint": "پروفائلز اور ایک میکرو منتخب کریں، پھر لائیو پیش رفت دیکھنے کے لیے رن شروع کریں۔",
+    "steps": "{{ran}}/{{total}} قدم",
+    "profileFallback": "پروفائل {{id}}",
+    "runConsole": "رن کنسول",
+    "live": "لائیو",
+    "consoleIdle": "[ idle ] ابھی کوئی رن نہیں - پیش رفت یہاں دکھے گی (کوکیز یا لاگ ان معلومات کبھی شامل نہیں ہوتیں)۔",
+    "logRunFinished": "رن مکمل - {{passed}}/{{total}} کامیاب",
+    "logRunFinishedError": "رن مکمل - {{passed}}/{{total}} کامیاب ({{error}})",
+    "errors": {
+      "readSpreadsheet": "اسپریڈ شیٹ پڑھی نہیں جا سکی۔",
+      "chooseMacro": "چلانے کے لیے میکرو چنیں۔",
+      "selectProfile": "کم از کم ایک پروفائل منتخب کریں۔",
+      "startRun": "متوازی رن شروع نہیں ہو سکا۔"
+    }
+  },
+  "warmer": {
+    "title": "کوکی وارمر",
+    "subtitle": "اصل سائٹس براؤز کر کے قدرتی کوکیز اور ہسٹری بناتا ہے۔",
+    "sitesLabel": "کھولنے والی سائٹس ({{count}})",
+    "addSuggested": "تجویز کردہ سائٹ شامل کریں…",
+    "add": "شامل کریں",
+    "customPlaceholder": "یا اپنا URL پیسٹ کریں (مثلاً example.com)",
+    "bulkAdd": "ایک ساتھ شامل کریں",
+    "importFile": ".txt/.csv امپورٹ کریں",
+    "clearAll": "سب صاف کریں",
+    "bulkPlaceholder": "ہر لائن میں ایک URL پیسٹ کریں، مثلاً\nexample.com\nhttps://news.site\nshop.site, 45, links",
+    "addList": "لسٹ شامل کریں",
+    "bulkHint": "ہر لائن میں ایک URL۔ اختیاری CSV کالمز: url, seconds, behaviour (none/random/links)۔",
+    "addSecondsTitle": "شامل کیے گئے لنکس کے لیے ڈیفالٹ سیکنڈ",
+    "addBehaviorTitle": "شامل کیے گئے لنکس کے لیے ڈیفالٹ رویہ",
+    "saveList": "لسٹ محفوظ کریں",
+    "saveListPrompt": "اس لنک لسٹ کو نام دیں (بعد میں دوبارہ استعمال کے لیے):",
+    "loadListTitle": "یہ محفوظ لسٹ لوڈ کریں",
+    "deleteListTitle": "یہ محفوظ لسٹ ڈیلیٹ کریں",
+    "selectRows": "قطاریں منتخب کریں",
+    "nSelected": "{{count}} منتخب",
+    "bulkSetSeconds": "منتخب قطاروں کے سیکنڈ سیٹ کریں",
+    "bulkSetBehavior": "منتخب قطاروں کا رویہ سیٹ کریں",
+    "setBehavior": "رویہ سیٹ کریں…",
+    "deleteSelected": "ڈیلیٹ کریں",
+    "noSites": "ابھی کوئی سائٹ نہیں، اوپر سے ایک شامل کریں۔",
+    "secondsTitle": "اس سائٹ پر کتنے سیکنڈ گزاریں",
+    "secondsUnit": "s",
+    "behaviourTitle": "اس سائٹ پر کیا کریں",
+    "remove": "ہٹائیں",
+    "loopUntilStopped": "روکنے تک دہرائیں",
+    "keepOpen": "بعد میں سیشنز کھلے رکھیں",
+    "hidden": "چھپا کر چلائیں (کوئی ونڈو نہیں)",
+    "hiddenTitle": "بغیر ونڈو کے وارم اپ کریں، کوئی براؤزر ونڈو نہیں کھلے گی۔ کوکیز اور کیش پھر بھی ہر پروفائل میں محفوظ ہوں گے۔",
+    "cookieNote": "کوکیز اور کیش ہر پروفائل میں خود بخود محفوظ ہوتے ہیں، کنسول بتاتا ہے کہ ڈسک پر کتنی کوکیز اور کتنا کیش محفوظ ہوا۔ بعد میں عام لانچ انہیں دوبارہ استعمال کرتا ہے۔",
+    "startWarmup": "وارم اپ شروع کریں",
+    "warming": "وارم اپ جاری ہے…",
+    "stop": "روکیں",
+    "forceStop": "زبردستی روکیں",
+    "profilesLabel": "پروفائلز ({{count}} منتخب)",
+    "searchPlaceholder": "تلاش",
+    "selectAll": "سب",
+    "selectNone": "کوئی نہیں",
+    "invert": "الٹ دیں",
+    "addGroup": "گروپ شامل کریں…",
+    "addTag": "ٹیگ شامل کریں…",
+    "pasteIdsPlaceholder": "پروفائل IDs یا نام پیسٹ کریں (کوما / اسپیس سے الگ)",
+    "selectPaste": "منتخب کریں",
+    "noProfiles": "کوئی پروفائل نہیں ملی۔",
+    "profileFallback": "پروفائل {{id}}",
+    "warmupConsole": "وارم اپ کنسول",
+    "live": "لائیو",
+    "progressTitle": "وارم اپ کی پیش رفت",
+    "modeQueue": "قطار · ایک وقت میں ایک",
+    "modeBulk": "بلک · ایک وقت میں {{n}}",
+    "consoleIdle": "[ idle ] لائیو پیش رفت دیکھنے کے لیے پروفائلز منتخب کریں، دورانیہ سیٹ کریں اور وارم اپ شروع کریں۔",
+    "errors": {
+      "selectProfile": "وارم اپ کے لیے کم از کم ایک پروفائل منتخب کریں۔",
+      "addSite": "کھولنے کے لیے کم از کم ایک سائٹ شامل کریں۔",
+      "startWarmup": "وارم اپ شروع نہیں ہو سکا۔",
+      "stopWarmup": "وارم اپ روکا نہیں جا سکا۔",
+      "importFile": "وہ فائل پڑھی نہیں جا سکی۔"
+    },
+    "queueTitle": "ایک وقت میں ایک پروفائل وارم کریں (سخت قطار): براؤزر لانچ کریں، اسے مکمل ہو کر بند ہونے دیں، پھر اگلا۔ اس سے تمام منتخب براؤزرز ایک ساتھ نہیں کھلتے، جو RAM/CPU ختم کر کے ایپ کریش کر سکتے ہیں۔",
+    "queueMode": "ایک وقت میں ایک چلائیں (قطار)",
+    "parallelTitle": "ایک ساتھ کتنی پروفائلز وارم کرنی ہیں۔ زیادہ = تیز، لیکن RAM/CPU پر زیادہ بوجھ۔",
+    "parallelLabel": "ایک وقت میں:"
+  },
+  "counter": {
+    "total": "کل",
+    "running": "چل رہے",
+    "done": "مکمل",
+    "queued": "قطار میں"
+  },
+  "console": {
+    "copy": "کاپی",
+    "copied": "کاپی ہو گیا",
+    "export": "ایکسپورٹ",
+    "clear": "صاف کریں"
+  },
+  "history": {
+    "emptyTitle": "ابھی تک کوئی کام نہیں چلا",
+    "emptyHint": "وارمر، میکرو اور متوازی رن یہاں نظر آئیں گے۔",
+    "columns": {
+      "task": "کام",
+      "profiles": "پروفائلز",
+      "detail": "تفصیل",
+      "status": "اسٹیٹس",
+      "when": "کب"
+    },
+    "emptyDetail": "-",
+    "parallelRun": "متوازی رن",
+    "macroRun": "میکرو رن",
+    "cookieWarmup": "کوکی وارم اپ",
+    "minutes": "{{count}} منٹ",
+    "sites_one": "{{count}} سائٹ",
+    "sites_other": "{{count}} سائٹس"
+  },
+  "stepFieldOptions": {
+    "auto": "آٹو",
+    "value": "ویلیو",
+    "label": "لیبل",
+    "index": "انڈیکس",
+    "visible": "نظر آنے والا",
+    "hidden": "چھپا ہوا",
+    "checked": "چیک شدہ",
+    "unchecked": "ان چیک"
+  },
+  "autopilot": {
+    "title": "وارم اپ آٹو پائلٹ",
+    "subtitle": "ہر روز چند سائٹس سے پروفائلز وارم کرتا ہے، تاکہ ان کی اصل براؤزنگ ہسٹری بنے۔",
+    "toggle": "وارم اپ آٹو پائلٹ آن یا آف کریں",
+    "target": "پروفائلز",
+    "targetAll": "تمام پروفائلز",
+    "targetGroup": "ایک گروپ",
+    "group": "گروپ",
+    "runsPerDay": "روزانہ رن",
+    "runsPerDayTitle": "ہر پروفائل دن میں کتنی بار وارم ہو",
+    "sitesPerRun": "فی رن سائٹس",
+    "sitesPerRunTitle": "تجویز کردہ لسٹ سے رینڈم سائٹس، ہر ایک پر 20 سے 45 سیکنڈ",
+    "activeHours": "فعال اوقات",
+    "startHour": "شروع کا وقت",
+    "endHour": "ختم کا وقت",
+    "hoursTo": "تا",
+    "atATime": "ایک وقت میں",
+    "atATimeTitle": "ایک ساتھ وارم ہونے والی پروفائلز۔ زیادہ تیز ہے لیکن زیادہ میموری لیتا ہے۔",
+    "hidden": "چھپا کر چلائیں (کوئی ونڈو نہیں)",
+    "hint": "کوئی پروفائل تب وارم ہوتی ہے جب اس کا آخری وارم اپ 24 گھنٹے تقسیم روزانہ رن سے پرانا ہو۔ کھلی، لاک یا مصروف پروفائلز چھوڑ دی جاتی ہیں۔",
+    "ownedByOther": "یہ کسی اور ممبر نے آن کیا ہے۔ صرف وہ یا ان سے اوپر والا اسے بدل سکتا ہے۔",
+    "status": {
+      "off": "آف",
+      "nextSoon": "اگلا رن ایک منٹ کے اندر",
+      "nextAt": "اگلا رن {{time}}",
+      "nothingDue": "وارم کرنے کے لیے کوئی پروفائل نہیں",
+      "warmedToday": "آج {{total}} میں سے {{done}} وارم ہوئیں",
+      "warmingNow": "{{n}} ابھی وارم ہو رہی ہیں",
+      "lastError": "آخری خرابی، {{time}}: {{error}}"
+    },
+    "errors": {
+      "load": "آٹو پائلٹ سیٹنگز لوڈ نہیں ہو سکیں۔",
+      "save": "آٹو پائلٹ سیٹنگز محفوظ نہیں ہو سکیں۔",
+      "noGroups": "ابھی کوئی گروپ نہیں۔ پہلے پروفائلز پیج پر ایک بنائیں۔",
+      "owner-missing": "جس ممبر نے آٹو پائلٹ آن کیا تھا وہ اب موجود نہیں۔ ورک اسپیس کا مالک اسے آف کر کے دوبارہ آن کر کے سنبھال سکتا ہے۔",
+      "owner-inactive": "جس ممبر نے آٹو پائلٹ آن کیا تھا وہ معطل یا بلاک ہے۔",
+      "owner-no-permission": "جس ممبر نے آٹو پائلٹ آن کیا تھا اسے اب آٹومیشن چلانے کی اجازت نہیں۔",
+      "warm-failed": "{{profile}}: {{error}}",
+      "warmFailedHidden": "ایک پروفائل جو آپ نہیں دیکھ سکتے، وارم اپ نہیں ہو سکی۔",
+      "tick-failed": "{{error}}"
+    }
+  }
+}

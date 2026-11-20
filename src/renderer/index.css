@@ -191,8 +191,9 @@
   --radius-2xl: 12px;
 
   /* Fonts (bundled locally via @fontsource - no network needed) */
-  --font-sans: "Inter", ui-sans-serif, system-ui, sans-serif;
-  --font-display: "Space Grotesk", "Inter", ui-sans-serif, sans-serif;
+  /* --font-script: the system font for scripts Inter does not cover (set per language below). */
+  --font-sans: "Inter", var(--font-script), ui-sans-serif, system-ui, sans-serif;
+  --font-display: "Space Grotesk", "Inter", var(--font-script), ui-sans-serif, sans-serif;
   --font-mono: "JetBrains Mono", ui-monospace, monospace;
 
   /* Reusable animations */
@@ -350,3 +351,39 @@
   .animate-float-slow, .animate-float-slower, .animate-aurora, .auth-grid { animation: none !important; }
   .shimmer-text { animation: none !important; }
 }
+
+/* ------------------------------------------------------------------ */
+/*  Languages: script fonts and right-to-left layout.                  */
+/*  Inter covers Latin, Cyrillic and Vietnamese; other scripts use the  */
+/*  Windows UI font for that script (macOS / Linux names follow). The   */
+/*  html lang / dir attributes are set by i18n/index.js.                */
+/* ------------------------------------------------------------------ */
+:root { --font-script: "Segoe UI"; }
+:lang(ar) { --font-script: "Segoe UI", "Noto Sans Arabic", "Geeza Pro", Tahoma, Arial; }
+/* Urdu reads best in Nastaliq; use it when installed (Windows "Urdu Typesetting", Noto, Jameel),
+   else Segoe UI's Naskh, which every Windows has. */
+:lang(ur) { --font-script: "Noto Nastaliq Urdu", "Jameel Noori Nastaleeq", "Urdu Typesetting", "Segoe UI", "Noto Naskh Arabic", Tahoma, Arial; }
+:lang(hi) { --font-script: "Nirmala UI", "Noto Sans Devanagari", "Kohinoor Devanagari", Mangal; }
+:lang(th) { --font-script: "Leelawadee UI", "Noto Sans Thai", "Thonburi", Tahoma; }
+/* Han characters differ per language: never let Japanese fall to a Chinese font, or the reverse. */
+:lang(ja) { --font-script: "Yu Gothic UI", "Meiryo UI", "Noto Sans JP", "Hiragino Sans", "MS UI Gothic"; }
+:lang(zh-Hans) { --font-script: "Microsoft YaHei UI", "Microsoft YaHei", "Noto Sans SC", "PingFang SC"; }
+:lang(zh-Hant) { --font-script: "Microsoft JhengHei UI", "Microsoft JhengHei", "Noto Sans TC", "PingFang TC"; }
+/* An element in another language (the language picker's native names) re-resolves its stack. */
+:where(body [lang]) { font-family: "Inter", var(--font-script), ui-sans-serif, system-ui, sans-serif; }
+
+/* Tall scripts: room for Thai / Devanagari marks and Urdu descenders. */
+:root:is(:lang(th), :lang(hi)) body { line-height: 1.6; }
+:root:lang(ur) body { line-height: 1.8; }
+:root:lang(ar) body { line-height: 1.6; }
+
+/* RTL: layout uses logical utilities (ms/me, ps/pe, inset-s/e, text-start/end, border-s/e).
+   Arrows that mean "forward / back" point the other way; logos, numbers, code and URLs do not. */
+[dir="rtl"] :is(.lucide-arrow-right, .lucide-arrow-left, .lucide-chevron-right, .lucide-chevron-left,
+  .lucide-chevrons-right, .lucide-chevrons-left, .lucide-arrow-up-right, .lucide-corner-down-left,
+  .lucide-log-out, .lucide-log-in, .lucide-undo-2, .lucide-redo-2, .lucide-send) { scale: -1 1; }
+[dir="rtl"] :is(code, kbd, pre, samp, input[type="email"], input[type="url"], input[type="password"], input[type="number"], input[type="tel"]) {
+  direction: ltr;
+  unicode-bidi: isolate;
+}
+[dir="rtl"] .font-mono { unicode-bidi: plaintext; }

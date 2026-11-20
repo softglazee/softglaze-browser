@@ -1,0 +1,116 @@
+{
+  "title": "Telefonlar",
+  "description": "SoftGlaze telefon uygulamasını bu bilgisayarla kullanın: profillerinizi görün, başlatıp durdurun ve yapay zekâ isteklerini telefonunuzdan yanıtlayın. Telefon ile bu bilgisayar arasındaki her şey uçtan uca şifrelenir.",
+  "enable": "Telefon eşlikçisini aç",
+  "loading": "Yükleniyor",
+  "offOwner": "Bir telefon eşlemek için bunu açın. Bu bilgisayar SoftGlaze aktarıcısıyla güvenli bir bağlantı tutar; aktarıcı yalnızca şifreli mesajları iletir.",
+  "offOther": "Sahip, telefon eşlikçisini açmadı.",
+  "copy": "Kopyala",
+  "cancel": "İptal",
+  "relay": {
+    "connected": "Aktarıcıya bağlı",
+    "connecting": "Aktarıcıya bağlanılıyor",
+    "authFailed": "Aktarıcı bu bilgisayarı reddetti. Gelişmiş bölümündeki aktarıcı adresini kontrol edin."
+  },
+  "pair": {
+    "title": "Telefon eşle",
+    "help": "SoftGlaze'i telefonunuza kurun, ardından bu ekrandaki kodu tarayın.",
+    "start": "Telefon eşle",
+    "qrAlt": "SoftGlaze telefon uygulaması için eşleme kodu",
+    "scanTitle": "Bu kodu SoftGlaze telefon uygulamasıyla tarayın",
+    "step1": "Telefonunuzda SoftGlaze'i açın.",
+    "step2": "Ayarlar'a, ardından PC ile eşle'ye gidin ve bu kodu tarayın.",
+    "step3": "İki ekranda da aynı altı hanenin göründüğünü kontrol edin.",
+    "expiresIn": "Kod bir kez çalışır ve {{time}} içinde sona erer.",
+    "textTitle": "Tarayamıyor musunuz? Kodu metin olarak kopyalayın",
+    "attemptFailed": "Bir telefon yanlış veya bozuk bir kod denedi. Kod hâlâ geçerli."
+  },
+  "confirm": {
+    "title": "{{name}} eşlenmek istiyor",
+    "help": "Yalnızca telefonunuz tam olarak bu altı haneyi gösteriyorsa devam edin.",
+    "helpBrowser": "Yalnızca tarayıcı tam olarak bu altı haneyi gösteriyorsa devam edin. Bir tarayıcı profilleri görebilir ve yapay zekâ isteklerini yanıtlayabilir; bunu da istiyorsanız Profilleri başlat ve durdur seçeneğini işaretleyin.",
+    "codeLabel": "Kod {{code}}",
+    "name": "Telefon adı",
+    "member": "Kimin adına",
+    "scopes": "Bu telefon neler yapabilir",
+    "match": "Kodlar eşleşiyor, eşle",
+    "noMatch": "Kodlar eşleşmiyor"
+  },
+  "scopes": {
+    "view": {
+      "label": "Profilleri ve durumu görme",
+      "help": "Her zaman açık. Yalnızca üyenin görebildiği profiller."
+    },
+    "control_profiles": {
+      "label": "Profilleri başlatma ve durdurma",
+      "help": "Bu bilgisayardakiyle aynı kurallar."
+    },
+    "approve_ai": {
+      "label": "Yapay zekâ isteklerini yanıtlama",
+      "help": "Bu üyenin yanıtlayabildiği token'lar için yapay zekâ uygulamalarının işlemlerine izin verin veya reddedin."
+    },
+    "approve_team": {
+      "label": "Ekip isteklerini yanıtlama",
+      "help": "Ekip üyelerinin erişim isteklerini onaylayın."
+    },
+    "totp": {
+      "label": "2FA kodlarını gösterme",
+      "help": "Profillerde kayıtlı iki adımlı kodlar."
+    },
+    "phone_profiles_linked": {
+      "label": "Profilleri eşitleme",
+      "help": "Aşağıda seçtiğiniz profiller bu telefonda da açılır."
+    }
+  },
+  "roles": {
+    "OWNER": "Sahip",
+    "ADMIN": "Yönetici",
+    "MANAGER": "Müdür",
+    "OPERATOR": "Operatör"
+  },
+  "devices": {
+    "title": "Telefonlar ve tarayıcılar",
+    "kindPhone": "Telefon",
+    "kindBrowser": "Tarayıcı",
+    "empty": "Henüz telefon yok.",
+    "online": "Çevrimiçi",
+    "offline": "Çevrimdışı",
+    "lastSeen": "Son görülme {{when}}",
+    "actsAs": "{{name}} adına",
+    "edit": "Düzenle: {{name}}",
+    "remove": "Kaldır: {{name}}",
+    "removeConfirm": "{{name}} kaldırılsın mı? Bu bilgisayarla hemen çalışmayı bırakır ve yeniden eşlenmesi gerekir.",
+    "rename": "Yeniden adlandır",
+    "saveScopes": "İzinleri kaydet"
+  },
+  "sync": {
+    "title": "Profil eşitleme",
+    "help": "Seçilen profiller telefon uygulamasında da açılır. Ayarlar, başlangıç sayfaları ve çerezler profille birlikte gider; bir profil aynı anda tek bir cihazda açılır.",
+    "noPhone": "Henüz hiçbir telefon eşitleme yapamaz. Yukarıdan bir telefona Profilleri eşitleme iznini verin.",
+    "now": "Şimdi eşitle",
+    "search": "Profil bul",
+    "toggle": "{{name}} profilini telefonlarla eşitle",
+    "proxyPassword": "Proxy parolası",
+    "offConfirm": "{{name}} eşitlemesi durdurulsun mu? Telefonlar kendi kopyalarını korur.",
+    "removeAll": "Tüm eşitlenmiş verileri aktarıcıdan kaldır",
+    "removeAllConfirm": "Eşitlenen her profil aktarıcıdan kaldırılsın mı? Bu bilgisayardaki ve telefonlardaki profiller olduğu gibi kalır.",
+    "lastOk": "Son eşitleme {{when}}",
+    "lastError": "Son eşitleme başarısız oldu ({{code}}). Her dakika yeniden denenir.",
+    "limits": "Site depolaması, uzantılar, kayıtlı parolalar ve indirmeler eşitlenmez. Proxy parolaları yalnızca izin verdiğiniz yerde eşitlenir."
+  },
+  "advanced": {
+    "title": "Gelişmiş",
+    "pcName": "Bu bilgisayarın telefonlardaki adı",
+    "relay": "Aktarıcı adresi",
+    "relayFromEnv": "Test için SG_RELAY_URL tarafından ayarlandı.",
+    "save": "Kaydet",
+    "reset": "Telefon anahtarlarını sıfırla",
+    "resetConfirm": "Bu bilgisayarın telefon anahtarları sıfırlansın mı? Eşlenen her telefon kaldırılır ve yeniden eşlenmesi gerekir.",
+    "protocol": "Protokol {{version}}"
+  },
+  "errors": {
+    "load": "Telefon ayarları yüklenemedi.",
+    "generic": "Bu işlem çalışmadı. Tekrar deneyin.",
+    "unavailable": "Telefonlar bu sürümde kullanılamıyor."
+  }
+}

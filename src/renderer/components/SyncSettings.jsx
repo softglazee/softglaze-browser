@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { FolderSync, Loader2, Check, AlertTriangle, Lock, RefreshCw, ShieldCheck, ChevronDown } from 'lucide-react';
 import { softglazeApi } from '@/lib/softglazeApi.js';
+import { fmtDateTime } from '@/lib/intl.mjs';
 
 // End-to-end encrypted cloud sync to a self-hosted bucket. Status is honest: no endpoint shows
 // "disabled", and a run reports success only when main confirms it.
@@ -103,7 +104,7 @@ export default function SyncSettings() {
         <div className="mt-4 grid grid-cols-2 sm:grid-cols-4 gap-2 text-[12px]">
           <div className="rounded-lg bg-elevated border border-border px-3 py-2"><div className="text-muted-foreground text-[10px] uppercase tracking-wider">{t('sync.statEndpoint')}</div><div className="text-foreground truncate font-mono">{status.endpointHost || '-'}</div></div>
           <div className="rounded-lg bg-elevated border border-border px-3 py-2"><div className="text-muted-foreground text-[10px] uppercase tracking-wider">{t('sync.statPending')}</div><div className="text-foreground">{t('sync.pendingProfiles', { count: status.pendingCount })}</div></div>
-          <div className="rounded-lg bg-elevated border border-border px-3 py-2"><div className="text-muted-foreground text-[10px] uppercase tracking-wider">{t('sync.statLastSynced')}</div><div className="text-foreground">{status.lastSyncedAt ? new Date(status.lastSyncedAt).toLocaleString() : t('sync.never')}</div></div>
+          <div className="rounded-lg bg-elevated border border-border px-3 py-2"><div className="text-muted-foreground text-[10px] uppercase tracking-wider">{t('sync.statLastSynced')}</div><div className="text-foreground">{status.lastSyncedAt ? fmtDateTime(status.lastSyncedAt) : t('sync.never')}</div></div>
           <div className="rounded-lg bg-elevated border border-border px-3 py-2"><div className="text-muted-foreground text-[10px] uppercase tracking-wider">{t('sync.statNamespace')}</div><div className="text-foreground truncate font-mono">{status.namespace}</div></div>
         </div>
       )}
@@ -122,7 +123,7 @@ export default function SyncSettings() {
 
       {status?.configured && !status?.unlocked && (
         <div className="mt-4">
-          <label className={labelCls}><Lock className="w-3 h-3 inline mr-1" />{t('sync.unlockLabel')}</label>
+          <label className={labelCls}><Lock className="w-3 h-3 inline me-1" />{t('sync.unlockLabel')}</label>
           <div className="flex items-center gap-2">
             <input type="password" className={inputCls + ' font-mono'} value={unlockPass} onChange={(e) => setUnlockPass(e.target.value)} placeholder={t('sync.unlockPlaceholder')} />
             <button onClick={unlock} disabled={busy === 'unlock' || !unlockPass} className="h-10 px-4 rounded-lg text-[12.5px] font-semibold bg-secondary hover:bg-secondary/70 text-foreground flex items-center gap-1.5 disabled:opacity-60">

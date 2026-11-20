@@ -1,0 +1,146 @@
+{
+  "header": {
+    "eyebrow": "پرسوناز",
+    "title": "ڈیٹا تجوری",
+    "description": "اسمارٹ آٹو فل انجن کے لیے پرسوناز کی دوبارہ استعمال ہونے والی تجوری۔ انہیں خود شامل کریں یا اسپریڈ شیٹ امپورٹ کریں؛ ہر پرسونا یاد رکھتا ہے کہ وہ کن سائٹس پر پہلے استعمال ہو چکا ہے۔",
+    "refresh": "ریفریش",
+    "import": "Excel/CSV امپورٹ کریں",
+    "addManually": "خود شامل کریں"
+  },
+  "stats": {
+    "totalIdentities": "کل پرسوناز",
+    "neverUsed": "کبھی استعمال نہیں ہوئے",
+    "usedAtLeastOnce": "کم از کم ایک بار استعمال",
+    "totalUses": "کل استعمال",
+    "filtering": "فلٹر لگا ہے"
+  },
+  "toolbar": {
+    "searchPlaceholder": "نام، ای میل، یوزر نیم یا لیبل سے تلاش کریں...",
+    "showing": "{{count}} {{kind}} دکھائے جا رہے ہیں",
+    "kindNeverUsed": "غیر استعمال شدہ",
+    "kindUsed": "استعمال شدہ",
+    "clear": "صاف کریں"
+  },
+  "bulk": {
+    "selected": "{{count}} منتخب",
+    "resetUsedStatus": "استعمال کا اسٹیٹس ری سیٹ کریں",
+    "deleteSelected": "منتخب ڈیلیٹ کریں",
+    "clear": "صاف کریں",
+    "clearSelectionTitle": "انتخاب صاف کریں"
+  },
+  "table": {
+    "loading": "پرسوناز لوڈ ہو رہے ہیں...",
+    "selectAll": "تمام پرسوناز منتخب کریں",
+    "selectRow": "{{name}} منتخب کریں",
+    "colName": "نام",
+    "colEmail": "ای میل",
+    "colUsername": "یوزر نیم",
+    "colPassword": "پاس ورڈ",
+    "colPhone": "فون",
+    "colAddress": "پتہ",
+    "colLabel": "لیبل",
+    "colTimesUsed": "کتنی بار استعمال",
+    "colCreated": "بنایا گیا",
+    "colActions": "ایکشنز",
+    "sitesUsed_one": "{{count}} سائٹ",
+    "sitesUsed_other": "{{count}} سائٹس",
+    "never": "کبھی نہیں",
+    "editIdentity": "پرسونا ایڈٹ کریں",
+    "deleteIdentity": "پرسونا ڈیلیٹ کریں",
+    "hidePassword": "چھپائیں",
+    "revealPassword": "دکھائیں",
+    "reuse": "♻ دوبارہ استعمال · {{count}}"
+  },
+  "empty": {
+    "title": "آپ کی ڈیٹا تجوری خالی ہے",
+    "description": "اپنی آٹو فل تجوری بنانا شروع کرنے کے لیے پرسونا خود شامل کریں یا Excel/CSV شیٹ امپورٹ کریں۔",
+    "filteredTitle": "کوئی پرسونا آپ کے فلٹر سے میچ نہیں کرتا",
+    "filteredDescription": "کوئی اور تلاش آزمائیں، یا فلٹر صاف کریں۔"
+  },
+  "groups": {
+    "identity": "پرسونا",
+    "account": "اکاؤنٹ",
+    "address": "پتہ",
+    "meta": "دیگر"
+  },
+  "fields": {
+    "firstName": "پہلا نام",
+    "lastName": "آخری نام",
+    "email": "ای میل",
+    "username": "یوزر نیم",
+    "password": "پاس ورڈ",
+    "phone": "فون",
+    "dateOfBirth": "تاریخ پیدائش",
+    "addressLine1": "پتہ لائن 1",
+    "addressLine2": "پتہ لائن 2",
+    "city": "شہر",
+    "state": "ریاست / صوبہ",
+    "zipCode": "زپ / پوسٹل کوڈ",
+    "country": "ملک",
+    "company": "کمپنی",
+    "companyAddress": "کمپنی کا پتہ",
+    "label": "بیچ لیبل"
+  },
+  "form": {
+    "dialogTitleEdit": "پرسونا ایڈٹ کریں",
+    "dialogTitleAdd": "پرسونا شامل کریں",
+    "titleEdit": "پرسونا ایڈٹ کریں",
+    "titleAdd": "پرسونا شامل کریں",
+    "descEdit": "اس پرسونا کی تفصیلات اپ ڈیٹ کریں۔",
+    "descAdd": "اپنی ڈیٹا تجوری میں ایک پرسونا شامل کریں۔ * والے فیلڈز لازمی ہیں۔",
+    "cancel": "منسوخ کریں",
+    "saving": "محفوظ ہو رہا ہے...",
+    "saveChanges": "تبدیلیاں محفوظ کریں",
+    "addIdentity": "پرسونا شامل کریں",
+    "showPassword": "پاس ورڈ دکھائیں",
+    "hidePassword": "پاس ورڈ چھپائیں"
+  },
+  "import": {
+    "dialogTitle": "پرسوناز امپورٹ کریں",
+    "title": "Excel / CSV سے امپورٹ کریں",
+    "descStep1": "ایک .xlsx، .xls یا .csv فائل منتخب کریں۔ پہلی قطار میں کالم ہیڈرز ہونے چاہییں۔ ایک امپورٹ میں زیادہ سے زیادہ 1000 قطاریں۔",
+    "descStep2": "اپنے کالمز کو پرسونا فیلڈز سے ملائیں۔ {{fileName}} میں {{count}} قطاریں ملیں۔",
+    "yourFile": "آپ کی فائل",
+    "chooseSpreadsheet": "اسپریڈ شیٹ منتخب کریں",
+    "colIdentityField": "پرسونا فیلڈ",
+    "colYourColumn": "آپ کا کالم",
+    "skipOption": "- چھوڑیں -",
+    "mappedCount_one": "{{count}} فیلڈ ملایا گیا۔ جن قطاروں میں نام/ای میل/یوزر نیم نہیں وہ چھوڑ دی جائیں گی۔",
+    "mappedCount_other": "{{count}} فیلڈز ملائے گئے۔ جن قطاروں میں نام/ای میل/یوزر نیم نہیں وہ چھوڑ دی جائیں گی۔",
+    "done": "ہو گیا",
+    "cancel": "منسوخ کریں",
+    "back": "واپس",
+    "importing": "امپورٹ ہو رہا ہے...",
+    "importRows_one": "{{count}} قطار امپورٹ کریں",
+    "importRows_other": "{{count}} قطاریں امپورٹ کریں",
+    "result": {
+      "complete": "امپورٹ مکمل",
+      "addedPrefix": "تجوری میں",
+      "addedSuffix_one": "پرسونا شامل ہوا۔",
+      "addedSuffix_other": "پرسوناز شامل ہوئے۔",
+      "skipped_one": "{{count}} خالی قطار چھوڑ دی گئی۔",
+      "skipped_other": "{{count}} خالی قطاریں چھوڑ دی گئیں۔"
+    },
+    "errors": {
+      "noRows": "اس فائل میں پڑھنے کے قابل کوئی ہیڈر قطار یا ڈیٹا قطاریں نہیں۔",
+      "readFile": "وہ فائل پڑھی نہیں جا سکی۔",
+      "nothingMapped": "امپورٹ کے لیے کوئی قطار نہیں - پہلا نام / آخری نام / ای میل / یوزر نیم میں سے کم از کم ایک کو ملائیں۔",
+      "failed": "امپورٹ ناکام ہو گیا۔"
+    }
+  },
+  "confirm": {
+    "fallbackName": "پرسونا",
+    "deleteOne": "پرسونا \"{{name}}\" ڈیلیٹ کریں؟ یہ واپس نہیں ہو سکتا۔",
+    "deleteSelected_one": "{{count}} منتخب پرسونا ڈیلیٹ کریں؟ یہ واپس نہیں ہو سکتا۔",
+    "deleteSelected_other": "{{count}} منتخب پرسوناز ڈیلیٹ کریں؟ یہ واپس نہیں ہو سکتا۔",
+    "resetSelected_one": "{{count}} منتخب پرسونا کی \"کہاں استعمال ہوا\" ہسٹری ری سیٹ کریں؟ یہ دوبارہ ہر سائٹ کے لیے دستیاب ہو جائے گا۔",
+    "resetSelected_other": "{{count}} منتخب پرسوناز کی \"کہاں استعمال ہوا\" ہسٹری ری سیٹ کریں؟ یہ دوبارہ ہر سائٹ کے لیے دستیاب ہو جائیں گے۔"
+  },
+  "errors": {
+    "load": "ڈیٹا تجوری لوڈ نہیں ہو سکی۔",
+    "save": "یہ پرسونا محفوظ نہیں ہو سکا۔",
+    "deleteOne": "پرسونا ڈیلیٹ نہیں ہو سکا۔",
+    "deleteSelected": "منتخب پرسوناز ڈیلیٹ نہیں ہو سکے۔",
+    "resetSelected": "منتخب پرسوناز ری سیٹ نہیں ہو سکے۔"
+  }
+}

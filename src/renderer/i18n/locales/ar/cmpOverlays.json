@@ -1,0 +1,111 @@
+{
+  "palette": {
+    "dialogLabel": "لوحة الأوامر",
+    "searchPlaceholder": "ابحث في الصفحات والملفات والبروكسيات والأعضاء…",
+    "searchAriaLabel": "ابحث في الصفحات والملفات والبروكسيات والأعضاء",
+    "resultsLabel": "النتائج",
+    "esc": "Esc",
+    "noMatches": "لا توجد نتائج مطابقة.",
+    "nav": {
+      "dashboard": "لوحة التحكم",
+      "ai": "SoftGlaze AI",
+      "profiles": "الملفات",
+      "groups": "المجموعات",
+      "proxies": "مجمّع البروكسيات",
+      "freeProxies": "بروكسيات مجانية",
+      "proxyProviders": "مزوّدو البروكسي",
+      "browsers": "المتصفحات",
+      "extensions": "الإضافات",
+      "batchImport": "استيراد مجمّع",
+      "trash": "سلة المهملات",
+      "automation": "الأتمتة",
+      "members": "الأعضاء",
+      "account": "الحساب",
+      "settings": "الإعدادات"
+    },
+    "hint": {
+      "page": "صفحة",
+      "profile": "ملف",
+      "proxy": "بروكسي",
+      "member": "عضو",
+      "action": "إجراء"
+    },
+    "fallback": {
+      "profile": "ملف #{{id}}",
+      "proxy": "بروكسي #{{id}}",
+      "member": "عضو #{{id}}"
+    },
+    "action": {
+      "stopAi": "إيقاف كل مهام الذكاء الاصطناعي"
+    }
+  },
+  "wizard": {
+    "skipTitle": "تخطي الإعداد",
+    "back": "رجوع",
+    "skip": "تخطي",
+    "saveAndContinue": "حفظ ومتابعة",
+    "saveAndFinish": "حفظ وإنهاء",
+    "msg": {
+      "smtpSaved": "تم حفظ SMTP.",
+      "proxySaved": "تم حفظ البروكسي."
+    },
+    "err": {
+      "smtpSaveFailed": "تعذّر حفظ إعدادات SMTP.",
+      "proxySaveFailed": "تعذّر حفظ البروكسي.",
+      "profileCreateFailed": "تعذّر إنشاء الملف."
+    },
+    "welcome": {
+      "title": "مرحبًا بك في SoftGlaze",
+      "subtitle": "إعداد سريع من 3 خطوات يوصلك إلى ملفك الأول. يمكنك تخطي أي خطوة.",
+      "subtitleShort_zero": "لا توجد خطوات إعداد.",
+      "subtitleShort_one": "خطوة واحدة سريعة. يمكنك تخطيها.",
+      "subtitleShort_two": "إعداد سريع من خطوتين. يمكنك تخطي أي خطوة.",
+      "subtitleShort_few": "إعداد سريع من {{count}} خطوات. يمكنك تخطي أي خطوة.",
+      "subtitleShort_many": "إعداد سريع من {{count}} خطوة. يمكنك تخطي أي خطوة.",
+      "subtitleShort_other": "إعداد سريع من {{count}} خطوة. يمكنك تخطي أي خطوة.",
+      "unavailable": "الخطوات الرمادية متخطّاة: حسابك لا يستطيع تنفيذها.",
+      "getStarted": "ابدأ",
+      "stepEmail": "البريد الإلكتروني (SMTP) - اختياري، لرموز OTP",
+      "stepProxy": "أول بروكسي لك - اختياري",
+      "stepProfile": "أول ملف متصفح لك"
+    },
+    "smtp": {
+      "title": "البريد الإلكتروني (SMTP)",
+      "subtitle": "اختياري - يتيح للتطبيق إرسال رموز التحقق. يمكنك ضبطه لاحقًا في الإعدادات.",
+      "host": "خادم SMTP",
+      "hostPlaceholder": "smtp.example.com",
+      "port": "المنفذ",
+      "portPlaceholder": "587",
+      "username": "اسم المستخدم",
+      "usernamePlaceholder": "you@example.com",
+      "password": "كلمة المرور",
+      "passwordPlaceholder": "••••••••"
+    },
+    "proxy": {
+      "title": "أضف أول بروكسي لك",
+      "subtitle": "اختياري - امنح كل هوية شبكتها الخاصة. يمكنك إضافة المزيد في مجمّع البروكسيات.",
+      "type": "النوع",
+      "host": "المضيف",
+      "hostPlaceholder": "1.2.3.4",
+      "port": "المنفذ",
+      "portPlaceholder": "8080",
+      "user": "المستخدم",
+      "userPlaceholder": "اختياري",
+      "password": "كلمة المرور",
+      "passwordPlaceholder": "اختياري"
+    },
+    "profile": {
+      "title": "أنشئ أول ملف لك",
+      "subtitle": "تُنشأ لك بصمة فريدة ومتسقة داخليًا.",
+      "createAndFinish": "إنشاء وإنهاء",
+      "name": "اسم الملف",
+      "namePlaceholder": "ملفي الأول",
+      "defaultName": "ملفي الأول",
+      "deviceType": "نوع الجهاز",
+      "desktop": "سطح المكتب",
+      "mobile": "جوال (Android)",
+      "mobileNote": "يُحاكى Android على محرك سطح المكتب - UA ولمس وشاشة ومعالج رسومات متسقة، لكنه ليس جهازًا حقيقيًا.",
+      "proxyAttached": "سيُربط البروكسي الجديد بهذا الملف."
+    }
+  }
+}

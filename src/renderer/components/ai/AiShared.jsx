@@ -191,7 +191,7 @@ export function ChipList({ items, onRemove, removeLabel, disabled = false, empty
   return (
     <ul className="flex flex-wrap gap-1.5" aria-live="polite">
       {items.map((v) => (
-        <li key={v} className="inline-flex items-center gap-1 rounded-full border border-border bg-secondary py-0.5 pl-2.5 pr-1 font-mono text-[12px] text-foreground">
+        <li key={v} className="inline-flex items-center gap-1 rounded-full border border-border bg-secondary py-0.5 ps-2.5 pe-1 font-mono text-[12px] text-foreground">
           <span className="max-w-[18rem] truncate" title={v}>{v}</span>
           {!disabled && (
             <button type="button" onClick={() => onRemove(v)} aria-label={removeLabel(v)} className="grid h-5 w-5 place-items-center rounded-full text-muted-foreground hover:bg-elevated hover:text-foreground">

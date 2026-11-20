@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next';
 import { CalendarClock, Loader2 } from 'lucide-react';
 import Switch from '@/components/ui/Switch.jsx';
 import { softglazeApi } from '@/lib/softglazeApi.js';
+import { fmtDateParts, fmtDateTime } from '@/lib/intl.mjs';
 
 const range = (from, to) => Array.from({ length: to - from + 1 }, (_, i) => from + i);
 const hourLabel = (h) => `${String(h).padStart(2, '0')}:00`;
@@ -15,8 +16,8 @@ function formatNext(ts) {
   const d = new Date(ts);
   const sameDay = d.toDateString() === new Date().toDateString();
   try {
-    return new Intl.DateTimeFormat(undefined, sameDay ? { timeStyle: 'short' } : { weekday: 'short', hour: '2-digit', minute: '2-digit' }).format(d);
-  } catch (e) { return d.toLocaleString(); }
+    return fmtDateParts(d, sameDay ? { timeStyle: 'short' } : { weekday: 'short', hour: '2-digit', minute: '2-digit' }, '');
+  } catch (e) { return fmtDateTime(d); }
 }
 
 function errorText(t, e) {

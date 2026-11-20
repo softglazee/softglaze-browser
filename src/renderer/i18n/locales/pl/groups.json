@@ -1,0 +1,53 @@
+{
+  "header": {
+    "eyebrow": "Organizacja",
+    "title": "Grupy i tagi",
+    "description": "Porządkuj profile w grupy i oznaczaj je tagami, aby szybko filtrować."
+  },
+  "filters": {
+    "allProfiles": "Wszystkie profile",
+    "ungrouped": "Bez grupy",
+    "group": "Grupa"
+  },
+  "sidebar": {
+    "directories": "Katalogi",
+    "createGroup": "Utwórz nową grupę",
+    "renameGroup": "Zmień nazwę grupy {{name}}",
+    "deleteGroup": "Usuń grupę {{name}}",
+    "groupNamePlaceholder": "Nazwa grupy..."
+  },
+  "table": {
+    "searchPlaceholder": "Szukaj profili...",
+    "loading": "Wczytywanie grup...",
+    "colProfileName": "Nazwa profilu",
+    "colGroupAssignment": "Przypisana grupa",
+    "colTags": "Tagi"
+  },
+  "tagFilter": {
+    "label": "Filtry",
+    "clear": "wyczyść"
+  },
+  "bulk": {
+    "selected_one": "Zaznaczono {{count}}",
+    "selected_few": "Zaznaczono {{count}}",
+    "selected_many": "Zaznaczono {{count}}",
+    "selected_other": "Zaznaczono {{count}}",
+    "moveTo": "Przenieś do:",
+    "chooseGroup": "Wybierz grupę…",
+    "clear": "Wyczyść"
+  },
+  "empty": {
+    "title": "Nie znaleziono profili",
+    "noMatch": "Żaden profil nie pasuje do filtrów.",
+    "groupEmpty": "Ta grupa jest pusta. Przenieś tu profile za pomocą listy Grupa."
+  },
+  "tags": {
+    "add": "Dodaj tag",
+    "remove": "Usuń tag",
+    "inputPlaceholder": "tag + Enter"
+  },
+  "deleteConfirm": "Usunąć grupę \"{{name}}\"? Jej profile staną się profilami bez grupy (same profile nie zostaną usunięte).",
+  "errors": {
+    "loadFailed": "Nie udało się wczytać grup."
+  }
+}

@@ -1,0 +1,31 @@
+{
+  "brandSelect": {
+    "presentAs": "اس پروفائل کو {{brand}} کے طور پر دکھائیں"
+  },
+  "versionSelect": {
+    "auto": "آٹو",
+    "loadingVersions": "ورژنز لوڈ ہو رہے ہیں…",
+    "ready": "تیار",
+    "readyTitle": "انسٹال ہے اور استعمال کے لیے تیار",
+    "noVersions": "کوئی ورژن نہیں ملا۔",
+    "offlineError": "آف لائن: ورژن کیٹلاگ تک رسائی نہیں ہو رہی۔",
+    "downloadFailed": "ڈاؤن لوڈ ناکام ہو گیا۔",
+    "resumeFailed": "دوبارہ شروع نہیں ہو سکا۔",
+    "paused": "رکا ہوا",
+    "interrupted": "رک گیا",
+    "resumeTitle": "{{state}}، {{percent}}% پر: دوبارہ شروع کریں",
+    "statusInstalling": "انسٹال",
+    "statusQueued": "…",
+    "retryTitle": "دوبارہ کوشش کریں: {{error}}",
+    "downloadFailedShort": "ڈاؤن لوڈ ناکام",
+    "downloadInstallTitle": "یہ ورژن ڈاؤن لوڈ اور انسٹال کریں"
+  },
+  "pager": {
+    "showing": "{{total}} میں سے {{from}}-{{to}}",
+    "perPage": "فی صفحہ",
+    "all": "سب",
+    "prev": "پچھلا",
+    "next": "اگلا",
+    "pageOf": "صفحہ {{page}} / {{total}}"
+  }
+}

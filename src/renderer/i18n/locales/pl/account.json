@@ -1,0 +1,62 @@
+{
+  "header": {
+    "eyebrow": "Twoje konto",
+    "title": "Ustawienia konta",
+    "description": "Zarządzaj zdjęciem profilowym, imieniem, adresem e-mail i hasłem."
+  },
+  "notice": {
+    "superAdmin": "To jest sesja Super-Admina / właściciela kodu źródłowego - nie ma tu rekordu członka do edycji."
+  },
+  "fields": {
+    "fullName": "Imię i nazwisko",
+    "fullNamePlaceholder": "Twoje imię",
+    "email": "E-mail",
+    "newPassword": "Nowe hasło",
+    "newPasswordPlaceholder": "Zostaw puste, aby zachować obecne",
+    "confirmPassword": "Potwierdź nowe hasło",
+    "confirmPasswordPlaceholder": "Powtórz nowe hasło",
+    "verificationRequired": "wymagana weryfikacja"
+  },
+  "avatar": {
+    "alt": "awatar",
+    "changeTitle": "Zmień zdjęcie",
+    "newSelected": "Wybrano nowe zdjęcie - zapisz, aby zastosować.",
+    "notImage": "Wybierz plik graficzny.",
+    "tooLarge": "To zdjęcie ma ponad 2 MB. Wybierz mniejsze.",
+    "readFailed": "Nie udało się odczytać tego zdjęcia."
+  },
+  "verification": {
+    "banner": "Zmiana adresu e-mail lub hasła wymaga 6-cyfrowego kodu wysłanego na obecny adres e-mail"
+  },
+  "actions": {
+    "save": "Zapisz zmiany",
+    "saving": "Zapisywanie…",
+    "verifyAndSave": "Zweryfikuj i zapisz",
+    "discard": "Odrzuć"
+  },
+  "validation": {
+    "nameEmpty": "Imię nie może być puste.",
+    "emailInvalid": "Wpisz poprawny adres e-mail.",
+    "passwordTooShort": "Nowe hasło musi mieć co najmniej 8 znaków.",
+    "passwordMismatch": "Hasła nie są zgodne."
+  },
+  "messages": {
+    "profileUpdated": "Profil zaktualizowany.",
+    "accountUpdated": "Konto zostało zaktualizowane."
+  },
+  "errors": {
+    "loadFailed": "Nie udało się wczytać konta.",
+    "saveFailed": "Nie udało się zapisać zmian."
+  },
+  "verify": {
+    "title": "Potwierdź, że to Ty",
+    "codeSentTo": "Kod wysłano na {{email}}",
+    "codeLabel": "6-cyfrowy kod",
+    "devMode": "Tryb deweloperski - brak skonfigurowanego e-maila. Twój kod to",
+    "apply": "Zweryfikuj i zastosuj",
+    "resend": "Wyślij ponownie",
+    "enterCode": "Wpisz 6-cyfrowy kod.",
+    "failed": "Weryfikacja nie powiodła się.",
+    "resendFailed": "Nie udało się ponownie wysłać kodu."
+  }
+}

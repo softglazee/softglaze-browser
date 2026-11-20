@@ -1,0 +1,51 @@
+{
+  "header": {
+    "eyebrow": "Sắp xếp",
+    "title": "Nhóm và nhãn",
+    "description": "Sắp xếp hồ sơ vào nhóm và gắn nhãn để lọc nhanh."
+  },
+  "filters": {
+    "allProfiles": "Tất cả hồ sơ",
+    "ungrouped": "Chưa có nhóm",
+    "group": "Nhóm"
+  },
+  "sidebar": {
+    "directories": "Thư mục",
+    "createGroup": "Tạo nhóm mới",
+    "renameGroup": "Đổi tên nhóm {{name}}",
+    "deleteGroup": "Xóa nhóm {{name}}",
+    "groupNamePlaceholder": "Tên nhóm..."
+  },
+  "table": {
+    "searchPlaceholder": "Tìm hồ sơ...",
+    "loading": "Đang tải nhóm...",
+    "colProfileName": "Tên hồ sơ",
+    "colGroupAssignment": "Nhóm được gán",
+    "colTags": "Nhãn"
+  },
+  "tagFilter": {
+    "label": "Bộ lọc",
+    "clear": "xóa lọc"
+  },
+  "bulk": {
+    "selected_one": "Đã chọn {{count}}",
+    "selected_other": "Đã chọn {{count}}",
+    "moveTo": "Chuyển đến:",
+    "chooseGroup": "Chọn nhóm…",
+    "clear": "Bỏ chọn"
+  },
+  "empty": {
+    "title": "Không tìm thấy hồ sơ",
+    "noMatch": "Không có hồ sơ nào khớp với bộ lọc.",
+    "groupEmpty": "Nhóm này đang trống. Hãy chuyển hồ sơ vào đây bằng danh sách Nhóm."
+  },
+  "tags": {
+    "add": "Thêm nhãn",
+    "remove": "Gỡ nhãn",
+    "inputPlaceholder": "nhãn + Enter"
+  },
+  "deleteConfirm": "Xóa nhóm \"{{name}}\"? Các hồ sơ trong đó sẽ thành Chưa có nhóm (bản thân hồ sơ không bị xóa).",
+  "errors": {
+    "loadFailed": "Không tải được nhóm."
+  }
+}

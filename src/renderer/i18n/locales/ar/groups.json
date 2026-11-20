@@ -1,0 +1,55 @@
+{
+  "header": {
+    "eyebrow": "التنظيم",
+    "title": "المجموعات والوسوم",
+    "description": "نظّم الملفات في مجموعات وصنّفها بالوسوم لتصفيتها بسرعة."
+  },
+  "filters": {
+    "allProfiles": "كل الملفات",
+    "ungrouped": "بدون مجموعة",
+    "group": "المجموعة"
+  },
+  "sidebar": {
+    "directories": "المجلدات",
+    "createGroup": "إنشاء مجموعة جديدة",
+    "renameGroup": "إعادة تسمية المجموعة {{name}}",
+    "deleteGroup": "حذف المجموعة {{name}}",
+    "groupNamePlaceholder": "اسم المجموعة..."
+  },
+  "table": {
+    "searchPlaceholder": "ابحث في الملفات...",
+    "loading": "جارٍ تحميل المجموعات...",
+    "colProfileName": "اسم الملف",
+    "colGroupAssignment": "المجموعة المعيّنة",
+    "colTags": "الوسوم"
+  },
+  "tagFilter": {
+    "label": "عوامل التصفية",
+    "clear": "مسح"
+  },
+  "bulk": {
+    "selected_zero": "لم يتم تحديد أي عنصر",
+    "selected_one": "تم تحديد عنصر واحد",
+    "selected_two": "تم تحديد عنصرين",
+    "selected_few": "تم تحديد {{count}} عناصر",
+    "selected_many": "تم تحديد {{count}} عنصرًا",
+    "selected_other": "تم تحديد {{count}} عنصر",
+    "moveTo": "نقل إلى:",
+    "chooseGroup": "اختر مجموعة…",
+    "clear": "مسح"
+  },
+  "empty": {
+    "title": "لم يتم العثور على ملفات",
+    "noMatch": "لا توجد ملفات تطابق عوامل التصفية.",
+    "groupEmpty": "هذه المجموعة فارغة. انقل الملفات إليها من القائمة المنسدلة «المجموعة»."
+  },
+  "tags": {
+    "add": "إضافة وسم",
+    "remove": "إزالة الوسم",
+    "inputPlaceholder": "وسم + Enter"
+  },
+  "deleteConfirm": "حذف المجموعة \"{{name}}\"؟ ستصبح ملفاتها بدون مجموعة (لن تُحذف الملفات نفسها).",
+  "errors": {
+    "loadFailed": "فشل تحميل المجموعات."
+  }
+}

@@ -1,0 +1,70 @@
+{
+  "header": {
+    "eyebrow": "Silniki",
+    "title": "Przeglądarki",
+    "subtitle": "Pobieraj prawdziwe wersje Chrome i Firefox na żądanie - instalują się automatycznie i są gotowe do uruchomienia.",
+    "refresh": "Odśwież"
+  },
+  "stats": {
+    "chromeInstalled": "Chrome zainstalowane",
+    "chromeAvailable": "Chrome dostępne",
+    "firefoxInstalled": "Firefox zainstalowane",
+    "firefoxAvailable": "Firefox dostępne"
+  },
+  "counts": {
+    "installedAvailable": "· zainstalowane: {{installed}} · dostępne: {{available}}"
+  },
+  "engine": {
+    "heading": "Silnik odcisku przeglądarki",
+    "installed": "Zainstalowany",
+    "notInstalled": "Niezainstalowany",
+    "description": "fingerprint-chromium - natywnie ustawia canvas / WebGL / UA / platformę / strefę czasową, ukrywa webdriver, blokuje wyciek WebRTC. Włącz go w Ustawienia → Przeglądarka.",
+    "progressInstalling": "instalowanie",
+    "progressVerifying": "weryfikowanie",
+    "installing": "Instalowanie",
+    "verifying": "Weryfikowanie",
+    "downloading": "Pobieranie",
+    "download": "Pobierz (~180 MB)"
+  },
+  "firefox": {
+    "heading": "Firefox",
+    "ready": "Gotowy",
+    "notDetected": "Nie wykryto",
+    "detectedDesc": "Gotowy. Wykryto w {{path}}. Profile Firefox uruchamiają prawdziwego Firefoksa z proxy, UA, językiem, strefą czasową i wyłączonym WebRTC.",
+    "notDetectedDesc": "Nie wykryto Firefoksa w systemie. Pobierz wersję poniżej - zainstaluje się w aplikacji, a profile Firefox uruchomią prawdziwego Firefoksa z proxy, UA, językiem, strefą czasową i wyłączonym WebRTC.",
+    "fetching": "Pobieranie katalogu wydań Firefoksa…",
+    "empty": "Brak dostępnych wersji Firefoksa (czy jesteś offline?)."
+  },
+  "chromium": {
+    "heading": "Chromium (Chrome for Testing)",
+    "subtitle": "Prawdziwe wersje - UA, Client-Hints, TLS i workery naprawdę zgadzają się z wersją.",
+    "fetching": "Pobieranie katalogu Chrome for Testing…",
+    "empty": "Brak dostępnych wersji (czy jesteś offline?)."
+  },
+  "row": {
+    "versionLabel": "{{brand}} {{major}}",
+    "ready": "Gotowa",
+    "paused": "Wstrzymano",
+    "interrupted": "Przerwano",
+    "resume": "Wznów",
+    "download": "Pobierz",
+    "retry": "Ponów",
+    "downloading": "Pobieranie",
+    "installing": "Instalowanie…",
+    "installingShort": "Instalowanie",
+    "queued": "W kolejce…",
+    "pauseDownload": "Wstrzymaj pobieranie",
+    "pausedPercent": "Wstrzymano · {{percent}}%",
+    "interruptedPercent": "Przerwano · {{percent}}%"
+  },
+  "errors": {
+    "catalogUnreachable": "Nie można połączyć się z katalogiem przeglądarek. Sprawdź połączenie z internetem.",
+    "downloadFailed": "Pobieranie nie powiodło się.",
+    "pauseFailed": "Nie udało się wstrzymać.",
+    "resumeFailed": "Nie udało się wznowić."
+  },
+  "browsers": {
+    "showAll": "Pokaż wszystkie wersje ({{n}})",
+    "showLess": "Pokaż mniej"
+  }
+}

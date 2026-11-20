@@ -1,0 +1,281 @@
+{
+  "common": {
+    "back": "Kembali",
+    "redeem": "Tukarkan",
+    "go": "Masuk"
+  },
+  "remember": {
+    "label": "Tetap masuk di perangkat ini",
+    "unavailable": "Perangkat ini tidak bisa menyimpan login dengan aman (enkripsi OS tidak tersedia), jadi Anda akan diminta masuk lagi saat dibuka berikutnya."
+  },
+  "brand": {
+    "tagline": "Multi-Profil",
+    "bullets": {
+      "fingerprints": "Fingerprint unik dan konsisten untuk setiap profil",
+      "proxy": "Proxy khusus untuk setiap identitas",
+      "localFirst": "Lokal lebih dulu: ruang kerja Anda disimpan di perangkat ini"
+    },
+    "heroLine1": "Jalankan ratusan identitas.",
+    "heroLine2": "Jaga masing-masing tetap terpisah.",
+    "heroBody": "Browser multi-profil lokal untuk tim. Setiap profil menyimpan cookie, penyimpanan, proxy, dan pengaturan fingerprint-nya sendiri.",
+    "footer": "© {{year}} SoftGlaze · Ruang kerja lokal",
+    "trust": {
+      "local": "Lokal lebih dulu",
+      "encrypted": "Kunci ruang kerja",
+      "private": "Tanpa telemetri"
+    },
+    "slides": {
+      "security": {
+        "title": "Keamanan data yang kuat",
+        "body": "Profil, cookie, dan data jelajah Anda tetap di perangkat ini, dan seed 2FA serta kunci penyedia disegel dengan keychain sistem Anda."
+      },
+      "fingerprint": {
+        "title": "Fingerprint yang konsisten",
+        "body": "Setiap profil punya fingerprint unik yang konsisten: canvas, WebGL, font, audio, dan perangkat keras."
+      },
+      "proxy": {
+        "title": "Proxy untuk setiap identitas",
+        "body": "Pasang identitas jaringan khusus ke setiap profil dan putar dengan percaya diri."
+      },
+      "automation": {
+        "title": "Otomatisasi hemat waktu",
+        "body": "Panaskan cookie, buat profil secara massal, dan atur semuanya dalam skala besar."
+      }
+    }
+  },
+  "license": {
+    "machineMismatch": "Lisensi ini terdaftar di komputer lain. Pindahkan ke PC ini atau minta administrator Anda meresetnya."
+  },
+  "pay": {
+    "noMethods": "Pembelian di dalam aplikasi dijeda sementara kami menambahkan penyedia pembayaran baru. Kirim email ke support@softglaze.com untuk membeli dengan invoice, lalu masukkan kode pembelian Anda.",
+    "submitted": "Pembayaran terkirim: administrator akan meninjaunya dan segera mengaktifkan paket Anda.",
+    "manualBadge": "Manual",
+    "continueTo": "Lanjut ke {{label}}",
+    "openPaymentLink": "Buka tautan pembayaran",
+    "referencePlaceholder": "Referensi pembayaran / ID transaksi",
+    "submitForApproval": "Saya sudah bayar: kirim untuk disetujui"
+  },
+  "banned": {
+    "blockedHeading": "Akun Anda diblokir",
+    "endedHeading": "Langganan Anda sudah berakhir",
+    "blockedBodyNamed": "{{name}}, akun Anda diblokir oleh administrator. Hubungi mereka untuk memulihkan akses; data Anda aman.",
+    "blockedBody": "Akun Anda diblokir oleh administrator. Hubungi mereka untuk memulihkan akses; data Anda aman.",
+    "endedBodyNamed": "{{name}}, lisensi ini sudah tidak aktif (dikembalikan dananya, dicabut, atau terdaftar di komputer lain). Pilih paket untuk membuka ruang kerja Anda. Profil dan data Anda aman dan menunggu.",
+    "endedBody": "Lisensi ini sudah tidak aktif (dikembalikan dananya, dicabut, atau terdaftar di komputer lain). Pilih paket untuk membuka ruang kerja Anda. Profil dan data Anda aman dan menunggu.",
+    "haveCode": "Punya kode pembelian?",
+    "needHelp": "Butuh bantuan? Hubungi administrator Anda.",
+    "signOut": "Keluar"
+  },
+  "register": {
+    "title": "Buat akun Anda",
+    "subtitle": "Ini akun utama Anda: pemilik ruang kerja.",
+    "firstName": "Nama depan",
+    "lastName": "Nama belakang",
+    "email": "Email",
+    "emailPlaceholder": "anda@perusahaan.com",
+    "phone": "Nomor telepon",
+    "phonePlaceholder": "+62 812 3456 7890",
+    "password": "Kata sandi",
+    "passwordPlaceholder": "8+ karakter",
+    "confirm": "Konfirmasi",
+    "confirmPlaceholder": "Ulangi",
+    "continue": "Lanjut",
+    "storedLocally": "Disimpan lokal dan terenkripsi di perangkat ini",
+    "haveAccount": "Sudah punya akun?",
+    "logIn": "Masuk",
+    "consent": "Kirimi saya berita produk dan tips lewat email",
+    "consentNote": "Kode, pengingat uji coba, dan email akun selalu dikirim. Berita produk hanya jika Anda mencentang kotak ini.",
+    "checkedByServer": "Kami mengirim kode ke email Anda untuk mengonfirmasi alamat ini. Profil dan data Anda tetap di perangkat ini.",
+    "phoneOptional": "Nomor telepon (opsional)",
+    "phoneIntlPlaceholder": "+62 21 1234 5678",
+    "phoneHint": "Awali dengan + dan kode negara Anda."
+  },
+  "verify": {
+    "title": "Verifikasi email Anda",
+    "subtitlePrefix": "Masukkan kode 6 digit yang dikirim ke",
+    "subtitleSuffix": ".",
+    "devModePrefix": "Mode dev: belum ada email yang benar-benar dikirim. Kode Anda adalah",
+    "devModeSuffix": ".",
+    "verifyCreate": "Verifikasi & buat akun",
+    "resendIn": "Kirim ulang kode dalam {{count}} dtk",
+    "resend": "Kirim ulang kode",
+    "checkSpam": "Kode bisa butuh satu menit untuk sampai. Periksa folder spam jika belum terlihat."
+  },
+  "lead": {
+    "useCase": "Untuk apa Anda akan memakai SoftGlaze?",
+    "useCasePlaceholder": "Pilih satu",
+    "useCases": {
+      "ecommerce": "Toko online dan marketplace",
+      "social_media": "Akun media sosial",
+      "affiliate_marketing": "Pemasaran afiliasi dan media buying",
+      "agency": "Pekerjaan agensi untuk klien",
+      "web_research": "Riset web dan QA",
+      "other": "Lainnya"
+    },
+    "useCaseOther": "Ceritakan dalam beberapa kata",
+    "useCaseOtherPlaceholder": "Misalnya: cek harga per negara",
+    "company": "Perusahaan atau situs web (opsional)",
+    "companyPlaceholder": "PT Acme atau acme.com"
+  },
+  "confirm": {
+    "title": "Konfirmasi email Anda",
+    "subtitle": "Setiap ruang kerja SoftGlaze sekarang memerlukan email yang terkonfirmasi. Periksa data Anda dan kami akan mengirim kode 6 digit.",
+    "sendCode": "Kirim kode",
+    "codeTitle": "Masukkan kode",
+    "codeBody": "Kami mengirim kode 6 digit ke {{email}}. Masukkan untuk mengonfirmasi email ruang kerja ini.",
+    "confirmContinue": "Konfirmasi & lanjut",
+    "changeDetails": "Ubah data",
+    "dataNote": "Profil dan data Anda tetap di komputer ini. Kami menyimpan data ini untuk mengurus akun Anda.",
+    "later": "Lanjut dulu",
+    "laterNote": "Kami tidak bisa menjangkau server. Anda bisa memakai aplikasi sekarang, dan kami akan bertanya lagi saat aplikasi dibuka berikutnya.",
+    "memberTitle": "Pemilik perlu mengonfirmasi ruang kerja ini",
+    "memberBody": "Sebelum ruang kerja ini bisa dipakai, pemiliknya harus mengonfirmasi email. Minta pemilik masuk dan melakukannya, atau masuk sebagai pemilik.",
+    "signInAsOwner": "Masuk sebagai pemilik"
+  },
+  "plan": {
+    "title": "Semua siap",
+    "subtitlePrefix": "Akun Anda siap dengan",
+    "trialHighlight": "uji coba gratis 7 hari",
+    "subtitleSuffix": ". Mulai sekarang, atau aktifkan paket berbayar.",
+    "startTrialTitle": "Mulai uji coba gratis 7 hari",
+    "startTrialSubtitle": "Tanpa bayar sekarang: jelajahi semuanya.",
+    "activatePaid": "Aktifkan paket berbayar sekarang",
+    "haveCode": "Punya kode pembelian?",
+    "skip": "Lewati: mulai uji coba",
+    "tenantTitle": "Akun Anda siap",
+    "tenantSubtitle": "Mulai uji coba gratis, atau pilih paket.",
+    "tenantTrialSubtitle": "Akses penuh, tanpa bayar. Satu uji coba gratis per komputer dan email.",
+    "choosePlan": "Atau pilih paket",
+    "verifyTitle": "Konfirmasi email Anda",
+    "verifyBody": "Kami mengirim kode 6 digit ke {{email}}. Masukkan untuk memulai uji coba gratis.",
+    "verifyStart": "Konfirmasi & mulai uji coba",
+    "continueFreeTitle": "Lanjut dengan Free",
+    "continueFreeSubtitle": "Gratis selamanya: 25 profil, 1 berjalan sekaligus. Tingkatkan kapan saja.",
+    "trialUsedFree": "Uji coba gratis sudah dipakai di komputer atau email ini. Anda bisa lanjut dengan paket Free."
+  },
+  "login": {
+    "welcomeBackNamed": "Selamat datang kembali, {{name}}",
+    "welcomeBack": "Selamat datang kembali",
+    "subtitle": "Masuk untuk membuka ruang kerja Anda.",
+    "email": "Email",
+    "password": "Kata sandi",
+    "forgot": "Lupa?",
+    "passwordPlaceholder": "Kata sandi utama",
+    "forgotBody": "Kata sandi utama tidak bisa dipulihkan di instalasi lokal: tidak pernah keluar dari perangkat ini. Jika hilang, ruang kerja harus direset dari Pengaturan.",
+    "signIn": "Masuk",
+    "noAccount": "Belum punya akun?",
+    "newHere": "Baru di SoftGlaze?",
+    "createOne": "Buat akun Anda",
+    "haveInvite": "Punya kode undangan?",
+    "teamSignIn": "Masuk sebagai anggota tim"
+  },
+  "invite": {
+    "title": "Tukarkan undangan Anda",
+    "subtitle": "Masukkan kode yang Anda terima dan atur kata sandi untuk akun Anda.",
+    "code": "Kode undangan",
+    "codePlaceholder": "SG-XXXX-XXXX",
+    "yourName": "Nama Anda",
+    "optional": "(opsional)",
+    "namePlaceholder": "Nama lengkap",
+    "setPassword": "Atur kata sandi",
+    "passwordPlaceholder": "6+ karakter",
+    "join": "Gabung ke ruang kerja"
+  },
+  "member": {
+    "title": "Masuk sebagai anggota tim",
+    "subtitle": "Gunakan email/nama dan kata sandi yang Anda atur saat menukarkan undangan.",
+    "identifier": "Email atau nama",
+    "identifierPlaceholder": "anda@perusahaan.com",
+    "password": "Kata sandi",
+    "passwordPlaceholder": "Kata sandi Anda",
+    "signIn": "Masuk",
+    "haveInviteInstead": "Punya kode undangan?",
+    "redeemIt": "Tukarkan"
+  },
+  "super": {
+    "title": "Super Admin",
+    "access": "Akses Super Admin",
+    "setupSubtitlePrefix": "Pengaturan pertama. Buat kredensial Super Admin untuk",
+    "setupSubtitleHighlight": "instalasi ini",
+    "setupSubtitleSuffix": ": disimpan dalam bentuk hash di perangkat ini dan menjadi satu-satunya jalan masuk, jadi simpan baik-baik.",
+    "username": "Nama pengguna",
+    "usernamePlaceholder": "superadmin",
+    "password": "Kata sandi",
+    "setupPasswordPlaceholder": "Minimal 8 karakter",
+    "confirmPassword": "Konfirmasi kata sandi",
+    "confirmPasswordPlaceholder": "Masukkan ulang kata sandi",
+    "createCredentials": "Buat kredensial",
+    "loginSubtitle": "Akses pemilik kode sumber. Melewati pendaftaran dan membuka seluruh ruang kerja.",
+    "usernameOrEmail": "Nama pengguna atau email",
+    "loginPasswordPlaceholder": "Kata sandi",
+    "enterWorkspace": "Masuk ke ruang kerja"
+  },
+  "pick": {
+    "title": "Siapa yang bekerja?",
+    "subtitle": "Pilih profil anggota Anda untuk melanjutkan.",
+    "pin": "PIN",
+    "suspended": "Ditangguhkan",
+    "pinPlaceholder": "Masukkan PIN",
+    "haveInvite": "Punya kode undangan?",
+    "teamSignIn": "Masuk sebagai anggota tim"
+  },
+  "db": {
+    "title": "Buka kunci database Anda",
+    "subtitle": "Database ruang kerja ini terenkripsi. Masukkan kata sandi ruang kerja untuk mendekripsi dan membukanya.",
+    "workspacePassword": "Kata sandi ruang kerja",
+    "passwordPlaceholder": "Kata sandi ruang kerja",
+    "unlock": "Buka kunci",
+    "corrupted": "Jika Anda yakin kata sandinya benar, file database mungkin rusak. Anda bisa memulihkannya dengan memasang ulang dan memulihkan cadangan ruang kerja (Pengaturan → Cadangkan & pulihkan ruang kerja). Tidak ada reset kata sandi: data hanya bisa dibuka dengan kata sandi yang benar."
+  },
+  "errors": {
+    "enterFirstLast": "Masukkan nama depan dan belakang Anda.",
+    "validEmail": "Masukkan alamat email yang valid.",
+    "validPhone": "Masukkan nomor telepon yang valid.",
+    "password8": "Kata sandi minimal 8 karakter.",
+    "passwordsNoMatch": "Kata sandi tidak cocok.",
+    "couldNotSendCode": "Tidak bisa mengirim kode verifikasi.",
+    "couldNotResendCode": "Tidak bisa mengirim ulang kode.",
+    "enter6Digit": "Masukkan kode 6 digit.",
+    "verificationFailed": "Verifikasi gagal.",
+    "incorrectPassword": "Kata sandi salah.",
+    "couldNotSignIn": "Tidak bisa masuk.",
+    "superSetupRequired": "Kredensial Super Admin belum diatur: buat di bawah.",
+    "invalidSuperCredentials": "Kredensial Super Admin tidak valid.",
+    "couldNotCreateSuper": "Tidak bisa membuat kredensial Super Admin.",
+    "enterInviteCode": "Masukkan kode undangan Anda.",
+    "password6": "Kata sandi minimal 6 karakter.",
+    "couldNotRedeemInvite": "Tidak bisa menukarkan kode undangan itu.",
+    "enterEmailNamePassword": "Masukkan email/nama dan kata sandi Anda.",
+    "enterPurchaseCode": "Masukkan kode pembelian Anda.",
+    "invalidPurchaseCode": "Kode pembelian itu tidak valid.",
+    "noPaymentMethod": "Belum ada metode pembayaran yang tersedia.",
+    "paymentNotStarted": "Pembayaran tidak bisa dimulai.",
+    "couldNotSubmitPayment": "Tidak bisa mengirim pembayaran Anda.",
+    "enterWorkspacePassword": "Masukkan kata sandi ruang kerja Anda.",
+    "dbStillLocked": "Database masih terkunci: silakan coba lagi.",
+    "dbMissing": "File database terenkripsi tidak ditemukan. Pulihkan dari cadangan ruang kerja.",
+    "dbUnlockFailed": "Kata sandi salah, atau file rusak.",
+    "couldNotUnlockDb": "Tidak bisa membuka kunci database.",
+    "trialFailed": "Tidak bisa memulai uji coba gratis."
+  },
+  "serverErrors": {
+    "SIGNUP_INVALID_EMAIL": "Masukkan alamat email yang valid.",
+    "SIGNUP_DISPOSABLE_EMAIL": "Silakan gunakan alamat email permanen.",
+    "SIGNUP_NO_MX": "Kami tidak menemukan server email untuk alamat itu.",
+    "SIGNUP_BAD_CODE": "Kode itu salah atau sudah kedaluwarsa. Periksa email atau minta kode baru.",
+    "SIGNUP_OFFLINE": "Sambungkan ke internet untuk membuat akun Anda.",
+    "SIGNUP_FAILED": "Kami belum bisa memeriksa email itu sekarang. Coba lagi beberapa menit lagi.",
+    "RATE_LIMITED": "Terlalu banyak percobaan, coba lagi beberapa menit lagi.",
+    "TRIAL_USED": "Uji coba gratis sudah dipakai di komputer atau email ini. Pilih paket atau masukkan kode pembelian.",
+    "TRIAL_OFFLINE": "Sambungkan ke internet untuk memulai uji coba gratis.",
+    "TRIAL_VERIFY_EMAIL": "Konfirmasi alamat email Anda untuk memulai uji coba gratis. Kami sudah mengirim kode 6 digit.",
+    "TRIAL_NO_EMAIL": "Tambahkan alamat email ke akun pemilik dulu, lalu mulai uji coba gratis.",
+    "TRIAL_FAILED": "Uji coba gratis belum bisa dimulai sekarang. Coba lagi beberapa menit lagi.",
+    "SERVER_UNAVAILABLE": "Server lisensi kami sedang tidak menjawab. Coba lagi beberapa menit lagi.",
+    "MACHINE_MISMATCH": "Lisensi ini terdaftar di komputer lain. Pindahkan ke PC ini atau minta administrator Anda meresetnya.",
+    "SIGNUP_INVALID_PHONE": "Masukkan nomor telepon dengan + dan kode negara, atau kosongkan.",
+    "SIGNUP_USE_CASE": "Pilih untuk apa Anda akan memakai SoftGlaze.",
+    "SIGNUP_USE_CASE_OTHER": "Ceritakan dalam beberapa kata untuk apa Anda akan memakai SoftGlaze.",
+    "CONFIRM_OFFLINE": "Sambungkan ke internet untuk mengonfirmasi email Anda."
+  }
+}

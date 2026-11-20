@@ -282,7 +282,7 @@ export default function FreeProxiesPage() {
         <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" aria-hidden="true" />
         <div className="min-w-0">
           <p className="font-semibold">{t('freePage.warnTitle')}</p>
-          <ul className="mt-1 list-disc space-y-1 pl-4">
+          <ul className="mt-1 list-disc space-y-1 ps-4">
             <li>{t('free.warn.strangers')}</li>
             <li>{t('free.warn.quality')}</li>
             <li>{t('free.warn.legal')}</li>
@@ -294,9 +294,9 @@ export default function FreeProxiesPage() {
 
       <section aria-labelledby="free-list-title" className="flex flex-col gap-3">
         <div className="flex flex-wrap items-center gap-2">
-          <h2 id="free-list-title" className="mr-2 text-sm font-semibold text-foreground">
+          <h2 id="free-list-title" className="me-2 text-sm font-semibold text-foreground">
             {t('freePage.listTitle')}
-            <span className="ml-2 text-xs font-normal text-muted-foreground">{t('freePage.listCount', { shown: filtered.length, total: proxies.length })}</span>
+            <span className="ms-2 text-xs font-normal text-muted-foreground">{t('freePage.listCount', { shown: filtered.length, total: proxies.length })}</span>
           </h2>
           <select aria-label={t('freePage.filters.protocol')} value={protocol} onChange={(e) => setProtocol(e.target.value)} className={selectCls}>
             <option value="all">{t('freePage.filters.protocolAll')}</option>
@@ -319,7 +319,7 @@ export default function FreeProxiesPage() {
               {t('freePage.filters.reset')}
             </Button>
           )}
-          <div className="ml-auto flex flex-wrap items-center gap-2">
+          <div className="ms-auto flex flex-wrap items-center gap-2">
             <Button size="sm" variant="secondary" onClick={() => checkMany(filtered.map((p) => p.id))} disabled={checkBusy || filtered.length === 0}>
               {checkBusy ? <Loader2 className="h-3.5 w-3.5 animate-spin" aria-hidden="true" /> : <Activity className="h-3.5 w-3.5" aria-hidden="true" />}
               {t('freePage.actions.checkAll')}
@@ -355,7 +355,7 @@ export default function FreeProxiesPage() {
             <GuardedButton deny={denyManage} size="sm" variant="danger" onClick={() => removeIds(visibleSelected, t('freePage.confirm.deleteSelected', { count: visibleSelected.length }))} disabled={deleting}>
               {deleting ? <Loader2 className="h-3.5 w-3.5 animate-spin" aria-hidden="true" /> : <Trash2 className="h-3.5 w-3.5" aria-hidden="true" />}{t('freePage.actions.deleteSelected')}
             </GuardedButton>
-            <Button size="sm" variant="ghost" onClick={() => setSelectedIds(new Set())} className="ml-auto">
+            <Button size="sm" variant="ghost" onClick={() => setSelectedIds(new Set())} className="ms-auto">
               <X className="h-4 w-4" aria-hidden="true" />{t('freePage.actions.clear')}
             </Button>
           </div>
@@ -374,7 +374,7 @@ export default function FreeProxiesPage() {
             <div className="p-6"><EmptyState title={t('freePage.noMatch.title')} description={t('freePage.noMatch.description')} /></div>
           ) : (
             <div className="overflow-x-auto">
-              <table className="w-full border-collapse text-left text-sm">
+              <table className="w-full border-collapse text-start text-sm">
                 <thead className="border-b border-border text-xs font-semibold uppercase tracking-wider text-muted-foreground">
                   <tr>
                     <th scope="col" className="w-10 px-4 py-3">
@@ -394,7 +394,7 @@ export default function FreeProxiesPage() {
                     <th scope="col" className="px-4 py-3">{t('freePage.table.lastCheck')}</th>
                     <th scope="col" className="px-4 py-3">{t('freePage.table.status')}</th>
                     <th scope="col" className="px-4 py-3">{t('freePage.table.usedBy')}</th>
-                    <th scope="col" className="px-4 py-3 text-right">{t('freePage.table.actions')}</th>
+                    <th scope="col" className="px-4 py-3 text-end">{t('freePage.table.actions')}</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-border">

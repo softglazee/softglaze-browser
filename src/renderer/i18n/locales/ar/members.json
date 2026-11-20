@@ -1,0 +1,354 @@
+{
+  "header": {
+    "eyebrow": "الفريق",
+    "title": "الأعضاء",
+    "manageCount_zero": "لا تدير أي عضو",
+    "manageCount_one": "عضو واحد تديره",
+    "manageCount_two": "عضوان تديرهما",
+    "manageCount_few": "{{count}} أعضاء تديرهم",
+    "manageCount_many": "{{count}} عضوًا تديرهم",
+    "manageCount_other": "{{count}} عضو تديرهم",
+    "workspaceStats": "{{profiles}} ملف · {{proxies}} بروكسي في مساحة العمل"
+  },
+  "tabs": {
+    "members": "الأعضاء",
+    "activity": "النشاط",
+    "licenses": "التراخيص"
+  },
+  "memberCount_zero": "لا أعضاء",
+  "memberCount_one": "عضو واحد",
+  "memberCount_two": "عضوان",
+  "memberCount_few": "{{count}} أعضاء",
+  "memberCount_many": "{{count}} عضوًا",
+  "memberCount_other": "{{count}} عضو",
+  "roles": {
+    "SUPER_ADMIN": "المسؤول الأعلى",
+    "OWNER": "المالك",
+    "ADMIN": "مسؤول",
+    "MANAGER": "مدير",
+    "OPERATOR": "مشغّل"
+  },
+  "roleDesc": {
+    "OWNER": "تحكم كامل، بما في ذلك الأعضاء والخزنة.",
+    "ADMIN": "إدارة الملفات والبروكسيات والمجموعات، والمديرين والمشغّلين الذين ينشئهم.",
+    "MANAGER": "إنشاء الملفات وتعديلها وتشغيلها، وإضافة مشغّلين.",
+    "OPERATOR": "تشغيل الملفات المعيّنة له واستخدامها فقط."
+  },
+  "actionCategories": {
+    "Profiles": "الملفات",
+    "Proxies": "البروكسيات",
+    "Automation": "الأتمتة",
+    "Workspace": "مساحة العمل",
+    "Team": "الفريق"
+  },
+  "actionLabels": {
+    "profiles_launch": "تشغيل الملفات",
+    "profiles_create": "إنشاء الملفات",
+    "profiles_edit": "تعديل الملفات",
+    "profiles_export": "تصدير الملفات",
+    "profiles_share": "مشاركة الملفات مع الأعضاء",
+    "profiles_delete": "حذف الملفات (إلى سلة المهملات)",
+    "profiles_purge": "حذف الملفات نهائيًا",
+    "proxies_manage": "إضافة / تعديل / حذف البروكسيات",
+    "proxies_reveal": "إظهار بيانات اعتماد البروكسي الأصلية",
+    "automation_run": "تشغيل الأتمتة / الماكرو",
+    "extensions_manage": "إدارة إضافات الفريق",
+    "settings_manage": "تغيير إعدادات مساحة العمل",
+    "vault_manage": "إدارة خزنة الهويات",
+    "members_manage": "إدارة أعضاء الفريق",
+    "members_delete": "حذف الأعضاء / تغيير الأدوار"
+  },
+  "features": {
+    "dashboard": "لوحة التحكم (الصفحة فقط)",
+    "profiles": "الملفات",
+    "groups": "المجموعات",
+    "proxies": "مجمّع البروكسيات",
+    "browsers": "المتصفحات",
+    "extensions": "الإضافات",
+    "batchImport": "استيراد مجمّع",
+    "trash": "سلة المهملات",
+    "members": "الأعضاء",
+    "settings": "الإعدادات"
+  },
+  "caps": {
+    "maxAdmins": "المسؤولون",
+    "maxManagers": "المديرون",
+    "maxOperators": "المشغّلون"
+  },
+  "labels": {
+    "profiles": "الملفات",
+    "proxies": "البروكسيات",
+    "browsers": "المتصفحات"
+  },
+  "status": {
+    "active": "نشط",
+    "suspended": "موقوف",
+    "banned": "محجوب"
+  },
+  "actions": {
+    "inviteMember": "دعوة عضو",
+    "inviteTeamMember": "دعوة عضو فريق",
+    "remove": "إزالة",
+    "removeMember": "إزالة العضو",
+    "assignProfiles": "تعيين الملفات",
+    "cancel": "إلغاء",
+    "close": "إغلاق",
+    "clear": "مسح",
+    "save": "حفظ",
+    "createInvite": "إنشاء دعوة",
+    "done": "تم",
+    "copy": "نسخ",
+    "copied": "تم النسخ"
+  },
+  "empty": {
+    "title": "لا يوجد أعضاء بعد",
+    "canCreate": "ادعُ أول عضو في فريقك لتبدأ في توزيع العمل.",
+    "noMembers": "لا يوجد أعضاء تحت إدارتك بعد."
+  },
+  "member": {
+    "you": "أنت",
+    "noEmail": "لا يوجد بريد إلكتروني",
+    "invitePending": "الدعوة معلّقة",
+    "loginSet": "تم تعيين الدخول",
+    "subMembers_zero": "لا أعضاء فرعيين",
+    "subMembers_one": "عضو فرعي واحد",
+    "subMembers_two": "عضوان فرعيان",
+    "subMembers_few": "{{count}} أعضاء فرعيين",
+    "subMembers_many": "{{count}} عضوًا فرعيًا",
+    "subMembers_other": "{{count}} عضو فرعي"
+  },
+  "time": {
+    "neverActive": "لم يكن نشطًا قط",
+    "activeJustNow": "نشط الآن",
+    "activeMinutes": "نشط منذ {{count}} دقيقة",
+    "activeHours": "نشط منذ {{count}} ساعة",
+    "activeDays": "نشط منذ {{count}} يوم"
+  },
+  "errors": {
+    "loadMembers": "تعذّر تحميل الأعضاء.",
+    "changeStatus": "تعذّر تغيير الحالة.",
+    "nameRequired": "الاسم مطلوب.",
+    "saveMember": "تعذّر حفظ العضو.",
+    "resetPerms": "تعذّر إعادة تعيين الصلاحيات.",
+    "removeMember": "تعذّر إزالة العضو.",
+    "loadProfiles": "تعذّر تحميل الملفات.",
+    "reassignProfiles": "تعذّر إعادة تعيين الملفات."
+  },
+  "confirm": {
+    "revertPerms": "إعادة حدود وميزات {{name}} إلى الإعدادات الافتراضية لدوره؟"
+  },
+  "modal": {
+    "inviteTitle": "دعوة عضو",
+    "editTitle": "تعديل {{name}}",
+    "noCreatableRoles": "غير مسموح لك بإنشاء أي أعضاء فرعيين.",
+    "invitePendingCode": "الدعوة معلّقة، الرمز"
+  },
+  "fields": {
+    "name": "الاسم",
+    "namePlaceholder": "الاسم الكامل",
+    "email": "البريد الإلكتروني",
+    "role": "الدور",
+    "color": "اللون",
+    "instructions": "التعليمات",
+    "optional": "(اختياري)",
+    "instructionsPlaceholder": "ما المسؤول عنه هذا العضو…"
+  },
+  "invite": {
+    "createdTitle": "تم إنشاء الدعوة",
+    "sharePrefix": "شارك هذا الرمز مع ",
+    "shareSuffix": ". يفتح SoftGlaze Browser ← «لديك رمز دعوة؟»، ثم يُدخله ويعيّن كلمة المرور.",
+    "code": "رمز الدعوة",
+    "link": "رابط الدعوة",
+    "emailedTo": "أُرسلت بالبريد الإلكتروني إلى {{email}}.",
+    "emailNotSent": "لم يُرسَل البريد الإلكتروني (اضبط SMTP في الإعدادات ← البريد الإلكتروني). شارك الرمز يدويًا."
+  },
+  "alloc": {
+    "heading_zero": "غير مخصّص لأي عضو فرعي",
+    "heading_one": "مخصّص لعضو فرعي واحد",
+    "heading_two": "مخصّص لعضوين فرعيين",
+    "heading_few": "مخصّص لـ {{count}} أعضاء فرعيين",
+    "heading_many": "مخصّص لـ {{count}} عضوًا فرعيًا",
+    "heading_other": "مخصّص لـ {{count}} عضو فرعي",
+    "allocated": "تم تخصيص {{allocated}} من {{cap}}",
+    "left": "· متبقٍ {{remaining}}"
+  },
+  "perms": {
+    "title": "الصلاحيات والحدود",
+    "resourceLimits": "حدود الموارد",
+    "subMemberCaps": "حدود الأعضاء الفرعيين",
+    "visibleFeatures": "الميزات الظاهرة",
+    "actionPermissions": "صلاحيات الإجراءات",
+    "actionHint": "مفعّلة افتراضيًا لهذا الدور. أوقف أيًّا منها لسحبها من هذا العضو فقط.",
+    "revertDefaults": "الرجوع إلى افتراضيات الدور",
+    "max": "(الحد الأقصى {{max}})",
+    "canInvite": {
+      "canCreateAdmins": "يمكنه دعوة مسؤولين",
+      "canCreateManagers": "يمكنه دعوة مديرين",
+      "canCreateOperators": "يمكنه دعوة مشغّلين"
+    },
+    "featuresHint": "الميزة المُوقفة تُخفى من الشريط الجانبي، وتُرفض إجراءاتها في كل مكان (مثل إضافة البروكسيات أو الاستعادة من سلة المهملات أو تنزيل المتصفحات). أما القوائم التي تحتاجها صفحات أخرى، مثل اختيار بروكسي أو مجموعة في محرر الملف، فتظل تُحمَّل."
+  },
+  "accountStatus": {
+    "title": "حالة الحساب",
+    "reason": "السبب: {{reason}}",
+    "unban": "إلغاء حجب العضو",
+    "banHint": "تعديل الحقول أعلاه يُبقي الحجب، استخدم «إلغاء حجب العضو» لاستعادة الوصول.",
+    "suspendToggle": "إيقاف هذا العضو (يمنع تسجيل الدخول)",
+    "ban": "حجب العضو"
+  },
+  "delete": {
+    "title": "إزالة {{name}}",
+    "warnPrefix": "سيؤدي هذا إلى إزالة ",
+    "warnMiddle": " ونقل أي أعضاء فرعيين تابعين له إليك. اختر ما يحدث لبياناته:",
+    "profilesWord_zero": "ملف",
+    "profilesWord_one": "ملف",
+    "profilesWord_two": "ملفات",
+    "profilesWord_few": "ملفات",
+    "profilesWord_many": "ملفًا",
+    "profilesWord_other": "ملف",
+    "proxiesWord_zero": "بروكسي",
+    "proxiesWord_one": "بروكسي",
+    "proxiesWord_two": "بروكسيات",
+    "proxiesWord_few": "بروكسيات",
+    "proxiesWord_many": "بروكسي",
+    "proxiesWord_other": "بروكسي",
+    "options": {
+      "reassignMe": {
+        "label": "الاحتفاظ بها وإعادة تعيينها لي",
+        "desc": "تصبح مالك ملفاته وبروكسياته."
+      },
+      "reassignOther": {
+        "label": "الاحتفاظ بها وإعادة تعيينها لعضو آخر",
+        "desc": "سلّم بياناته إلى زميل محدد."
+      },
+      "delete": {
+        "label": "حذف كل البيانات المرتبطة",
+        "desc": "تُحذف بروكسياته ومجموعات البروكسي، وتُنقل الملفات إلى سلة المهملات (قابلة للاستعادة)."
+      }
+    },
+    "pickTarget": "اختر عضوًا لاستلام البيانات.",
+    "reassignTo": "إعادة التعيين إلى",
+    "noOtherMembers": "لا يوجد أعضاء آخرون، اختر خيارًا آخر."
+  },
+  "assign": {
+    "title": "تعيين الملفات · {{name}}",
+    "searchPlaceholder": "البحث في الملفات",
+    "noProfiles": "لم يُعثر على ملفات.",
+    "memberFallback": "العضو #{{id}}",
+    "updated": "تم التحديث: {{assigned}} معيّن، {{unassigned}} غير معيّن.",
+    "save": "حفظ التعيين"
+  },
+  "activity": {
+    "title": "نشاط الفريق",
+    "subtitle": "من فعل ماذا في مساحة العمل هذه",
+    "exported": "تم تصدير {{count}} صف إلى {{path}}",
+    "exportError": "تعذّر تصدير سجل النشاط.",
+    "filterByMember": "التصفية حسب العضو",
+    "filterByAction": "التصفية حسب الإجراء",
+    "allMembers": "جميع الأعضاء",
+    "allActions": "جميع الإجراءات",
+    "fromDate": "من تاريخ",
+    "toDate": "إلى تاريخ",
+    "empty": "لم يُسجَّل أي نشاط بعد.",
+    "noMatch": "لا يوجد نشاط يطابق عوامل التصفية هذه.",
+    "enterpriseFeature": "ميزة Enterprise",
+    "seeBilling": "عرض الفوترة",
+    "exportEnterpriseOnly": "تصدير سجل التدقيق (CSV / JSON) ميزة في Enterprise. قم بالترقية من صفحة الفوترة لتصدير سجل النشاط."
+  },
+  "activityActions": {
+    "launched": "تشغيل",
+    "stopped": "إيقاف",
+    "created": "إنشاء",
+    "edited": "تعديل",
+    "deleted": "حذف",
+    "restored": "استعادة",
+    "imported": "استيراد",
+    "assigned": "تعيين",
+    "reassigned": "إعادة تعيين",
+    "parallel_run": "تشغيل متوازٍ",
+    "macro_run": "تشغيل ماكرو",
+    "member_added": "إضافة عضو",
+    "member_edited": "تعديل عضو",
+    "member_removed": "إزالة عضو",
+    "permissions_changed": "تغيير الصلاحيات",
+    "status_changed": "تغيير الحالة",
+    "signed_in": "تسجيل الدخول",
+    "signed_out": "تسجيل الخروج",
+    "invite_accepted": "قبول دعوة",
+    "proxies_copied_for_extension": "نسخ البروكسيات للإضافة",
+    "devtools_address_shown": "عرض عنوان DevTools"
+  },
+  "feedTime": {
+    "justNow": "الآن",
+    "minutes": "منذ {{count}} دقيقة",
+    "hours": "منذ {{count}} ساعة",
+    "days": "منذ {{count}} يوم"
+  },
+  "license": {
+    "intro": "حالة الاشتراك لكل مساحة عمل مالك. تعمل محليًا أولًا وبأفضل جهد ممكن، فالمستخدم المصمّم يظل قادرًا على تعديل قاعدة البيانات المحلية أو الساعة؛ والتطبيق الدائم يحتاج إلى خادم الترخيص.",
+    "noOwners": "لا توجد مساحات عمل لمالكين بعد.",
+    "editTitle": "الترخيص · {{name}}",
+    "setState": "تعيين الحالة",
+    "grantPlan": "منح خطة",
+    "lifecycle": "دورة الحياة",
+    "state": {
+      "paid": "مدفوع",
+      "trialing": "تجربة",
+      "grace": "مهلة",
+      "banned": "محجوب"
+    },
+    "type": {
+      "trial": "تجربة",
+      "paid": "مدفوع"
+    },
+    "tier": {
+      "pro": "Pro",
+      "enterprise": "Enterprise"
+    },
+    "fields": {
+      "type": "النوع",
+      "tier": "الفئة",
+      "expiry": "الانتهاء",
+      "plan": "الخطة",
+      "months": "الأشهر"
+    },
+    "detail": {
+      "trial": "متبقٍ {{count}} يوم من التجربة",
+      "grace": "المهلة: متبقٍ {{count}} يوم",
+      "paid": "مدفوع حتى {{date}}",
+      "clockAnomaly": "⚠ خلل في الساعة"
+    },
+    "actions": {
+      "grantMonth": "منح شهر واحد",
+      "extend7": "+7 أيام",
+      "startTrial": "بدء التجربة",
+      "resetTrial": "إعادة تعيين التجربة",
+      "edit": "تعديل",
+      "terminate": "إنهاء",
+      "unblock": "إلغاء الحجب",
+      "block": "حجب",
+      "saveState": "حفظ الحالة",
+      "grantPlan": "منح الخطة",
+      "startFreeTrial": "بدء التجربة المجانية",
+      "terminateNow": "إنهاء الآن"
+    },
+    "confirm": {
+      "terminate": "إنهاء اشتراك {{name}} الآن؟ ستُقفل ملفاته حتى تمنحه الوصول مجددًا.",
+      "terminateModal": "إنهاء هذا الاشتراك الآن؟ تُقفل الملفات حتى تمنح الوصول مجددًا.",
+      "resetTrial": "إعادة تعيين تجربة {{name}}؟ تبدأ مدة التجربة من جديد وتُستبدل أي حالة ترخيص حالية.",
+      "block": "حجب {{name}}؟ سيُسجَّل خروجه هو وجميع أعضائه الفرعيين، ولن يتمكنوا من استخدام التطبيق حتى تلغي حجبهم."
+    },
+    "errors": {
+      "load": "تعذّر تحميل التراخيص.",
+      "action": "فشل الإجراء."
+    }
+  },
+  "seats": {
+    "usage": "{{used}} من {{total}} أعضاء",
+    "fullNotice": "جميع مقاعد الفريق في خطتك ({{total}}) مستخدمة، لذا لا يمكن إضافة أحد جديد. أوقف عضوًا لتحرير مقعد، أو قم بالترقية إلى Enterprise لما يصل إلى {{enterpriseSeats}} عضوًا في الفريق.",
+    "fullNoticeTop": "جميع مقاعد الفريق في خطتك ({{total}}) مستخدمة، لذا لا يمكن إضافة أحد جديد. أوقف عضوًا لتحرير مقعد.",
+    "overNotice": "يضم هذا الفريق {{used}} عضوًا وخطتك تشمل {{total}}. يحتفظ الجميع بالوصول؛ ويمكن إضافة أعضاء جدد بعد أن يصبح الفريق ضمن الحد.",
+    "seeBilling": "عرض الفوترة",
+    "limitError": "جميع مقاعد الفريق في خطتك مستخدمة. أوقف عضوًا لتحرير مقعد، أو اطّلع على الفوترة لمعرفة خيارات خطتك."
+  }
+}

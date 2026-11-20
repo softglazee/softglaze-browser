@@ -61,7 +61,7 @@ export function PlanLimitPrompt({ onChooseProfiles }) {
           <p className="mt-1.5 text-[13px] text-muted-foreground leading-relaxed">{t(`upgrade.body.${info.kind}`, vars)}</p>
           <div className="mt-3"><PriceLine price={price} /></div>
         </div>
-        <button type="button" onClick={close} aria-label={t('upgrade.notNow')} className="shrink-0 w-11 h-11 -mt-2 -mr-2 grid place-items-center rounded-lg text-muted-foreground hover:bg-secondary"><X className="w-4 h-4" /></button>
+        <button type="button" onClick={close} aria-label={t('upgrade.notNow')} className="shrink-0 w-11 h-11 -mt-2 -me-2 grid place-items-center rounded-lg text-muted-foreground hover:bg-secondary"><X className="w-4 h-4" /></button>
       </div>
       <div className="flex flex-col-reverse sm:flex-row sm:justify-end gap-2 px-5 py-4 border-t border-border">
         <button type="button" onClick={close} className={secondaryBtn}>{t('upgrade.notNow')}</button>
@@ -234,7 +234,7 @@ export function FreePlanBillingSection({ freeLimits, isFree }) {
         <div className="overflow-x-auto">
           <table className="w-full min-w-[520px] text-[12.5px]">
             <thead>
-              <tr className="text-left text-muted-foreground">
+              <tr className="text-start text-muted-foreground">
                 <th scope="col" className="px-4 sm:px-5 py-2.5 font-medium">{t('billing.colFeature')}</th>
                 <th scope="col" className={`px-3 py-2.5 font-semibold ${isFree ? 'text-primary' : ''}`}>{t('billing.colFree')}</th>
                 <th scope="col" className="px-3 py-2.5 font-semibold">{t('billing.colPro')}</th>
@@ -244,7 +244,7 @@ export function FreePlanBillingSection({ freeLimits, isFree }) {
             <tbody>
               {rows.map((r) => (
                 <tr key={r.key} className="border-t border-border">
-                  <th scope="row" className="px-4 sm:px-5 py-2.5 text-left font-medium text-foreground">{t(`billing.rows.${r.key}`)}</th>
+                  <th scope="row" className="px-4 sm:px-5 py-2.5 text-start font-medium text-foreground">{t(`billing.rows.${r.key}`)}</th>
                   <td className={`px-3 py-2.5 ${isFree ? 'text-foreground font-medium' : 'text-muted-foreground'}`}>{val(r.free)}</td>
                   <td className="px-3 py-2.5 text-muted-foreground">{val(r.pro)}</td>
                   <td className="px-3 py-2.5 text-muted-foreground">{val(r.enterprise)}</td>

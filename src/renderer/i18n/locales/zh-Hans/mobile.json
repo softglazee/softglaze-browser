@@ -1,0 +1,116 @@
+{
+  "title": "手机",
+  "description": "将 SoftGlaze 手机应用与这台电脑配合使用：在手机上查看配置文件、启动和停止它们，以及处理 AI 请求。手机与这台电脑之间的所有通信都经过端到端加密。",
+  "enable": "开启手机伴侣",
+  "loading": "正在加载",
+  "offOwner": "开启后即可配对手机。这台电脑随后会与 SoftGlaze 中继服务器保持安全连接，中继服务器只负责转发加密消息。",
+  "offOther": "所有者尚未开启手机伴侣。",
+  "copy": "复制",
+  "cancel": "取消",
+  "relay": {
+    "connected": "已连接到中继服务器",
+    "connecting": "正在连接中继服务器",
+    "authFailed": "中继服务器拒绝了这台电脑。请在“高级”中检查中继地址。"
+  },
+  "pair": {
+    "title": "配对手机",
+    "help": "在手机上安装 SoftGlaze，然后扫描此屏幕上的二维码。",
+    "start": "配对手机",
+    "qrAlt": "SoftGlaze 手机应用的配对码",
+    "scanTitle": "使用 SoftGlaze 手机应用扫描此二维码",
+    "step1": "在手机上打开 SoftGlaze。",
+    "step2": "前往“设置”>“与电脑配对”，然后扫描此二维码。",
+    "step3": "确认两个屏幕显示相同的六位数字。",
+    "expiresIn": "此码只能使用一次，将在 {{time}} 后失效。",
+    "textTitle": "无法扫描？以文本形式复制配对码",
+    "attemptFailed": "有手机尝试使用了错误或损坏的配对码。此配对码仍然有效。"
+  },
+  "confirm": {
+    "title": "{{name}} 请求配对",
+    "help": "只有当手机显示的六位数字与此完全一致时才继续。",
+    "helpBrowser": "只有当浏览器显示的六位数字与此完全一致时才继续。浏览器可以查看配置文件并处理 AI 请求；只有在你也需要时，才勾选“启动和停止配置文件”。",
+    "codeLabel": "代码 {{code}}",
+    "name": "手机名称",
+    "member": "身份",
+    "scopes": "此手机可执行的操作",
+    "match": "数字一致，配对",
+    "noMatch": "数字不一致"
+  },
+  "scopes": {
+    "view": {
+      "label": "查看配置文件和状态",
+      "help": "始终开启。仅限该成员可以查看的配置文件。"
+    },
+    "control_profiles": {
+      "label": "启动和停止配置文件",
+      "help": "规则与这台电脑上相同。"
+    },
+    "approve_ai": {
+      "label": "处理 AI 请求",
+      "help": "允许或拒绝 AI 应用的操作，仅限该成员可处理的令牌。"
+    },
+    "approve_team": {
+      "label": "处理团队请求",
+      "help": "批准团队成员的访问请求。"
+    },
+    "totp": {
+      "label": "显示双重验证码",
+      "help": "保存在配置文件中的两步验证码。"
+    },
+    "phone_profiles_linked": {
+      "label": "同步配置文件",
+      "help": "你在下方选择的配置文件也会在此手机上打开。"
+    }
+  },
+  "roles": {
+    "OWNER": "所有者",
+    "ADMIN": "管理员",
+    "MANAGER": "经理",
+    "OPERATOR": "操作员"
+  },
+  "devices": {
+    "title": "手机和浏览器",
+    "kindPhone": "手机",
+    "kindBrowser": "浏览器",
+    "empty": "还没有手机。",
+    "online": "在线",
+    "offline": "离线",
+    "lastSeen": "最后在线 {{when}}",
+    "actsAs": "身份为 {{name}}",
+    "edit": "编辑 {{name}}",
+    "remove": "移除 {{name}}",
+    "removeConfirm": "移除 {{name}}？它将立即停止与这台电脑配合使用，需要重新配对。",
+    "rename": "重命名",
+    "saveScopes": "保存权限"
+  },
+  "sync": {
+    "title": "配置文件同步",
+    "help": "所选的配置文件也会在手机应用中打开。设置、起始页和 Cookie 会随配置文件同步；同一时间一个配置文件只能在一台设备上打开。",
+    "noPhone": "目前还没有可以同步的手机。请在上方为手机授予“同步配置文件”权限。",
+    "now": "立即同步",
+    "search": "查找配置文件",
+    "toggle": "将 {{name}} 与手机同步",
+    "proxyPassword": "代理密码",
+    "offConfirm": "停止同步 {{name}}？手机会保留其副本。",
+    "removeAll": "从中继服务器移除所有已同步的数据",
+    "removeAllConfirm": "从中继服务器移除所有已同步的配置文件？这台电脑和手机上的配置文件将保持不变。",
+    "lastOk": "上次同步：{{when}}",
+    "lastError": "上次同步失败（{{code}}）。每分钟会自动重试。",
+    "limits": "网站存储、扩展程序、已保存的密码和下载内容不会同步。代理密码仅在你允许时同步。"
+  },
+  "advanced": {
+    "title": "高级",
+    "pcName": "这台电脑在手机上显示的名称",
+    "relay": "中继地址",
+    "relayFromEnv": "由 SG_RELAY_URL 设置，用于测试。",
+    "save": "保存",
+    "reset": "重置手机密钥",
+    "resetConfirm": "重置这台电脑的手机密钥？所有已配对的手机都将被移除，需要重新配对。",
+    "protocol": "协议 {{version}}"
+  },
+  "errors": {
+    "load": "无法加载手机设置。",
+    "generic": "操作未成功，请重试。",
+    "unavailable": "此版本不支持手机功能。"
+  }
+}

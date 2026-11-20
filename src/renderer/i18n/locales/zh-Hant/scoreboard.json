@@ -1,0 +1,43 @@
+{
+  "title": "供應商排行榜",
+  "note": "基於你在過去 {{days}} 天內的代理檢測結果。",
+  "refresh": "重新整理",
+  "show": "顯示供應商排行榜",
+  "hide": "隱藏供應商排行榜",
+  "loading": "正在載入排行榜...",
+  "loadError": "無法載入排行榜：{{message}}",
+  "empty": "還沒有代理。從供應商拉取一些或新增你自己的代理，然後檢測它們，即可檢視每個供應商的表現。",
+  "truncated": "僅統計了最新的 {{max}} 次檢測。",
+  "scoreHelp": "滿分 100 分。檢測成功率權重最高，其次是列入黑名單的代理數量（越少越好），然後是速度，最後是每個代理的網站攔截次數。檢測次數少於 {{min}} 次的列不評分。",
+  "own": "你自己的代理",
+  "free": "免費代理",
+  "col": {
+    "vendor": "供應商",
+    "score": "評分",
+    "success": "檢測成功率",
+    "speed": "速度中位數",
+    "blocklisted": "已列入黑名單",
+    "datacenter": "資料中心",
+    "blocks": "網站攔截",
+    "proxies": "代理",
+    "lastChecked": "上次檢測"
+  },
+  "sortBy": "按{{column}}排序",
+  "notEnough": "資料不足",
+  "notEnoughTitle_one": "過去 {{days}} 天內僅有 {{count}} 次檢測，評分至少需要 {{min}} 次。",
+  "notEnoughTitle_other": "過去 {{days}} 天內僅有 {{count}} 次檢測，評分至少需要 {{min}} 次。",
+  "level": {
+    "good": "良好",
+    "fair": "一般",
+    "poor": "較差"
+  },
+  "scoreTitle": "{{level}}：{{score}} 分（滿分 100）",
+  "checks_one": "{{count}} 次檢測",
+  "checks_other": "{{count}} 次檢測",
+  "ms": "{{ms}} ms",
+  "working": "{{pct}} 可用",
+  "noData": "無資料",
+  "never": "從未",
+  "openProvider": "開啟 {{name}}",
+  "topSites": "攔截最多：{{sites}}"
+}

@@ -1,0 +1,191 @@
+{
+  "badgeTitle": "驗證碼風險 {{score}}/100。點選檢視原因和修復方法。",
+  "title": "驗證碼評分",
+  "subtitle": "網站向此設定檔跳出驗證的可能性，以及如何降低它",
+  "outOf100": "/ 100",
+  "level": {
+    "low": "低風險",
+    "some": "中風險",
+    "high": "高風險",
+    "veryHigh": "極高風險"
+  },
+  "levelShort": {
+    "low": "低",
+    "some": "中",
+    "high": "高",
+    "veryHigh": "極高"
+  },
+  "column": "驗證碼風險",
+  "issues_zero": "未發現問題",
+  "issues_one": "1 個問題",
+  "issues_other": "{{count}} 個問題",
+  "fixable_one": "「全部修復」可處理 1 個",
+  "fixable_other": "「全部修復」可處理 {{count}} 個",
+  "leakTest": "洩露測試",
+  "leakTestTitle": "開啟詳細的洩露檢測，包括對執行中設定檔的即時測試",
+  "loadFailed": "無法為此設定檔評分。",
+  "fixAll": "全部修復",
+  "fixAllTitle": "套用所有僅更改此設定檔設定或代理的修復",
+  "rescore": "重新評分",
+  "done": "完成",
+  "runningNote": "此設定檔已開啟。更改將在下次啟動時生效。",
+  "adviceOnly": "請在設定檔編輯器中更改此項；在這裡修復會改變網站已知的裝置資訊。",
+  "status": {
+    "pass": "正常",
+    "warn": "有風險",
+    "fail": "高風險"
+  },
+  "fix": {
+    "assign-proxy": "分配一個備用代理",
+    "swap-proxy": "切換到備用代理",
+    "check-proxy": "立即檢測代理",
+    "tz-auto": "使用代理的時區",
+    "lang-auto": "使用代理的語言",
+    "geo-auto": "使用代理的位置",
+    "webrtc-safe": "將 WebRTC 設為「轉發」",
+    "allow-3p-cookies": "允許第三方 Cookie",
+    "warm-up": "進行預熱"
+  },
+  "result": {
+    "swapped": "現在使用 {{name}}。",
+    "checked": "代理已檢測。",
+    "checkFailed": "代理未通過檢測：{{error}}",
+    "warming": "預熱已開始：設定檔會開啟並瀏覽幾個熱門網站。可在「自動化」頁面追蹤進度。",
+    "cookies": "現已對所有設定檔允許第三方 Cookie。",
+    "applied": "完成。"
+  },
+  "label": {
+    "proxy": "代理",
+    "proxyHealth": "代理健康狀況",
+    "blocklist": "垃圾資訊黑名單",
+    "freeProxy": "免費代理",
+    "ipType": "IP 類型",
+    "sharedProxy": "共用代理",
+    "timezone": "時區",
+    "language": "語言",
+    "geolocation": "位置",
+    "webrtc": "WebRTC",
+    "thirdPartyCookies": "第三方 Cookie",
+    "history": "瀏覽歷史",
+    "device": "裝置",
+    "osMismatch": "作業系統"
+  },
+  "factor": {
+    "proxy": {
+      "pass": "使用 {{name}}。",
+      "warn": "無代理：此設定檔使用你自己的網路連線，所有未設定代理的設定檔都共用這個連線。"
+    },
+    "proxyHealth": {
+      "pass": "已通過上次檢測。",
+      "fail": "未通過上次檢測，頁面可能會超時或顯示錯誤。",
+      "never": "從未檢測，健康狀況和黑名單狀態未知。",
+      "stale": "上次檢測於 {{days}} 天前。"
+    },
+    "blocklist": {
+      "pass": "不在任何已檢查的垃圾資訊黑名單上。",
+      "warn": "尚未對照垃圾資訊黑名單進行檢查。",
+      "fail": "出口 IP 在垃圾資訊黑名單上。Google 和 Cloudflare 對已列入名單的 IP 跳出驗證的頻率要高得多。"
+    },
+    "freeProxy": {
+      "fail": "這是免費公共代理。大多數已被標記，預計會頻繁出現驗證碼。"
+    },
+    "ipType": {
+      "pass": "家庭或行動網路{{isp}}。",
+      "warn": "資料中心 IP{{isp}}。網站對託管公司 IP 跳出驗證的頻率遠高於家庭 IP。"
+    },
+    "sharedProxy": {
+      "msg_one": "另有 1 個設定檔使用此代理，它們共用一個 IP，可能被關聯。",
+      "msg_other": "另有 {{count}} 個設定檔使用此代理，它們共用一個 IP，可能被關聯。"
+    },
+    "timezone": {
+      "pass": "跟隨代理的 IP。",
+      "warn": "手動設定（{{zone}}），可能與代理不一致。",
+      "fail": "使用這台電腦的時區，與代理所在國家/地區不一致。"
+    },
+    "language": {
+      "pass": "與代理所在國家/地區一致。",
+      "warn": "語言區域 {{region}} 與代理所在國家/地區 {{country}} 不一致。",
+      "unverified": "手動設定（{{lang}}）；代理所在國家/地區尚未知曉，因此無法比較。"
+    },
+    "geolocation": {
+      "pass": "跟隨代理的 IP，或已禁止。",
+      "warn": "手動設定，可能與代理不一致。"
+    },
+    "webrtc": {
+      "pass": "{{mode}} 模式會隱藏你的真實 IP。",
+      "realNoProxy": "無代理時使用「真實」：網站本來就能看到這台電腦的 IP，因此 WebRTC 不會暴露新的資訊。",
+      "firefoxOff": "Firefox 設定檔中的 WebRTC 已關閉，而很少有真實瀏覽器會這樣做。任何設定都無法改變這一點。",
+      "warn": "WebRTC 已停用，而很少有真實瀏覽器會這樣做。",
+      "fail": "設為「真實」，會暴露代理背後的真實 IP。"
+    },
+    "thirdPartyCookies": {
+      "pass": "已允許，與普通 Chrome 相同。",
+      "warn": "已在「設定」中對所有設定檔阻擋。reCAPTCHA 和 hCaptcha 依賴於它們。"
+    },
+    "history": {
+      "pass": "已有瀏覽歷史和 Cookie。",
+      "warn": "幾乎還沒有 Cookie 或瀏覽歷史。網站更信任使用過的設定檔。",
+      "warmed_one": "已預熱 {{count}} 次，因此擁有真實的瀏覽歷史和 Cookie。",
+      "warmed_other": "已預熱 {{count}} 次，因此擁有真實的瀏覽歷史和 Cookie。"
+    },
+    "device": {
+      "warn": "顯示卡（WebGL）可能與此裝置或系統不匹配。",
+      "fail": "顯示卡（WebGL）與此裝置或系統不匹配。"
+    },
+    "osMismatch": {
+      "warn": "宣告為 {{claimed}}，但實際執行在 {{host}} 上；字型和其他細節可能暴露真實系統。"
+    }
+  },
+  "prelaunch": {
+    "title_one": "開啟前檢查此設定檔",
+    "title_other": "開啟前檢查 {{count}} 個設定檔",
+    "subtitle": "設定檔一開啟，網站就能發現這些不一致之處。",
+    "issue": {
+      "uaOs": "User Agent 顯示為 {{ua}}，但設定檔設定為 {{os}}。",
+      "gpuOs": "顯示卡（WebGL）與 {{os}} 不匹配。",
+      "screen": {
+        "mobile": "手機的螢幕為 {{width}}x{{height}}；手機螢幕應為窄長的豎屏。",
+        "desktop": "電腦的螢幕為 {{width}}x{{height}}；電腦螢幕至少為 1024x600。"
+      },
+      "language": "語言區域 {{region}} 與代理所在國家/地區 {{country}} 不一致。",
+      "timezone": "時區來自這台電腦，而非代理。",
+      "webrtc": "WebRTC 設為「真實」，會暴露代理背後的真實 IP。",
+      "proxyDead": "代理未通過上次檢測。",
+      "socks4Dns": "使用 SOCKS4 代理 {{proxy}}。Chromium 無法透過 SOCKS4 傳送 DNS 查詢，因此每個網站的網域都會在代理之外解析（DNS 洩露），設定檔將無法開啟。請在 Firefox 中開啟，或為其分配 SOCKS5 或 HTTP 代理。"
+    },
+    "os": {
+      "windows": "Windows",
+      "mac": "macOS",
+      "linux": "Linux",
+      "android": "Android",
+      "ios": "iOS"
+    },
+    "editorOnly": "（請在設定檔編輯器中更改）",
+    "blocking": "（在設定檔編輯器中更改之前，此設定檔將無法開啟）",
+    "stopAsking": "啟動前不再檢查（可在「設定」中重新開啟）",
+    "cancel": "取消",
+    "launchAnyway": "仍然啟動",
+    "fixAndLaunch": "修復並啟動"
+  },
+  "bulk": {
+    "fix": "修復驗證碼問題",
+    "fixTitle": "對所選設定檔套用安全的驗證碼修復：時區、語言、位置、WebRTC，以及在能降低風險時分配備用代理",
+    "confirm_one": "修復此設定檔的驗證碼問題？只會更改能降低風險的設定和代理。",
+    "confirm_other": "修復 {{count}} 個設定檔的驗證碼問題？只會更改能降低風險的設定和代理。",
+    "done": "已修復 {{total}} 個設定檔中的 {{changed}} 個；{{swapped}} 個已切換到備用代理。",
+    "noBetter": "{{count}} 個未能獲得更好的代理。"
+  },
+  "filter": {
+    "any": "任意驗證碼風險",
+    "low": "低風險",
+    "some": "有一定風險",
+    "high": "高風險",
+    "veryHigh": "極高風險",
+    "fixable": "可一鍵修復"
+  },
+  "sort": {
+    "default": "預設順序",
+    "riskDesc": "風險最高優先",
+    "riskAsc": "最安全優先"
+  }
+}

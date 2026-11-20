@@ -1,0 +1,337 @@
+{
+  "common": {
+    "cancel": "Batal",
+    "save": "Simpan",
+    "edit": "Edit",
+    "delete": "Hapus"
+  },
+  "header": {
+    "title": "Tagihan & paket",
+    "description": "Kelola langganan, bandingkan paket, dan tingkatkan, semuanya di satu tempat."
+  },
+  "status": {
+    "loading": "Memuat…",
+    "sourceOwner": "Pemilik kode sumber",
+    "active": "Aktif",
+    "activeRenews": "Aktif · diperpanjang {{date}}",
+    "trial": "Uji coba",
+    "trialDaysLeft": "Uji coba · sisa {{days}} hr",
+    "graceDaysLeft": "Masa tenggang · sisa {{days}} hr",
+    "subscriptionEnded": "Langganan berakhir",
+    "free": "Paket Free"
+  },
+  "backend": {
+    "licensedVerified": "Berlisensi & terverifikasi",
+    "renews": "diperpanjang {{date}}",
+    "noLicense": "Lisensi aktif: belum ada lisensi berbayar untuk instalasi ini.",
+    "trialVerified": "Uji coba gratis, terverifikasi",
+    "trialEnds": "berakhir {{date}}"
+  },
+  "current": {
+    "title": "Paket saat ini",
+    "sourceOwnerAllFeatures": "Pemilik kode sumber · semua fitur",
+    "paid": "berbayar",
+    "freeTrial": "uji coba gratis",
+    "freeForever": "Paket Free · gratis selamanya"
+  },
+  "grace": {
+    "message_other": "{{kind}} Anda sudah berakhir: sisa masa tenggang {{count}} hari. Perpanjang di bawah agar tidak kehilangan akses.",
+    "kindTrial": "Uji coba gratis",
+    "kindSubscription": "Langganan"
+  },
+  "banned": {
+    "message": "Langganan Anda sudah berakhir dan pembukaan profil terkunci. Berlangganan atau masukkan kode pembelian untuk memulihkan akses."
+  },
+  "trialRemaining": {
+    "message_other": "Uji coba gratis: sisa {{count}} hari."
+  },
+  "seats": {
+    "label": "Kursi tim",
+    "usage": "{{used}} / {{total}} terpakai",
+    "upgradeToAddMore": "· tingkatkan untuk menambah"
+  },
+  "exempt": {
+    "note": "Anda pemilik kode sumber: dikecualikan dari sistem langganan. Semua fitur termasuk."
+  },
+  "checkout": {
+    "waiting": "Menunggu pembayaran Anda…",
+    "waitingForPlan": "Menunggu pembayaran Anda · {{plan}}…",
+    "opened": "Halaman pembayaran terbuka di browser Anda. Setelah membayar, halaman ini diperbarui otomatis.",
+    "reopen": "Buka lagi halaman pembayaran"
+  },
+  "plans": {
+    "chooseHeading": "Pilih paket",
+    "bestValue": "Paling hemat",
+    "current": "Saat ini",
+    "footerNote": "Pembayaran diproses dengan metode yang diaktifkan administrator Anda. Setelah membayar di browser, halaman ini mengaktifkan paket Anda secara otomatis."
+  },
+  "period": {
+    "label": "Periode tagihan",
+    "monthly": "Bulanan",
+    "yearly": "Tahunan",
+    "billedYearly": "Ditagih tahunan, sekitar {{perMonth}} per bulan",
+    "monthsFree_other": "Gratis {{count}} bulan, Anda hemat {{saving}}",
+    "monthsFreeShort_other": "Gratis {{count}} bulan",
+    "save": "Anda hemat {{saving}} per tahun"
+  },
+  "cta": {
+    "included": "Termasuk",
+    "onPaidPlan": "Paket berbayar aktif",
+    "trialActiveDaysLeft": "Uji coba aktif · sisa {{days}} hr",
+    "startFreeTrial": "Mulai uji coba gratis",
+    "trialUsed": "Uji coba gratis sudah dipakai",
+    "currentPlan": "Paket saat ini",
+    "upgradeEnterprise": "Tingkatkan ke Enterprise",
+    "downgradePro": "Turun ke Pro",
+    "choosePlan": "Pilih {{name}}"
+  },
+  "trial": {
+    "started": "Uji coba gratis dengan akses penuh sudah aktif. Selamat mencoba!",
+    "startedWithDays": "Uji coba gratis Anda aktif: {{days}} hari akses penuh. Selamat mencoba!",
+    "errors": {
+      "failed": "Tidak bisa memulai uji coba."
+    }
+  },
+  "redeem": {
+    "label": "Punya kode pembelian?",
+    "apply": "Terapkan",
+    "success": "Kode pembelian diterapkan. Terima kasih!",
+    "errors": {
+      "empty": "Masukkan kode pembelian Anda.",
+      "failed": "Tidak bisa menerapkan kode itu."
+    }
+  },
+  "pay": {
+    "received": "Pembayaran diterima: paket Anda sekarang aktif!",
+    "errors": {
+      "noMethods": "Pembelian di dalam aplikasi dijeda sementara kami menambahkan penyedia pembayaran baru. Kirim email ke support@softglaze.com untuk membeli dengan invoice, lalu masukkan kode pembelian Anda di bawah.",
+      "checkoutFailed": "Tidak bisa memulai checkout.",
+      "submitFailed": "Tidak bisa mengirim pembayaran Anda."
+    }
+  },
+  "payModal": {
+    "title": "Bayar {{name}}",
+    "manualSubmitted": "Pembayaran terkirim. Administrator akan meninjaunya dan segera mengaktifkan paket Anda.",
+    "manualBadge": "Manual",
+    "continueTo": "Lanjut ke {{method}}",
+    "openPayLink": "Buka tautan pembayaran",
+    "referencePlaceholder": "Referensi pembayaran / ID transaksi",
+    "notePlaceholder": "Catatan (opsional)",
+    "submitForApproval": "Saya sudah bayar: kirim untuk disetujui",
+    "manualActivationNote": "Paket Anda aktif setelah administrator mengonfirmasi pembayaran."
+  },
+  "admin": {
+    "configureMethods": "Atur metode pembayaran di Pengaturan"
+  },
+  "invoices": {
+    "title": "Invoice",
+    "subtitleAdmin": "Semua pembayaran dari semua pemilik: otomatis + manual.",
+    "subtitleUser": "Bukti pembayaran Anda.",
+    "add": "Tambah",
+    "empty": "Belum ada invoice.",
+    "manualSuffix": "manual",
+    "confirmDelete": "Hapus invoice ini?",
+    "cols": {
+      "date": "Tanggal",
+      "owner": "Pemilik",
+      "amount": "Jumlah",
+      "method": "Metode",
+      "status": "Status",
+      "reference": "Referensi"
+    },
+    "errors": {
+      "loadFailed": "Tidak bisa memuat invoice.",
+      "deleteFailed": "Tidak bisa menghapus."
+    }
+  },
+  "invoiceForm": {
+    "addTitle": "Tambah invoice",
+    "editTitle": "Edit invoice",
+    "ownerMemberId": "ID anggota pemilik",
+    "optionalPlaceholder": "(opsional)",
+    "amount": "Jumlah",
+    "currency": "Mata uang",
+    "method": "Metode",
+    "status": "Status",
+    "tier": "Tingkat",
+    "months": "Bulan",
+    "reference": "Referensi",
+    "referencePlaceholder": "transaksi / kode",
+    "note": "Catatan",
+    "errors": {
+      "invalidAmount": "Masukkan jumlah yang valid.",
+      "saveFailed": "Tidak bisa menyimpan invoice."
+    }
+  },
+  "planManager": {
+    "title": "Paket & bundel",
+    "subtitle": "Atur harga, edit detail, dan buat bundel baru. Perubahan langsung berlaku di checkout.",
+    "newPackage": "Bundel baru",
+    "activeBadge": "Aktif",
+    "hiddenBadge": "Tersembunyi",
+    "termMeta": "Masa {{months}} bln · {{tier}}",
+    "hide": "Sembunyikan",
+    "show": "Tampilkan",
+    "hideTitle": "Sembunyikan dari checkout",
+    "showTitle": "Tampilkan di checkout",
+    "deleteTitle": "Hapus paket",
+    "confirmDelete": "Hapus paket “{{name}}”? Pembeli tidak akan melihatnya lagi.",
+    "errors": {
+      "loadFailed": "Tidak bisa memuat paket.",
+      "updateFailed": "Tidak bisa memperbarui paket.",
+      "deleteFailed": "Tidak bisa menghapus paket."
+    }
+  },
+  "planForm": {
+    "newTitle": "Bundel baru",
+    "editTitle": "Edit {{name}}",
+    "editTitleAria": "Edit bundel",
+    "packageName": "Nama bundel",
+    "planType": "Jenis paket",
+    "typePaid": "Berbayar",
+    "typeTrial": "Uji coba gratis",
+    "trialLength": "Lama uji coba (hari)",
+    "price": "Harga",
+    "currency": "Mata uang",
+    "shownAs": "Ditampilkan sebagai",
+    "trialShownValue": "{{days}} hari · gratis",
+    "billedPer": "Ditagih per",
+    "term": "Masa (bulan yang diberikan)",
+    "featureTier": "Tingkat fitur",
+    "bestValue": "Paling hemat",
+    "active": "Aktif",
+    "tagline": "Slogan",
+    "taglinePlaceholder": "Semua yang dibutuhkan operator tunggal.",
+    "features": "Fitur (satu per baris)",
+    "featuresPlaceholder": "Profil browser tanpa batas\nMesin fingerprint lengkap\nKumpulan & rotasi proxy",
+    "savePackage": "Simpan bundel",
+    "errors": {
+      "nameRequired": "Beri nama bundel.",
+      "invalidPrice": "Masukkan harga yang valid.",
+      "saveFailed": "Tidak bisa menyimpan paket."
+    }
+  },
+  "subscribers": {
+    "title": "Pelanggan",
+    "subtitle": "Setiap akun, kapan bergabung, paket, dan masa berlakunya. Total {{count}}.",
+    "assignPlan": "Tetapkan paket",
+    "empty": "Belum ada akun pemilik.",
+    "trialSuffix": "uji coba",
+    "daysLeftShort": "{{days}} hr",
+    "assign": "Tetapkan",
+    "assignTitle": "Tetapkan / berikan paket",
+    "state": {
+      "ended": "Berakhir",
+      "grace": "Masa tenggang",
+      "active": "Aktif",
+      "trial": "Uji coba"
+    },
+    "cols": {
+      "account": "Akun",
+      "joined": "Bergabung",
+      "plan": "Paket",
+      "state": "Status",
+      "expires": "Berakhir",
+      "team": "Tim"
+    },
+    "errors": {
+      "loadFailed": "Tidak bisa memuat pelanggan."
+    }
+  },
+  "assignForm": {
+    "title": "Tetapkan paket",
+    "account": "Akun",
+    "plan": "Paket",
+    "months": "Bulan",
+    "monthsWithDefault": "Bulan (bawaan {{default}})",
+    "recordAsPaid": "Catat sebagai penjualan berbayar",
+    "noteOptional": "Catatan (opsional)",
+    "notePlaceholder": "Alasan pemberian",
+    "grantNote": "Memberikan masa langganan seketika dan menghapus blokir langganan.",
+    "grantNotePaid": "Invoice berbayar dicatat.",
+    "grantNoteFree": "Dicatat sebagai pemberian $0.",
+    "fallbackAccount": "akun",
+    "fallbackPlan": "paket",
+    "success_other": "{{plan}} ditetapkan untuk {{name}}: {{count}} bulan.",
+    "errors": {
+      "chooseAccount": "Pilih akun.",
+      "choosePlan": "Pilih paket.",
+      "assignFailed": "Tidak bisa menetapkan paket."
+    }
+  },
+  "planText": {
+    "trialTagline": "Coba semua fitur gratis: akses penuh, tanpa kartu.",
+    "trialFullAccess": "Akses penuh ke semua fitur",
+    "trialTools": "Semua alat fingerprint, proxy & kebocoran",
+    "trialMacros": "Makro, pemanas cookie & profil seluler",
+    "trialBackupSeats": "Cadangan terenkripsi & kursi tim",
+    "trialNoCard": "Tanpa kartu kredit",
+    "trialUpgrade": "Tingkatkan ke paket berbayar kapan saja",
+    "proTagline": "Semua yang dibutuhkan operator tunggal untuk menjalankan profil dalam skala besar.",
+    "proProfiles": "Profil browser lokal tanpa batas",
+    "proFingerprint": "Mesin fingerprint lengkap + cek kebocoran",
+    "proProxies": "Kumpulan proxy, kebijakan rotasi & pencocokan lokasi otomatis",
+    "proMacros": "Perekam makro, penjadwal & proses berbasis data",
+    "proCookieWarmer": "Pemanas cookie",
+    "proMobile": "Profil perangkat seluler / Android",
+    "proBackup": "Cadangkan & pulihkan ruang kerja terenkripsi",
+    "proDbEncryption": "Enkripsi database penuh saat disimpan",
+    "proPalette": "Palet perintah + panduan awal",
+    "proSeats": "Hingga 3 anggota tim",
+    "proParallel": "Proses paralel, hingga 3 profil sekaligus, dengan konsol langsung",
+    "entTagline": "Untuk tim: hingga 25 anggota, 10 profil sekaligus, dan ekspor log audit.",
+    "entEverythingInPro": "Semua fitur Pro, plus:",
+    "entSeats": "Hingga 25 anggota tim",
+    "entParallel": "Proses paralel, hingga 10 profil sekaligus, dengan konsol langsung",
+    "entAuditExport": "Ekspor log audit (CSV / JSON)",
+    "entSupport": "Dukungan email prioritas"
+  },
+  "serverErrors": {
+    "SIGNUP_INVALID_EMAIL": "Masukkan alamat email yang valid.",
+    "SIGNUP_DISPOSABLE_EMAIL": "Silakan gunakan alamat email permanen.",
+    "SIGNUP_NO_MX": "Kami tidak menemukan server email untuk alamat itu.",
+    "SIGNUP_BAD_CODE": "Kode itu salah atau sudah kedaluwarsa. Periksa email atau minta kode baru.",
+    "SIGNUP_OFFLINE": "Sambungkan ke internet untuk membuat akun Anda.",
+    "SIGNUP_FAILED": "Kami belum bisa memeriksa email itu sekarang. Coba lagi beberapa menit lagi.",
+    "RATE_LIMITED": "Terlalu banyak percobaan, coba lagi beberapa menit lagi.",
+    "TRIAL_USED": "Uji coba gratis sudah dipakai di komputer atau email ini. Pilih paket atau masukkan kode pembelian.",
+    "TRIAL_OFFLINE": "Sambungkan ke internet untuk memulai uji coba gratis.",
+    "TRIAL_VERIFY_EMAIL": "Konfirmasi alamat email Anda untuk memulai uji coba gratis. Kami sudah mengirim kode 6 digit.",
+    "TRIAL_NO_EMAIL": "Tambahkan alamat email ke akun pemilik dulu, lalu mulai uji coba gratis.",
+    "TRIAL_FAILED": "Uji coba gratis belum bisa dimulai sekarang. Coba lagi beberapa menit lagi.",
+    "SERVER_UNAVAILABLE": "Server lisensi kami sedang tidak menjawab. Coba lagi beberapa menit lagi.",
+    "MACHINE_MISMATCH": "Lisensi ini terdaftar di komputer lain. Pindahkan ke PC ini atau minta administrator Anda meresetnya.",
+    "SIGNUP_INVALID_PHONE": "Masukkan nomor telepon dengan + dan kode negara, atau kosongkan.",
+    "SIGNUP_USE_CASE": "Pilih untuk apa Anda akan memakai SoftGlaze.",
+    "SIGNUP_USE_CASE_OTHER": "Ceritakan dalam beberapa kata untuk apa Anda akan memakai SoftGlaze.",
+    "CONFIRM_OFFLINE": "Sambungkan ke internet untuk mengonfirmasi email Anda."
+  },
+  "store": {
+    "cardTitle": "Langganan Microsoft Store",
+    "processedBy": "Di versi ini, Microsoft adalah pemroses pembayaran: Anda membayar dengan akun Microsoft dan Microsoft menagih langganan setiap bulan, atau setiap tahun untuk paket tahunan.",
+    "upgradeNote": "Pindah dari Pro ke Enterprise memulai langganan kedua. Batalkan Pro di akun Microsoft Anda agar tidak diperpanjang.",
+    "periodNote": "Pindah antara tagihan bulanan dan tahunan juga memulai langganan kedua. Batalkan yang lama di akun Microsoft Anda agar tidak diperpanjang.",
+    "downgradeNote": "Untuk pindah dari Enterprise ke Pro, batalkan Enterprise di akun Microsoft Anda dan beli Pro setelahnya berakhir.",
+    "buyWith": "Beli lewat Microsoft Store",
+    "buyWithPrice": "Beli lewat Microsoft Store · {{price}}",
+    "priceFrom": "Harga dari Microsoft Store, dalam mata uang Anda",
+    "restore": "Pulihkan pembelian Microsoft Store",
+    "moveHere": "Pindahkan ke komputer ini",
+    "manage": "Kelola atau batalkan di akun Microsoft Anda",
+    "result": {
+      "active": "Terima kasih. Paket {{plan}} Anda aktif.",
+      "cancelled": "Pembelian dibatalkan. Tidak ada tagihan.",
+      "pending": "Microsoft sudah menerima pembelian Anda. Kami sedang mengonfirmasinya, bisa butuh satu menit.",
+      "pendingLong": "Pembelian Anda belum terkonfirmasi. Klik Pulihkan pembelian Microsoft Store dalam beberapa menit, atau kirim email ke support@softglaze.com.",
+      "pendingOffline": "Pembelian Anda tersimpan di komputer ini. Akan diaktifkan begitu aplikasi bisa menjangkau server kami.",
+      "pendingReview": "Kami menerima pembelian Anda dan sedang memeriksanya. Paket Anda aktif begitu disetujui.",
+      "none": "Tidak ditemukan langganan Microsoft Store aktif untuk aplikasi ini di akun Microsoft ini.",
+      "inUse": "Langganan ini sedang dipakai di komputer lain. Anda bisa memindahkannya ke komputer ini.",
+      "moveLimit": "Langganan ini sudah dipindahkan ke komputer lain dua kali dalam 30 hari terakhir. Kirim email ke support@softglaze.com untuk bantuan.",
+      "unavailable": "Pembelian Microsoft Store tidak tersedia saat ini. Silakan coba lagi nanti.",
+      "productMissing": "Paket ini belum tersedia di Microsoft Store.",
+      "network": "Microsoft Store tidak bisa dijangkau. Periksa koneksi internet Anda dan coba lagi.",
+      "error": "Pembelian tidak bisa diselesaikan: {{message}}"
+    }
+  }
+}

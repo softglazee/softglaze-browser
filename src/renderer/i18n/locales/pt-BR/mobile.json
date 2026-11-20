@@ -1,0 +1,116 @@
+{
+  "title": "Celulares",
+  "description": "Use o app SoftGlaze para celular com este computador: veja seus perfis, abra e feche-os e responda a pedidos de IA pelo celular. Tudo entre o celular e este computador tem criptografia de ponta a ponta.",
+  "enable": "Ativar o app de celular",
+  "loading": "Carregando",
+  "offOwner": "Ative para parear um celular. Este computador passa a manter uma conexão segura com o relay do SoftGlaze, que só repassa mensagens criptografadas.",
+  "offOther": "O Proprietário não ativou o app de celular.",
+  "copy": "Copiar",
+  "cancel": "Cancelar",
+  "relay": {
+    "connected": "Conectado ao relay",
+    "connecting": "Conectando ao relay",
+    "authFailed": "O relay recusou este computador. Confira o endereço do relay em Avançado."
+  },
+  "pair": {
+    "title": "Parear um celular",
+    "help": "Instale o SoftGlaze no celular e leia um código desta tela.",
+    "start": "Parear um celular",
+    "qrAlt": "Código de pareamento para o app SoftGlaze para celular",
+    "scanTitle": "Leia este código com o app SoftGlaze para celular",
+    "step1": "Abra o SoftGlaze no celular.",
+    "step2": "Vá em Configurações, Parear com um PC, e leia este código.",
+    "step3": "Confira se as duas telas mostram os mesmos seis dígitos.",
+    "expiresIn": "O código funciona uma vez e expira em {{time}}.",
+    "textTitle": "Não consegue ler? Copie o código como texto",
+    "attemptFailed": "Um celular tentou um código errado ou danificado. O código continua válido."
+  },
+  "confirm": {
+    "title": "{{name}} quer parear",
+    "help": "Só continue se o celular mostrar exatamente estes seis dígitos.",
+    "helpBrowser": "Só continue se o navegador mostrar exatamente estes seis dígitos. Um navegador pode ver perfis e responder a pedidos de IA; marque Abrir e fechar perfis só se quiser isso também.",
+    "codeLabel": "Código {{code}}",
+    "name": "Nome do celular",
+    "member": "Atua como",
+    "scopes": "O que este celular pode fazer",
+    "match": "Os códigos batem, parear",
+    "noMatch": "Os códigos não batem"
+  },
+  "scopes": {
+    "view": {
+      "label": "Ver perfis e status",
+      "help": "Sempre ativo. Só os perfis que o membro pode ver."
+    },
+    "control_profiles": {
+      "label": "Abrir e fechar perfis",
+      "help": "As mesmas regras deste computador."
+    },
+    "approve_ai": {
+      "label": "Responder a pedidos de IA",
+      "help": "Permitir ou negar ações de apps de IA, para tokens que este membro pode responder."
+    },
+    "approve_team": {
+      "label": "Responder a pedidos da equipe",
+      "help": "Aprovar pedidos de acesso de membros da equipe."
+    },
+    "totp": {
+      "label": "Mostrar códigos 2FA",
+      "help": "Códigos de verificação em duas etapas salvos nos perfis."
+    },
+    "phone_profiles_linked": {
+      "label": "Sincronizar perfis",
+      "help": "Os perfis que você escolher abaixo também abrem neste celular."
+    }
+  },
+  "roles": {
+    "OWNER": "Proprietário",
+    "ADMIN": "Admin",
+    "MANAGER": "Gerente",
+    "OPERATOR": "Operador"
+  },
+  "devices": {
+    "title": "Celulares e navegadores",
+    "kindPhone": "Celular",
+    "kindBrowser": "Navegador",
+    "empty": "Nenhum celular ainda.",
+    "online": "Online",
+    "offline": "Offline",
+    "lastSeen": "Visto por último {{when}}",
+    "actsAs": "atua como {{name}}",
+    "edit": "Editar {{name}}",
+    "remove": "Remover {{name}}",
+    "removeConfirm": "Remover {{name}}? Ele deixa de funcionar com este computador na hora e precisa parear de novo.",
+    "rename": "Renomear",
+    "saveScopes": "Salvar permissões"
+  },
+  "sync": {
+    "title": "Sincronização de perfis",
+    "help": "Os perfis escolhidos também abrem no app de celular. Configurações, páginas iniciais e cookies acompanham o perfil; um perfil abre em um aparelho por vez.",
+    "noPhone": "Nenhum celular pode sincronizar ainda. Dê a um celular a permissão Sincronizar perfis acima.",
+    "now": "Sincronizar agora",
+    "search": "Encontrar um perfil",
+    "toggle": "Sincronizar {{name}} com celulares",
+    "proxyPassword": "Senha do proxy",
+    "offConfirm": "Parar de sincronizar {{name}}? Os celulares mantêm a cópia deles.",
+    "removeAll": "Remover todos os dados sincronizados do relay",
+    "removeAllConfirm": "Remover todos os perfis sincronizados do relay? Os perfis neste computador e nos celulares continuam como estão.",
+    "lastOk": "Última sincronização {{when}}",
+    "lastError": "A última sincronização falhou ({{code}}). Ela tenta de novo a cada minuto.",
+    "limits": "Armazenamento de sites, extensões, senhas salvas e downloads não são sincronizados. Senhas de proxy só sincronizam onde você permitir."
+  },
+  "advanced": {
+    "title": "Avançado",
+    "pcName": "Nome deste computador nos celulares",
+    "relay": "Endereço do relay",
+    "relayFromEnv": "Definido por SG_RELAY_URL para testes.",
+    "save": "Salvar",
+    "reset": "Redefinir chaves de celular",
+    "resetConfirm": "Redefinir as chaves de celular deste computador? Todos os celulares pareados são removidos e precisam parear de novo.",
+    "protocol": "Protocolo {{version}}"
+  },
+  "errors": {
+    "load": "Não foi possível carregar as configurações de celular.",
+    "generic": "Não deu certo. Tente de novo.",
+    "unavailable": "Celulares não estão disponíveis nesta versão."
+  }
+}

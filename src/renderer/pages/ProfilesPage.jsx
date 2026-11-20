@@ -38,12 +38,6 @@ import { webrtcMode as webrtcModeOf, hardwareAccelerationChoice, chromeVersionPi
 import { formatDate, formatDateTime } from '@/lib/utils.js';
 import { PlanCounters, usePlanUsage } from '@/components/FreePlan.jsx';
 import i18n from '@/i18n/index.js';
-import profilesEn from '@/i18n/locales/en/profiles.json';
-import profilesEs from '@/i18n/locales/es/profiles.json';
-
-// Register the "profiles" namespace here instead of in the central i18n config.
-if (!i18n.hasResourceBundle('en', 'profiles')) i18n.addResourceBundle('en', 'profiles', profilesEn);
-if (!i18n.hasResourceBundle('es', 'profiles')) i18n.addResourceBundle('es', 'profiles', profilesEs);
 
 // Compact relative time; the cell's title keeps the absolute timestamp on hover.
 function relTime(iso) {
@@ -69,11 +63,11 @@ const CustomSelect = ({ value, onChange, className = '', children, disabled, ari
       onChange={onChange}
       disabled={disabled}
       aria-label={ariaLabel}
-      className="w-full appearance-none bg-background border border-border rounded pl-3 pr-9 py-2 text-foreground text-sm outline-none focus:border-primary focus:ring-1 focus:ring-primary transition disabled:opacity-50 text-ellipsis overflow-hidden whitespace-nowrap cursor-pointer hover:border-muted-dark"
+      className="w-full appearance-none bg-background border border-border rounded ps-3 pe-9 py-2 text-foreground text-sm outline-none focus:border-primary focus:ring-1 focus:ring-primary transition disabled:opacity-50 text-ellipsis overflow-hidden whitespace-nowrap cursor-pointer hover:border-muted-dark"
     >
       {children}
     </select>
-    <div className="absolute right-3 pointer-events-none text-muted">
+    <div className="absolute inset-e-3 pointer-events-none text-muted">
       <ChevronDown className="w-4 h-4" />
     </div>
   </div>
@@ -90,7 +84,7 @@ const ButtonTabs = ({ value, onChange, options, labels, className = '' }) => {
         type="button"
         onClick={() => onChange(opt)}
         aria-pressed={value === opt}
-        className={`px-3 py-1.5 text-xs transition border-r border-border last:border-0 ${value === opt ? 'bg-muted-dark text-foreground font-medium' : 'text-muted hover:text-foreground hover:bg-surface'}`}
+        className={`px-3 py-1.5 text-xs transition border-e border-border last:border-0 ${value === opt ? 'bg-muted-dark text-foreground font-medium' : 'text-muted hover:text-foreground hover:bg-surface'}`}
       >
         {labels && labels[opt] ? labels[opt] : optionLabel(t, opt)}
       </button>
@@ -109,7 +103,7 @@ const ToggleSwitch = ({ checked, onChange, labelledBy, describedBy }) => (
     onClick={() => onChange(!checked)}
     className={`relative inline-flex h-5 w-9 shrink-0 cursor-pointer items-center rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-surface ${checked ? 'bg-primary' : 'bg-muted-dark'}`}
   >
-    <span className={`pointer-events-none inline-block h-4 w-4 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out ${checked ? 'translate-x-4' : 'translate-x-0'}`} />
+    <span className={`pointer-events-none inline-block h-4 w-4 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out ${checked ? 'translate-x-4 rtl:-translate-x-4' : 'translate-x-0'}`} />
   </button>
 );
 
@@ -158,7 +152,7 @@ const FpRow = ({ label, description, children }) => (
   <div className="grid grid-cols-1 lg:grid-cols-[200px_1fr] items-start gap-2 lg:gap-6 border-b border-border pb-5 mb-5 last:border-0 last:pb-0 last:mb-0">
     <div className="mt-1">
       <label className="text-foreground font-medium text-sm block">{label}</label>
-      {description && <p className="text-muted text-xs mt-1.5 leading-relaxed pr-4">{description}</p>}
+      {description && <p className="text-muted text-xs mt-1.5 leading-relaxed pe-4">{description}</p>}
     </div>
     <div className="w-full space-y-3">
       {children}
@@ -1573,12 +1567,12 @@ export default function ProfilesPage() {
               {activeTab === 'General' && (
                 <div className="space-y-6 max-w-3xl">
                   <div className="grid grid-cols-1 lg:grid-cols-[140px_1fr] items-center gap-2 lg:gap-4">
-                    <label htmlFor="pf-general-name" className="text-left lg:text-right text-muted font-medium">{t('general.name')}</label>
+                    <label htmlFor="pf-general-name" className="text-start lg:text-end text-muted font-medium">{t('general.name')}</label>
                     <input id="pf-general-name" type="text" value={pd.name} onChange={e => updatePd('name', e.target.value)} placeholder={t('general.namePlaceholder')} className="w-full bg-background border border-border rounded px-4 py-2.5 text-foreground outline-none focus:border-primary focus:ring-1 focus:ring-primary transition" />
                   </div>
 
                   <div className="grid grid-cols-1 lg:grid-cols-[140px_1fr] items-center gap-2 lg:gap-4">
-                    <label className="text-left lg:text-right text-muted font-medium">{t('general.browser')}</label>
+                    <label className="text-start lg:text-end text-muted font-medium">{t('general.browser')}</label>
                     <div className="flex flex-wrap gap-4">
                       {['Chromium', 'Firefox'].map(core => (
                         <div key={core} className={`flex items-center rounded border transition shadow-sm ${pd.browserCore === core ? 'border-primary bg-primary/10' : 'border-border bg-background hover:border-muted'}`}>
@@ -1619,7 +1613,7 @@ export default function ProfilesPage() {
                   )}
                   {pd.browserCore === 'Chromium' && (
                     <div className="grid grid-cols-1 lg:grid-cols-[140px_1fr] gap-2 lg:gap-4">
-                      <label className="text-left lg:text-right text-muted font-medium pt-2">{t('general.identity')}</label>
+                      <label className="text-start lg:text-end text-muted font-medium pt-2">{t('general.identity')}</label>
                       <div>
                         <BrowserBrandSelect value={pd.browserBrand || 'Chrome'} onChange={(v) => updatePd('browserBrand', v)} />
                         <p className="mt-2 text-xs text-muted">
@@ -1631,7 +1625,7 @@ export default function ProfilesPage() {
 
                   {pd.browserCore === 'Chromium' && (
                     <div className="grid grid-cols-1 lg:grid-cols-[140px_1fr] items-start gap-2 lg:gap-4">
-                      <label className="text-left lg:text-right text-muted font-medium mt-2">{t('general.engine', 'Engine')}</label>
+                      <label className="text-start lg:text-end text-muted font-medium mt-2">{t('general.engine', 'Engine')}</label>
                       <div className="w-full">
                         <div className="flex items-start gap-3 bg-background border border-border rounded px-4 py-3.5">
                           <button
@@ -1644,7 +1638,7 @@ export default function ProfilesPage() {
                             title="Toggle the native fingerprint engine for this profile"
                           >
                             <span
-                              className={`inline-block transform rounded-full bg-white shadow transition-transform ${pd.antidetectEngine ? 'translate-x-5' : 'translate-x-1'}`}
+                              className={`inline-block transform rounded-full bg-white shadow transition-transform ${pd.antidetectEngine ? 'translate-x-5 rtl:-translate-x-5' : 'translate-x-1 rtl:-translate-x-1'}`}
                               style={{ height: 18, width: 18 }}
                             />
                           </button>
@@ -1660,7 +1654,7 @@ export default function ProfilesPage() {
                   )}
 
                   <div className="grid grid-cols-1 lg:grid-cols-[140px_1fr] items-center gap-2 lg:gap-4">
-                    <label className="text-left lg:text-right text-muted font-medium">{t('general.os')}</label>
+                    <label className="text-start lg:text-end text-muted font-medium">{t('general.os')}</label>
                     <div className="flex flex-wrap gap-3">
                       {OS_PLATFORMS.map(os => {
                         const Icon = os.icon;
@@ -1675,10 +1669,10 @@ export default function ProfilesPage() {
                             </button>
                             <div className="w-px h-6 bg-border"></div>
                             <div className="relative">
-                              <select value={isSelected ? pd.osVersion : os.versions[0]} onChange={e => { updatePd('os', os.id); updatePd('osVersion', e.target.value); }} className="appearance-none bg-transparent outline-none text-muted hover:text-foreground px-3 pr-8 py-2 text-sm cursor-pointer">
+                              <select value={isSelected ? pd.osVersion : os.versions[0]} onChange={e => { updatePd('os', os.id); updatePd('osVersion', e.target.value); }} className="appearance-none bg-transparent outline-none text-muted hover:text-foreground px-3 pe-8 py-2 text-sm cursor-pointer">
                                 {os.versions.map(v => <option key={v} value={v} className="bg-surface text-foreground">{osVersionLabel(t, os.id, v)}</option>)}
                               </select>
-                              <ChevronDown className="absolute right-2 top-1/2 -translate-y-1/2 w-4 h-4 text-muted pointer-events-none" />
+                              <ChevronDown className="absolute inset-e-2 top-1/2 -translate-y-1/2 w-4 h-4 text-muted pointer-events-none" />
                             </div>
                           </div>
                         );
@@ -1706,7 +1700,7 @@ export default function ProfilesPage() {
                   <div className="w-full h-px bg-border"></div>
 
                   <div className="grid grid-cols-1 lg:grid-cols-[140px_1fr] items-start gap-2 lg:gap-4">
-                    <div className="text-left lg:text-right mt-2"><label className="text-muted font-medium block">{t('general.userAgent')}</label></div>
+                    <div className="text-start lg:text-end mt-2"><label className="text-muted font-medium block">{t('general.userAgent')}</label></div>
                     <div className="w-full flex flex-col sm:flex-row gap-3 items-start">
                       <CustomSelect value={pd.uaCategory} onChange={e => updatePd('uaCategory', e.target.value)} className="w-full sm:w-[200px] shrink-0">
                         <option value="All">{t('general.allCategories')}</option>
@@ -1745,7 +1739,7 @@ export default function ProfilesPage() {
                   )}
 
                   <div className="grid grid-cols-1 lg:grid-cols-[140px_1fr] items-start gap-2 lg:gap-4">
-                    <label className="text-left lg:text-right text-muted font-medium mt-2">{t('general.group')}</label>
+                    <label className="text-start lg:text-end text-muted font-medium mt-2">{t('general.group')}</label>
                     <div className="space-y-2 min-w-0">
                       <div className="flex flex-col sm:flex-row gap-3">
                         {/* The workspace's real groups; the value is the group id main stores. */}
@@ -1799,7 +1793,7 @@ export default function ProfilesPage() {
                   </div>
 
                   <div className="grid grid-cols-1 lg:grid-cols-[140px_1fr] items-start gap-2 lg:gap-4">
-                    <label htmlFor="pf-general-cookie" className="text-left lg:text-right text-muted font-medium mt-2">{t('general.cookie')}</label>
+                    <label htmlFor="pf-general-cookie" className="text-start lg:text-end text-muted font-medium mt-2">{t('general.cookie')}</label>
                     <div className="w-full">
                       <textarea id="pf-general-cookie" aria-describedby="pf-general-cookie-hint" value={pd.cookie} onChange={e => updatePd('cookie', e.target.value)} rows="3" placeholder={t('general.cookiePlaceholder')} className="w-full bg-background border border-border rounded px-4 py-3 text-foreground outline-none focus:border-primary focus:ring-1 focus:ring-primary resize-y font-mono text-xs transition"></textarea>
                       <div className="flex flex-wrap items-start justify-between gap-3 mt-2">
@@ -1815,7 +1809,7 @@ export default function ProfilesPage() {
                   </div>
 
                   <div className="grid grid-cols-1 lg:grid-cols-[140px_1fr] items-start gap-2 lg:gap-4">
-                    <label htmlFor="pf-general-remark" className="text-left lg:text-right text-muted font-medium mt-2">{t('general.remarks')}</label>
+                    <label htmlFor="pf-general-remark" className="text-start lg:text-end text-muted font-medium mt-2">{t('general.remarks')}</label>
                     <textarea id="pf-general-remark" value={pd.remark} onChange={e => updatePd('remark', e.target.value)} rows="2" placeholder={t('general.remarksPlaceholder')} className="w-full bg-background border border-border rounded px-4 py-3 text-foreground outline-none focus:border-primary focus:ring-1 focus:ring-primary resize-y transition"></textarea>
                   </div>
                 </div>
@@ -1824,14 +1818,14 @@ export default function ProfilesPage() {
               {activeTab === 'Proxy' && (
                 <div className="space-y-8 max-w-3xl">
                   <div className="grid grid-cols-1 lg:grid-cols-[140px_1fr] items-center gap-2 lg:gap-4">
-                    <label className="text-left lg:text-right text-muted font-medium">{t('proxy.setting')}</label>
+                    <label className="text-start lg:text-end text-muted font-medium">{t('proxy.setting')}</label>
                     <ButtonTabs value={pd.proxySetting} onChange={v => { updatePd('proxySetting', v); setProxyResult(null); setError(''); }} options={['Custom', 'Saved Proxies', 'Rotating Proxy']} labels={{ Custom: t('proxy.settingCustom'), 'Saved Proxies': t('proxy.settingSaved'), 'Rotating Proxy': t('proxy.settingRotating') }} />
                   </div>
 
                   {pd.proxySetting === 'Custom' && (
                     <>
                       <div className="grid grid-cols-1 lg:grid-cols-[140px_1fr] items-start gap-2 lg:gap-4">
-                        <label className="text-left lg:text-right text-muted font-medium mt-2">{t('proxy.type')}</label>
+                        <label className="text-start lg:text-end text-muted font-medium mt-2">{t('proxy.type')}</label>
                         <div className="flex flex-col gap-4">
                           <div className="flex flex-wrap gap-3">
                             <CustomSelect ariaLabel={t('proxy.type')} value={pd.proxyType} onChange={e => { const v = e.target.value; updatePd('proxyType', v); if (v === 'Local' && !pd.proxyHost) updatePd('proxyHost', '127.0.0.1'); }} className="w-[160px]"><option value="HTTP">HTTP</option><option value="HTTPS">HTTPS</option><option value="SOCKS5">SOCKS5</option><option value="SOCKS4">SOCKS4</option><option value="Local">{t('proxy.typeLocal')}</option></CustomSelect>
@@ -1855,7 +1849,7 @@ export default function ProfilesPage() {
                       </div>
 
                       <div className="grid grid-cols-1 lg:grid-cols-[140px_1fr] items-start gap-2 lg:gap-4 pt-2">
-                        <label className="text-left lg:text-right text-muted font-medium mt-2"></label>
+                        <label className="text-start lg:text-end text-muted font-medium mt-2"></label>
                         <div className="space-y-4 w-full">
                           <p className="text-xs text-primary italic bg-primary/10 border border-primary/20 px-3 py-2 rounded w-max mb-4">{t('proxy.pasteTip')}</p>
                           <div className="flex gap-4">
@@ -1865,8 +1859,8 @@ export default function ProfilesPage() {
                           <div className="flex gap-4">
                             <input type="text" placeholder={t('proxy.userPlaceholder')} value={pd.proxyUser} onChange={e => updatePd('proxyUser', e.target.value)} className="w-full flex-1 bg-background border border-border rounded px-4 py-2.5 text-foreground outline-none focus:border-primary focus:ring-1 font-mono text-sm" />
                             <div className="relative w-full flex-1">
-                              <input type={showProxyPass ? 'text' : 'password'} autoComplete="off" placeholder={t('proxy.passPlaceholder')} value={pd.proxyPass} onChange={e => updatePd('proxyPass', e.target.value)} className="w-full bg-background border border-border rounded pl-4 pr-10 py-2.5 text-foreground outline-none focus:border-primary focus:ring-1 font-mono text-sm" />
-                              <button type="button" onClick={() => setShowProxyPass((v) => !v)} aria-label={showProxyPass ? t('proxy.hidePassword') : t('proxy.showPassword')} title={showProxyPass ? t('proxy.hidePassword') : t('proxy.showPassword')} className="absolute right-2 top-1/2 -translate-y-1/2 p-1 rounded text-muted-foreground hover:text-foreground">
+                              <input type={showProxyPass ? 'text' : 'password'} autoComplete="off" placeholder={t('proxy.passPlaceholder')} value={pd.proxyPass} onChange={e => updatePd('proxyPass', e.target.value)} className="w-full bg-background border border-border rounded ps-4 pe-10 py-2.5 text-foreground outline-none focus:border-primary focus:ring-1 font-mono text-sm" />
+                              <button type="button" onClick={() => setShowProxyPass((v) => !v)} aria-label={showProxyPass ? t('proxy.hidePassword') : t('proxy.showPassword')} title={showProxyPass ? t('proxy.hidePassword') : t('proxy.showPassword')} className="absolute inset-e-2 top-1/2 -translate-y-1/2 p-1 rounded text-muted-foreground hover:text-foreground">
                                 {showProxyPass ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                               </button>
                             </div>
@@ -1877,7 +1871,7 @@ export default function ProfilesPage() {
                   )}
                   {pd.proxySetting === 'Saved Proxies' && (
                     <div className="grid grid-cols-1 lg:grid-cols-[140px_1fr] items-start gap-2 lg:gap-4 mt-4">
-                      <label className="text-left lg:text-right text-muted font-medium mt-2">{t('proxy.selectProxy')}</label>
+                      <label className="text-start lg:text-end text-muted font-medium mt-2">{t('proxy.selectProxy')}</label>
                       <div className="w-full space-y-4 min-w-0">
                         <div className="flex flex-wrap gap-3">
                           <CustomSelect value={pd.selectedSavedProxy} onChange={e => { updatePd('selectedSavedProxy', e.target.value); setProxyResult(null); }} className="w-full max-w-md">
@@ -1920,7 +1914,7 @@ export default function ProfilesPage() {
                     });
                     return (
                       <div className="grid grid-cols-1 lg:grid-cols-[140px_1fr] items-start gap-2 lg:gap-4 mt-4">
-                        <label className="text-left lg:text-right text-muted font-medium mt-2">{t('proxy.rotationPool')}</label>
+                        <label className="text-start lg:text-end text-muted font-medium mt-2">{t('proxy.rotationPool')}</label>
                         <div className="w-full max-w-xl space-y-3 min-w-0">
                           <p className="text-xs text-muted leading-relaxed">{t('proxy.rotationHelp')}</p>
                           <ButtonTabs value={pd.rotationMode} onChange={v => updatePd('rotationMode', v)} options={['round-robin', 'random']} labels={{ 'round-robin': t('proxy.rotationRoundRobin'), random: t('proxy.rotationRandom') }} />
@@ -1946,7 +1940,7 @@ export default function ProfilesPage() {
 
                   <div className="w-full h-px bg-border"></div>
                   <div className="grid grid-cols-1 lg:grid-cols-[140px_1fr] items-start gap-2 lg:gap-4">
-                    <label className="text-left lg:text-right text-muted font-medium mt-2">{t('proxy.network')}</label>
+                    <label className="text-start lg:text-end text-muted font-medium mt-2">{t('proxy.network')}</label>
                     <div className="w-full">
                       <div className="flex items-start gap-3 bg-background border border-border rounded px-4 py-3.5">
                         <button
@@ -1959,7 +1953,7 @@ export default function ProfilesPage() {
                           title={pd.enableQuic ? t('proxy.quicDisableTitle') : t('proxy.quicEnableTitle')}
                         >
                           <span
-                            className={`inline-block transform rounded-full bg-white shadow transition-transform ${pd.enableQuic ? 'translate-x-5' : 'translate-x-1'}`}
+                            className={`inline-block transform rounded-full bg-white shadow transition-transform ${pd.enableQuic ? 'translate-x-5 rtl:-translate-x-5' : 'translate-x-1 rtl:-translate-x-1'}`}
                             style={{ height: 18, width: 18 }}
                           />
                         </button>
@@ -1978,7 +1972,7 @@ export default function ProfilesPage() {
               {activeTab === 'Platform' && (
                 <div className="space-y-8 max-w-3xl">
                   <div className="grid grid-cols-1 lg:grid-cols-[140px_1fr] items-start gap-2 lg:gap-4">
-                    <label htmlFor="pf-platform-startup" className="text-left lg:text-right text-muted font-medium mt-2">{t('platform.startupTabs')}</label>
+                    <label htmlFor="pf-platform-startup" className="text-start lg:text-end text-muted font-medium mt-2">{t('platform.startupTabs')}</label>
                     <div className="w-full">
                       <textarea id="pf-platform-startup" value={pd.startupUrls} onChange={e => updatePd('startupUrls', e.target.value)} rows="3" placeholder={t('platform.startupPlaceholder')} className="w-full bg-background border border-border rounded px-4 py-3 text-foreground outline-none focus:border-primary focus:ring-1 resize-y font-mono text-sm"></textarea>
                       <p className="text-xs text-muted mt-2 italic">{t('platform.startupHint')}</p>
@@ -1986,7 +1980,7 @@ export default function ProfilesPage() {
                   </div>
                   <div className="w-full h-px bg-border"></div>
                   <div className="grid grid-cols-1 lg:grid-cols-[140px_1fr] items-start gap-2 lg:gap-4">
-                    <div className="text-left lg:text-right mt-2">
+                    <div className="text-start lg:text-end mt-2">
                       <label className="text-muted font-medium block">{t('platform.accounts')}</label>
                       <button type="button" onClick={() => updatePd('platformAccounts', [...pd.platformAccounts, { platform: 'Facebook', username: '', password: '' }])} className="mt-3 inline-flex items-center gap-1.5 text-sm font-medium text-primary hover:text-primary-hover transition">
                         <Plus className="w-4 h-4" /> {t('platform.addAccount')}
@@ -2010,7 +2004,7 @@ export default function ProfilesPage() {
                   <div className="w-full h-px bg-border"></div>
 
                   <div className="grid grid-cols-1 lg:grid-cols-[140px_1fr] items-start gap-2 lg:gap-4">
-                    <div className="text-left lg:text-right mt-2">
+                    <div className="text-start lg:text-end mt-2">
                       <label htmlFor="pf-platform-2fa" className="text-muted font-medium flex items-center gap-1.5 lg:justify-end"><KeyRound className="w-3.5 h-3.5 text-violet-400" /> {t('platform.twoFactor')}</label>
                     </div>
                     <div className="w-full">
@@ -2031,7 +2025,7 @@ export default function ProfilesPage() {
               )}
 
               {activeTab === 'Fingerprint' && (
-                <div className="max-w-4xl pr-4 pb-10">
+                <div className="max-w-4xl pe-4 pb-10">
                   <div className="flex items-center gap-2.5 mb-6">
                     <div className="w-7 h-7 rounded-lg flex items-center justify-center" style={{ background: 'color-mix(in srgb, #3b82f6 14%, transparent)' }}>
                       <ShieldCheck className="w-4 h-4 text-blue-400" />
@@ -2361,7 +2355,7 @@ export default function ProfilesPage() {
               )}
 
               {activeTab === 'Advanced' && (
-                <div className="max-w-4xl pr-4 pb-10">
+                <div className="max-w-4xl pe-4 pb-10">
                   <div className="flex items-center gap-2.5 mb-6">
                     <div className="w-7 h-7 rounded-lg flex items-center justify-center" style={{ background: 'color-mix(in srgb, #3b82f6 14%, transparent)' }}>
                       <Settings2 className="w-4 h-4 text-blue-400" />
@@ -2463,8 +2457,8 @@ export default function ProfilesPage() {
             {/* Wraps instead of overflowing: on a narrow window Cancel and Save move below Preview Environment
                 (which was clipped at 375 px). On a wide one it is the same single row. */}
             <div className="bg-surface border-t border-border p-5 flex flex-wrap gap-3 shrink-0 rounded-b">
-              <Button variant="secondary" onClick={() => setPreviewDraft(pd)}><Fingerprint className="w-4 h-4 mr-1.5" /> {t('editor.previewEnvironment')}</Button>
-              <div className="ml-auto flex gap-3">
+              <Button variant="secondary" onClick={() => setPreviewDraft(pd)}><Fingerprint className="w-4 h-4 me-1.5" /> {t('editor.previewEnvironment')}</Button>
+              <div className="ms-auto flex gap-3">
                 <Button variant="secondary" onClick={closeEditor}>{t('common.cancel')}</Button>
                 <Button variant="primary" onClick={handleSaveProfile} isLoading={saving}>{t('editor.saveProfile')}</Button>
               </div>
@@ -2476,12 +2470,12 @@ export default function ProfilesPage() {
               <h2 className="text-sm font-semibold text-foreground uppercase tracking-wider">{t('env.overview')}</h2>
             </div>
             
-            <div className="space-y-1 text-sm max-h-[calc(100vh-220px)] overflow-y-auto pr-1">
+            <div className="space-y-1 text-sm max-h-[calc(100vh-220px)] overflow-y-auto pe-1">
               {(() => {
                 const EnvRow = ({ k, v, mono }) => (
                   <div className="flex justify-between items-start gap-3 py-1.5">
                     <span className="text-muted text-xs shrink-0">{k}</span>
-                    <span className={`text-foreground font-medium text-right text-xs ${mono ? 'font-mono break-all' : ''}`}>{v}</span>
+                    <span className={`text-foreground font-medium text-end text-xs ${mono ? 'font-mono break-all' : ''}`}>{v}</span>
                   </div>
                 );
                 const EnvHead = ({ children }) => (
@@ -2707,13 +2701,13 @@ export default function ProfilesPage() {
             </span>
           )}
           {selectedIds.size > 0 && (
-          <div className="flex flex-wrap items-center justify-end gap-2 ml-auto min-w-0">
+          <div className="flex flex-wrap items-center justify-end gap-2 ms-auto min-w-0">
             <label className="inline-flex items-center gap-1.5 text-[11.5px] text-muted-foreground cursor-pointer select-none" title={t('bulk.queueTitle', 'Feed the selected profiles through a queue: keep a fixed number open at a time and start the next one as each is closed.')}>
               <input type="checkbox" checked={launchQueue} onChange={(e) => setLaunchQueue(e.target.checked)} disabled={bulkBusy} className="accent-primary" /> {t('bulk.queue', 'Queue')}
             </label>
             {/* Slots the queue keeps open; each frees when its browser closes. */}
             {launchQueue && (
-              <label className="inline-flex items-center gap-1.5 text-[11.5px] text-muted-foreground mr-1 select-none" title={t('bulk.queueWidthTitle', 'How many profiles stay open at the same time. The next one opens as soon as you close one.')}>
+              <label className="inline-flex items-center gap-1.5 text-[11.5px] text-muted-foreground me-1 select-none" title={t('bulk.queueWidthTitle', 'How many profiles stay open at the same time. The next one opens as soon as you close one.')}>
                 <select
                   value={launchQueueWidth}
                   onChange={(e) => setLaunchQueueWidth(Number(e.target.value) || 1)}
@@ -2727,14 +2721,14 @@ export default function ProfilesPage() {
               </label>
             )}
             <GuardedButton deny={perm.deny('profiles.launch')} size="sm" disabled={bulkBusy} onClick={handleBulkLaunch} className="bg-emerald-600 hover:bg-emerald-500 text-white border-transparent">{t('bulk.launch')}</GuardedButton>
-            <GuardedButton deny={perm.deny('profiles.launch')} size="sm" disabled={bulkBusy || selectedIds.size < 2} onClick={handleSynchronize} className="bg-violet-600 hover:bg-violet-500 text-white border-transparent" title={t('bulk.synchronizeTitle')}><Combine className="w-3.5 h-3.5 mr-1" /> {t('bulk.synchronize')}</GuardedButton>
+            <GuardedButton deny={perm.deny('profiles.launch')} size="sm" disabled={bulkBusy || selectedIds.size < 2} onClick={handleSynchronize} className="bg-violet-600 hover:bg-violet-500 text-white border-transparent" title={t('bulk.synchronizeTitle')}><Combine className="w-3.5 h-3.5 me-1" /> {t('bulk.synchronize')}</GuardedButton>
             <Button size="sm" variant="secondary" disabled={bulkBusy} onClick={handleBulkClose}>{t('bulk.close')}</Button>
-            <GuardedButton deny={perm.deny('profiles.edit')} size="sm" variant="secondary" disabled={bulkBusy} onClick={() => setShowTagModal(true)} title={t('bulk.tagTitle')}><Tag className="w-3.5 h-3.5 mr-1" /> {t('bulk.tag')}</GuardedButton>
-            <GuardedButton deny={perm.deny('profiles.edit')} size="sm" variant="secondary" disabled={bulkBusy} onClick={() => { setRenameStart(1); setShowRenameModal(true); }} title={t('bulk.renameTitle')}><Pencil className="w-3.5 h-3.5 mr-1" /> {t('bulk.rename')}</GuardedButton>
-            <GuardedButton deny={perm.deny('profiles.edit')} size="sm" variant="secondary" disabled={bulkBusy} onClick={() => setShowReassignModal(true)} title={t('bulk.reassignProxyTitle')}><Link2 className="w-3.5 h-3.5 mr-1" /> {t('bulk.reassignProxy')}</GuardedButton>
-            <GuardedButton deny={perm.deny('profiles.edit')} size="sm" variant="secondary" disabled={bulkBusy} onClick={handleBulkCaptchaFix} title={tc('bulk.fixTitle')}><ShieldCheck className="w-3.5 h-3.5 mr-1" /> {tc('bulk.fix')}</GuardedButton>
-            <GuardedButton deny={perm.deny('profiles.share')} size="sm" variant="secondary" disabled={bulkBusy} onClick={() => setShowShareModal(true)} title={t('bulk.shareTitle')}><Share2 className="w-3.5 h-3.5 mr-1" /> {t('bulk.share')}</GuardedButton>
-            <Button size="sm" variant="secondary" disabled={bulkBusy || selectedIds.size < 2} onClick={openCompare} title={t('bulk.compareTitle')}><GitCompare className="w-3.5 h-3.5 mr-1" /> {t('bulk.compare')}</Button>
+            <GuardedButton deny={perm.deny('profiles.edit')} size="sm" variant="secondary" disabled={bulkBusy} onClick={() => setShowTagModal(true)} title={t('bulk.tagTitle')}><Tag className="w-3.5 h-3.5 me-1" /> {t('bulk.tag')}</GuardedButton>
+            <GuardedButton deny={perm.deny('profiles.edit')} size="sm" variant="secondary" disabled={bulkBusy} onClick={() => { setRenameStart(1); setShowRenameModal(true); }} title={t('bulk.renameTitle')}><Pencil className="w-3.5 h-3.5 me-1" /> {t('bulk.rename')}</GuardedButton>
+            <GuardedButton deny={perm.deny('profiles.edit')} size="sm" variant="secondary" disabled={bulkBusy} onClick={() => setShowReassignModal(true)} title={t('bulk.reassignProxyTitle')}><Link2 className="w-3.5 h-3.5 me-1" /> {t('bulk.reassignProxy')}</GuardedButton>
+            <GuardedButton deny={perm.deny('profiles.edit')} size="sm" variant="secondary" disabled={bulkBusy} onClick={handleBulkCaptchaFix} title={tc('bulk.fixTitle')}><ShieldCheck className="w-3.5 h-3.5 me-1" /> {tc('bulk.fix')}</GuardedButton>
+            <GuardedButton deny={perm.deny('profiles.share')} size="sm" variant="secondary" disabled={bulkBusy} onClick={() => setShowShareModal(true)} title={t('bulk.shareTitle')}><Share2 className="w-3.5 h-3.5 me-1" /> {t('bulk.share')}</GuardedButton>
+            <Button size="sm" variant="secondary" disabled={bulkBusy || selectedIds.size < 2} onClick={openCompare} title={t('bulk.compareTitle')}><GitCompare className="w-3.5 h-3.5 me-1" /> {t('bulk.compare')}</Button>
             <GuardedButton deny={perm.deny('profiles.delete')} size="sm" variant="danger" disabled={bulkBusy} onClick={handleBulkDelete}>{t('bulk.delete')}</GuardedButton>
             <Button size="sm" variant="ghost" disabled={bulkBusy} onClick={clearSelection}>{t('bulk.clear')}</Button>
           </div>
@@ -2775,8 +2769,8 @@ export default function ProfilesPage() {
         </CustomSelect>
 
         <div className="relative flex-1 min-w-[200px] max-w-[300px]">
-          <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
-          <input value={search} onChange={(e) => setSearch(e.target.value)} placeholder={t('filters.searchPlaceholder')} className="w-full bg-input-background border border-border rounded pl-9 pr-3 py-2 text-sm text-foreground placeholder:text-muted-foreground outline-none focus:border-primary focus:ring-1 focus:ring-primary transition" />
+          <Search className="w-4 h-4 absolute inset-s-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
+          <input value={search} onChange={(e) => setSearch(e.target.value)} placeholder={t('filters.searchPlaceholder')} className="w-full bg-input-background border border-border rounded ps-9 pe-3 py-2 text-sm text-foreground placeholder:text-muted-foreground outline-none focus:border-primary focus:ring-1 focus:ring-primary transition" />
         </div>
         <CustomSelect value={captchaFilter} onChange={(e) => setCaptchaFilter(e.target.value)} className="w-auto" ariaLabel={tc('filter.any')}>
           <option value="all">{tc('filter.any')}</option>
@@ -2802,14 +2796,14 @@ export default function ProfilesPage() {
             {filterPresets.map((p) => <option key={p.name} value={p.name}>{p.name}</option>)}
           </CustomSelect>
         )}
-        <Button variant="ghost" size="sm" onClick={() => setShowPresetName(true)} title={t('filters.savePresetTitle')}><Bookmark className="w-3.5 h-3.5 mr-1" /> {t('filters.save')}</Button>
-        <span className="ml-auto text-sm text-muted-foreground font-medium bg-elevated px-3 py-1.5 rounded-lg border border-border">{t('filters.profileCount', { count: filteredProfiles.length })}</span>
+        <Button variant="ghost" size="sm" onClick={() => setShowPresetName(true)} title={t('filters.savePresetTitle')}><Bookmark className="w-3.5 h-3.5 me-1" /> {t('filters.save')}</Button>
+        <span className="ms-auto text-sm text-muted-foreground font-medium bg-elevated px-3 py-1.5 rounded-lg border border-border">{t('filters.profileCount', { count: filteredProfiles.length })}</span>
       </div>
       
       <Card className="bg-card border border-border hover:border-border-strong transition-colors flex flex-col flex-1 rounded-xl">
         <CardContent className="p-0 overflow-auto flex-1 rounded-xl">
           <div className="w-full overflow-x-auto">
-            <table className="w-full min-w-[1120px] border-collapse text-left text-sm whitespace-nowrap">
+            <table className="w-full min-w-[1120px] border-collapse text-start text-sm whitespace-nowrap">
               <thead className="bg-elevated text-muted-foreground text-[10px] uppercase tracking-wider font-semibold border-b border-border sticky top-0 z-10">
                 <tr>
                   <th className="px-5 py-4 w-12 text-center">
@@ -2822,7 +2816,7 @@ export default function ProfilesPage() {
                   <th className="px-3 py-4">{t('table.created')}</th>
                   <th className="px-2 py-4 whitespace-nowrap">{tc('column')}</th>
                   <th className="px-3 py-4">{t('table.lastUsed')}</th>
-                  <th className="px-5 py-4 text-right">{t('table.actions')}</th>
+                  <th className="px-5 py-4 text-end">{t('table.actions')}</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-border">
@@ -2944,22 +2938,22 @@ export default function ProfilesPage() {
                       <button onClick={() => setActivityProfile({ id: p.id, title: p.title })} className="inline-flex items-center gap-2 hover:text-foreground transition text-xs" title={t('row.viewActivity')}>
                         <History className="h-3.5 w-3.5" />
                         <span title={p.lastUsedAt ? formatDateTime(p.lastUsedAt) : t('row.neverUsed')}>{p.lastUsedAt ? relTime(p.lastUsedAt) : t('relTime.never')}</span>
-                        {p.launchCount ? <span className="text-[10px] bg-elevated border border-border px-1.5 py-0.5 rounded font-semibold ml-1">{p.launchCount}×</span> : null}
+                        {p.launchCount ? <span className="text-[10px] bg-elevated border border-border px-1.5 py-0.5 rounded font-semibold ms-1">{p.launchCount}×</span> : null}
                       </button>
                     </td>
                     <td className="px-5 py-3.5">
                       <div className="flex justify-end gap-1">
                         {runningIds.has(p.id) ? (
                           <Button size="sm" variant="danger" onClick={() => handleBulkClose([p.id])} className="px-3" title={t('actions.stop')}>
-                            <Square className="w-3.5 h-3.5 mr-1" /> {t('actions.stop')}
+                            <Square className="w-3.5 h-3.5 me-1" /> {t('actions.stop')}
                           </Button>
                         ) : (locks[p.id] && !locks[p.id].mine) ? (
                           <Button size="sm" variant="ghost" disabled className="px-3 opacity-60 cursor-not-allowed" title={t('actions.inUseTitle', { member: locks[p.id].memberName || t('row.anotherMember') })}>
-                            <Lock className="w-3.5 h-3.5 mr-1" /> {t('row.inUse')}
+                            <Lock className="w-3.5 h-3.5 me-1" /> {t('row.inUse')}
                           </Button>
                         ) : (
                           <GuardedButton deny={perm.deny('profiles.launch')} size="sm" className="bg-emerald-600 hover:bg-emerald-500 text-white shadow-glow shadow-emerald-500/20 px-3" onClick={() => handleLaunch(p.id)} title={t('actions.launch')}>
-                            <Play className="w-3.5 h-3.5 mr-1" /> {t('actions.launch')}
+                            <Play className="w-3.5 h-3.5 me-1" /> {t('actions.launch')}
                           </GuardedButton>
                         )}
 

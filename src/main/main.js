@@ -307,6 +307,8 @@ await killOrphanedBrowsers(); // must finish before any profile launches
   registerIpcHandlers();
   // Hand keyboard focus back after native confirm()/alert() dialogs (see dialogFocus.js).
   require('./dialogFocus').registerDialogRefocus(ipcMain, () => mainWindow);
+  // Native menus and file dialogs follow the app language the renderer reports.
+  require('./i18nMain').registerLanguageChannel(ipcMain);
 
   // 1st: wait for the saved member session to restore before the window loads.
 try {

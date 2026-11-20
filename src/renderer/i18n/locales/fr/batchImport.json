@@ -1,0 +1,82 @@
+{
+  "header": {
+    "eyebrow": "Automatisation",
+    "title": "Création de profils en lot",
+    "description": "Déployez rapidement plusieurs environnements de navigation via un tableur ou une génération séquentielle.",
+    "exportProfiles": "Exporter les profils"
+  },
+  "exportNotice_one": "{{count}} profil exporté vers {{path}}",
+  "exportNotice_other": "{{count}} profils exportés vers {{path}}",
+  "exportNotice_many": "{{count}} profils exportés vers {{path}}",
+  "tabs": {
+    "importFromFile": "Importer depuis un fichier",
+    "quickGenerate": "Génération rapide"
+  },
+  "step1": {
+    "title": "Télécharger le modèle",
+    "description": "Pour une lecture sans accroc, utilisez notre modèle Excel ou CSV standard. Renseignez les noms de profils, les proxys et les règles d'empreinte.",
+    "downloadButton": "Télécharger le modèle .CSV"
+  },
+  "step2": {
+    "title": "Importer et prévisualiser",
+    "description": "Sélectionnez votre tableur rempli. Nous le lisons localement et vérifions les erreurs de format avant l'enregistrement.",
+    "selectButton": "Choisir un fichier"
+  },
+  "step3": {
+    "title": "Prévisualiser et valider les données"
+  },
+  "awaiting": {
+    "title": "En attente de données",
+    "description": "Sélectionnez un fichier pour prévisualiser vos profils ici."
+  },
+  "preview": {
+    "file": "Fichier :",
+    "validRows": "Lignes valides :",
+    "errors": "Erreurs :"
+  },
+  "processing": {
+    "importing": "Import en cours… {{index}}/{{total}}",
+    "backendLog": "Journal de traitement",
+    "connecting": "Connexion au moteur d'import…"
+  },
+  "table": {
+    "row": "Ligne",
+    "title": "Titre",
+    "group": "Groupe",
+    "proxyMethod": "Méthode proxy",
+    "dataDir": "Dossier de données",
+    "auto": "Auto"
+  },
+  "autoBind": {
+    "label": "Attribuer automatiquement les proxys par pays",
+    "descPrefix": ": pour les lignes sans proxy propre, attribuer un proxy enregistré dont le pays vérifié correspond à la colonne",
+    "descSuffix": "de la ligne (à tour de rôle parmi les correspondances).",
+    "sourceLabel": "Attribuer depuis",
+    "sourcePaid": "Vos proxys",
+    "sourceFree": "Proxys gratuits (fonctionnels uniquement)",
+    "freeWarn": "Les proxys gratuits sont gérés par des inconnus : ne vous connectez jamais à des comptes et ne payez jamais avec ces profils."
+  },
+  "commitButton_one": "Valider {{count}} profil",
+  "commitButton_other": "Valider {{count}} profils",
+  "commitButton_many": "Valider {{count}} profils",
+  "success": {
+    "title": "Import réussi",
+    "importedPrefix": "Importés avec succès :",
+    "importedMiddle": "profils, associés à",
+    "importedSuffix": "nouveaux proxys",
+    "autoBoundPrefix": "· attribués automatiquement :",
+    "autoBoundSuffix": "par pays",
+    "importAnother": "Nouvel import"
+  },
+  "quick": {
+    "engineTitle": "Moteur de génération séquentielle",
+    "description": "Créez instantanément plusieurs profils sans tableur : empreintes uniques, noms séquentiels, un groupe cible (créable sur place) et l'attribution de proxys depuis un groupe ou un fournisseur précis. Utilise exactement le même moteur que la page Profils.",
+    "openButton": "Ouvrir la génération rapide"
+  },
+  "errors": {
+    "parse": "Impossible de lire le fichier. Vérifiez qu'il s'agit d'un tableur valide.",
+    "commit": "Impossible d'enregistrer les profils dans la base de données.",
+    "importFailed": "L'import a échoué.",
+    "export": "Impossible d'exporter les profils."
+  }
+}

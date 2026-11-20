@@ -1,0 +1,281 @@
+{
+  "common": {
+    "back": "Zurück",
+    "redeem": "Einlösen",
+    "go": "Los"
+  },
+  "remember": {
+    "label": "Auf diesem Gerät angemeldet bleiben",
+    "unavailable": "Dieses Gerät kann keine Anmeldung sicher speichern (Betriebssystem-Verschlüsselung nicht verfügbar), daher müssen Sie sich beim nächsten Start erneut anmelden."
+  },
+  "brand": {
+    "tagline": "Multi-Profil",
+    "bullets": {
+      "fingerprints": "Eindeutige, stimmige Fingerprints pro Profil",
+      "proxy": "Ein eigener Proxy für jede Identität",
+      "localFirst": "Lokal zuerst – Ihr Arbeitsbereich wird auf diesem Gerät gespeichert"
+    },
+    "heroLine1": "Betreiben Sie Hunderte Identitäten.",
+    "heroLine2": "Und halten Sie jede getrennt.",
+    "heroBody": "Ein lokaler Multi-Profil-Browser für Teams. Jedes Profil hat eigene Cookies, eigenen Speicher, eigenen Proxy und eigene Fingerprint-Einstellungen.",
+    "footer": "© {{year}} SoftGlaze · Lokaler Arbeitsbereich",
+    "trust": {
+      "local": "Lokal zuerst",
+      "encrypted": "Arbeitsbereich-Sperre",
+      "private": "Keine Telemetrie"
+    },
+    "slides": {
+      "security": {
+        "title": "Starke Datensicherheit",
+        "body": "Ihre Profile, Cookies und Browserdaten bleiben auf diesem Gerät, und 2FA-Seeds sowie Anbieterschlüssel sind mit dem Schlüsselbund Ihres Systems versiegelt."
+      },
+      "fingerprint": {
+        "title": "Stimmige Fingerprints",
+        "body": "Jedes Profil erhält einen eindeutigen, stimmigen Fingerprint: Canvas, WebGL, Schriften, Audio und Hardware."
+      },
+      "proxy": {
+        "title": "Ein Proxy für jede Identität",
+        "body": "Binden Sie an jedes Profil eine eigene Netzwerkidentität und rotieren Sie mit Zuversicht."
+      },
+      "automation": {
+        "title": "Zeitsparende Automatisierung",
+        "body": "Cookies aufwärmen, Profile in Serie erstellen und alles im großen Maßstab steuern."
+      }
+    }
+  },
+  "license": {
+    "machineMismatch": "Diese Lizenz ist auf einen anderen Computer registriert. Verschieben Sie sie auf diesen PC oder bitten Sie Ihren Administrator, sie zurückzusetzen."
+  },
+  "pay": {
+    "noMethods": "Der Kauf in der App ist pausiert, während wir einen neuen Zahlungsanbieter hinzufügen. Schreiben Sie an support@softglaze.com, um per Rechnung zu kaufen, und geben Sie dann Ihren Kaufcode ein.",
+    "submitted": "Zahlung eingereicht – ein Administrator prüft sie und aktiviert Ihren Tarif in Kürze.",
+    "manualBadge": "Manuell",
+    "continueTo": "Weiter zu {{label}}",
+    "openPaymentLink": "Zahlungslink öffnen",
+    "referencePlaceholder": "Zahlungsreferenz / Transaktions-ID",
+    "submitForApproval": "Ich habe bezahlt – zur Freigabe einreichen"
+  },
+  "banned": {
+    "blockedHeading": "Ihr Konto ist gesperrt",
+    "endedHeading": "Ihr Abonnement ist beendet",
+    "blockedBodyNamed": "{{name}}, Ihr Konto wurde von einem Administrator gesperrt. Bitte wenden Sie sich an ihn, um den Zugriff wiederherzustellen – Ihre Daten sind sicher.",
+    "blockedBody": "Ihr Konto wurde von einem Administrator gesperrt. Bitte wenden Sie sich an ihn, um den Zugriff wiederherzustellen – Ihre Daten sind sicher.",
+    "endedBodyNamed": "{{name}}, diese Lizenz ist nicht mehr aktiv (erstattet, widerrufen oder auf einen anderen Computer registriert). Wählen Sie einen Tarif, um Ihren Arbeitsbereich zu entsperren. Ihre Profile und Daten sind sicher und warten auf Sie.",
+    "endedBody": "Diese Lizenz ist nicht mehr aktiv (erstattet, widerrufen oder auf einen anderen Computer registriert). Wählen Sie einen Tarif, um Ihren Arbeitsbereich zu entsperren. Ihre Profile und Daten sind sicher und warten auf Sie.",
+    "haveCode": "Haben Sie einen Kaufcode?",
+    "needHelp": "Brauchen Sie Hilfe? Wenden Sie sich an Ihren Administrator.",
+    "signOut": "Abmelden"
+  },
+  "register": {
+    "title": "Konto erstellen",
+    "subtitle": "Dies ist Ihr Hauptkonto – der Inhaber des Arbeitsbereichs.",
+    "firstName": "Vorname",
+    "lastName": "Nachname",
+    "email": "E-Mail",
+    "emailPlaceholder": "sie@arbeitsbereich.de",
+    "phone": "Telefonnummer",
+    "phonePlaceholder": "+49 30 12345678",
+    "password": "Passwort",
+    "passwordPlaceholder": "8+ Zeichen",
+    "confirm": "Bestätigen",
+    "confirmPlaceholder": "Wiederholen",
+    "continue": "Weiter",
+    "storedLocally": "Lokal und verschlüsselt auf diesem Gerät gespeichert",
+    "haveAccount": "Haben Sie schon ein Konto?",
+    "logIn": "Anmelden",
+    "consent": "Produktneuigkeiten und Tipps per E-Mail erhalten",
+    "consentNote": "Ihr Code, Testphasen-Erinnerungen und Konto-E-Mails werden immer gesendet. Produktneuigkeiten nur, wenn Sie das Kästchen anhaken.",
+    "checkedByServer": "Wir senden Ihnen einen Code per E-Mail, um diese Adresse zu bestätigen. Ihre Profile und Daten bleiben auf diesem Gerät.",
+    "phoneOptional": "Telefonnummer (optional)",
+    "phoneIntlPlaceholder": "+44 20 7946 0958",
+    "phoneHint": "Beginnen Sie mit + und Ihrer Ländervorwahl."
+  },
+  "verify": {
+    "title": "E-Mail bestätigen",
+    "subtitlePrefix": "Geben Sie den 6-stelligen Code ein, der gesendet wurde an",
+    "subtitleSuffix": ".",
+    "devModePrefix": "Entwicklermodus – es wird noch keine E-Mail gesendet. Ihr Code lautet",
+    "devModeSuffix": ".",
+    "verifyCreate": "Bestätigen & Konto erstellen",
+    "resendIn": "Code erneut senden in {{count}} s",
+    "resend": "Code erneut senden",
+    "checkSpam": "Der Code kann eine Minute brauchen. Sehen Sie im Spam-Ordner nach, falls er nicht ankommt."
+  },
+  "lead": {
+    "useCase": "Wofür werden Sie SoftGlaze nutzen?",
+    "useCasePlaceholder": "Bitte wählen",
+    "useCases": {
+      "ecommerce": "E-Commerce-Shops und Marktplätze",
+      "social_media": "Social-Media-Konten",
+      "affiliate_marketing": "Affiliate-Marketing und Media Buying",
+      "agency": "Agenturarbeit für Kunden",
+      "web_research": "Webrecherche und QA",
+      "other": "Etwas anderes"
+    },
+    "useCaseOther": "Sagen Sie es uns in wenigen Worten",
+    "useCaseOtherPlaceholder": "Zum Beispiel: Preisvergleiche nach Land",
+    "company": "Firma oder Website (optional)",
+    "companyPlaceholder": "Muster GmbH oder muster.de"
+  },
+  "confirm": {
+    "title": "E-Mail bestätigen",
+    "subtitle": "Jeder SoftGlaze-Arbeitsbereich braucht jetzt eine bestätigte E-Mail. Prüfen Sie Ihre Angaben, dann senden wir Ihnen einen 6-stelligen Code.",
+    "sendCode": "Code senden",
+    "codeTitle": "Code eingeben",
+    "codeBody": "Wir haben einen 6-stelligen Code an {{email}} gesendet. Geben Sie ihn ein, um die E-Mail für diesen Arbeitsbereich zu bestätigen.",
+    "confirmContinue": "Bestätigen und weiter",
+    "changeDetails": "Angaben ändern",
+    "dataNote": "Ihre Profile und Daten bleiben auf diesem Computer. Wir speichern diese Angaben, um Ihr Konto zu betreuen.",
+    "later": "Vorerst fortfahren",
+    "laterNote": "Unser Server war nicht erreichbar. Sie können die App jetzt nutzen; wir fragen beim nächsten Start erneut.",
+    "memberTitle": "Der Inhaber muss diesen Arbeitsbereich bestätigen",
+    "memberBody": "Bevor dieser Arbeitsbereich genutzt werden kann, muss sein Inhaber seine E-Mail bestätigen. Bitten Sie den Inhaber, sich anzumelden und das zu erledigen, oder melden Sie sich als Inhaber an.",
+    "signInAsOwner": "Als Inhaber anmelden"
+  },
+  "plan": {
+    "title": "Alles bereit",
+    "subtitlePrefix": "Ihr Konto ist bereit mit einer",
+    "trialHighlight": "7-tägigen kostenlosen Testphase",
+    "subtitleSuffix": ". Jetzt starten oder einen bezahlten Tarif aktivieren.",
+    "startTrialTitle": "7-tägige kostenlose Testphase starten",
+    "startTrialSubtitle": "Jetzt keine Zahlung – entdecken Sie alles.",
+    "activatePaid": "Jetzt einen bezahlten Tarif aktivieren",
+    "haveCode": "Haben Sie einen Kaufcode?",
+    "skip": "Überspringen – Testphase starten",
+    "tenantTitle": "Ihr Konto ist bereit",
+    "tenantSubtitle": "Starten Sie Ihre kostenlose Testphase oder wählen Sie einen Tarif.",
+    "tenantTrialSubtitle": "Voller Zugriff, keine Zahlung. Eine kostenlose Testphase pro Computer und E-Mail.",
+    "choosePlan": "Oder wählen Sie einen Tarif",
+    "verifyTitle": "E-Mail bestätigen",
+    "verifyBody": "Wir haben einen 6-stelligen Code an {{email}} gesendet. Geben Sie ihn ein, um die kostenlose Testphase zu starten.",
+    "verifyStart": "Bestätigen und Testphase starten",
+    "continueFreeTitle": "Weiter mit Free",
+    "continueFreeSubtitle": "Für immer kostenlos: 25 Profile, 1 gleichzeitig aktiv. Jederzeit upgraden.",
+    "trialUsedFree": "Die kostenlose Testphase wurde auf diesem Computer oder mit dieser E-Mail schon genutzt. Sie können mit dem Free-Tarif weitermachen."
+  },
+  "login": {
+    "welcomeBackNamed": "Willkommen zurück, {{name}}",
+    "welcomeBack": "Willkommen zurück",
+    "subtitle": "Melden Sie sich an, um Ihren Arbeitsbereich zu entsperren.",
+    "email": "E-Mail",
+    "password": "Passwort",
+    "forgot": "Vergessen?",
+    "passwordPlaceholder": "Master-Passwort",
+    "forgotBody": "Ihr Master-Passwort lässt sich bei einer lokalen Installation nicht wiederherstellen – es verlässt dieses Gerät nie. Geht es verloren, muss der Arbeitsbereich in den Einstellungen zurückgesetzt werden.",
+    "signIn": "Anmelden",
+    "noAccount": "Noch kein Konto?",
+    "newHere": "Neu bei SoftGlaze?",
+    "createOne": "Konto erstellen",
+    "haveInvite": "Haben Sie einen Einladungscode?",
+    "teamSignIn": "Anmeldung für Teammitglieder"
+  },
+  "invite": {
+    "title": "Einladung einlösen",
+    "subtitle": "Geben Sie den erhaltenen Code ein und legen Sie ein Passwort für Ihr Konto fest.",
+    "code": "Einladungscode",
+    "codePlaceholder": "SG-XXXX-XXXX",
+    "yourName": "Ihr Name",
+    "optional": "(optional)",
+    "namePlaceholder": "Vollständiger Name",
+    "setPassword": "Passwort festlegen",
+    "passwordPlaceholder": "6+ Zeichen",
+    "join": "Arbeitsbereich beitreten"
+  },
+  "member": {
+    "title": "Anmeldung für Teammitglieder",
+    "subtitle": "Nutzen Sie die E-Mail/den Namen und das Passwort, die Sie beim Einlösen Ihrer Einladung festgelegt haben.",
+    "identifier": "E-Mail oder Name",
+    "identifierPlaceholder": "sie@arbeitsbereich.de",
+    "password": "Passwort",
+    "passwordPlaceholder": "Ihr Passwort",
+    "signIn": "Anmelden",
+    "haveInviteInstead": "Haben Sie stattdessen einen Einladungscode?",
+    "redeemIt": "Einlösen"
+  },
+  "super": {
+    "title": "Super-Admin",
+    "access": "Super-Admin-Zugang",
+    "setupSubtitlePrefix": "Ersteinrichtung. Erstellen Sie die Super-Admin-Zugangsdaten für",
+    "setupSubtitleHighlight": "diese Installation",
+    "setupSubtitleSuffix": "– sie werden gehasht auf diesem Gerät gespeichert und sind der einzige Zugang, bewahren Sie sie also sicher auf.",
+    "username": "Benutzername",
+    "usernamePlaceholder": "superadmin",
+    "password": "Passwort",
+    "setupPasswordPlaceholder": "Mindestens 8 Zeichen",
+    "confirmPassword": "Passwort bestätigen",
+    "confirmPasswordPlaceholder": "Passwort erneut eingeben",
+    "createCredentials": "Zugangsdaten erstellen",
+    "loginSubtitle": "Zugang für Quellcode-Inhaber. Überspringt die Registrierung und entsperrt den gesamten Arbeitsbereich.",
+    "usernameOrEmail": "Benutzername oder E-Mail",
+    "loginPasswordPlaceholder": "Passwort",
+    "enterWorkspace": "Arbeitsbereich öffnen"
+  },
+  "pick": {
+    "title": "Wer arbeitet?",
+    "subtitle": "Wählen Sie Ihr Mitgliedsprofil, um fortzufahren.",
+    "pin": "PIN",
+    "suspended": "Suspendiert",
+    "pinPlaceholder": "PIN eingeben",
+    "haveInvite": "Haben Sie einen Einladungscode?",
+    "teamSignIn": "Anmeldung für Teammitglieder"
+  },
+  "db": {
+    "title": "Datenbank entsperren",
+    "subtitle": "Die Datenbank dieses Arbeitsbereichs ist verschlüsselt. Geben Sie Ihr Arbeitsbereich-Passwort ein, um sie zu entschlüsseln und zu öffnen.",
+    "workspacePassword": "Arbeitsbereich-Passwort",
+    "passwordPlaceholder": "Arbeitsbereich-Passwort",
+    "unlock": "Entsperren",
+    "corrupted": "Wenn Sie sicher sind, dass das Passwort stimmt, ist die Datenbankdatei eventuell beschädigt. Sie können sie durch Neuinstallation und Wiederherstellen eines Backups wiederherstellen (Einstellungen → Backup & Wiederherstellung des Arbeitsbereichs). Es gibt kein Zurücksetzen des Passworts – die Daten lassen sich nur mit dem richtigen Passwort öffnen."
+  },
+  "errors": {
+    "enterFirstLast": "Geben Sie Vor- und Nachnamen ein.",
+    "validEmail": "Geben Sie eine gültige E-Mail-Adresse ein.",
+    "validPhone": "Geben Sie eine gültige Telefonnummer ein.",
+    "password8": "Das Passwort muss mindestens 8 Zeichen haben.",
+    "passwordsNoMatch": "Die Passwörter stimmen nicht überein.",
+    "couldNotSendCode": "Der Bestätigungscode konnte nicht gesendet werden.",
+    "couldNotResendCode": "Der Code konnte nicht erneut gesendet werden.",
+    "enter6Digit": "Geben Sie den 6-stelligen Code ein.",
+    "verificationFailed": "Bestätigung fehlgeschlagen.",
+    "incorrectPassword": "Falsches Passwort.",
+    "couldNotSignIn": "Anmeldung fehlgeschlagen.",
+    "superSetupRequired": "Noch keine Super-Admin-Zugangsdaten festgelegt – erstellen Sie sie unten.",
+    "invalidSuperCredentials": "Ungültige Super-Admin-Zugangsdaten.",
+    "couldNotCreateSuper": "Super-Admin-Zugangsdaten konnten nicht erstellt werden.",
+    "enterInviteCode": "Geben Sie Ihren Einladungscode ein.",
+    "password6": "Das Passwort muss mindestens 6 Zeichen haben.",
+    "couldNotRedeemInvite": "Dieser Einladungscode konnte nicht eingelöst werden.",
+    "enterEmailNamePassword": "Geben Sie Ihre E-Mail/Ihren Namen und Ihr Passwort ein.",
+    "enterPurchaseCode": "Geben Sie Ihren Kaufcode ein.",
+    "invalidPurchaseCode": "Dieser Kaufcode ist ungültig.",
+    "noPaymentMethod": "Noch keine Zahlungsmethode verfügbar.",
+    "paymentNotStarted": "Die Zahlung konnte nicht gestartet werden.",
+    "couldNotSubmitPayment": "Ihre Zahlung konnte nicht eingereicht werden.",
+    "enterWorkspacePassword": "Geben Sie Ihr Arbeitsbereich-Passwort ein.",
+    "dbStillLocked": "Die Datenbank ist noch gesperrt – bitte versuchen Sie es erneut.",
+    "dbMissing": "Die verschlüsselte Datenbankdatei fehlt. Stellen Sie sie aus einem Backup des Arbeitsbereichs wieder her.",
+    "dbUnlockFailed": "Falsches Passwort – oder die Datei ist beschädigt.",
+    "couldNotUnlockDb": "Die Datenbank konnte nicht entsperrt werden.",
+    "trialFailed": "Die kostenlose Testphase konnte nicht gestartet werden."
+  },
+  "serverErrors": {
+    "SIGNUP_INVALID_EMAIL": "Geben Sie eine gültige E-Mail-Adresse ein.",
+    "SIGNUP_DISPOSABLE_EMAIL": "Bitte verwenden Sie eine dauerhafte E-Mail-Adresse.",
+    "SIGNUP_NO_MX": "Für diese Adresse wurde kein Mailserver gefunden.",
+    "SIGNUP_BAD_CODE": "Dieser Code stimmt nicht oder ist abgelaufen. Prüfen Sie die E-Mail oder fordern Sie einen neuen Code an.",
+    "SIGNUP_OFFLINE": "Verbinden Sie sich mit dem Internet, um Ihr Konto zu erstellen.",
+    "SIGNUP_FAILED": "Diese E-Mail konnte gerade nicht geprüft werden. Versuchen Sie es in ein paar Minuten erneut.",
+    "RATE_LIMITED": "Zu viele Versuche, versuchen Sie es in ein paar Minuten erneut.",
+    "TRIAL_USED": "Auf diesem Computer oder mit dieser E-Mail wurde schon eine kostenlose Testphase genutzt. Wählen Sie einen Tarif oder geben Sie einen Kaufcode ein.",
+    "TRIAL_OFFLINE": "Verbinden Sie sich mit dem Internet, um die kostenlose Testphase zu starten.",
+    "TRIAL_VERIFY_EMAIL": "Bestätigen Sie Ihre E-Mail-Adresse, um die kostenlose Testphase zu starten. Wir haben Ihnen einen 6-stelligen Code gesendet.",
+    "TRIAL_NO_EMAIL": "Fügen Sie dem Inhaberkonto zuerst eine E-Mail-Adresse hinzu und starten Sie dann die kostenlose Testphase.",
+    "TRIAL_FAILED": "Die kostenlose Testphase konnte gerade nicht gestartet werden. Versuchen Sie es in ein paar Minuten erneut.",
+    "SERVER_UNAVAILABLE": "Unser Lizenzserver antwortet gerade nicht. Versuchen Sie es in ein paar Minuten erneut.",
+    "MACHINE_MISMATCH": "Diese Lizenz ist auf einen anderen Computer registriert. Verschieben Sie sie auf diesen PC oder bitten Sie Ihren Administrator, sie zurückzusetzen.",
+    "SIGNUP_INVALID_PHONE": "Geben Sie die Telefonnummer mit + und Ländervorwahl ein oder lassen Sie das Feld leer.",
+    "SIGNUP_USE_CASE": "Wählen Sie, wofür Sie SoftGlaze nutzen werden.",
+    "SIGNUP_USE_CASE_OTHER": "Sagen Sie uns in wenigen Worten, wofür Sie SoftGlaze nutzen werden.",
+    "CONFIRM_OFFLINE": "Verbinden Sie sich mit dem Internet, um Ihre E-Mail zu bestätigen."
+  }
+}

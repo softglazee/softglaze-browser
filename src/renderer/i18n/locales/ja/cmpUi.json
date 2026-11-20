@@ -1,0 +1,31 @@
+{
+  "brandSelect": {
+    "presentAs": "このプロファイルを {{brand}} として表示"
+  },
+  "versionSelect": {
+    "auto": "自動",
+    "loadingVersions": "バージョンを読み込み中…",
+    "ready": "準備完了",
+    "readyTitle": "インストール済み、すぐに使えます",
+    "noVersions": "バージョンが見つかりません。",
+    "offlineError": "オフラインです。バージョンカタログに接続できません。",
+    "downloadFailed": "ダウンロードに失敗しました。",
+    "resumeFailed": "再開に失敗しました。",
+    "paused": "一時停止中",
+    "interrupted": "中断",
+    "resumeTitle": "{{state}}({{percent}}%)- 再開",
+    "statusInstalling": "導入中",
+    "statusQueued": "…",
+    "retryTitle": "再試行 - {{error}}",
+    "downloadFailedShort": "DL失敗",
+    "downloadInstallTitle": "このバージョンをダウンロードしてインストール"
+  },
+  "pager": {
+    "showing": "{{total}}件中 {{from}}-{{to}}件を表示",
+    "perPage": "表示件数",
+    "all": "すべて",
+    "prev": "前へ",
+    "next": "次へ",
+    "pageOf": "{{page}} / {{total}} ページ"
+  }
+}

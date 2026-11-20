@@ -1,0 +1,504 @@
+{
+  "header": {
+    "eyebrow": "Jaringan",
+    "title": "Kumpulan proxy",
+    "description": "Simpan proxy HTTP dan SOCKS5 yang bisa dipakai ulang secara lokal, atau sinkronkan kumpulan yang dibeli langsung dari penyedia terintegrasi."
+  },
+  "rotation": {
+    "label": "Rotasi:",
+    "tooltip": "Cara kumpulan rotasi profil diterapkan saat dibuka",
+    "eachLaunch": "Ganti setiap dibuka",
+    "sticky": "Tetap (proxy tetap)",
+    "failover": "Alihkan ke yang sehat",
+    "latencyOptimized": "Tercepat (latensi)",
+    "failoverMaxTooltip": "Lewati proxy yang lebih lambat dari ms ini (0 = tanpa batas; kembali ke seluruh kumpulan jika tidak ada yang memenuhi)",
+    "maxMsPlaceholder": "maks ms",
+    "topNTooltip": "Bergiliran di antara N proxy tercepat",
+    "topNPlaceholder": "top N"
+  },
+  "actions": {
+    "testAll": "Uji semua",
+    "testAllTooltip": "Uji kesehatan semua proxy secara bersamaan",
+    "testAllSummary": "{{ok}}/{{total}} ok",
+    "checkAll": "Cek semua",
+    "refresh": "Muat ulang",
+    "batchAdd": "Tambah massal",
+    "newProxy": "Proxy baru",
+    "checkNew": "Cek yang baru",
+    "checkNewTooltip": "Cek hanya proxy yang baru ditambahkan dan belum pernah dicek."
+  },
+  "free": {
+    "button": "Proxy gratis",
+    "buttonTooltip": "Cari, uji, dan simpan proxy publik gratis di halaman tersendiri, terpisah dari proxy berbayar Anda",
+    "title": "Proxy publik gratis",
+    "description": "SoftGlaze mengunduh daftar publik yang diterbitkan proyek proxy gratis, menguji setiap proxy, dan hanya menyimpan yang berfungsi, di halaman ini dan terpisah dari proxy berbayar Anda.",
+    "warn": {
+      "strangers": "Proxy gratis dijalankan orang yang tidak dikenal. Jangan memakainya untuk masuk ke akun, memasukkan kata sandi, atau membayar: pemilik proxy bisa melihat lalu lintas yang tidak terenkripsi.",
+      "quality": "Proxy ini lambat, sering berhenti bekerja dalam hitungan jam, dan banyak yang masuk daftar blokir, jadi CAPTCHA akan lebih sering muncul dibanding proxy berbayar. Untuk pekerjaan akun sungguhan, gunakan penyedia proxy.",
+      "legal": "Pakai hanya di tempat yang diizinkan. Buat cepat tidak pernah memilih proxy gratis kecuali Anda memilih \"Proxy gratis\" sebagai sumber proxy-nya."
+    },
+    "checks": "Setiap proxy diuji langsung, dan proxy HTTP yang meneruskan IP asli Anda ke situs web ditolak.",
+    "protocol": "Protokol",
+    "country": "Negara (opsional)",
+    "countryPlaceholder": "mis. ID",
+    "limit": "Berapa yang ditambahkan",
+    "start": "Cari proxy gratis",
+    "again": "Cari lagi",
+    "cancel": "Hentikan",
+    "close": "Tutup",
+    "done": "Selesai",
+    "progress": {
+      "fetching": "Mengunduh daftar publik…",
+      "checking": "{{checked}} dari {{total}} diuji · {{found}} bagus"
+    },
+    "result": {
+      "added": "{{added}} dari {{requested}} yang diminta ditambahkan.",
+      "checked": "{{checked}} dari {{total}} kandidat diuji",
+      "rejected": "{{dead}} tidak berfungsi, {{leak}} membocorkan IP Anda, {{country}} negara salah",
+      "planLimit": "Batas proxy paket Anda tercapai, jadi beberapa proxy bagus tidak ditambahkan."
+    },
+    "stopped": {
+      "limit": "Berhenti: jumlah yang Anda minta tercapai.",
+      "time": "Berhenti setelah 3 menit. Jalankan lagi untuk menemukan lebih banyak.",
+      "cancelled": "Dihentikan oleh Anda.",
+      "exhausted": "Semua kandidat di daftar sudah diuji."
+    },
+    "errors": {
+      "country": "Gunakan kode negara dua huruf, seperti ID atau US.",
+      "failed": "Pencarian tidak bisa diselesaikan."
+    }
+  },
+  "freePage": {
+    "eyebrow": "Proxy",
+    "title": "Proxy gratis",
+    "description": "Proxy publik gratis ada di sini, terpisah dari proxy berbayar Anda. Proxy ini tidak pernah muncul di Kumpulan proxy, jumlahnya, atau grupnya, dan profil hanya memakainya jika Anda memilihnya.",
+    "openPool": "Kumpulan proxy",
+    "refresh": "Muat ulang",
+    "warnTitle": "Baca ini sebelum memakai proxy gratis",
+    "searchTitle": "Cari proxy gratis",
+    "busy": "Pencarian proxy gratis sedang berjalan.",
+    "stopIt": "Hentikan",
+    "listTitle": "Proxy gratis tersimpan",
+    "listCount": "{{shown}} dari {{total}}",
+    "filters": {
+      "protocol": "Protokol",
+      "protocolAll": "Semua protokol",
+      "country": "Negara",
+      "countryAll": "Semua negara",
+      "countryUnknown": "Negara tidak diketahui",
+      "status": "Status",
+      "statusAll": "Semua status",
+      "reset": "Reset filter"
+    },
+    "status": {
+      "working": "Berfungsi",
+      "dead": "Tidak berfungsi",
+      "unchecked": "Belum dicek",
+      "checking": "Mengecek…"
+    },
+    "table": {
+      "address": "Alamat",
+      "protocol": "Protokol",
+      "country": "Negara",
+      "speed": "Kecepatan",
+      "lastCheck": "Cek terakhir",
+      "status": "Status",
+      "usedBy": "Dipakai oleh",
+      "actions": "Aksi",
+      "selectAll": "Pilih semua yang tampil",
+      "selectRow": "Pilih {{address}}",
+      "loading": "Memuat proxy gratis…",
+      "never": "Belum pernah",
+      "notUsed": "Tidak ada profil",
+      "usedByCount_other": "{{count}} profil"
+    },
+    "actions": {
+      "check": "Cek sekarang",
+      "checkAria": "Cek {{address}} sekarang",
+      "delete": "Hapus",
+      "deleteAria": "Hapus {{address}}",
+      "checkAll": "Cek semua yang tampil",
+      "deleteDead": "Hapus yang mati",
+      "checkSelected": "Cek yang dipilih",
+      "deleteSelected": "Hapus yang dipilih",
+      "clear": "Bersihkan",
+      "selected": "{{count}} dipilih"
+    },
+    "confirm": {
+      "delete": "Hapus proxy gratis {{address}}?",
+      "deleteUsed_other": "Hapus proxy gratis {{address}}? {{count}} profil memakainya dan akan kehilangan proxy-nya.",
+      "deleteSelected_other": "Hapus {{count}} proxy gratis terpilih?",
+      "deleteDead_other": "Hapus {{count}} proxy gratis yang gagal di cek terakhir?"
+    },
+    "checkRun": {
+      "running": "Mengecek {{done}} dari {{total}} · {{ok}} berfungsi, {{fail}} tidak berfungsi",
+      "done": "{{total}} dicek · {{ok}} berfungsi, {{fail}} tidak berfungsi",
+      "stop": "Hentikan"
+    },
+    "empty": {
+      "title": "Belum ada proxy gratis",
+      "description": "Gunakan pencarian di atas untuk menemukan, menguji, dan menyimpan proxy publik gratis. Hanya yang berfungsi dan menyembunyikan IP Anda yang disimpan."
+    },
+    "noMatch": {
+      "title": "Tidak ada proxy gratis yang cocok dengan filter ini",
+      "description": "Ubah atau reset filter untuk melihat yang lain."
+    },
+    "errors": {
+      "load": "Tidak bisa memuat proxy gratis.",
+      "delete": "Tidak bisa menghapus proxy gratis.",
+      "check": "Tidak bisa mengecek proxy gratis."
+    }
+  },
+  "tabs": {
+    "custom": "Proxy sendiri",
+    "providers": "Penyedia proxy",
+    "integrated": "Terintegrasi",
+    "history": "Riwayat cek",
+    "groups": "Grup & negara"
+  },
+  "stats": {
+    "totalProxies": "Total proxy",
+    "totalTip": "Tampilkan seluruh kumpulan",
+    "splitSub": "{{verified}} terverifikasi · {{unchecked}} belum dicek",
+    "proxyTypes": "Jenis proxy",
+    "verified": "Terverifikasi",
+    "verifiedTip": "Filter tabel ke proxy terverifikasi",
+    "pctOfPool": "{{pct}}% dari kumpulan",
+    "failed": "Gagal",
+    "failedTip": "Filter tabel ke proxy yang gagal",
+    "uncheckedSub": "{{count}} belum dicek",
+    "nonVerified": "Belum terverifikasi",
+    "protocols": "HTTP / SOCKS",
+    "protocolsTip": "Campuran protokol di kumpulan",
+    "protocolsSub": "{{http}} HTTP · {{socks}} SOCKS",
+    "countries": "Negara",
+    "countriesTip": "Buka rincian negara",
+    "topCountry": "{{country}} teratas · {{count}}",
+    "countriesEmpty": "Jalankan cek untuk mendeteksi lokasi",
+    "lastCheck": "Cek terakhir",
+    "lastCheckTip": "Buka cek kesehatan otomatis",
+    "autoEvery": "Cek otomatis setiap {{n}} mnt",
+    "autoOff": "Cek otomatis mati",
+    "justNow": "baru saja",
+    "minAgo": "{{n}} mnt lalu",
+    "hrAgo": "{{n}} jam lalu",
+    "dayAgo": "{{n}} hr lalu",
+    "filtering": "menyaring",
+    "noProxies": "Tidak ada proxy",
+    "total": "total"
+  },
+  "search": {
+    "placeholder": "Cari nama proxy, host, atau nama pengguna..."
+  },
+  "deleteFiltered": {
+    "tooltip": "Hapus setiap proxy yang cocok dengan filter saat ini",
+    "button": "Hapus semua {{scope}} ({{count}})",
+    "confirm_other": "Hapus semua {{count}} proxy {{scope}}? Ini tidak bisa dibatalkan: profil yang memakainya kehilangan proxy dan tidak akan terbuka sampai Anda memasang proxy lain.",
+    "scope": {
+      "all": "semua",
+      "filtered": "tersaring",
+      "matching": "yang cocok",
+      "verified": "terverifikasi",
+      "failed": "gagal"
+    }
+  },
+  "filters": {
+    "all": "Semua",
+    "ungrouped": "Tanpa grup",
+    "byProvider": "Menurut penyedia"
+  },
+  "groups": {
+    "chipTooltip": "Klik untuk menyaring · seret proxy ke sini untuk menambahkannya",
+    "renameRecolor": "Ganti nama / warna",
+    "deleteGroup": "Hapus grup",
+    "newGroup": "Grup baru",
+    "deleteConfirm": "Hapus grup \"{{name}}\"? Proxy tetap ada di kumpulan, hanya menjadi tanpa grup."
+  },
+  "autoGroup": {
+    "granularityTooltip": "Tingkat pengelompokan otomatis",
+    "country": "Negara",
+    "state": "Provinsi",
+    "city": "Kota",
+    "buttonTooltip": "Buat grup dari negara/provinsi/kota terverifikasi tiap proxy. Jalankan Uji semua dulu agar proxy punya lokasi terdeteksi.",
+    "button": "Grup otomatis",
+    "result_other": "+{{count}} grup · {{assigned}} ditetapkan"
+  },
+  "sort": {
+    "tooltip": "Urutkan menurut latensi",
+    "default": "Urutan: bawaan",
+    "fastest": "Paling cepat dulu",
+    "slowest": "Paling lambat dulu"
+  },
+  "geo": {
+    "toggleTooltip": "Tampilkan/sembunyikan rincian lokasi",
+    "button": "Lokasi",
+    "byCountry": "Proxy menurut negara",
+    "summary": "{{countries}} negara · {{proxies}} proxy",
+    "unknown": "Tidak diketahui"
+  },
+  "scheduler": {
+    "tooltip": "Uji ulang semua proxy otomatis sesuai jadwal",
+    "autoCheckEvery": "Cek otomatis setiap",
+    "min": "mnt"
+  },
+  "selection": {
+    "count": "{{count}} dipilih",
+    "checkSelected": "Cek yang dipilih",
+    "moveToGroup": "Pindahkan ke grup",
+    "noGroupsYet": "Belum ada grup: buat dulu.",
+    "removeFromGroup": "Keluarkan dari grup",
+    "deleteSelected": "Hapus yang dipilih",
+    "clear": "Bersihkan",
+    "clearTooltip": "Hapus pilihan",
+    "copyForExtension": "Salin untuk SoftGlaze Proxy",
+    "copyForExtensionTooltip": "Salin proxy terpilih untuk Impor massal di ekstensi browser SoftGlaze Proxy"
+  },
+  "copyForExtension": {
+    "title": "Salin untuk SoftGlaze Proxy",
+    "description": "Menyalin proxy terpilih sebagai baris yang dibaca ekstensi browser SoftGlaze Proxy di kotak Impor massal. Setiap baris menyebut jenisnya (http, https, socks5, atau socks4), jadi proxy SOCKS5 tidak pernah dibaca sebagai HTTP.",
+    "loading": "Menghitung proxy terpilih…",
+    "count": "Proxy yang disalin: {{count}}",
+    "skipped": "Dilewati: {{count}} (jenis, alamat, atau port yang tidak dibaca ekstensi).",
+    "includeCredentials": "Sertakan nama pengguna dan kata sandi",
+    "credsNoRole": "Peran Anda tidak bisa melihat nama pengguna dan kata sandi proxy. Tanyakan pemilik atau admin.",
+    "credsNone": "Tidak ada proxy terpilih yang punya nama pengguna atau kata sandi.",
+    "socks5Note": "Proxy SOCKS5 dengan login: {{count}}. Chrome dan Edge tidak bisa login ke proxy SOCKS5, jadi ekstensi tidak menerima baris itu di sana. Firefox bisa memakainya.",
+    "socks4Note": "Proxy SOCKS4 dengan login: {{count}}. Disalin tanpa login, karena SOCKS4 tidak punya kata sandi dan ekstensi tidak menerimanya.",
+    "clipboardWarning": "Program lain di komputer ini bisa membaca papan klip. Aplikasi menghapusnya setelah 2 menit jika masih berisi daftar ini.",
+    "copy": "Salin",
+    "copying": "Menyalin…",
+    "cancel": "Batal",
+    "close": "Tutup",
+    "copied": "{{count}} proxy disalin tanpa nama pengguna atau kata sandi. Di ekstensi, buka Proxies, pilih Bulk import, lalu tempel.",
+    "copiedWithCredentials": "{{count}} proxy disalin beserta nama pengguna dan kata sandinya. Di ekstensi, buka Proxies, pilih Bulk import, lalu tempel.",
+    "getExtension": "Dapatkan ekstensi SoftGlaze Proxy",
+    "loadError": "Tidak bisa membaca proxy terpilih.",
+    "copyError": "Tidak bisa menyalin proxy."
+  },
+  "table": {
+    "loading": "Memuat proxy...",
+    "emptyTitle": "Tidak ada proxy",
+    "emptyDescription": "Tambahkan proxy secara manual atau tempel sekumpulan string proxy.",
+    "selectAll": "Pilih semua proxy",
+    "selectRow": "Pilih {{name}}",
+    "colName": "Nama",
+    "colType": "Jenis",
+    "colEndpoint": "Endpoint",
+    "colUsername": "Nama pengguna",
+    "colGroup": "Grup",
+    "colProfiles": "Profil",
+    "colCreated": "Dibuat",
+    "colSpeed": "Kecepatan",
+    "colBlocklist": "Daftar blokir",
+    "colStatus": "Status",
+    "colActions": "Aksi",
+    "profileCount_other": "{{count}} profil",
+    "defaultProxyName": "Proxy"
+  },
+  "rowActions": {
+    "testProxy": "Uji proxy",
+    "healthHistory": "Riwayat kesehatan",
+    "editProxy": "Edit proxy",
+    "deleteProxy": "Hapus proxy",
+    "copyEndpoint": "Salin host:port",
+    "check": "Cek",
+    "rotateIp": "Putar IP",
+    "rotateIpTitle": "Dapatkan IP keluar baru di proxy ini"
+  },
+  "status": {
+    "checking": "Mengecek…",
+    "failed": "Gagal",
+    "ok": "OK"
+  },
+  "checker": {
+    "running": "Mengecek proxy…",
+    "done": "Cek selesai",
+    "healthy": "{{n}} sehat",
+    "failed": "{{n}} gagal",
+    "eta": "Perkiraan",
+    "stop": "Hentikan",
+    "dismiss": "Tutup",
+    "idle": "Menunggu dimulai…",
+    "health": "Kesehatan",
+    "blacklisted": "Masuk daftar hitam di",
+    "blacklistShort": "daftar hitam",
+    "notBlacklisted": "Tidak ada di daftar blokir yang dicek",
+    "clean": "bersih",
+    "residential": "Rentang residensial",
+    "residentialTip": "Rentang residensial (Spamhaus PBL), bukan daftar spam. Normal untuk proxy residensial dan seluler; tidak menurunkan skor kesehatan.",
+    "hideLog": "Sembunyikan log",
+    "showLog": "Tampilkan log",
+    "speed": {
+      "fast": "cepat",
+      "good": "baik",
+      "ok": "ok",
+      "slow": "lambat"
+    }
+  },
+  "blacklistFilter": {
+    "all": "Semua",
+    "clean": "Bersih",
+    "blacklisted": "Daftar hitam",
+    "cleanTip": "Tampilkan hanya proxy yang tidak ada di daftar blokir yang dicek",
+    "blacklistedTip": "Tampilkan hanya proxy yang ditandai di daftar blokir DNS"
+  },
+  "speedFilter": {
+    "all": "Semua",
+    "fast": "Cepat",
+    "slow": "Lambat",
+    "fastTip": "Tampilkan hanya proxy yang terukur 2 dtk atau lebih cepat",
+    "slowTip": "Tampilkan hanya proxy yang terukur lebih lambat dari 2 dtk"
+  },
+  "bulkDelete": {
+    "confirm_other": "Hapus {{count}} proxy terpilih? Profil yang memakainya kehilangan proxy dan tidak akan terbuka sampai Anda memasang proxy lain."
+  },
+  "delete": {
+    "confirm": "Hapus proxy \"{{name}}\"?",
+    "profilesNeedProxy": "Profil yang memakai proxy yang dihapus: {{count}}. Sekarang profil itu tanpa proxy dan tidak akan terbuka sampai Anda memasang satu (di editor profil, atau lewat Proxy di halaman Profil).",
+    "dismissNotice": "Tutup"
+  },
+  "history": {
+    "dialogTitle": "Riwayat kesehatan proxy",
+    "title": "Riwayat kesehatan",
+    "empty": "Belum ada riwayat. Jalankan cek kesehatan (atau aktifkan Cek otomatis) dan linimasa latensi/status akan terbentuk di sini.",
+    "latencyOverTime": "Latensi dari waktu ke waktu (ms)",
+    "ok": "ok",
+    "fail": "gagal",
+    "checks_other": "{{count}} pengecekan",
+    "close": "Tutup"
+  },
+  "historyCards": {
+    "title": "Riwayat cek terbaru",
+    "openDetail": "Buka riwayat lengkap",
+    "regressed": "Dulu terverifikasi, lalu gagal",
+    "regressedCount_other": "{{count}} terverifikasi lalu gagal",
+    "empty": "Belum ada pengecekan. Jalankan Cek semua atau Uji semua di halaman Proxy dan hasilnya muncul di sini."
+  },
+  "form": {
+    "dialogTitleEdit": "Edit proxy",
+    "dialogTitleCreate": "Buat proxy",
+    "titleEdit": "Edit proxy",
+    "titleCreate": "Buat proxy",
+    "descriptionEdit": "Perbarui proxy yang ada. Biarkan kata sandi bertopeng apa adanya untuk mempertahankan nilai saat ini.",
+    "descriptionCreate": "Tambahkan satu proxy terstruktur ke kumpulan SQLite lokal.",
+    "tipPrefix": "Tips: tempel proxy Anda",
+    "tipSuffix": "ke kolom Host untuk mengisi semua kolom otomatis.",
+    "proxyName": "Nama proxy",
+    "proxyNamePlaceholder": "Residensial ID 01",
+    "type": "Jenis",
+    "host": "Host",
+    "port": "Port",
+    "username": "Nama pengguna",
+    "password": "Kata sandi",
+    "optional": "Opsional",
+    "cancel": "Batal",
+    "saving": "Menyimpan...",
+    "saveChanges": "Simpan perubahan",
+    "createProxy": "Buat proxy",
+    "socks4Note": "SOCKS4 berfungsi di profil Firefox. Profil Chromium tidak akan terbuka dengannya: Chromium tidak bisa mengirim kueri DNS lewat SOCKS4, jadi setiap situs akan dicari di luar proxy. Gunakan SOCKS5 atau HTTP untuk profil Chromium."
+  },
+  "batch": {
+    "dialogTitle": "Tambah proxy massal",
+    "title": "Tambah proxy massal",
+    "descriptionPrefix": "Tempel satu proxy per baris. Format yang didukung:",
+    "defaultType": "Jenis bawaan",
+    "providerLabel": "Penyedia (opsional)",
+    "providerNone": "Tidak ada",
+    "providerHint": "Menandai proxy ini dengan penyedia asalnya, agar dikelompokkan di bawahnya di sini dan dihitung di halaman Penyedia proxy.",
+    "proxyLines": "Baris proxy",
+    "resultTitle": "Hasil massal",
+    "total": "Total",
+    "created": "Dibuat",
+    "skipped": "Dilewati",
+    "errors": "Kesalahan",
+    "lineError": "Baris {{line}}: {{message}}",
+    "close": "Tutup",
+    "importing": "Mengimpor...",
+    "addProxies": "Tambah proxy"
+  },
+  "groupModal": {
+    "dialogTitleEdit": "Edit grup",
+    "dialogTitleNew": "Grup baru",
+    "titleEdit": "Edit grup proxy",
+    "titleNew": "Grup proxy baru",
+    "description": "Kelompokkan proxy menurut negara atau tujuan (mis. USA, UK, Jepang). Anda bisa memilih grup saat membuat profil secara massal.",
+    "groupName": "Nama grup",
+    "groupNamePlaceholder": "Proxy USA",
+    "color": "Warna",
+    "colorLabel": "Warna {{color}}",
+    "cancel": "Batal",
+    "saveChanges": "Simpan perubahan",
+    "createGroup": "Buat grup"
+  },
+  "errors": {
+    "deleteProxies": "Gagal menghapus proxy.",
+    "loadProxies": "Gagal memuat proxy.",
+    "copyClipboard": "Tidak bisa menyalin ke papan klip.",
+    "deleteSelected": "Gagal menghapus proxy terpilih.",
+    "saveProxy": "Gagal menyimpan proxy.",
+    "batchAdd": "Gagal menambah proxy massal.",
+    "bulkTest": "Uji massal gagal.",
+    "savePolicy": "Tidak bisa menyimpan kebijakan proxy.",
+    "saveSchedule": "Tidak bisa menyimpan jadwal.",
+    "enterGroupName": "Masukkan nama grup.",
+    "saveGroup": "Tidak bisa menyimpan grup.",
+    "deleteGroup": "Tidak bisa menghapus grup.",
+    "moveProxies": "Tidak bisa memindahkan proxy.",
+    "autoGroup": "Grup otomatis gagal. Jalankan Uji semua dulu agar proxy punya negara terdeteksi.",
+    "deleteProxy": "Gagal menghapus proxy. Lepaskan profil yang terhubung atau ubah proxy-nya dulu.",
+    "rotate": "Tidak bisa memutar IP.",
+    "rotateStatus": "Permintaan rotasi mengembalikan HTTP {{status}}."
+  },
+  "groupsPage": {
+    "groupsTitle": "Grup dan negara",
+    "openGroup": "Tampilkan proxy ini",
+    "noGeo": "Jalankan Cek semua di halaman Proxy untuk mendeteksi negara tiap proxy.",
+    "noProviders": "Belum ada proxy dari penyedia. Ambil dari Penyedia proxy.",
+    "scheduleTitle": "Cek kesehatan otomatis"
+  },
+  "filterBar": {
+    "statusTip": "Status cek",
+    "statusAll": "Semua status",
+    "blocklistAll": "Semua daftar blokir",
+    "speedAll": "Semua kecepatan",
+    "groupTip": "Grup atau negara",
+    "groupAll": "Semua grup",
+    "providerAll": "Semua penyedia",
+    "reset": "Reset filter"
+  },
+  "providerAccount": {
+    "title": "Akun",
+    "check": "Cek akun",
+    "checkedAt": "Dicek {{time}}",
+    "notChecked": "Belum dicek. Cek akun membaca paket, masa berlaku, trafik, dan saldo dengan kunci yang tersimpan untuk penyedia ini.",
+    "notSupported": "API penyedia ini tidak melaporkan detail akun.",
+    "openDashboard": "Buka dasbor",
+    "status": "Status",
+    "statusActive": "Aktif",
+    "statusExpired": "Kedaluwarsa",
+    "statusSuspended": "Ditangguhkan",
+    "statusUnknown": "Tidak diketahui",
+    "plan": "Paket",
+    "expires": "Berakhir",
+    "daysLeft_other": "sisa {{count}} hari",
+    "endsToday": "berakhir hari ini",
+    "endedAgo_other": "berakhir {{count}} hari lalu",
+    "traffic": "Trafik",
+    "trafficLeft": "sisa {{left}}",
+    "trafficUsedOf": "{{used}} terpakai dari {{total}}",
+    "trafficUsed": "{{used}} terpakai",
+    "trafficTotal": "Paket {{total}}",
+    "balance": "Saldo",
+    "noDetails": "Penyedia menjawab tetapi tidak melaporkan paket, masa berlaku, trafik, atau saldo.",
+    "error": "Tidak bisa mengecek akun: {{message}}",
+    "note": {
+      "firstToExpire": "Masa berlaku yang ditampilkan adalah proxy atau paket pertama yang berakhir.",
+      "summedPlans": "Angka ini menjumlahkan semua paket aktif Anda.",
+      "noActivePlans": "Tidak ada paket aktif di akun ini.",
+      "noActiveProxies": "Tidak ada proxy aktif di akun ini.",
+      "planSizeOnly": "API melaporkan ukuran paket, bukan sisa trafik.",
+      "firstPageOnly": "Dihitung dari 1000 proxy pertama Anda.",
+      "usedLast7Days": "Trafik yang terpakai dalam 7 hari terakhir; API tidak melaporkan sisanya."
+    }
+  }
+}

@@ -1,0 +1,324 @@
+{
+  "header": {
+    "eyebrow": "チーム",
+    "title": "メンバー",
+    "manageCount_other": "管理しているメンバー：{{count}}人",
+    "workspaceStats": "ワークスペース内：{{profiles}}プロファイル · {{proxies}}プロキシ"
+  },
+  "tabs": {
+    "members": "メンバー",
+    "activity": "アクティビティ",
+    "licenses": "ライセンス"
+  },
+  "memberCount_other": "{{count}}人のメンバー",
+  "roles": {
+    "SUPER_ADMIN": "スーパー管理者",
+    "OWNER": "オーナー",
+    "ADMIN": "管理者",
+    "MANAGER": "マネージャー",
+    "OPERATOR": "オペレーター"
+  },
+  "roleDesc": {
+    "OWNER": "メンバーや保管庫を含め、すべてを管理できます。",
+    "ADMIN": "プロファイル、プロキシ、グループ、および自分が作成したマネージャー/オペレーターを管理できます。",
+    "MANAGER": "プロファイルの作成・編集・起動と、オペレーターの追加ができます。",
+    "OPERATOR": "割り当てられたプロファイルの起動と使用のみできます。"
+  },
+  "actionCategories": {
+    "Profiles": "プロファイル",
+    "Proxies": "プロキシ",
+    "Automation": "自動化",
+    "Workspace": "ワークスペース",
+    "Team": "チーム"
+  },
+  "actionLabels": {
+    "profiles_launch": "プロファイルを起動",
+    "profiles_create": "プロファイルを作成",
+    "profiles_edit": "プロファイルを編集",
+    "profiles_export": "プロファイルをエクスポート",
+    "profiles_share": "プロファイルをメンバーと共有",
+    "profiles_delete": "プロファイルを削除（ゴミ箱へ）",
+    "profiles_purge": "プロファイルを完全に消去",
+    "proxies_manage": "プロキシの追加 / 編集 / 削除",
+    "proxies_reveal": "プロキシの認証情報を表示",
+    "automation_run": "自動化 / マクロを実行",
+    "extensions_manage": "チームの拡張機能を管理",
+    "settings_manage": "ワークスペースの設定を変更",
+    "vault_manage": "アイデンティティ保管庫を管理",
+    "members_manage": "チームメンバーを管理",
+    "members_delete": "メンバーの削除 / ロールの変更"
+  },
+  "features": {
+    "dashboard": "ダッシュボード（ページのみ）",
+    "profiles": "プロファイル",
+    "groups": "グループ",
+    "proxies": "プロキシプール",
+    "browsers": "ブラウザ",
+    "extensions": "拡張機能",
+    "batchImport": "一括インポート",
+    "trash": "ゴミ箱",
+    "members": "メンバー",
+    "settings": "設定"
+  },
+  "caps": {
+    "maxAdmins": "管理者",
+    "maxManagers": "マネージャー",
+    "maxOperators": "オペレーター"
+  },
+  "labels": {
+    "profiles": "プロファイル",
+    "proxies": "プロキシ",
+    "browsers": "ブラウザ"
+  },
+  "status": {
+    "active": "有効",
+    "suspended": "一時停止中",
+    "banned": "利用停止中"
+  },
+  "actions": {
+    "inviteMember": "メンバーを招待",
+    "inviteTeamMember": "チームメンバーを招待",
+    "remove": "削除",
+    "removeMember": "メンバーを削除",
+    "assignProfiles": "プロファイルを割り当て",
+    "cancel": "キャンセル",
+    "close": "閉じる",
+    "clear": "クリア",
+    "save": "保存",
+    "createInvite": "招待を作成",
+    "done": "完了",
+    "copy": "コピー",
+    "copied": "コピーしました"
+  },
+  "empty": {
+    "title": "メンバーはまだいません",
+    "canCreate": "最初のチームメンバーを招待して、作業を分担しましょう。",
+    "noMembers": "配下のメンバーはまだいません。"
+  },
+  "member": {
+    "you": "あなた",
+    "noEmail": "メールなし",
+    "invitePending": "招待保留中",
+    "loginSet": "ログイン設定済み",
+    "subMembers_other": "サブメンバー{{count}}人"
+  },
+  "time": {
+    "neverActive": "未アクティブ",
+    "activeJustNow": "たった今アクティブ",
+    "activeMinutes": "{{count}}分前にアクティブ",
+    "activeHours": "{{count}}時間前にアクティブ",
+    "activeDays": "{{count}}日前にアクティブ"
+  },
+  "errors": {
+    "loadMembers": "メンバーを読み込めませんでした。",
+    "changeStatus": "ステータスを変更できませんでした。",
+    "nameRequired": "名前は必須です。",
+    "saveMember": "メンバーを保存できませんでした。",
+    "resetPerms": "権限をリセットできませんでした。",
+    "removeMember": "メンバーを削除できませんでした。",
+    "loadProfiles": "プロファイルを読み込めませんでした。",
+    "reassignProfiles": "プロファイルを再割り当てできませんでした。"
+  },
+  "confirm": {
+    "revertPerms": "{{name}}さんの上限と機能を、ロールの既定値にリセットしますか？"
+  },
+  "modal": {
+    "inviteTitle": "メンバーを招待",
+    "editTitle": "{{name}}を編集",
+    "noCreatableRoles": "サブメンバーを作成する権限がありません。",
+    "invitePendingCode": "招待保留中 - コード"
+  },
+  "fields": {
+    "name": "名前",
+    "namePlaceholder": "氏名",
+    "email": "メールアドレス",
+    "role": "ロール",
+    "color": "色",
+    "instructions": "指示",
+    "optional": "（任意）",
+    "instructionsPlaceholder": "このメンバーの担当内容…"
+  },
+  "invite": {
+    "createdTitle": "招待を作成しました",
+    "sharePrefix": "このコードを次の人と共有してください：",
+    "shareSuffix": "。SoftGlaze Browserを開き、「招待コードをお持ちですか？」からコードを入力してパスワードを設定します。",
+    "code": "招待コード",
+    "link": "招待リンク",
+    "emailedTo": "{{email}} にメールで送信しました。",
+    "emailNotSent": "メールは送信されませんでした（設定 → メールでSMTPを構成してください）。コードを手動で共有してください。"
+  },
+  "alloc": {
+    "heading_other": "サブメンバー{{count}}人に割り当て済み",
+    "allocated": "{{cap}}中{{allocated}}を割り当て済み",
+    "left": "· 残り{{remaining}}"
+  },
+  "perms": {
+    "title": "権限と上限",
+    "resourceLimits": "リソースの上限",
+    "subMemberCaps": "サブメンバーの上限",
+    "visibleFeatures": "表示する機能",
+    "actionPermissions": "操作の権限",
+    "actionHint": "このロールでは既定でオンです。オフにすると、このメンバーだけ権限が取り消されます。",
+    "revertDefaults": "ロールの既定値に戻す",
+    "max": "（最大{{max}}）",
+    "canInvite": {
+      "canCreateAdmins": "管理者を招待できる",
+      "canCreateManagers": "マネージャーを招待できる",
+      "canCreateOperators": "オペレーターを招待できる"
+    },
+    "featuresHint": "オフにした機能はサイドバーから非表示になり、その操作はどこからでも拒否されます（プロキシの追加、ゴミ箱からの復元、ブラウザのダウンロードなど）。プロファイルエディターでのプロキシやグループの選択など、他のページが必要とする一覧は引き続き読み込まれます。"
+  },
+  "accountStatus": {
+    "title": "アカウントの状態",
+    "reason": "理由：{{reason}}",
+    "unban": "利用停止を解除",
+    "banHint": "上のフィールドを編集しても利用停止は維持されます。アクセスを復元するには「利用停止を解除」を使用してください。",
+    "suspendToggle": "このメンバーを一時停止（サインインをブロック）",
+    "ban": "メンバーを利用停止"
+  },
+  "delete": {
+    "title": "{{name}}を削除",
+    "warnPrefix": "次のメンバーを削除します：",
+    "warnMiddle": "。サブメンバーはあなたの配下に移動します。データの扱いを選択してください：",
+    "profilesWord_other": "プロファイル",
+    "proxiesWord_other": "プロキシ",
+    "options": {
+      "reassignMe": {
+        "label": "保持して自分に再割り当て",
+        "desc": "このメンバーのプロファイルとプロキシのオーナーがあなたになります。"
+      },
+      "reassignOther": {
+        "label": "保持して別のメンバーに再割り当て",
+        "desc": "データを特定のチームメンバーに引き継ぎます。"
+      },
+      "delete": {
+        "label": "関連データをすべて削除",
+        "desc": "プロキシとプロキシグループは削除され、プロファイルはゴミ箱に移動します（復元可能）。"
+      }
+    },
+    "pickTarget": "データを引き継ぐメンバーを選択してください。",
+    "reassignTo": "再割り当て先",
+    "noOtherMembers": "他に利用できるメンバーがいません。別のオプションを選択してください。"
+  },
+  "assign": {
+    "title": "プロファイルを割り当て · {{name}}",
+    "searchPlaceholder": "プロファイルを検索",
+    "noProfiles": "プロファイルが見つかりません。",
+    "memberFallback": "メンバー #{{id}}",
+    "updated": "更新しました：{{assigned}}件割り当て、{{unassigned}}件割り当て解除。",
+    "save": "割り当てを保存"
+  },
+  "activity": {
+    "title": "チームのアクティビティ",
+    "subtitle": "このワークスペースで誰が何をしたか",
+    "exported": "{{count}}行をエクスポートしました → {{path}}",
+    "exportError": "アクティビティログをエクスポートできませんでした。",
+    "filterByMember": "メンバーで絞り込み",
+    "filterByAction": "操作で絞り込み",
+    "allMembers": "すべてのメンバー",
+    "allActions": "すべての操作",
+    "fromDate": "開始日",
+    "toDate": "終了日",
+    "empty": "アクティビティはまだ記録されていません。",
+    "noMatch": "条件に一致するアクティビティはありません。",
+    "enterpriseFeature": "Enterpriseの機能",
+    "seeBilling": "請求を見る",
+    "exportEnterpriseOnly": "監査ログのエクスポート（CSV / JSON）はEnterpriseの機能です。アクティビティログをエクスポートするには、請求ページでアップグレードしてください。"
+  },
+  "activityActions": {
+    "launched": "起動",
+    "stopped": "停止",
+    "created": "作成",
+    "edited": "編集",
+    "deleted": "削除",
+    "restored": "復元",
+    "imported": "インポート",
+    "assigned": "割り当て",
+    "reassigned": "再割り当て",
+    "parallel_run": "並列実行",
+    "macro_run": "マクロ実行",
+    "member_added": "メンバー追加",
+    "member_edited": "メンバー編集",
+    "member_removed": "メンバー削除",
+    "permissions_changed": "権限変更",
+    "status_changed": "ステータス変更",
+    "signed_in": "サインイン",
+    "signed_out": "サインアウト",
+    "invite_accepted": "招待承諾",
+    "proxies_copied_for_extension": "拡張機能用にプロキシをコピー",
+    "devtools_address_shown": "DevToolsアドレスを表示"
+  },
+  "feedTime": {
+    "justNow": "たった今",
+    "minutes": "{{count}}分前",
+    "hours": "{{count}}時間前",
+    "days": "{{count}}日前"
+  },
+  "license": {
+    "intro": "オーナーのワークスペースごとのサブスクリプション状態です。ローカルファーストかつベストエフォートのため、意図的なユーザーはローカルDBや時計を編集できます。確実な適用にはライセンスバックエンドが必要です。",
+    "noOwners": "オーナーのワークスペースはまだありません。",
+    "editTitle": "ライセンス · {{name}}",
+    "setState": "状態を設定",
+    "grantPlan": "プランを付与",
+    "lifecycle": "ライフサイクル",
+    "state": {
+      "paid": "有料",
+      "trialing": "トライアル",
+      "grace": "猶予",
+      "banned": "利用停止中"
+    },
+    "type": {
+      "trial": "トライアル",
+      "paid": "有料"
+    },
+    "tier": {
+      "pro": "Pro",
+      "enterprise": "Enterprise"
+    },
+    "fields": {
+      "type": "種類",
+      "tier": "ティア",
+      "expiry": "有効期限",
+      "plan": "プラン",
+      "months": "月数"
+    },
+    "detail": {
+      "trial": "トライアル残り{{count}}日",
+      "grace": "猶予：残り{{count}}日",
+      "paid": "{{date}}まで有料",
+      "clockAnomaly": "⚠ 時計の異常"
+    },
+    "actions": {
+      "grantMonth": "1か月付与",
+      "extend7": "+7日",
+      "startTrial": "トライアル開始",
+      "resetTrial": "トライアルをリセット",
+      "edit": "編集",
+      "terminate": "終了",
+      "unblock": "ブロック解除",
+      "block": "ブロック",
+      "saveState": "状態を保存",
+      "grantPlan": "プランを付与",
+      "startFreeTrial": "無料トライアルを開始",
+      "terminateNow": "今すぐ終了"
+    },
+    "confirm": {
+      "terminate": "{{name}}さんのサブスクリプションを今すぐ終了しますか？再度アクセスを付与するまで、プロファイルはロックされます。",
+      "terminateModal": "このサブスクリプションを今すぐ終了しますか？再度アクセスを付与するまで、プロファイルはロックされます。",
+      "resetTrial": "{{name}}さんのトライアルをリセットしますか？トライアル期間が最初から始まり、現在のライセンス状態は置き換えられます。",
+      "block": "{{name}}さんをブロックしますか？本人とそのすべてのサブメンバーはサインアウトされ、ブロックを解除するまでアプリを使用できません。"
+    },
+    "errors": {
+      "load": "ライセンスを読み込めませんでした。",
+      "action": "操作に失敗しました。"
+    }
+  },
+  "seats": {
+    "usage": "{{total}}人中{{used}}人",
+    "fullNotice": "プランのチーム席{{total}}席がすべて使用中のため、新しいメンバーを追加できません。メンバーを一時停止して席を空けるか、Enterpriseにアップグレードすると最大{{enterpriseSeats}}人まで追加できます。",
+    "fullNoticeTop": "プランのチーム席{{total}}席がすべて使用中のため、新しいメンバーを追加できません。メンバーを一時停止して席を空けてください。",
+    "overNotice": "このチームには{{used}}人のメンバーがいますが、プランに含まれるのは{{total}}人です。全員アクセスは維持され、上限を下回ると新しいメンバーを追加できます。",
+    "seeBilling": "請求を見る",
+    "limitError": "プランのチーム席がすべて使用中です。メンバーを一時停止して席を空けるか、請求ページでプランのオプションを確認してください。"
+  }
+}

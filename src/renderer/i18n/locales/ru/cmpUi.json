@@ -1,0 +1,31 @@
+{
+  "brandSelect": {
+    "presentAs": "Показывать этот профиль как {{brand}}"
+  },
+  "versionSelect": {
+    "auto": "Авто",
+    "loadingVersions": "Загрузка версий…",
+    "ready": "Готово",
+    "readyTitle": "Установлено и готово к работе",
+    "noVersions": "Версии не найдены.",
+    "offlineError": "Нет сети: каталог версий недоступен.",
+    "downloadFailed": "Не удалось скачать.",
+    "resumeFailed": "Не удалось возобновить.",
+    "paused": "Пауза",
+    "interrupted": "Прервано",
+    "resumeTitle": "{{state}} на {{percent}}% - возобновить",
+    "statusInstalling": "уст.",
+    "statusQueued": "…",
+    "retryTitle": "Повторить - {{error}}",
+    "downloadFailedShort": "ошибка загрузки",
+    "downloadInstallTitle": "Скачать и установить эту версию"
+  },
+  "pager": {
+    "showing": "Показано {{from}}-{{to}} из {{total}}",
+    "perPage": "На странице",
+    "all": "Все",
+    "prev": "Назад",
+    "next": "Далее",
+    "pageOf": "Стр. {{page}} / {{total}}"
+  }
+}

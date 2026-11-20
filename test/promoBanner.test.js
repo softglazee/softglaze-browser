@@ -58,15 +58,32 @@ test('dismissal is kept per offer, and storage errors never throw', async () => 
   assert.doesNotThrow(() => dismissPromo('bf-2026', broken));
 });
 
-test('English and Spanish text, the website link, and the store-safe wording', async () => {
+test('the words come from the common namespace in every language; English fallback; store-safe wording', async () => {
   const { pickPromo, PROMOS } = await load();
-  const en = pickPromo(L.free, { now: at('2026-11-25T00:00:00Z'), lang: 'en-US' });
-  const es = pickPromo(L.free, { now: at('2026-11-25T00:00:00Z'), lang: 'es' });
-  assert.match(en.text, /US\$49/);
+  const bundle = (lang) => JSON.parse(fs.readFileSync(path.join(R, 'i18n', 'locales', lang, 'common.json'), 'utf8')).promo;
+  const tFor = (lang) => (key, { defaultValue } = {}) => key.split('.').slice(1).reduce((o, k) => (o ? o[k] : undefined), bundle(lang)) ?? defaultValue;
+  const now = at('2026-11-25T00:00:00Z');
+  assert.ok(!pickPromo(L.free, { now, t: tFor('es') }).text.includes('{{'), 'prices filled in');
+  const plain = pickPromo(L.free, { now });
+  assert.match(plain.text, /US\$49/);
+  assert.equal(plain.cta, 'See the offer');
+  const en = pickPromo(L.free, { now, t: tFor('en') });
+  assert.equal(en.text, plain.text, 'the English locale matches the fallback');
+  const es = pickPromo(L.free, { now, t: tFor('es') });
   assert.match(es.text, /US\$249/);
   assert.equal(es.cta, 'Ver la oferta');
   assert.match(en.url, /^https:\/\/browser\.softglaze\.com\/black-friday\?/);
-  const all = JSON.stringify(PROMOS);
+  const langs = fs.readdirSync(path.join(R, 'i18n', 'locales'));
+  for (const lang of langs) {
+    const b = bundle(lang);
+    assert.ok(b && b.bf2026 && b.xmas2026 && b.cta && b.dismiss, `${lang} has the promo texts`);
+    for (const k of ['bf2026', 'xmas2026']) {
+      assert.match(b[k].text, /\{\{pro\}\}/, `${lang} ${k} Pro price`);
+      assert.match(b[k].text, /\{\{enterprise\}\}/, `${lang} ${k} Enterprise price`);
+      assert.doesNotMatch(b[k].text, /\d\d\$|\$\d/, `${lang} ${k}: no price written in the locale`);
+    }
+  }
+  const all = JSON.stringify(PROMOS) + JSON.stringify(langs.map(bundle));
   assert.ok(!/[–—]/.test(all), 'no en or em dashes');
   assert.ok(!/antidetect|undetectable|bypass|evade|spoof|stealth|\bban\b|fake|anonymous/i.test(all));
 });

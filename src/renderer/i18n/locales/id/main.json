@@ -1,0 +1,25 @@
+{
+  "contextMenu": {
+    "undo": "Urungkan",
+    "redo": "Ulangi",
+    "cut": "Potong",
+    "copy": "Salin",
+    "paste": "Tempel",
+    "selectAll": "Pilih semua",
+    "copyLink": "Salin tautan"
+  },
+  "dialogs": {
+    "exportArchiveTitle": "Ekspor arsip profil terenkripsi",
+    "archiveFilter": "Arsip terenkripsi SoftGlaze",
+    "importProfilesTitle": "Pilih spreadsheet profil SoftGlaze untuk diimpor",
+    "spreadsheetFilter": "File spreadsheet",
+    "exportProfilesTitle": "Ekspor profil SoftGlaze",
+    "excelFilter": "Workbook Excel",
+    "importIdentitiesTitle": "Pilih spreadsheet identitas untuk diimpor",
+    "backupTitle": "Cadangkan ruang kerja",
+    "backupFilter": "Cadangan ruang kerja SoftGlaze",
+    "restoreTitle": "Pulihkan cadangan ruang kerja",
+    "exportActivityTitle": "Ekspor log aktivitas",
+    "bindSpreadsheetTitle": "Pilih spreadsheet untuk dihubungkan ke proses paralel ini"
+  }
+}

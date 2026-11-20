@@ -1,0 +1,342 @@
+{
+  "common": {
+    "cancel": "取消",
+    "save": "儲存",
+    "edit": "編輯",
+    "delete": "刪除"
+  },
+  "header": {
+    "title": "帳單和方案",
+    "description": "在一個地方管理訂閱、比較方案和升級。"
+  },
+  "status": {
+    "loading": "正在載入…",
+    "sourceOwner": "原始碼擁有者",
+    "active": "有效",
+    "activeRenews": "有效 · {{date}} 續訂",
+    "trial": "試用",
+    "trialDaysLeft": "試用 · 剩餘 {{days}} 天",
+    "graceDaysLeft": "寬限期 · 剩餘 {{days}} 天",
+    "subscriptionEnded": "訂閱已結束",
+    "free": "免費方案"
+  },
+  "backend": {
+    "licensedVerified": "已授權並驗證",
+    "renews": "{{date}} 續訂",
+    "noLicense": "授權服務已啟用：此安裝尚無付費授權。",
+    "trialVerified": "免費試用，已驗證",
+    "trialEnds": "{{date}} 結束"
+  },
+  "current": {
+    "title": "目前方案",
+    "sourceOwnerAllFeatures": "原始碼擁有者 · 全部功能",
+    "paid": "付費",
+    "freeTrial": "免費試用",
+    "freeForever": "免費方案 · 永久免費"
+  },
+  "grace": {
+    "message_one": "你的{{kind}}已結束，寬限期還剩 {{count}} 天。請在下方續訂，以免失去存取權限。",
+    "message_other": "你的{{kind}}已結束，寬限期還剩 {{count}} 天。請在下方續訂，以免失去存取權限。",
+    "kindTrial": "免費試用",
+    "kindSubscription": "訂閱"
+  },
+  "banned": {
+    "message": "你的訂閱已結束，設定檔啟動已被鎖定。請訂閱或輸入購買碼以恢復存取。"
+  },
+  "trialRemaining": {
+    "message_one": "免費試用：剩餘 {{count}} 天。",
+    "message_other": "免費試用：剩餘 {{count}} 天。"
+  },
+  "seats": {
+    "label": "團隊席位",
+    "usage": "已使用 {{used}} / {{total}}",
+    "upgradeToAddMore": "· 升級以新增更多"
+  },
+  "exempt": {
+    "note": "你是原始碼擁有者，不受訂閱系統限制。包含全部功能。"
+  },
+  "checkout": {
+    "waiting": "正在等待你的付款…",
+    "waitingForPlan": "正在等待你的付款 · {{plan}}…",
+    "opened": "已在你的瀏覽器中開啟付款頁面。付款後，此處會自動更新。",
+    "reopen": "重新開啟付款頁面"
+  },
+  "plans": {
+    "chooseHeading": "選擇方案",
+    "bestValue": "最超值",
+    "current": "目前",
+    "footerNote": "付款透過管理員啟用的方式處理。在瀏覽器中完成付款後，此頁面會自動啟用你的方案。"
+  },
+  "period": {
+    "label": "計費週期",
+    "monthly": "按月",
+    "yearly": "按年",
+    "billedYearly": "按年計費，約合每月 {{perMonth}}",
+    "monthsFree_one": "免費 {{count}} 個月，節省 {{saving}}",
+    "monthsFree_other": "免費 {{count}} 個月，節省 {{saving}}",
+    "monthsFreeShort_one": "免費 {{count}} 個月",
+    "monthsFreeShort_other": "免費 {{count}} 個月",
+    "save": "每年節省 {{saving}}"
+  },
+  "cta": {
+    "included": "已包含",
+    "onPaidPlan": "使用付費方案中",
+    "trialActiveDaysLeft": "試用中 · 剩餘 {{days}} 天",
+    "startFreeTrial": "開始免費試用",
+    "trialUsed": "免費試用已使用",
+    "currentPlan": "目前方案",
+    "upgradeEnterprise": "升級到 Enterprise",
+    "downgradePro": "降級到 Pro",
+    "choosePlan": "選擇 {{name}}"
+  },
+  "trial": {
+    "started": "你的免費試用已開始，可使用全部功能。祝你使用愉快！",
+    "startedWithDays": "你的免費試用已開始：{{days}} 天全部功能存取。祝你使用愉快！",
+    "errors": {
+      "failed": "無法開始試用。"
+    }
+  },
+  "redeem": {
+    "label": "有購買碼？",
+    "apply": "應用程式",
+    "success": "購買碼已套用，謝謝！",
+    "errors": {
+      "empty": "請輸入你的購買碼。",
+      "failed": "無法套用該購買碼。"
+    }
+  },
+  "pay": {
+    "received": "已收到付款，你的方案現已啟用！",
+    "errors": {
+      "noMethods": "我們正在接入新的支付供應商，應用程式內購買暫停中。如需透過發票購買，請傳送郵件至 support@softglaze.com，然後在下方輸入您的購買碼。",
+      "checkoutFailed": "無法開始結賬。",
+      "submitFailed": "無法提交你的付款。"
+    }
+  },
+  "payModal": {
+    "title": "為 {{name}} 付款",
+    "manualSubmitted": "付款已提交。管理員稽核後會儘快啟用你的方案。",
+    "manualBadge": "手動",
+    "continueTo": "繼續前往 {{method}}",
+    "openPayLink": "開啟付款連結",
+    "referencePlaceholder": "付款參考號/交易 ID",
+    "notePlaceholder": "備註（可選）",
+    "submitForApproval": "我已付款，提交稽核",
+    "manualActivationNote": "管理員確認付款後，你的方案即會啟用。"
+  },
+  "admin": {
+    "configureMethods": "在「設定」中設定付款方式"
+  },
+  "invoices": {
+    "title": "發票",
+    "subtitleAdmin": "所有擁有者的全部付款：自動收款 + 手動付款。",
+    "subtitleUser": "你的付款收據。",
+    "add": "新增",
+    "empty": "還沒有發票。",
+    "manualSuffix": "手動",
+    "confirmDelete": "刪除此發票？",
+    "cols": {
+      "date": "日期",
+      "owner": "擁有者",
+      "amount": "金額",
+      "method": "方式",
+      "status": "狀態",
+      "reference": "參考號"
+    },
+    "errors": {
+      "loadFailed": "無法載入發票。",
+      "deleteFailed": "無法刪除。"
+    }
+  },
+  "invoiceForm": {
+    "addTitle": "新增發票",
+    "editTitle": "編輯發票",
+    "ownerMemberId": "擁有者成員 ID",
+    "optionalPlaceholder": "（可選）",
+    "amount": "金額",
+    "currency": "幣種",
+    "method": "方式",
+    "status": "狀態",
+    "tier": "級別",
+    "months": "月數",
+    "reference": "參考號",
+    "referencePlaceholder": "交易號/代碼",
+    "note": "備註",
+    "errors": {
+      "invalidAmount": "請輸入有效金額。",
+      "saveFailed": "無法儲存發票。"
+    }
+  },
+  "planManager": {
+    "title": "方案和方案包",
+    "subtitle": "設定價格、編輯詳情並建立新方案包。更改會立即套用到結賬頁面。",
+    "newPackage": "新增方案包",
+    "activeBadge": "已啟用",
+    "hiddenBadge": "已隱藏",
+    "termMeta": "{{months}} 個月期限 · {{tier}}",
+    "hide": "隱藏",
+    "show": "顯示",
+    "hideTitle": "在結賬頁面中隱藏",
+    "showTitle": "在結賬頁面中顯示",
+    "deleteTitle": "刪除方案",
+    "confirmDelete": "刪除「{{name}}」方案？購買者將不再看到它。",
+    "errors": {
+      "loadFailed": "無法載入方案。",
+      "updateFailed": "無法更新方案。",
+      "deleteFailed": "無法刪除方案。"
+    }
+  },
+  "planForm": {
+    "newTitle": "新增方案包",
+    "editTitle": "編輯 {{name}}",
+    "editTitleAria": "編輯方案包",
+    "packageName": "方案包名稱",
+    "planType": "方案類型",
+    "typePaid": "付費",
+    "typeTrial": "免費試用",
+    "trialLength": "試用期（天）",
+    "price": "價格",
+    "currency": "幣種",
+    "shownAs": "顯示為",
+    "trialShownValue": "{{days}} 天 · 免費",
+    "billedPer": "計費單位",
+    "term": "期限（授予的月數）",
+    "featureTier": "功能級別",
+    "bestValue": "最超值",
+    "active": "已啟用",
+    "tagline": "宣傳語",
+    "taglinePlaceholder": "個人使用者所需的一切。",
+    "features": "功能（每行一個）",
+    "featuresPlaceholder": "無限瀏覽器設定檔\n完整指紋引擎\n代理池和輪換",
+    "savePackage": "儲存方案包",
+    "errors": {
+      "nameRequired": "請為方案包命名。",
+      "invalidPrice": "請輸入有效價格。",
+      "saveFailed": "無法儲存方案。"
+    }
+  },
+  "subscribers": {
+    "title": "訂閱者",
+    "subtitle": "每個帳號的加入時間、方案和到期時間。共 {{count}} 個。",
+    "assignPlan": "分配方案",
+    "empty": "還沒有擁有者帳號。",
+    "trialSuffix": "試用",
+    "daysLeftShort": "{{days}} 天",
+    "assign": "分配",
+    "assignTitle": "分配/授予方案",
+    "state": {
+      "ended": "已結束",
+      "grace": "寬限期",
+      "active": "有效",
+      "trial": "試用"
+    },
+    "cols": {
+      "account": "帳號",
+      "joined": "加入時間",
+      "plan": "方案",
+      "state": "狀態",
+      "expires": "到期時間",
+      "team": "團隊"
+    },
+    "errors": {
+      "loadFailed": "無法載入訂閱者。"
+    }
+  },
+  "assignForm": {
+    "title": "分配方案",
+    "account": "帳號",
+    "plan": "方案",
+    "months": "月數",
+    "monthsWithDefault": "月數（預設 {{default}}）",
+    "recordAsPaid": "記錄為付費銷售",
+    "noteOptional": "備註（可選）",
+    "notePlaceholder": "授予原因",
+    "grantNote": "立即授予期限，並清除所有訂閱鎖定。",
+    "grantNotePaid": "將記錄一張已付款發票。",
+    "grantNoteFree": "記錄為 $0 授予。",
+    "fallbackAccount": "帳號",
+    "fallbackPlan": "方案",
+    "success_one": "已將 {{plan}} 分配給 {{name}}，期限 {{count}} 個月。",
+    "success_other": "已將 {{plan}} 分配給 {{name}}，期限 {{count}} 個月。",
+    "errors": {
+      "chooseAccount": "請選擇帳號。",
+      "choosePlan": "請選擇方案。",
+      "assignFailed": "無法分配方案。"
+    }
+  },
+  "planText": {
+    "trialTagline": "免費試用全部功能：完整存取，無需信用卡。",
+    "trialFullAccess": "完整存取全部功能",
+    "trialTools": "全部指紋、代理和洩露檢測工具",
+    "trialMacros": "巨集、Cookie 預熱和行動設定檔",
+    "trialBackupSeats": "加密備份和團隊席位",
+    "trialNoCard": "無需信用卡",
+    "trialUpgrade": "隨時升級到付費方案",
+    "proTagline": "個人使用者規模化執行設定檔所需的一切。",
+    "proProfiles": "無限本機瀏覽器設定檔",
+    "proFingerprint": "完整指紋引擎 + 洩露檢測",
+    "proProxies": "代理池、輪換策略和地理位置自動匹配",
+    "proMacros": "巨集錄製器、排程工作和資料驅動執行",
+    "proCookieWarmer": "Cookie 預熱",
+    "proMobile": "行動/Android 裝置設定檔",
+    "proBackup": "加密的工作區備份和還原",
+    "proDbEncryption": "完整的資料庫靜態加密",
+    "proPalette": "指令面板 + 新手引導",
+    "proSeats": "最多 3 位團隊成員",
+    "proParallel": "並行執行器，最多同時執行 3 個設定檔，附帶即時執行控制台",
+    "entTagline": "面向團隊：最多 25 位成員，同時執行 10 個設定檔，並可匯出審計記錄。",
+    "entEverythingInPro": "包含 Pro 的全部功能，另外還有：",
+    "entSeats": "最多 25 位團隊成員",
+    "entParallel": "並行執行器，最多同時執行 10 個設定檔，附帶即時執行控制台",
+    "entAuditExport": "審計記錄匯出（CSV/JSON）",
+    "entSupport": "優先郵件支援"
+  },
+  "serverErrors": {
+    "SIGNUP_INVALID_EMAIL": "請輸入有效的電子郵件地址。",
+    "SIGNUP_DISPOSABLE_EMAIL": "請使用長期有效的電子郵件地址。",
+    "SIGNUP_NO_MX": "找不到該地址的郵件伺服器。",
+    "SIGNUP_BAD_CODE": "驗證碼不正確或已過期。請檢查郵件或重新取得驗證碼。",
+    "SIGNUP_OFFLINE": "請連線網際網路以建立帳號。",
+    "SIGNUP_FAILED": "目前無法驗證該電子郵件，請過幾分鐘再試。",
+    "RATE_LIMITED": "嘗試次數過多，請過幾分鐘再試。",
+    "TRIAL_USED": "這台電腦或該電子郵件已使用過免費試用。請選擇方案或輸入購買碼。",
+    "TRIAL_OFFLINE": "請連線網際網路以開始免費試用。",
+    "TRIAL_VERIFY_EMAIL": "請確認您的電子郵件地址以開始免費試用。我們已向您傳送 6 位驗證碼。",
+    "TRIAL_NO_EMAIL": "請先為擁有者帳號新增電子郵件地址，然後再開始免費試用。",
+    "TRIAL_FAILED": "目前無法開始免費試用，請過幾分鐘再試。",
+    "SERVER_UNAVAILABLE": "我們的授權伺服器暫時沒有回應，請過幾分鐘再試。",
+    "MACHINE_MISMATCH": "此授權已註冊到另一台電腦。請將其轉移到這台電腦，或請管理員重設。",
+    "SIGNUP_INVALID_PHONE": "請輸入帶 + 和國家/地區代碼的電話號碼，或留空。",
+    "SIGNUP_USE_CASE": "請選擇你將用 SoftGlaze 做什麼。",
+    "SIGNUP_USE_CASE_OTHER": "請簡單告訴我們你將用 SoftGlaze 做什麼。",
+    "CONFIRM_OFFLINE": "請連線網際網路以確認您的電子郵件。"
+  },
+  "store": {
+    "cardTitle": "Microsoft Store 訂閱",
+    "processedBy": "在此版本中，由 Microsoft 處理付款：你使用 Microsoft 帳戶付款，Microsoft 每月收取訂閱費用（年度方案則每年收取）。",
+    "upgradeNote": "從 Pro 升級到 Enterprise 會開始第二個訂閱。請在你的 Microsoft 帳戶中取消 Pro，使其停止續訂。",
+    "periodNote": "在按月和按年計費之間切換也會開始第二個訂閱。請在你的 Microsoft 帳戶中取消舊訂閱，使其停止續訂。",
+    "downgradeNote": "如需從 Enterprise 降級到 Pro，請在你的 Microsoft 帳戶中取消 Enterprise，並在其結束後購買 Pro。",
+    "buyWith": "透過 Microsoft Store 購買",
+    "buyWithPrice": "透過 Microsoft Store 購買 · {{price}}",
+    "priceFrom": "價格來自 Microsoft Store，以你的貨幣顯示",
+    "restore": "還原 Microsoft Store 購買",
+    "moveHere": "轉移到這台電腦",
+    "manage": "在你的 Microsoft 帳戶中管理或取消",
+    "result": {
+      "active": "謝謝。你的 {{plan}} 方案已啟用。",
+      "cancelled": "購買已取消，未產生任何費用。",
+      "pending": "Microsoft 已收到你的購買。我們正在確認，可能需要一分鐘。",
+      "pendingLong": "你的購買尚未確認。請在幾分鐘後點選「還原 Microsoft Store 購買」，或傳送郵件至 support@softglaze.com。",
+      "pendingOffline": "你的購買已儲存在這台電腦上。應用程式一旦能連線到我們的伺服器，就會立即啟用。",
+      "pendingReview": "我們已收到你的購買，正在核實。獲得核准後，你的方案將立即啟用。",
+      "none": "在此 Microsoft 帳戶中未找到此應用程式的有效 Microsoft Store 訂閱。",
+      "inUse": "此訂閱正在另一台電腦上使用。你可以將其轉移到這台電腦。",
+      "moveLimit": "此訂閱在過去 30 天內已被轉移到其他電腦兩次。如需幫助，請傳送郵件至 support@softglaze.com。",
+      "unavailable": "Microsoft Store 購買目前不可用，請稍後再試。",
+      "productMissing": "此方案尚未在 Microsoft Store 上架。",
+      "network": "無法連線到 Microsoft Store。請檢查網路連線後重試。",
+      "error": "無法完成購買：{{message}}"
+    }
+  }
+}

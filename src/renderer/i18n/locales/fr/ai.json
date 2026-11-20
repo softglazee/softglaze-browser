@@ -1,0 +1,643 @@
+{
+  "title": "SoftGlaze AI",
+  "beta": "Bêta",
+  "description": "Laissez des applications d'IA comme Claude, Cursor et ChatGPT travailler avec vos profils. Vous choisissez à quelle fréquence les modifications nécessitent votre approbation, et tout est consigné.",
+  "loading": "Chargement de SoftGlaze AI…",
+  "refresh": "Actualiser",
+  "retry": "Réessayer",
+  "learnMore": "Lire le guide",
+  "opensInBrowser": "(s'ouvre dans votre navigateur)",
+  "copy": "Copier",
+  "copied": "Copié",
+  "copyFailed": "Copie impossible. Sélectionnez le texte et copiez-le manuellement.",
+  "cancel": "Annuler",
+  "close": "Fermer",
+  "save": "Enregistrer",
+  "saving": "Enregistrement…",
+  "saved": "Enregistré",
+  "saveFailed": "Non enregistré",
+  "never": "Jamais",
+  "unknown": "Inconnu",
+  "roles": {
+    "OWNER": "Propriétaire",
+    "ADMIN": "Admin",
+    "MANAGER": "Manager",
+    "OPERATOR": "Opérateur",
+    "SUPER_ADMIN": "Super Admin"
+  },
+  "states": {
+    "unavailableTitle": "SoftGlaze AI n'est pas disponible dans cette version",
+    "unavailableBody": "Cette version de SoftGlaze Browser n'inclut pas encore le serveur IA. Il arrivera avec une mise à jour. Votre espace de travail ne présente aucun problème.",
+    "forbiddenTitle": "Seul le Propriétaire ou un Admin peut gérer SoftGlaze AI",
+    "forbiddenBody": "Demandez l'accès au Propriétaire de l'espace de travail. Quand une application d'IA utilise un jeton qui agit en votre nom, ses demandes s'affichent quand même pour que vous les autorisiez ou refusiez, sur n'importe quelle page.",
+    "errorTitle": "Impossible de charger SoftGlaze AI"
+  },
+  "header": {
+    "switchLabel": "Serveur SoftGlaze AI",
+    "switchShort": "Serveur IA",
+    "on": "Activé",
+    "off": "Désactivé",
+    "turningOn": "Activation…",
+    "turningOff": "Désactivation…",
+    "stopAll": "Arrêter toute l'IA",
+    "toggleError": "Impossible de modifier le serveur IA : {{message}}"
+  },
+  "status": {
+    "server": "Serveur IA",
+    "running": "En cours",
+    "error": "Arrêté",
+    "off": "Désactivé",
+    "offHint": "Activez-le pour que les applications d'IA puissent se connecter.",
+    "errorHint": "Il est activé mais ne tourne pas : {{message}}",
+    "errorHintNoMessage": "Il est activé mais ne tourne pas. Le port est peut-être utilisé ; modifiez-le dans Paramètres.",
+    "apps": "Applications connectées",
+    "appsNone": "Aucune application connectée pour l'instant",
+    "appSeen": "{{name}} · {{when}}",
+    "appsMore_one": "et {{count}} autre",
+    "appsMore_other": "et {{count}} autres",
+    "appsMore_many": "et {{count}} autres",
+    "waiting": "En attente de vous",
+    "waitingNone": "Rien à traiter",
+    "waitingSome_one": "{{count}} demande à traiter",
+    "waitingSome_other": "{{count}} demandes à traiter",
+    "waitingSome_many": "{{count}} demandes à traiter",
+    "openApprovals": "ouvrir les approbations",
+    "sessions": "Sessions IA en cours",
+    "sessionsHint": "Lancées par des applications d'IA"
+  },
+  "tabs": {
+    "label": "Sections de SoftGlaze AI",
+    "connect": "Connexion",
+    "tokens": "Jetons",
+    "approvals": "Approbations",
+    "activity": "Activité",
+    "memory": "Mémoire",
+    "prompts": "Prompts",
+    "settings": "Paramètres",
+    "waiting": "en attente"
+  },
+  "stop": {
+    "title": "Arrêter toute l'IA ?",
+    "body": "Utilisez cette option si une application d'IA fait quelque chose d'inattendu.",
+    "point1": "Chaque exécution et chaque profil lancés par une application d'IA s'arrêtent immédiatement.",
+    "point2": "Chaque application d'IA connectée est déconnectée, et les appels en cours sont annulés.",
+    "point3": "Chaque demande en attente de votre réponse est refusée.",
+    "point4": "SoftGlaze AI est désactivé. Les jetons restent valides ; réactivez-le quand vous êtes prêt.",
+    "confirm": "Arrêter toute l'IA",
+    "error": "Impossible de tout arrêter : {{message}}",
+    "result": "Terminé. Exécutions arrêtées : {{runs}}. Profils arrêtés : {{profiles}}. Appels annulés : {{calls}}. Sessions terminées : {{sessions}}. Demandes refusées : {{approvals}}.",
+    "nowOff": "SoftGlaze AI est désactivé. Les applications d'IA ne peuvent pas se connecter tant que vous ne l'activez pas.",
+    "turnOn": "Activer"
+  },
+  "start": {
+    "title": "Démarrer en trois étapes",
+    "step1": "Activer le serveur IA",
+    "step2": "Créer un jeton pour votre application d'IA",
+    "step3": "Connecter votre application d'IA",
+    "done": "Terminé",
+    "turnOn": "Activer"
+  },
+  "connect": {
+    "loadError": "Impossible de charger la configuration des applications d'IA : {{message}}",
+    "empty": "Aucune configuration à afficher pour l'instant",
+    "emptyOn": "Le serveur IA n'a envoyé aucune configuration. Essayez « Actualiser ».",
+    "emptyBody": "Activez le serveur IA pour voir comment connecter chaque application.",
+    "appsLabel": "Applications d'IA",
+    "guide": "Guide complet",
+    "appDocs": "Documentation de l'application",
+    "where": "Emplacement",
+    "steps": "Comment se connecter",
+    "kind": {
+      "command": "Commande",
+      "json": "JSON",
+      "toml": "TOML",
+      "n8n": "Workflow"
+    },
+    "snippet": "Configuration pour {{app}}",
+    "placeholderHint": "<YOUR_TOKEN> est l'endroit où placer votre jeton. Un jeton ne s'affiche qu'une seule fois, à sa création.",
+    "noSnippet": "Cette application n'a pas de configuration prête à l'emploi. Suivez les étapes ci-dessus.",
+    "createToken": "Créer un jeton pour cette application",
+    "createTokenHint": "Donnez à chaque application son propre jeton. Vous pourrez ainsi voir ce que fait chacune et en désactiver une sans toucher aux autres.",
+    "installGuide": "Guide d'installation",
+    "mcpb": {
+      "title": "Installer dans Claude Desktop : télécharger softglaze-browser.mcpb",
+      "download": "Télécharger softglaze-browser.mcpb",
+      "body": "Double-cliquez sur le fichier, ou dans Claude Desktop ouvrez Settings > Extensions > Advanced settings > Install Extension. Claude Desktop demande votre jeton et le port ; gardez le port affiché sur cette page. Les discussions Claude Desktop et Cowork l'utilisent toutes les deux."
+    },
+    "claudeCode": {
+      "pluginTitle": "Installer les plugins SoftGlaze (recommandé)",
+      "pluginBody": "Exécutez-les un par un dans Claude Code. softglaze-browser ajoute les skills ; softglaze-browser-connector ajoute les outils SoftGlaze et demande votre jeton et le port. Le connecteur nécessite Node.js 18 ou plus récent.",
+      "desktopNote": "Les discussions Claude Desktop et Cowork utilisent plutôt softglaze-browser.mcpb (voir Claude Desktop).",
+      "manualTitle": "Ou ajoutez le serveur vous-même (sans Node.js)"
+    },
+    "envVar": {
+      "title": "Enregistrer le jeton pour Codex",
+      "body": "Codex lit le jeton dans une variable d'environnement nommée SOFTGLAZE_TOKEN. Exécutez ceci une fois avec votre jeton, puis ouvrez un nouveau terminal.",
+      "windows": "Windows (Invite de commandes ou PowerShell)",
+      "unix": "macOS ou Linux (ajoutez-le à votre profil de shell)"
+    },
+    "bridge": {
+      "title": "Passerelle pour les applications qui lancent un programme local",
+      "body": "Certaines applications ne peuvent pas se connecter à une adresse web. Elles lancent alors la passerelle SoftGlaze, qui transmet tout au serveur IA de ce PC. Même jeton, mêmes approbations.",
+      "unavailable": "La passerelle n'est pas incluse dans cette version.",
+      "mcpb": "Fichier d'installation en un clic pour Claude Desktop",
+      "command": "Commande",
+      "args": "Arguments",
+      "env": "Variables d'environnement"
+    },
+    "clients": {
+      "claude-desktop": {
+        "where": "Settings > Developer > Edit Config (claude_desktop_config.json), puis redémarrez Claude Desktop. Claude Desktop exécute les serveurs locaux via stdio : ceci lance donc la passerelle SoftGlaze. Plus simple : installez softglaze-browser.mcpb ({{mcpb}}), qui demande votre jeton et le port et sert aussi Cowork.",
+        "title": "Claude Desktop",
+        "step1": "Créez un jeton pour Claude Desktop avec le bouton ci-dessous.",
+        "step2": "Le plus simple : téléchargez softglaze-browser.mcpb avec le bouton ci-dessous, double-cliquez dessus et collez votre jeton quand Claude Desktop le demande. Ou ouvrez Settings > Developer > Edit Config et collez la configuration dans claude_desktop_config.json, avec votre jeton à la place de <YOUR_TOKEN>.",
+        "step2NoMcpb": "Ouvrez Settings > Developer > Edit Config et collez la configuration dans claude_desktop_config.json, avec votre jeton à la place de <YOUR_TOKEN>. Elle lance la passerelle SoftGlaze, car Claude Desktop exécute des serveurs locaux.",
+        "step3": "Si vous avez modifié le fichier de configuration, quittez et rouvrez Claude Desktop. SoftGlaze apparaît sous le bouton + sous la zone de discussion, dans Connectors."
+      },
+      "claude-code": {
+        "where": "Sans les plugins : exécutez dans un terminal. Ajoutez --scope user pour utiliser SoftGlaze dans tous les projets. Utilisez les plugins ou cette commande, pas les deux.",
+        "title": "Claude Code",
+        "step1": "Créez un jeton pour Claude Code avec le bouton ci-dessous.",
+        "step2": "Installez les plugins SoftGlaze avec les commandes ci-dessous et collez votre jeton quand Claude Code le demande. Ou exécutez la commande plus bas, avec votre jeton à la place de <YOUR_TOKEN>. Utilisez une seule méthode, pas les deux.",
+        "step3": "Tapez /mcp dans Claude Code. SoftGlaze devrait apparaître comme connecté (plugin:softglaze-browser-connector:softglaze avec les plugins)."
+      },
+      "cursor": {
+        "where": "~/.cursor/mcp.json (tous les projets) ou .cursor/mcp.json dans un projet. Pour garder le jeton hors du fichier, utilisez \"Bearer ${env:SOFTGLAZE_TOKEN}\".",
+        "title": "Cursor",
+        "step1": "Créez un jeton pour Cursor avec le bouton ci-dessous.",
+        "step2": "Ouvrez ~/.cursor/mcp.json (ou .cursor/mcp.json dans un projet) et collez la configuration, avec votre jeton à la place de <YOUR_TOKEN>.",
+        "step3": "Dans les réglages de Cursor, vérifiez que SoftGlaze est listé et activé. Demandez ensuite au chat de lister vos profils SoftGlaze."
+      },
+      "vscode": {
+        "where": ".vscode/mcp.json dans votre espace de travail, ou exécutez « MCP: Open User Configuration ». VS Code demande le jeton une fois et le stocke de façon sécurisée : il ne figure jamais dans le fichier.",
+        "title": "VS Code (Copilot)",
+        "step1": "Créez un jeton pour VS Code avec le bouton ci-dessous.",
+        "step2": "Ajoutez la configuration à .vscode/mcp.json dans votre espace de travail (ou exécutez MCP: Open User Configuration). Au premier démarrage de SoftGlaze, VS Code demande votre jeton et le stocke de façon sécurisée : il ne figure jamais dans le fichier.",
+        "step3": "Ouvrez Copilot Chat et demandez-lui de lister vos profils SoftGlaze. Autorisez l'outil quand VS Code le demande."
+      },
+      "gemini-cli": {
+        "where": "~/.gemini/settings.json (à fusionner dans le fichier), ou exécutez : gemini mcp add --transport http -s user --header \"Authorization: Bearer <YOUR_TOKEN>\" softglaze {{mcp}}",
+        "title": "Gemini CLI",
+        "step1": "Créez un jeton pour Gemini CLI avec le bouton ci-dessous.",
+        "step2": "Ajoutez la configuration dans \"mcpServers\" de ~/.gemini/settings.json, avec votre jeton à la place de <YOUR_TOKEN>. Laissez \"trust\" désactivé : SoftGlaze vous demande de toute façon avant chaque modification.",
+        "step3": "Lancez gemini et tapez /mcp. SoftGlaze et ses outils devraient être listés."
+      },
+      "codex": {
+        "where": "~/.codex/config.toml (partagé par l'application de bureau ChatGPT, Codex CLI et l'extension IDE). Définissez d'abord la variable d'environnement SOFTGLAZE_TOKEN avec votre jeton (Windows : setx SOFTGLAZE_TOKEN \"<YOUR_TOKEN>\"), puis redémarrez l'application.",
+        "title": "ChatGPT (bureau) / Codex",
+        "step1": "Créez un jeton pour Codex avec le bouton ci-dessous, puis enregistrez-le dans la variable d'environnement SOFTGLAZE_TOKEN (commande ci-dessous).",
+        "step2": "Ajoutez la configuration à ~/.codex/config.toml. Codex lit le jeton dans SOFTGLAZE_TOKEN : le fichier ne le contient donc jamais.",
+        "step3": "Ouvrez un nouveau terminal, lancez Codex et tapez /mcp. SoftGlaze devrait être listé."
+      },
+      "windsurf": {
+        "where": "~/.codeium/windsurf/mcp_config.json, puis actualisez les serveurs MCP. Devin Desktop (le nouveau nom de Windsurf) utilise ~/.config/devin/mcp_config.json avec \"url\" et \"transport\": \"http\" au lieu de \"serverUrl\".",
+        "title": "Windsurf",
+        "step1": "Créez un jeton pour Windsurf avec le bouton ci-dessous.",
+        "step2": "Collez la configuration dans le fichier de configuration MCP de Windsurf (voir « Emplacement »), avec votre jeton à la place de <YOUR_TOKEN>.",
+        "step3": "Actualisez les serveurs MCP dans Windsurf et vérifiez que SoftGlaze est listé."
+      },
+      "cline": {
+        "where": "Cline : MCP Servers > Configure (cline_mcp_settings.json).",
+        "title": "Cline",
+        "step1": "Créez un jeton pour Cline avec le bouton ci-dessous.",
+        "step2": "Dans Cline, ouvrez MCP Servers > Configure et collez la configuration dans cline_mcp_settings.json, avec votre jeton à la place de <YOUR_TOKEN>.",
+        "step3": "Vérifiez que SoftGlaze apparaît comme connecté dans la liste MCP Servers de Cline."
+      },
+      "n8n": {
+        "where": "Dans le nœud MCP Client Tool : SSE Endpoint comme ci-dessous, Authentication « Bearer », et votre jeton comme identifiant. Si n8n tourne dans Docker Desktop, utilisez host.docker.internal au lieu de 127.0.0.1 et ajoutez host.docker.internal aux hôtes supplémentaires autorisés dans les paramètres de SoftGlaze AI. Pour les workflows sans surveillance, utilisez un jeton d'automatisation (outils pré-approuvés, limité à des groupes).",
+        "title": "n8n"
+      },
+      "other": {
+        "where": "Tout client MCP qui prend en charge Streamable HTTP avec en-têtes. Les clients qui ne gèrent que l'ancien transport HTTP+SSE utilisent l'URL SSE. Les clients qui ne lancent que des commandes locales utilisent la passerelle SoftGlaze (voir Claude Desktop).",
+        "title": "Autres applications",
+        "step1": "Créez un jeton pour l'application avec le bouton ci-dessous.",
+        "step2": "Ouvrez les paramètres MCP de l'application et ajoutez un serveur avec cette adresse et un en-tête Authorization : Bearer, un espace, puis votre jeton.",
+        "step3": "Si l'application ne peut lancer qu'un programme local (stdio), utilisez la passerelle SoftGlaze ci-dessous au lieu de l'adresse."
+      },
+      "custom": {
+        "step1": "Créez un jeton pour cette application avec le bouton ci-dessous.",
+        "step2": "Collez la configuration là où l'application garde ses serveurs MCP, avec votre jeton à la place de <YOUR_TOKEN>.",
+        "step3": "Redémarrez l'application et vérifiez que SoftGlaze est listé dans ses paramètres MCP ou d'outils."
+      }
+    },
+    "n8n": {
+      "subtitle": "Exécutez SoftGlaze depuis des workflows n8n sur ce PC.",
+      "selfHosted": "n8n doit tourner sur ce PC (npx ou Docker). n8n Cloud ne peut pas encore accéder à votre PC.",
+      "noPort": "Activez le serveur IA pour voir l'adresse n8n.",
+      "a": {
+        "title": "Laisser un agent IA n8n utiliser SoftGlaze",
+        "step1": "Ajoutez un nœud AI Agent, puis ajoutez un nœud MCP Client Tool comme l'un de ses outils.",
+        "step2": "Définissez SSE Endpoint sur l'adresse ci-dessous. Si n8n tourne dans Docker, utilisez l'adresse Docker.",
+        "step3": "Définissez Authentication sur Bearer et collez votre jeton. Sous Tools to Include, choisissez All ou seulement les outils dont vous avez besoin.",
+        "sse": "Point de terminaison SSE (n8n sur ce PC)",
+        "sseDocker": "Point de terminaison SSE (n8n dans Docker)",
+        "dockerNote": "Pour Docker, ajoutez aussi host.docker.internal dans « Noms d'hôte supplémentaires autorisés » de l'onglet Paramètres."
+      },
+      "b": {
+        "title": "Étapes fixes avec le nœud HTTP Request",
+        "body": "Pour des étapes qui ne changent jamais, comme lancer un profil à 9:00, un nœud HTTP Request peut appeler directement l'API locale. Envoyez le jeton dans l'en-tête Authorization.",
+        "kind": "HTTP Request"
+      },
+      "c": {
+        "title": "Utiliser un jeton d'automatisation pour les workflows planifiés",
+        "body": "Un workflow planifié n'a personne pour cliquer sur « Autoriser ». Un jeton d'automatisation pré-approuve uniquement les outils choisis, uniquement pour les groupes choisis, avec des limites par appel et par heure. Tout le reste demande toujours.",
+        "create": "Créer un jeton d'automatisation",
+        "ownerOnly": "Seul le Propriétaire peut créer des jetons d'automatisation."
+      }
+    },
+    "devtools": {
+      "title": "Utiliser un profil avec Playwright MCP ou Chrome DevTools MCP (avancé)",
+      "subtitle": "Confiez un profil Chromium en cours d'exécution à un client DevTools externe.",
+      "ownerOnly": "Propriétaire uniquement",
+      "warning": "Les sites web peuvent détecter un débogueur externe. Playwright MCP et Chrome DevTools MCP se connectent comme second client DevTools et envoient leurs propres commandes, ce que les scripts anti-robots peuvent remarquer. Le profil peut être signalé ou bloqué. Les outils de page de SoftGlaze ne font pas cela. Toute personne sur cet ordinateur qui possède l'adresse ci-dessous peut contrôler le profil pendant son exécution.",
+      "intro": "Utilisez ceci pour ce que les outils de page de SoftGlaze ne font pas, comme des traces de performances ou les journaux réseau et console de votre propre site, et utilisez un profil de test. C'est vous qui agissez dans l'application, indépendamment du mode Expert, qui décide de ce que les applications d'IA peuvent demander.",
+      "profile": "Profil en cours",
+      "loading": "Chargement des profils en cours…",
+      "loadError": "Impossible de charger les profils en cours : {{message}}",
+      "choose": "Choisir un profil en cours",
+      "option": "{{name}} (#{{id}}) · Chromium",
+      "optionFirefox": "{{name}} (#{{id}}) · Firefox : les profils Firefox n'ont pas de point de terminaison DevTools",
+      "empty": "Lancez d'abord un profil Chromium.",
+      "openProfiles": "Ouvrir les profils",
+      "stopped": "Ce profil ({{name}}) s'est arrêté. Son adresse ne fonctionne plus.",
+      "address": "Adresse DevTools",
+      "hiddenLabel": "Adresse DevTools, masquée jusqu'à ce que vous appuyiez sur « Afficher »",
+      "show": "Afficher",
+      "showLabel": "Afficher l'adresse DevTools de {{name}}",
+      "hide": "Masquer",
+      "addressNote": "Nouvelle à chaque lancement du profil. Fonctionne uniquement sur cet ordinateur pendant l'exécution du profil.",
+      "noAddress": "SoftGlaze n'a reçu aucune adresse DevTools pour ce profil. Arrêtez-le et relancez-le, puis réessayez.",
+      "setup": "Configuration",
+      "toolsLabel": "Serveur MCP",
+      "clientsLabel": "Application d'IA",
+      "where": {
+        "claude-code": "Exécutez dans un terminal, dans le dossier de votre projet. L'adresse change à chaque lancement du profil : exécutez donc d'abord claude mcp remove {{name}}, puis de nouveau cette commande.",
+        "claude-desktop": "Settings > Developer > Edit Config (claude_desktop_config.json) : ajoutez ceci sous \"mcpServers\", puis quittez et rouvrez Claude Desktop. Mettez à jour l'adresse après chaque lancement.",
+        "cursor": "~/.cursor/mcp.json (tous les projets) ou .cursor/mcp.json dans un projet. Mettez à jour l'adresse après chaque lancement.",
+        "vscode": ".vscode/mcp.json dans votre espace de travail, ou exécutez MCP: Open User Configuration. Mettez à jour l'adresse après chaque lancement."
+      },
+      "snippet": "Configuration {{tool}} pour {{app}}",
+      "pressShow": "Appuyez sur « Afficher » pour voir la configuration avec l'adresse de ce profil.",
+      "usageStats": "Désactiver les statistiques d'utilisation de Chrome DevTools MCP",
+      "usageStatsHint": "Ajoute --no-usage-statistics. Sans cela, Chrome DevTools MCP envoie des statistiques d'utilisation à Google.",
+      "footer": "Quand vous avez terminé, fermez le serveur MCP, puis arrêtez le profil.",
+      "guide": "Guide : Playwright MCP et Chrome DevTools MCP"
+    }
+  },
+  "scope": {
+    "read": {
+      "title": "Lecture seule",
+      "body": "Peut consulter les profils, proxys, groupes et l'activité. Ne peut rien modifier ni lancer."
+    },
+    "operate": {
+      "title": "Utilisation",
+      "body": "Peut aussi créer et lancer des profils, exécuter des macros et agir dans les pages. Les modifications vous sont toujours demandées d'abord, selon les Paramètres. Choisissez ceci en connaissance de cause."
+    },
+    "full": {
+      "title": "Complet",
+      "body": "Tout ce que permet « Utilisation », plus les outils experts quand le mode Expert est activé. Uniquement pour les applications en qui vous avez entièrement confiance."
+    }
+  },
+  "create": {
+    "title": "Créer un jeton",
+    "titleFor": "Créer un jeton pour {{app}}",
+    "description": "Un jeton permet à une application d'IA de se connecter. Il agit comme un membre de votre équipe et ne peut faire que ce que ce membre a le droit de faire.",
+    "revealTitle": "Votre nouveau jeton",
+    "revealDescription": "Copiez-le maintenant dans votre application d'IA.",
+    "name": "Nom",
+    "nameHint": "Indiquez l'application et l'ordinateur pour le reconnaître plus tard.",
+    "namePlaceholder": "Claude Desktop sur mon PC",
+    "member": "Agit en tant que",
+    "memberHint": "L'IA travaille en tant que ce membre, avec ses autorisations et ses profils.",
+    "you": "vous",
+    "scope": "Ce qu'il peut faire",
+    "expiry": "Expire après",
+    "expiryNever": "Jamais",
+    "expiryDays_one": "{{count}} jour",
+    "expiryDays_other": "{{count}} jours",
+    "expiryDays_many": "{{count}} jours",
+    "expiryNeverWarn": "Un jeton qui n'expire jamais reste valide jusqu'à ce que vous le révoquiez.",
+    "profiles": "Profils utilisables",
+    "profilesAll": "Tous",
+    "profilesSome": "Certains groupes seulement",
+    "profilesAllHint": "Tous les profils que le membre peut ouvrir.",
+    "profilesSomeHint": "Uniquement les profils des groupes cochés.",
+    "noGroups": "Il n'y a encore aucun groupe. Créez-en un d'abord sur la page Groupes.",
+    "pickGroups": "Groupes",
+    "submit": "Créer le jeton",
+    "onceWarning": "Copiez ce jeton maintenant. SoftGlaze ne l'affiche qu'une seule fois. Si vous le perdez, révoquez-le et créez-en un nouveau.",
+    "yourToken": "Jeton",
+    "filledSetup": "Configuration pour {{app}}, avec votre jeton déjà renseigné",
+    "n8nHint": "Dans n8n, définissez Authentication sur Bearer et collez ce jeton.",
+    "claudeCodeHint": "Vous installez les plugins SoftGlaze ? Collez ce jeton quand Claude Code le demande pendant l'installation de softglaze-browser-connector. La commande ci-dessus est la méthode sans les plugins.",
+    "claudeDesktopHint": "Vous installez softglaze-browser.mcpb ? Collez ce jeton quand Claude Desktop le demande. La configuration ci-dessus est la méthode sans l'extension.",
+    "acknowledge": "J'ai enregistré ce jeton en lieu sûr",
+    "closeWarning": "Copiez le jeton ou cochez d'abord la case. Vous ne pourrez plus voir ce jeton.",
+    "done": "Terminé"
+  },
+  "errors": {
+    "nameRequired": "Saisissez un nom.",
+    "nameTooLong": "Le nom ne doit pas dépasser {{max}} caractères.",
+    "memberRequired": "Choisissez un membre.",
+    "scopeRequired": "Choisissez ce que le jeton peut faire.",
+    "expiryRequired": "Choisissez quand il expire.",
+    "groupsRequired": "Cochez au moins un groupe, ou choisissez « Tous ».",
+    "groupsRequiredAutomation": "Un jeton d'automatisation doit être limité à des groupes. Cochez au moins un groupe.",
+    "toolNotAllowed": "L'un des outils ne peut pas être pré-approuvé.",
+    "limitRange": "Saisissez un nombre entier de {{min}} à {{max}}.",
+    "create": "Le jeton n'a pas été créé.",
+    "noToken": "Le serveur IA n'a renvoyé aucun jeton. Réessayez.",
+    "createFailed": "Le jeton n'a pas été créé : {{message}}"
+  },
+  "automation": {
+    "title": "Jeton d'automatisation (pour n8n, planifications et scripts)",
+    "ownerOnly": "Propriétaire uniquement",
+    "count_one": "{{count}} pré-approuvé",
+    "count_other": "{{count}} pré-approuvés",
+    "count_many": "{{count}} pré-approuvés",
+    "intro": "Pour les workflows qui tournent sans vous, choisissez les outils qui peuvent s'exécuter sans demander.",
+    "needsOperate": "Choisissez « Utilisation » ou « Complet » ci-dessus pour pré-approuver des outils.",
+    "warning": "Ces outils s'exécuteront sans vous demander. Ils restent limités aux groupes choisis, sont consignés et s'arrêtent avec « Arrêter toute l'IA ».",
+    "tools": "Outils exécutés sans demander",
+    "destructive": "Irréversible",
+    "groups": {
+      "profiles": "Profils",
+      "sessions": "Lancer et arrêter",
+      "proxies": "Proxys",
+      "groups": "Groupes",
+      "automation": "Automatisation",
+      "page": "Dans les pages",
+      "other": "Autres"
+    },
+    "maxProfiles": "Profils max. par appel",
+    "maxProfilesHint": "5 par défaut, jusqu'à 50.",
+    "maxCalls": "Appels max. par heure",
+    "maxCallsHint": "60 par défaut, jusqu'à 1000.",
+    "groupsNote": "Les outils pré-approuvés ne fonctionnent que sur les groupes cochés sous « Profils utilisables ». Tous les autres outils vous demandent toujours."
+  },
+  "tools": {
+    "create_profile": "Créer un profil",
+    "update_profile": "Modifier un profil (nom, groupe, tags, notes, page de démarrage, proxy)",
+    "batch_generate_profiles": "Créer de nombreux profils à la fois",
+    "start_profile": "Lancer un profil",
+    "stop_profile": "Arrêter un profil",
+    "assign_proxy": "Attribuer un proxy à un profil",
+    "rotate_proxy_ip": "Obtenir une nouvelle IP du proxy",
+    "find_free_proxies": "Trouver et tester des proxys gratuits",
+    "create_group": "Créer un groupe",
+    "move_profiles_to_group": "Déplacer des profils vers un groupe",
+    "save_macro": "Enregistrer une macro",
+    "run_macro": "Exécuter une macro",
+    "stop_run": "Arrêter une exécution",
+    "start_warmer": "Lancer un préchauffage",
+    "page_navigate": "Ouvrir une page web",
+    "page_snapshot": "Lire la structure de la page",
+    "page_click": "Cliquer sur une page",
+    "page_type": "Saisir du texte sur une page",
+    "page_press_key": "Appuyer sur une touche sur une page",
+    "page_scroll": "Faire défiler une page",
+    "page_screenshot": "Prendre une capture d'écran",
+    "page_extract_text": "Copier le texte d'une page",
+    "page_wait_for": "Attendre un élément sur une page"
+  },
+  "tokens": {
+    "search": "Rechercher des jetons",
+    "showRevoked": "Afficher les jetons révoqués",
+    "showRevokedCount_one": "Afficher {{count}} révoqué",
+    "showRevokedCount_other": "Afficher {{count}} révoqués",
+    "showRevokedCount_many": "Afficher {{count}} révoqués",
+    "create": "Créer un jeton",
+    "intro": "Chaque application d'IA se connecte avec son propre jeton. Un jeton agit comme un membre et peut être limité à certains groupes. Révoquez un jeton pour couper immédiatement l'accès de cette application.",
+    "loadError": "Impossible de charger les jetons : {{message}}",
+    "emptyTitle": "Aucun jeton pour l'instant",
+    "emptyBody": "Créez un jeton, puis collez-le dans votre application d'IA. L'onglet « Connexion » indique où le placer.",
+    "caption": "Jetons IA",
+    "colName": "Nom",
+    "colMember": "Agit en tant que",
+    "colScope": "Accès",
+    "colGroups": "Profils",
+    "colExpires": "Expiration",
+    "colLastUsed": "Dernière utilisation",
+    "colActions": "Actions",
+    "state": {
+      "revoked": "Révoqué",
+      "expired": "Expiré",
+      "expiring": "Expire bientôt"
+    },
+    "automation_one": "Automatisation · {{count}} pré-approuvé",
+    "automation_other": "Automatisation · {{count}} pré-approuvés",
+    "automation_many": "Automatisation · {{count}} pré-approuvés",
+    "allProfiles": "Tous les profils",
+    "groupsMore_one": "{{names}} et {{count}} autre",
+    "groupsMore_other": "{{names}} et {{count}} autres",
+    "groupsMore_many": "{{names}} et {{count}} autres",
+    "neverUsed": "Pas encore utilisé",
+    "revoke": "Révoquer",
+    "revokeAria": "Révoquer {{name}}",
+    "noMatch": "Aucun jeton ne correspond.",
+    "revokeTitle": "Révoquer « {{name}} » ?",
+    "revokeBody": "L'application d'IA qui utilise ce jeton perd l'accès immédiatement. Cette action est irréversible.",
+    "revokeError": "Impossible de révoquer le jeton : {{message}}"
+  },
+  "approval": {
+    "eyebrow": "Demande de l'IA",
+    "eyebrowMany": "Demande de l'IA {{position}} sur {{total}}",
+    "title": "{{app}} demande une autorisation",
+    "tokenOnly": "Jeton : {{token}}",
+    "tokenAndMember": "Jeton : {{token}} · agit en tant que {{member}}",
+    "noSummary": "Exécuter l'outil {{tool}}",
+    "unknownApp": "Une application d'IA",
+    "timeLeft": "pour répondre. Sans réponse, la demande est refusée.",
+    "timeLeftHint": "Temps restant avant le refus de la demande",
+    "timeLeftSr": "{{time}} restant avant le refus de la demande",
+    "secondsLeftAnnounce": "{{seconds}} secondes restantes pour répondre à la demande de l'IA",
+    "showDetails": "Afficher les détails",
+    "hideDetails": "Masquer les détails",
+    "tool": "Outil",
+    "token": "Jeton",
+    "argsLabel": "Détails de la demande",
+    "noArgs": "Cette demande n'a pas de détails supplémentaires.",
+    "redactedNote": "Les mots de passe et autres secrets sont masqués ici.",
+    "deny": "Refuser",
+    "allowHour": "Autoriser pendant 1 heure",
+    "allowHourHint": "Ne plus demander pour ce type d'action de {{token}} pendant l'heure qui vient.",
+    "allowOnce": "Autoriser une fois",
+    "footnote": "SoftGlaze demande dans l'application, quels que soient les réglages de l'application d'IA. Chaque réponse est consignée dans « Activité ».",
+    "later": "Décider plus tard (refusée à l'expiration du délai)",
+    "respondError": "Votre réponse n'a pas été enregistrée : {{message}}",
+    "waitingChip_one": "{{count}} demande de l'IA en attente",
+    "waitingChip_other": "{{count}} demandes de l'IA en attente",
+    "waitingChip_many": "{{count}} demandes de l'IA en attente",
+    "timedOut": "La demande de {{app}} a expiré et a été refusée.",
+    "gone": "Cette demande a déjà reçu une réponse ou a été annulée."
+  },
+  "approvals": {
+    "intro": "Chaque action qui modifie quelque chose attend ici votre réponse. Une demande sans réponse est refusée au bout de 2 minutes. La même demande s'affiche aussi sur n'importe quelle page.",
+    "changeRules": "Modifier quand SoftGlaze demande",
+    "emptyTitle": "Rien ne vous attend",
+    "emptyBody": "Quand une application d'IA veut modifier quelque chose, la demande apparaît ici et dans une fenêtre sur n'importe quelle page.",
+    "listLabel": "Demandes en attente de votre réponse",
+    "meta": "{{app}} · jeton {{token}} · {{when}}",
+    "actsAs": "agit en tant que {{member}}"
+  },
+  "activity": {
+    "search": "Rechercher un outil, une demande ou un jeton",
+    "outcome": "Résultat",
+    "all": "Tous",
+    "outcomes": {
+      "ok": "OK",
+      "denied": "Refusé",
+      "error": "Erreur",
+      "pending": "En attente"
+    },
+    "app": "Application",
+    "allApps": "Toutes les applications",
+    "loadError": "Impossible de charger l'activité : {{message}}",
+    "noMatchTitle": "Rien ne correspond à ces filtres",
+    "noMatchBody": "Essayez un autre résultat, une autre application ou une autre recherche.",
+    "emptyTitle": "Aucune activité IA pour l'instant",
+    "emptyBody": "Tout ce qu'une application d'IA fait via SoftGlaze est listé ici : ce qu'elle a demandé, votre réponse et le résultat.",
+    "caption": "Activité IA",
+    "colTime": "Heure",
+    "colApp": "Application et jeton",
+    "colTool": "Outil",
+    "colSummary": "Ce qui s'est passé",
+    "colOutcome": "Résultat",
+    "colDuration": "Durée",
+    "approval": {
+      "none": "Aucune approbation requise",
+      "asked": "Vous a été demandé",
+      "pre-approved": "Pré-approuvé",
+      "allow-once": "Autorisé une fois",
+      "allow-hour": "Vous l'avez autorisé pour 1 heure",
+      "hour-grant": "Autorisé pour 1 heure",
+      "deny": "Refusé par vous",
+      "timeout": "Aucune réponse en 2 minutes",
+      "cancelled": "Arrêté par « Arrêter toute l'IA »",
+      "started-by-this-token": "Un profil lancé par cette application",
+      "developer-token": "Jeton API développeur"
+    },
+    "pageEmpty": "Aucune autre entrée.",
+    "runId": "Exécution",
+    "pageInfo": "Page {{page}} · {{size}} par page",
+    "newer": "Plus récent",
+    "older": "Plus ancien"
+  },
+  "memory": {
+    "title": "Mémoire de l'espace de travail",
+    "description": "Notes que chaque application d'IA lit avant de commencer : comment vous nommez les choses, à quoi sert chaque groupe, règles de proxy, horaires de travail et ce qu'elle ne doit jamais faire. En Markdown simple.",
+    "updated": "Enregistré {{when}}",
+    "loadError": "Impossible de charger la mémoire : {{message}}",
+    "editorLabel": "Mémoire de l'espace de travail (Markdown)",
+    "placeholder": "Écrivez ici des notes pour les applications d'IA, en Markdown.",
+    "usage": "{{used}} Ko sur {{limit}} Ko · {{chars}} caractères",
+    "over": "La limite est dépassée. Raccourcissez le texte pour l'enregistrer.",
+    "discard": "Annuler les modifications",
+    "reset": "Rétablir la valeur par défaut",
+    "unsaved": "Modifications non enregistrées",
+    "tip": "Astuce : appuyez sur Ctrl+S pour enregistrer. Restez bref et précis : les applications d'IA lisent tout à chaque fois.",
+    "guidesTitle": "Guides intégrés",
+    "guidesDescription": "SoftGlaze fournit aussi ces guides à chaque application d'IA. Ils sont en lecture seule.",
+    "resetTitle": "Rétablir la mémoire par défaut ?",
+    "resetBody": "Vos notes sont remplacées par le modèle SoftGlaze. Cette action est irréversible.",
+    "guides": {
+      "howItWorks": {
+        "title": "Fonctionnement de SoftGlaze",
+        "body": "Profils, empreintes, proxys, groupes, sessions, macros et limites du forfait, et comment bien utiliser les outils."
+      },
+      "acceptableUse": {
+        "title": "Utilisation acceptable",
+        "body": "Ce pour quoi SoftGlaze peut ou ne peut pas être utilisé. Les applications d'IA ont pour consigne de refuser tout ce qui est interdit."
+      }
+    },
+    "readGuide": "Lire le guide",
+    "hideGuide": "Masquer",
+    "guideReadOnly": "Lecture seule. Tenu à jour par SoftGlaze."
+  },
+  "prompts": {
+    "loadError": "Impossible de charger les prompts : {{message}}",
+    "emptyTitle": "Aucun prompt pour l'instant",
+    "emptyBody": "Des prompts prêts à l'emploi apparaissent ici quand le serveur IA est disponible.",
+    "search": "Rechercher des prompts",
+    "listLabel": "Prompts",
+    "noMatch": "Aucun prompt ne correspond.",
+    "inClaudeCode": "Dans Claude Code :",
+    "arguments": "Détails à renseigner",
+    "noArguments": "Ce prompt ne nécessite aucun détail.",
+    "argName": "Nom",
+    "argRequired": "Requis",
+    "argDescription": "Description",
+    "required": "Obligatoire",
+    "optional": "Facultatif",
+    "text": "Texte du prompt",
+    "howTitle": "Comment utiliser les prompts",
+    "howIntro": "Les prompts sont des tâches prêtes à l'emploi. Votre application d'IA renseigne les détails et les exécute avec SoftGlaze.",
+    "howClaudeCode": "tapez / et choisissez un prompt softglaze.",
+    "howClaudeDesktop": "cliquez sur + sous la zone de discussion et cherchez SoftGlaze.",
+    "howVsCode": "tapez / dans Copilot Chat et choisissez un prompt SoftGlaze.",
+    "howCursor": "si les prompts ne sont pas listés, copiez le texte ci-dessous.",
+    "howOther": "Toute application : copiez le texte du prompt, collez-le dans la discussion et renseignez les détails."
+  },
+  "settings": {
+    "loadError": "Impossible de charger les paramètres : {{message}}",
+    "ownerOnly": "Propriétaire uniquement",
+    "ownerOnlyHint": "Seul le Propriétaire de l'espace de travail peut modifier ceci.",
+    "remove": "Retirer {{value}}",
+    "approvals": {
+      "title": "Quand SoftGlaze vous demande",
+      "description": "SoftGlaze demande dans l'application avant qu'une application d'IA fasse quelque chose, quels que soient les réglages de l'application d'IA.",
+      "read": {
+        "title": "Outils en lecture seule",
+        "body": "Consulter les profils, proxys, groupes et l'activité."
+      },
+      "operate": {
+        "title": "Outils d'utilisation",
+        "body": "Créer et lancer des profils, exécuter des macros, agir dans les pages."
+      },
+      "full": {
+        "title": "Outils complets",
+        "body": "Outils experts, uniquement quand le mode Expert est activé."
+      },
+      "alwaysAsk": "Certaines actions demandent toujours à chaque fois, comme lancer ou arrêter de nombreux profils à la fois, et les outils experts."
+    },
+    "modes": {
+      "never": "Ne jamais demander",
+      "ask-hour": "Demander une fois par heure",
+      "ask-always": "Toujours demander"
+    },
+    "domains": {
+      "title": "Sites sur lesquels l'IA peut travailler",
+      "description": "Les outils de page (ouvrir une page, cliquer, saisir, lire du texte) ne fonctionnent que sur les sites de cette liste et leurs sous-domaines.",
+      "placeholder": "example.com",
+      "invalid": "Saisissez un nom de site comme example.com.",
+      "empty": "Aucun site pour l'instant. Les outils de page peuvent ouvrir n'importe quel site, et votre accord est toujours demandé d'abord.",
+      "add": "Ajouter un site"
+    },
+    "hosts": {
+      "title": "Noms d'hôte supplémentaires autorisés",
+      "description": "Le serveur IA ne répond qu'aux requêtes adressées à 127.0.0.1. Pour n8n ou d'autres outils qui tournent dans Docker, ajoutez host.docker.internal.",
+      "invalid": "Saisissez un nom d'hôte comme host.docker.internal, sans port ni chemin.",
+      "empty": "Aucun. Seul 127.0.0.1 est autorisé.",
+      "add": "Ajouter un hôte"
+    },
+    "expert": {
+      "title": "Mode Expert",
+      "description": "Permet à une application d'IA de prendre le contrôle d'un profil en cours avec Playwright, Puppeteer ou Chrome DevTools.",
+      "warning": "Détectable. Les outils externes contrôlent le navigateur d'une façon que les sites web peuvent repérer : les profils peuvent donc être signalés ou bloqués. Désactivé par défaut. Propriétaire uniquement.",
+      "switch": "Mode Expert",
+      "isOn": "Activé. Les applications d'IA avec un jeton Complet peuvent demander à prendre le contrôle d'un profil en cours. Votre accord est demandé à chaque fois.",
+      "isOff": "Désactivé. Aucune application d'IA ne peut prendre le contrôle d'un profil en cours.",
+      "confirmTitle": "Activer le mode Expert ?",
+      "confirmBody": "Les applications d'IA avec un jeton Complet pourront alors demander à contrôler directement les profils en cours. Les sites web peuvent le détecter, et les comptes de ces profils peuvent être signalés.",
+      "confirm": "Activer",
+      "ack": "Je comprends que cela peut être détecté et entraîner le signalement de profils."
+    },
+    "port": {
+      "title": "Port du serveur",
+      "description": "Les applications d'IA se connectent à http://127.0.0.1 sur ce port.",
+      "label": "Port",
+      "invalid": "Utilisez un nombre de {{min}} à {{max}}.",
+      "hint": "Après l'avoir modifié, mettez à jour l'adresse dans chaque application d'IA connectée. L'onglet « Connexion » affiche la nouvelle configuration."
+    }
+  }
+}

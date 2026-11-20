@@ -1,0 +1,159 @@
+{
+  "billing": {
+    "status": {
+      "loading": "Yükleniyor…",
+      "sourceOwner": "Kaynak sahibi",
+      "active": "Etkin",
+      "activeUntil": "Etkin · {{date}} tarihine kadar",
+      "trialDaysLeft_one": "Deneme · {{count}} gün kaldı",
+      "trialDaysLeft_other": "Deneme · {{count}} gün kaldı",
+      "graceDaysLeft_one": "Ek süre · {{count}} gün kaldı",
+      "graceDaysLeft_other": "Ek süre · {{count}} gün kaldı",
+      "subscriptionEnded": "Abonelik sona erdi"
+    },
+    "subscription": {
+      "title": "Abonelik",
+      "planLine": "SoftGlaze Browser · {{tier}} planı",
+      "manageButton": "Aboneliği ve planları yönet"
+    },
+    "seats": {
+      "label": "Ekip koltukları",
+      "usage": "{{used}} / {{total}} kullanılıyor"
+    },
+    "gateway": {
+      "title": "Ödeme yöntemleri",
+      "description": "Yalnızca Süper Yönetici. Ödeme sırasında sahiplere gösterilecek yöntemleri açın ve her sağlayıcının anahtarlarını saklayın.",
+      "loadError": "Ödeme ayarları yüklenemedi.",
+      "footnote": "Anahtarlar bu makinede şifreli saklanır ve buradan asla çıkmaz. Ödeme yoklama ile çalışır (webhook yok), bu yüzden kurulumlar arası denetim için yine de lisans sunucusu gerekir. Wise ve Manuel ödemeleri aşağıdaki “Bekleyen ödemeler” bölümünde siz onaylarsınız.",
+      "retry": "Tekrar dene"
+    },
+    "provider": {
+      "kindManual": "Manuel",
+      "kindAutomated": "Otomatik",
+      "on": "açık",
+      "enabled": "Etkin",
+      "disabled": "Devre dışı",
+      "enableAria": "{{provider}} etkinleştir",
+      "documentation": "Belgeler",
+      "secretStoredPlaceholder": "•••••••• (mevcut değeri korumak için boş bırakın)",
+      "secretPlaceholder": "Anahtarı yapıştırın",
+      "save": "Kaydet",
+      "testConnection": "Bağlantıyı test et",
+      "enabledMsg": "Etkinleştirildi.",
+      "disabledMsg": "Devre dışı bırakıldı.",
+      "updateError": "Güncellenemedi.",
+      "savedMsg": "Kaydedildi.",
+      "saveError": "Kaydedilemedi.",
+      "connectionOk": "Bağlantı iyi görünüyor ✓",
+      "validationFailedKeys": "Doğrulama başarısız - anahtarları kontrol edin.",
+      "validationFailed": "Doğrulama başarısız oldu."
+    },
+    "manual": {
+      "title": "Bekleyen ödemeler",
+      "description": "Onayınızı bekleyen manuel (Wise / banka havalesi) bildirimleri.",
+      "loadError": "Manuel ödemeler yüklenemedi.",
+      "resolveError": "Bu ödeme güncellenemedi.",
+      "ownerFallback": "Sahip #{{id}}",
+      "refPrefix": "ref:",
+      "approve": "Onayla",
+      "reject": "Reddet",
+      "statusLabel": {
+        "pending": "bekliyor",
+        "approved": "onaylandı",
+        "rejected": "reddedildi"
+      }
+    }
+  },
+  "monetization": {
+    "heading": "Gelir",
+    "affiliate": {
+      "title": "Ortaklık ve Yönlendirme Bağlantıları",
+      "ownerOnly": "Yalnızca sahip",
+      "description": "Proxy pazarındaki “Satın al” düğmeleri için iş ortağı URL'leriniz. SoftGlaze varsayılanını kullanmak için boş bırakın.",
+      "loadError": "Ortaklık bağlantıları yüklenemedi.",
+      "saveError": "Ortaklık bağlantıları kaydedilemedi.",
+      "savedMsg": "Kaydedildi. Pazar düğmeleri artık sizin bağlantılarınızı kullanıyor.",
+      "customLink": "Özel bağlantı",
+      "defaultLink": "Varsayılan bağlantı",
+      "openLinkTitle": "{{provider}} bağlantısını aç",
+      "saving": "Kaydediliyor…",
+      "saveButton": "Bağlantıları kaydet",
+      "footnote": "Bu bağlantılar Proxy havuzu → Sağlayıcılar sekmesindeki “Satın al…” / “Panoyu ziyaret et” düğmelerini çalıştırır. Yalnızca herkese açık yönlendirme URL'leridir - proxy token'ları ve kimlik bilgileri asla etkilenmez."
+    }
+  },
+  "developerApi": {
+    "title": "Geliştirici API Erişimi",
+    "description": "SoftGlaze'i programla kontrol etmek için API anahtarları oluşturun ve yerel bir REST sunucusu çalıştırın.",
+    "copy": "Kopyala",
+    "errors": {
+      "load": "Geliştirici API ayarları yüklenemedi.",
+      "nameRequired": "Anahtara bir ad verin (örn. \"CI sunucusu\").",
+      "generate": "API anahtarı oluşturulamadı.",
+      "revoke": "Anahtar iptal edilemedi.",
+      "toggleServer": "Yerel sunucunun durumu değiştirilemedi."
+    },
+    "keys": {
+      "title": "API Anahtarları",
+      "namePlaceholder": "Anahtar adı (örn. CI sunucusu)",
+      "generate": "Yeni API anahtarı oluştur",
+      "copyOnce": "Bu anahtarı şimdi kopyalayın - yalnızca bir kez gösterilir ve kurtarılamaz.",
+      "empty": "Henüz API anahtarı yok.",
+      "lastUsed": "son kullanım {{when}}",
+      "neverUsed": "hiç kullanılmadı",
+      "never": "hiç",
+      "revoke": "İptal et",
+      "revokeConfirm": "\"{{name}}\" API anahtarı iptal edilsin mi? Onu kullanan her betik hemen çalışmayı bırakır. Bu işlem geri alınamaz."
+    },
+    "server": {
+      "title": "Yerel REST API",
+      "runningAt": "Çalıştığı adres",
+      "stoppedPrefix": "Durduruldu · bağlanacağı adres",
+      "loopbackOnly": "(yalnızca loopback)",
+      "disableTitle": "Yerel API'yi devre dışı bırak",
+      "enableTitle": "Yerel API'yi etkinleştir",
+      "curlExample": "Örnek: cURL ile profil başlatma",
+      "footnote": "Sunucu yalnızca bu makineden gelen istekleri kabul eder ve geçerli bir Bearer anahtarı gerektirir."
+    }
+  },
+  "migration": {
+    "title": "Profilleri Aktar",
+    "ownerOnly": "Yalnızca sahip",
+    "description": "Mevcut profillerinizi başka bir çoklu profil tarayıcısından API'si aracılığıyla içe aktarın.",
+    "sourcePlatform": "Kaynak platform",
+    "noteLabel": "Not:",
+    "instructions": "Talimatlar",
+    "tokenSectionTitle": "{{platform}} API token'ı",
+    "transferring": "Aktarılıyor…",
+    "startTransfer": "Aktarımı başlat",
+    "tokenFootnote": "Token'ınız bu aktarım için bir kez kullanılır ve asla saklanmaz. Yerel platformlar (AdsPower, ixBrowser) Local API etkin şekilde çalışıyor olmalıdır.",
+    "errors": {
+      "tokenRequired": "{{platform}} {{placeholder}} değerini girin.",
+      "transferFailed": "Aktarım başarısız oldu."
+    },
+    "log": {
+      "title": "Taşıma günlüğü",
+      "imported": "{{created}}/{{total}} içe aktarıldı",
+      "errors_one": "{{count}} hata",
+      "errors_other": "{{count}} hata",
+      "waiting": "Platformun yanıtı bekleniyor…"
+    },
+    "platforms": {
+      "dolphin": {
+        "placeholder": "Dolphin_Token",
+        "warning": "Dolphin'in ücretsiz planından aktarıyorsanız çerezler aktarılmaz."
+      },
+      "gologin": {
+        "placeholder": "GoLogin API token'ı"
+      },
+      "multilogin": {
+        "placeholder": "Multilogin otomasyon token'ı"
+      },
+      "adspower": {
+        "placeholder": "AdsPower Local API anahtarı"
+      },
+      "ixbrowser": {
+        "placeholder": "ixBrowser Local API anahtarı"
+      }
+    }
+  }
+}

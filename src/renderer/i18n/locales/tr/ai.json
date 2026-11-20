@@ -1,0 +1,635 @@
+{
+  "title": "SoftGlaze AI",
+  "beta": "Beta",
+  "description": "Claude, Cursor ve ChatGPT gibi yapay zekâ uygulamalarının profillerinizle çalışmasına izin verin. Değişikliklerin ne sıklıkla onayınızı gerektireceğini siz seçersiniz ve her şey kaydedilir.",
+  "loading": "SoftGlaze AI yükleniyor…",
+  "refresh": "Yenile",
+  "retry": "Tekrar dene",
+  "learnMore": "Kılavuzu okuyun",
+  "opensInBrowser": "(tarayıcınızda açılır)",
+  "copy": "Kopyala",
+  "copied": "Kopyalandı",
+  "copyFailed": "Kopyalanamadı. Metni seçip elle kopyalayın.",
+  "cancel": "İptal",
+  "close": "Kapat",
+  "save": "Kaydet",
+  "saving": "Kaydediliyor…",
+  "saved": "Kaydedildi",
+  "saveFailed": "Kaydedilmedi",
+  "never": "Hiç",
+  "unknown": "Bilinmiyor",
+  "roles": {
+    "OWNER": "Sahip",
+    "ADMIN": "Yönetici",
+    "MANAGER": "Müdür",
+    "OPERATOR": "Operatör",
+    "SUPER_ADMIN": "Süper Yönetici"
+  },
+  "states": {
+    "unavailableTitle": "SoftGlaze AI bu sürümde kullanılamıyor",
+    "unavailableBody": "SoftGlaze Browser'ın bu sürümü henüz yapay zekâ sunucusunu içermiyor. Bir güncellemeyle gelecek. Çalışma alanınızda bir sorun yok.",
+    "forbiddenTitle": "SoftGlaze AI'yı yalnızca Sahip veya bir Yönetici yönetebilir",
+    "forbiddenBody": "Erişim için çalışma alanı Sahibine başvurun. Bir yapay zekâ uygulaması sizin adınıza çalışan bir token kullandığında, istekleri yine her sayfada size izin vermeniz veya reddetmeniz için gösterilir.",
+    "errorTitle": "SoftGlaze AI yüklenemedi"
+  },
+  "header": {
+    "switchLabel": "SoftGlaze AI sunucusu",
+    "switchShort": "AI sunucusu",
+    "on": "Açık",
+    "off": "Kapalı",
+    "turningOn": "Açılıyor…",
+    "turningOff": "Kapatılıyor…",
+    "stopAll": "Tüm yapay zekâyı durdur",
+    "toggleError": "AI sunucusu değiştirilemedi: {{message}}"
+  },
+  "status": {
+    "server": "AI sunucusu",
+    "running": "Çalışıyor",
+    "error": "Çalışmıyor",
+    "off": "Kapalı",
+    "offHint": "Yapay zekâ uygulamalarının bağlanabilmesi için açın.",
+    "errorHint": "Açık ama çalışmıyor: {{message}}",
+    "errorHintNoMessage": "Açık ama çalışmıyor. Port kullanımda olabilir; Ayarlar'dan değiştirin.",
+    "apps": "Bağlı uygulamalar",
+    "appsNone": "Henüz bağlı uygulama yok",
+    "appSeen": "{{name}} · {{when}}",
+    "appsMore_one": "ve {{count}} tane daha",
+    "appsMore_other": "ve {{count}} tane daha",
+    "waiting": "Sizi bekliyor",
+    "waitingNone": "Yanıtlanacak bir şey yok",
+    "waitingSome_one": "Yanıtlanacak {{count}} istek",
+    "waitingSome_other": "Yanıtlanacak {{count}} istek",
+    "openApprovals": "Onaylar'ı aç",
+    "sessions": "Çalışan AI oturumları",
+    "sessionsHint": "Yapay zekâ uygulamaları tarafından başlatıldı"
+  },
+  "tabs": {
+    "label": "SoftGlaze AI bölümleri",
+    "connect": "Bağlan",
+    "tokens": "Token'lar",
+    "approvals": "Onaylar",
+    "activity": "Etkinlik",
+    "memory": "Bellek",
+    "prompts": "İstemler",
+    "settings": "Ayarlar",
+    "waiting": "bekliyor"
+  },
+  "stop": {
+    "title": "Tüm yapay zekâ durdurulsun mu?",
+    "body": "Bir yapay zekâ uygulaması beklemediğiniz bir şey yapıyorsa bunu kullanın.",
+    "point1": "Bir yapay zekâ uygulamasının başlattığı her çalıştırma ve profil şimdi durur.",
+    "point2": "Bağlı her yapay zekâ uygulamasının bağlantısı kesilir ve süren çağrılar iptal edilir.",
+    "point3": "Yanıtınızı bekleyen her istek reddedilir.",
+    "point4": "SoftGlaze AI kapatılır. Token'lar geçerli kalır; hazır olduğunuzda yeniden açın.",
+    "confirm": "Tüm yapay zekâyı durdur",
+    "error": "Her şey durdurulamadı: {{message}}",
+    "result": "Tamam. Durdurulan çalıştırmalar: {{runs}}. Durdurulan profiller: {{profiles}}. İptal edilen çağrılar: {{calls}}. Biten oturumlar: {{sessions}}. Reddedilen istekler: {{approvals}}.",
+    "nowOff": "SoftGlaze AI kapalı. Siz açana kadar yapay zekâ uygulamaları bağlanamaz.",
+    "turnOn": "Aç"
+  },
+  "start": {
+    "title": "Üç adımda başlayın",
+    "step1": "AI sunucusunu açın",
+    "step2": "Yapay zekâ uygulamanız için bir token oluşturun",
+    "step3": "Yapay zekâ uygulamanızı bağlayın",
+    "done": "Bitti",
+    "turnOn": "Aç"
+  },
+  "connect": {
+    "loadError": "Yapay zekâ uygulamaları için kurulum yüklenemedi: {{message}}",
+    "empty": "Henüz gösterilecek kurulum yok",
+    "emptyOn": "AI sunucusu kurulum göndermedi. Yenile'yi deneyin.",
+    "emptyBody": "Her uygulamanın nasıl bağlanacağını görmek için AI sunucusunu açın.",
+    "appsLabel": "Yapay zekâ uygulamaları",
+    "guide": "Tam kılavuz",
+    "appDocs": "Uygulamanın kendi belgeleri",
+    "where": "Nereye eklenir",
+    "steps": "Nasıl bağlanır",
+    "kind": {
+      "command": "Komut",
+      "json": "JSON",
+      "toml": "TOML",
+      "n8n": "İş akışı"
+    },
+    "snippet": "{{app}} için kurulum",
+    "placeholderHint": "<YOUR_TOKEN> yerine token'ınız gelir. Bir token'ı yalnızca bir kez, oluşturduğunuzda görürsünüz.",
+    "noSnippet": "Bu uygulamanın hazır bir kurulumu yok. Yukarıdaki adımları izleyin.",
+    "createToken": "Bu uygulama için token oluştur",
+    "createTokenHint": "Her uygulamaya kendi token'ını verin. Böylece her birinin ne yaptığını görebilir ve diğerlerine dokunmadan birini kapatabilirsiniz.",
+    "installGuide": "Kurulum kılavuzu",
+    "mcpb": {
+      "title": "Claude Desktop'a kurun: softglaze-browser.mcpb dosyasını indirin",
+      "download": "softglaze-browser.mcpb indir",
+      "body": "Dosyaya çift tıklayın veya Claude Desktop'ta Settings > Extensions > Advanced settings > Install Extension'ı açın. Claude Desktop token'ınızı ve portu sorar; bu sayfada gösterilen portu koruyun. Claude Desktop sohbetleri ve Cowork bunu kullanır."
+    },
+    "claudeCode": {
+      "pluginTitle": "SoftGlaze eklentilerini kurun (önerilir)",
+      "pluginBody": "Bunları Claude Code içinde tek tek çalıştırın. softglaze-browser becerileri ekler; softglaze-browser-connector SoftGlaze araçlarını ekler ve token'ınızı ve portu sorar. Bağlayıcı Node.js 18 veya üzerini gerektirir.",
+      "desktopNote": "Claude Desktop sohbetleri ve Cowork bunun yerine softglaze-browser.mcpb kullanır (bkz. Claude Desktop).",
+      "manualTitle": "Veya sunucuyu kendiniz ekleyin (Node.js gerekmez)"
+    },
+    "envVar": {
+      "title": "Token'ı Codex için kaydedin",
+      "body": "Codex token'ı SOFTGLAZE_TOKEN adlı bir ortam değişkeninden okur. Bunu token'ınızla bir kez çalıştırın, sonra yeni bir terminal açın.",
+      "windows": "Windows (Komut İstemi veya PowerShell)",
+      "unix": "macOS veya Linux (kabuk profilinize ekleyin)"
+    },
+    "bridge": {
+      "title": "Yerel program başlatan uygulamalar için köprü",
+      "body": "Bazı uygulamalar bir web adresine bağlanamaz. Bunun yerine SoftGlaze köprüsünü başlatırlar ve köprü her şeyi bu PC'deki AI sunucusuna iletir. Aynı token, aynı onaylar.",
+      "unavailable": "Köprü bu sürüme dahil değil.",
+      "mcpb": "Claude Desktop için tek tıkla kurulum dosyası",
+      "command": "Komut",
+      "args": "Argümanlar",
+      "env": "Ortam değişkenleri"
+    },
+    "clients": {
+      "claude-desktop": {
+        "where": "Settings > Developer > Edit Config (claude_desktop_config.json), sonra Claude Desktop'ı yeniden başlatın. Claude Desktop yerel sunucuları stdio üzerinden çalıştırır, bu yüzden bu SoftGlaze köprüsünü başlatır. Daha kolayı: token'ınızı ve portu soran ve Cowork'e de hizmet veren softglaze-browser.mcpb'yi ({{mcpb}}) kurun.",
+        "title": "Claude Desktop",
+        "step1": "Aşağıdaki düğmeyle Claude Desktop için bir token oluşturun.",
+        "step2": "En kolayı: aşağıdaki düğmeyle softglaze-browser.mcpb'yi indirin, çift tıklayın ve Claude Desktop sorduğunda token'ınızı yapıştırın. Veya Settings > Developer > Edit Config'i açın ve kurulumu <YOUR_TOKEN> yerine token'ınızı koyarak claude_desktop_config.json dosyasına yapıştırın.",
+        "step2NoMcpb": "Settings > Developer > Edit Config'i açın ve kurulumu <YOUR_TOKEN> yerine token'ınızı koyarak claude_desktop_config.json dosyasına yapıştırın. Claude Desktop yerel sunucuları çalıştırdığı için bu SoftGlaze köprüsünü başlatır.",
+        "step3": "Yapılandırma dosyasını düzenlediyseniz Claude Desktop'ı kapatıp yeniden açın. SoftGlaze, sohbet kutusunun altındaki + düğmesinde, Connectors bölümünde görünür."
+      },
+      "claude-code": {
+        "where": "Eklentiler olmadan: bir terminalde çalıştırın. SoftGlaze'i her projede kullanmak için --scope user ekleyin. Eklentileri veya bu komutu kullanın, ikisini birden değil.",
+        "title": "Claude Code",
+        "step1": "Aşağıdaki düğmeyle Claude Code için bir token oluşturun.",
+        "step2": "Aşağıdaki komutlarla SoftGlaze eklentilerini kurun ve Claude Code sorduğunda token'ınızı yapıştırın. Veya daha aşağıdaki komutu <YOUR_TOKEN> yerine token'ınızı koyarak çalıştırın. Tek bir yol kullanın, ikisini birden değil.",
+        "step3": "Claude Code'da /mcp yazın. SoftGlaze bağlı olarak görünmelidir (eklentilerle plugin:softglaze-browser-connector:softglaze)."
+      },
+      "cursor": {
+        "where": "~/.cursor/mcp.json (tüm projeler) veya bir projede .cursor/mcp.json. Token'ı dosyanın dışında tutmak için \"Bearer ${env:SOFTGLAZE_TOKEN}\" kullanın.",
+        "title": "Cursor",
+        "step1": "Aşağıdaki düğmeyle Cursor için bir token oluşturun.",
+        "step2": "~/.cursor/mcp.json (veya tek bir projede .cursor/mcp.json) dosyasını açın ve kurulumu <YOUR_TOKEN> yerine token'ınızı koyarak yapıştırın.",
+        "step3": "Cursor ayarlarında SoftGlaze'in listelendiğini ve açık olduğunu kontrol edin. Ardından sohbetten SoftGlaze profillerinizi listelemesini isteyin."
+      },
+      "vscode": {
+        "where": "Çalışma alanınızda .vscode/mcp.json veya \"MCP: Open User Configuration\" komutunu çalıştırın. VS Code token'ı bir kez sorar ve güvenle saklar, böylece asla dosyada durmaz.",
+        "title": "VS Code (Copilot)",
+        "step1": "Aşağıdaki düğmeyle VS Code için bir token oluşturun.",
+        "step2": "Kurulumu çalışma alanınızdaki .vscode/mcp.json dosyasına ekleyin (veya MCP: Open User Configuration'ı çalıştırın). SoftGlaze ilk başladığında VS Code token'ınızı sorar ve güvenle saklar, böylece asla dosyada durmaz.",
+        "step3": "Copilot Chat'i açın ve SoftGlaze profillerinizi listelemesini isteyin. VS Code sorduğunda araca izin verin."
+      },
+      "gemini-cli": {
+        "where": "~/.gemini/settings.json (dosyayla birleştirin) veya şunu çalıştırın: gemini mcp add --transport http -s user --header \"Authorization: Bearer <YOUR_TOKEN>\" softglaze {{mcp}}",
+        "title": "Gemini CLI",
+        "step1": "Aşağıdaki düğmeyle Gemini CLI için bir token oluşturun.",
+        "step2": "Kurulumu ~/.gemini/settings.json içindeki \"mcpServers\" altına, <YOUR_TOKEN> yerine token'ınızı koyarak ekleyin. \"trust\" seçeneğini kapalı bırakın: SoftGlaze zaten her değişiklikten önce size sorar.",
+        "step3": "gemini'yi başlatın ve /mcp yazın. SoftGlaze ve araçları listelenmelidir."
+      },
+      "codex": {
+        "where": "~/.codex/config.toml (ChatGPT masaüstü uygulaması, Codex CLI ve IDE uzantısı tarafından paylaşılır). Önce SOFTGLAZE_TOKEN ortam değişkenini token'ınıza ayarlayın (Windows: setx SOFTGLAZE_TOKEN \"<YOUR_TOKEN>\"), sonra uygulamayı yeniden başlatın.",
+        "title": "ChatGPT masaüstü / Codex",
+        "step1": "Aşağıdaki düğmeyle Codex için bir token oluşturun, ardından SOFTGLAZE_TOKEN ortam değişkenine kaydedin (komut aşağıda).",
+        "step2": "Kurulumu ~/.codex/config.toml dosyasına ekleyin. Codex token'ı SOFTGLAZE_TOKEN'dan okur, böylece dosya onu asla içermez.",
+        "step3": "Yeni bir terminal açın, Codex'i başlatın ve /mcp yazın. SoftGlaze listelenmelidir."
+      },
+      "windsurf": {
+        "where": "~/.codeium/windsurf/mcp_config.json, sonra MCP sunucularını yenileyin. Devin Desktop (Windsurf'ün yeni adı) \"serverUrl\" yerine \"url\" ve \"transport\": \"http\" ile ~/.config/devin/mcp_config.json kullanır.",
+        "title": "Windsurf",
+        "step1": "Aşağıdaki düğmeyle Windsurf için bir token oluşturun.",
+        "step2": "Kurulumu Windsurf'ün MCP yapılandırma dosyasına (bkz. Nereye eklenir), <YOUR_TOKEN> yerine token'ınızı koyarak yapıştırın.",
+        "step3": "Windsurf'te MCP sunucularını yenileyin ve SoftGlaze'in listelendiğini kontrol edin."
+      },
+      "cline": {
+        "where": "Cline: MCP Servers > Configure (cline_mcp_settings.json).",
+        "title": "Cline",
+        "step1": "Aşağıdaki düğmeyle Cline için bir token oluşturun.",
+        "step2": "Cline'da MCP Servers > Configure'ı açın ve kurulumu <YOUR_TOKEN> yerine token'ınızı koyarak cline_mcp_settings.json dosyasına yapıştırın.",
+        "step3": "SoftGlaze'in Cline'ın MCP Servers listesinde bağlı göründüğünü kontrol edin."
+      },
+      "n8n": {
+        "where": "MCP Client Tool düğümünde: SSE Endpoint aşağıdaki gibi, Authentication \"Bearer\" ve kimlik bilgisi olarak token'ınız. n8n Docker Desktop'ta çalışıyorsa 127.0.0.1 yerine host.docker.internal kullanın ve SoftGlaze AI ayarlarında Ek izinli sunucular listesine host.docker.internal ekleyin. Gözetimsiz iş akışları için bir otomasyon token'ı kullanın (önceden onaylı araçlar, gruplarla sınırlı).",
+        "title": "n8n"
+      },
+      "other": {
+        "where": "Başlıklarla Streamable HTTP destekleyen herhangi bir MCP istemcisi. Yalnızca eski HTTP+SSE taşımasını kullanan istemciler SSE URL'sini kullanır. Yalnızca yerel komut çalıştıran istemciler SoftGlaze köprüsünü kullanır (bkz. Claude Desktop).",
+        "title": "Diğer uygulamalar",
+        "step1": "Aşağıdaki düğmeyle uygulama için bir token oluşturun.",
+        "step2": "Uygulamanın MCP ayarlarını açın ve bu adres ile bir Authorization başlığıyla sunucu ekleyin: Bearer, bir boşluk, sonra token'ınız.",
+        "step3": "Uygulama yalnızca yerel bir program (stdio) başlatabiliyorsa adres yerine aşağıdaki SoftGlaze köprüsünü kullanın."
+      },
+      "custom": {
+        "step1": "Aşağıdaki düğmeyle bu uygulama için bir token oluşturun.",
+        "step2": "Kurulumu, uygulamanın MCP sunucularını sakladığı yere <YOUR_TOKEN> yerine token'ınızı koyarak yapıştırın.",
+        "step3": "Uygulamayı yeniden başlatın ve SoftGlaze'in MCP veya araç ayarlarında listelendiğini kontrol edin."
+      }
+    },
+    "n8n": {
+      "subtitle": "SoftGlaze'i bu PC'deki n8n iş akışlarından çalıştırın.",
+      "selfHosted": "n8n bu PC'de çalışmalıdır (npx veya Docker). n8n Cloud henüz PC'nize ulaşamaz.",
+      "noPort": "n8n adresini görmek için AI sunucusunu açın.",
+      "a": {
+        "title": "Bir n8n AI Agent'ın SoftGlaze kullanmasına izin verin",
+        "step1": "Bir AI Agent düğümü ekleyin, ardından araçlarından biri olarak bir MCP Client Tool düğümü ekleyin.",
+        "step2": "SSE Endpoint'i aşağıdaki adrese ayarlayın. n8n Docker'da çalışıyorsa Docker adresini kullanın.",
+        "step3": "Authentication'ı Bearer yapın ve token'ınızı yapıştırın. Tools to Include altında All'ı veya yalnızca gereken araçları seçin.",
+        "sse": "SSE uç noktası (bu PC'deki n8n)",
+        "sseDocker": "SSE uç noktası (Docker'daki n8n)",
+        "dockerNote": "Docker için Ayarlar sekmesindeki Ek izinli sunucu adlarına host.docker.internal'ı da ekleyin."
+      },
+      "b": {
+        "title": "HTTP Request düğümüyle sabit adımlar",
+        "body": "Saat 9:00'da bir profili başlatmak gibi hiç değişmeyen adımlar için bir HTTP Request düğümü Local API'yi doğrudan çağırabilir. Token'ı Authorization başlığında gönderin.",
+        "kind": "HTTP Request"
+      },
+      "c": {
+        "title": "Zamanlanmış iş akışları için Otomasyon token'ı kullanın",
+        "body": "Zamanlamayla çalışan bir iş akışında İzin ver'e tıklayacak kimse yoktur. Otomasyon token'ı yalnızca seçtiğiniz araçları, yalnızca seçtiğiniz gruplar için, çağrı ve saat başına sınırlarla önceden onaylar. Diğer her şey yine sorar.",
+        "create": "Otomasyon token'ı oluştur",
+        "ownerOnly": "Otomasyon token'larını yalnızca Sahip oluşturabilir."
+      }
+    },
+    "devtools": {
+      "title": "Bir profili Playwright MCP veya Chrome DevTools MCP ile kullanın (gelişmiş)",
+      "subtitle": "Çalışan bir Chromium profilini harici bir DevTools istemcisine verin.",
+      "ownerOnly": "Yalnızca sahip",
+      "warning": "Web siteleri harici bir hata ayıklayıcıyı tespit edebilir. Playwright MCP ve Chrome DevTools MCP ikinci bir DevTools istemcisi olarak bağlanır ve kendi komutlarını gönderir; bot karşıtı betikler bunu fark edebilir. Profil işaretlenebilir veya engellenebilir. SoftGlaze'in kendi sayfa araçları bunu yapmaz. Bu bilgisayarda aşağıdaki adrese sahip herkes, profil çalışırken onu kontrol edebilir.",
+      "intro": "Bunu SoftGlaze'in sayfa araçlarının yapmadığı işler için kullanın, örneğin kendi sitenizde performans izleri veya ağ ve konsol günlükleri, ve bir test profili kullanın. Bu, yapay zekâ uygulamalarının neler isteyebileceğini belirleyen Uzman modundan ayrı olarak, uygulamada sizin yaptığınız bir işlemdir.",
+      "profile": "Çalışan profil",
+      "loading": "Çalışan profiller yükleniyor…",
+      "loadError": "Çalışan profiller yüklenemedi: {{message}}",
+      "choose": "Çalışan bir profil seçin",
+      "option": "{{name}} (#{{id}}) · Chromium",
+      "optionFirefox": "{{name}} (#{{id}}) · Firefox: Firefox profillerinin DevTools uç noktası yok",
+      "empty": "Önce bir Chromium profili başlatın.",
+      "openProfiles": "Profilleri aç",
+      "stopped": "Bu profil ({{name}}) durdu. Adresi artık çalışmıyor.",
+      "address": "DevTools adresi",
+      "hiddenLabel": "DevTools adresi, Göster'e basana kadar gizli",
+      "show": "Göster",
+      "showLabel": "{{name}} profilinin DevTools adresini göster",
+      "hide": "Gizle",
+      "addressNote": "Profil her başladığında yenilenir. Yalnızca bu bilgisayarda, profil çalışırken çalışır.",
+      "noAddress": "SoftGlaze bu profil için DevTools adresi alamadı. Durdurup başlatın, sonra tekrar deneyin.",
+      "setup": "Kurulum",
+      "toolsLabel": "MCP sunucusu",
+      "clientsLabel": "Yapay zekâ uygulaması",
+      "where": {
+        "claude-code": "Proje klasörünüzde bir terminalde çalıştırın. Adres profil her başladığında değişir, bu yüzden önce claude mcp remove {{name}} çalıştırın, sonra bu komutu tekrar çalıştırın.",
+        "claude-desktop": "Settings > Developer > Edit Config (claude_desktop_config.json): bunu \"mcpServers\" altına ekleyin, sonra Claude Desktop'ı kapatıp yeniden açın. Adresi her başlatmadan sonra güncelleyin.",
+        "cursor": "~/.cursor/mcp.json (tüm projeler) veya tek bir projede .cursor/mcp.json. Adresi her başlatmadan sonra güncelleyin.",
+        "vscode": "Çalışma alanınızda .vscode/mcp.json veya MCP: Open User Configuration'ı çalıştırın. Adresi her başlatmadan sonra güncelleyin."
+      },
+      "snippet": "{{app}} için {{tool}} kurulumu",
+      "pressShow": "Bu profilin adresiyle kurulumu görmek için Göster'e basın.",
+      "usageStats": "Chrome DevTools MCP kullanım istatistiklerini kapat",
+      "usageStatsHint": "--no-usage-statistics ekler. Bu olmadan Chrome DevTools MCP kullanım istatistiklerini Google'a gönderir.",
+      "footer": "İşiniz bitince önce MCP sunucusunu kapatın, sonra profili durdurun.",
+      "guide": "Kılavuz: Playwright MCP ve Chrome DevTools MCP"
+    }
+  },
+  "scope": {
+    "read": {
+      "title": "Yalnızca okuma",
+      "body": "Profillere, proxy'lere, gruplara ve etkinliğe bakabilir. Hiçbir şeyi değiştiremez veya başlatamaz."
+    },
+    "operate": {
+      "title": "Kullanım",
+      "body": "Ayrıca profil oluşturup başlatabilir, makro çalıştırabilir ve sayfalarda işlem yapabilir. Değişiklikler, Ayarlar'da belirlendiği gibi yine önce size sorar. Bunu bilerek seçin."
+    },
+    "full": {
+      "title": "Tam",
+      "body": "Kullanım'daki her şey, artı Uzman modu açıkken uzman araçları. Yalnızca tamamen güvendiğiniz uygulamalar için."
+    }
+  },
+  "create": {
+    "title": "Token oluştur",
+    "titleFor": "{{app}} için token oluştur",
+    "description": "Bir token, bir yapay zekâ uygulamasının bağlanmasını sağlar. Ekibinizin bir üyesi olarak çalışır ve yalnızca o üyenin yapabileceklerini yapabilir.",
+    "revealTitle": "Yeni token'ınız",
+    "revealDescription": "Şimdi yapay zekâ uygulamanıza kopyalayın.",
+    "name": "Ad",
+    "nameHint": "Daha sonra tanıyabilmeniz için hangi uygulama ve hangi bilgisayar olduğunu belirtin.",
+    "namePlaceholder": "PC'mdeki Claude Desktop",
+    "member": "Kimin adına",
+    "memberHint": "Yapay zekâ bu üye olarak, bu üyenin izinleri ve profilleriyle çalışır.",
+    "you": "siz",
+    "scope": "Neler yapabilir",
+    "expiry": "Geçerlilik süresi",
+    "expiryNever": "Süresiz",
+    "expiryDays_one": "{{count}} gün",
+    "expiryDays_other": "{{count}} gün",
+    "expiryNeverWarn": "Süresiz bir token, siz iptal edene kadar geçerli kalır.",
+    "profiles": "Kullanabileceği profiller",
+    "profilesAll": "Tümü",
+    "profilesSome": "Yalnızca bazı gruplar",
+    "profilesAllHint": "Üyenin açabildiği her profil.",
+    "profilesSomeHint": "Yalnızca işaretlediğiniz gruplardaki profiller.",
+    "noGroups": "Henüz grup yok. Önce Gruplar sayfasında bir tane oluşturun.",
+    "pickGroups": "Gruplar",
+    "submit": "Token oluştur",
+    "onceWarning": "Bu token'ı şimdi kopyalayın. SoftGlaze onu yalnızca bu kez gösterir. Kaybederseniz iptal edip yenisini oluşturun.",
+    "yourToken": "Token",
+    "filledSetup": "{{app}} için token'ınızın doldurulduğu kurulum",
+    "n8nHint": "n8n'de Authentication'ı Bearer yapın ve bu token'ı yapıştırın.",
+    "claudeCodeHint": "SoftGlaze eklentilerini mi kuruyorsunuz? softglaze-browser-connector kurulurken Claude Code sorduğunda bu token'ı yapıştırın. Yukarıdaki komut eklentisiz yoldur.",
+    "claudeDesktopHint": "softglaze-browser.mcpb mi kuruyorsunuz? Claude Desktop sorduğunda bu token'ı yapıştırın. Yukarıdaki kurulum uzantısız yoldur.",
+    "acknowledge": "Bu token'ı güvenli bir yere kaydettim",
+    "closeWarning": "Önce token'ı kopyalayın veya kutuyu işaretleyin. Bu token'ı bir daha göremezsiniz.",
+    "done": "Bitti"
+  },
+  "errors": {
+    "nameRequired": "Bir ad girin.",
+    "nameTooLong": "Adı en fazla {{max}} karakterle sınırlayın.",
+    "memberRequired": "Bir üye seçin.",
+    "scopeRequired": "Token'ın neler yapabileceğini seçin.",
+    "expiryRequired": "Ne zaman sona ereceğini seçin.",
+    "groupsRequired": "En az bir grup işaretleyin veya Tümü'nü seçin.",
+    "groupsRequiredAutomation": "Bir Otomasyon token'ı gruplarla sınırlı olmalıdır. En az bir grup işaretleyin.",
+    "toolNotAllowed": "Araçlardan biri önceden onaylanamaz.",
+    "limitRange": "{{min}} ile {{max}} arasında bir tam sayı girin.",
+    "create": "Token oluşturulmadı.",
+    "noToken": "AI sunucusu token döndürmedi. Tekrar deneyin.",
+    "createFailed": "Token oluşturulmadı: {{message}}"
+  },
+  "automation": {
+    "title": "Otomasyon token'ı (n8n, zamanlamalar ve betikler için)",
+    "ownerOnly": "Yalnızca sahip",
+    "count_one": "{{count}} önceden onaylı",
+    "count_other": "{{count}} önceden onaylı",
+    "intro": "Siz olmadan çalışan iş akışları için sormadan çalışabilecek araçları seçin.",
+    "needsOperate": "Araçları önceden onaylamak için yukarıdan Kullanım veya Tam'ı seçin.",
+    "warning": "Bu araçlar size sormadan çalışır. Seçilen gruplarla sınırlı kalırlar, kaydedilirler ve Tüm yapay zekâyı durdur ile dururlar.",
+    "tools": "Sormadan çalışan araçlar",
+    "destructive": "Geri alınamaz",
+    "groups": {
+      "profiles": "Profiller",
+      "sessions": "Başlat ve durdur",
+      "proxies": "Proxy'ler",
+      "groups": "Gruplar",
+      "automation": "Otomasyon",
+      "page": "Sayfa içi",
+      "other": "Diğer"
+    },
+    "maxProfiles": "Çağrı başına en fazla profil",
+    "maxProfilesHint": "Varsayılan 5, en fazla 50.",
+    "maxCalls": "Saat başına en fazla çağrı",
+    "maxCallsHint": "Varsayılan 60, en fazla 1000.",
+    "groupsNote": "Önceden onaylı araçlar yalnızca Kullanabileceği profiller altında işaretlenen gruplarda çalışır. Diğer her araç yine size sorar."
+  },
+  "tools": {
+    "create_profile": "Profil oluştur",
+    "update_profile": "Profili değiştir (ad, grup, etiketler, notlar, başlangıç sayfası, proxy)",
+    "batch_generate_profiles": "Aynı anda çok sayıda profil oluştur",
+    "start_profile": "Profil başlat",
+    "stop_profile": "Profil durdur",
+    "assign_proxy": "Profile proxy ver",
+    "rotate_proxy_ip": "Proxy'den yeni IP al",
+    "find_free_proxies": "Ücretsiz proxy bul ve test et",
+    "create_group": "Grup oluştur",
+    "move_profiles_to_group": "Profilleri gruba taşı",
+    "save_macro": "Makro kaydet",
+    "run_macro": "Makro çalıştır",
+    "stop_run": "Çalıştırmayı durdur",
+    "start_warmer": "Isınma başlat",
+    "page_navigate": "Web sayfası aç",
+    "page_snapshot": "Sayfa düzenini oku",
+    "page_click": "Sayfada tıkla",
+    "page_type": "Sayfada yaz",
+    "page_press_key": "Sayfada tuşa bas",
+    "page_scroll": "Sayfayı kaydır",
+    "page_screenshot": "Ekran görüntüsü al",
+    "page_extract_text": "Sayfadan metin kopyala",
+    "page_wait_for": "Sayfada bir şeyi bekle"
+  },
+  "tokens": {
+    "search": "Token'larda ara",
+    "showRevoked": "İptal edilen token'ları göster",
+    "showRevokedCount_one": "İptal edilen {{count}} token'ı göster",
+    "showRevokedCount_other": "İptal edilen {{count}} token'ı göster",
+    "create": "Token oluştur",
+    "intro": "Her yapay zekâ uygulaması kendi token'ıyla bağlanır. Bir token tek bir üye olarak çalışır ve bazı gruplarla sınırlanabilir. O uygulamayı hemen kesmek için token'ı iptal edin.",
+    "loadError": "Token'lar yüklenemedi: {{message}}",
+    "emptyTitle": "Henüz token yok",
+    "emptyBody": "Bir token oluşturun, sonra yapay zekâ uygulamanıza yapıştırın. Bağlan sekmesi nereye ekleneceğini gösterir.",
+    "caption": "AI token'ları",
+    "colName": "Ad",
+    "colMember": "Kimin adına",
+    "colScope": "Erişim",
+    "colGroups": "Profiller",
+    "colExpires": "Bitiş",
+    "colLastUsed": "Son kullanım",
+    "colActions": "İşlemler",
+    "state": {
+      "revoked": "İptal edildi",
+      "expired": "Süresi doldu",
+      "expiring": "Yakında doluyor"
+    },
+    "automation_one": "Otomasyon · {{count}} önceden onaylı",
+    "automation_other": "Otomasyon · {{count}} önceden onaylı",
+    "allProfiles": "Tüm profiller",
+    "groupsMore_one": "{{names}} ve {{count}} tane daha",
+    "groupsMore_other": "{{names}} ve {{count}} tane daha",
+    "neverUsed": "Henüz kullanılmadı",
+    "revoke": "İptal et",
+    "revokeAria": "{{name}} iptal et",
+    "noMatch": "Eşleşen token yok.",
+    "revokeTitle": "“{{name}}” iptal edilsin mi?",
+    "revokeBody": "Bu token'ı kullanan yapay zekâ uygulaması erişimini hemen kaybeder. Bu işlem geri alınamaz.",
+    "revokeError": "Token iptal edilemedi: {{message}}"
+  },
+  "approval": {
+    "eyebrow": "Yapay zekâ isteği",
+    "eyebrowMany": "Yapay zekâ isteği {{position}} / {{total}}",
+    "title": "{{app}} izin istiyor",
+    "tokenOnly": "Token: {{token}}",
+    "tokenAndMember": "Token: {{token}} · {{member}} adına",
+    "noSummary": "{{tool}} aracını çalıştır",
+    "unknownApp": "Bir yapay zekâ uygulaması",
+    "timeLeft": "yanıt süresi kaldı. Yanıt verilmezse istek reddedilir.",
+    "timeLeftHint": "İstek reddedilmeden önce kalan süre",
+    "timeLeftSr": "İstek reddedilmeden önce {{time}} kaldı",
+    "secondsLeftAnnounce": "Yapay zekâ isteğini yanıtlamak için {{seconds}} saniye kaldı",
+    "showDetails": "Ayrıntıları göster",
+    "hideDetails": "Ayrıntıları gizle",
+    "tool": "Araç",
+    "token": "Token",
+    "argsLabel": "İstek ayrıntıları",
+    "noArgs": "Bu isteğin ek ayrıntısı yok.",
+    "redactedNote": "Parolalar ve diğer gizli bilgiler burada gizlenir.",
+    "deny": "Reddet",
+    "allowHour": "1 saat izin ver",
+    "allowHourHint": "Önümüzdeki bir saat boyunca {{token}} için bu tür işlemlerde tekrar sorma.",
+    "allowOnce": "Bir kez izin ver",
+    "footnote": "SoftGlaze, yapay zekâ uygulamasının kendi ayarları ne olursa olsun uygulamanın içinde sorar. Her yanıt Etkinlik altında kaydedilir.",
+    "later": "Sonra karar ver (süre dolunca reddedilir)",
+    "respondError": "Yanıtınız kaydedilmedi: {{message}}",
+    "waitingChip_one": "{{count}} yapay zekâ isteği bekliyor",
+    "waitingChip_other": "{{count}} yapay zekâ isteği bekliyor",
+    "timedOut": "{{app}} isteğinin süresi doldu ve reddedildi.",
+    "gone": "Bu istek zaten yanıtlandı veya iptal edildi."
+  },
+  "approvals": {
+    "intro": "Bir şeyi değiştiren her işlem siz yanıtlayana kadar burada bekler. Yanıtlanmayan bir istek 2 dakika sonra reddedilir. Aynı istek her sayfada açılır pencere olarak da görünür.",
+    "changeRules": "SoftGlaze'in ne zaman soracağını değiştir",
+    "emptyTitle": "Sizi bekleyen bir şey yok",
+    "emptyBody": "Bir yapay zekâ uygulaması bir şeyi değiştirmek istediğinde istek burada ve her sayfada açılır pencere olarak görünür.",
+    "listLabel": "Sizi bekleyen istekler",
+    "meta": "{{app}} · token {{token}} · {{when}}",
+    "actsAs": "{{member}} adına"
+  },
+  "activity": {
+    "search": "Araç, istek veya token ara",
+    "outcome": "Sonuç",
+    "all": "Tümü",
+    "outcomes": {
+      "ok": "Tamam",
+      "denied": "Reddedildi",
+      "error": "Hata",
+      "pending": "Bekliyor"
+    },
+    "app": "Uygulama",
+    "allApps": "Tüm uygulamalar",
+    "loadError": "Etkinlik yüklenemedi: {{message}}",
+    "noMatchTitle": "Bu filtrelerle eşleşen bir şey yok",
+    "noMatchBody": "Başka bir sonuç, uygulama veya arama deneyin.",
+    "emptyTitle": "Henüz yapay zekâ etkinliği yok",
+    "emptyBody": "Bir yapay zekâ uygulamasının SoftGlaze üzerinden yaptığı her şey burada listelenir: ne istediği, yanıtınız ve nasıl sonuçlandığı.",
+    "caption": "Yapay zekâ etkinliği",
+    "colTime": "Zaman",
+    "colApp": "Uygulama ve token",
+    "colTool": "Araç",
+    "colSummary": "Ne oldu",
+    "colOutcome": "Sonuç",
+    "colDuration": "Süre",
+    "approval": {
+      "none": "Onay gerekmedi",
+      "asked": "Size soruldu",
+      "pre-approved": "Önceden onaylı",
+      "allow-once": "Bir kez izin verildi",
+      "allow-hour": "1 saatliğine izin verdiniz",
+      "hour-grant": "1 saatliğine izinli",
+      "deny": "Sizin tarafınızdan reddedildi",
+      "timeout": "2 dakika içinde yanıt yok",
+      "cancelled": "Tüm yapay zekâyı durdur ile durduruldu",
+      "started-by-this-token": "Bu uygulamanın başlattığı bir profil",
+      "developer-token": "Geliştirici API token'ı"
+    },
+    "pageEmpty": "Başka kayıt yok.",
+    "runId": "Çalıştırma",
+    "pageInfo": "Sayfa {{page}} · sayfa başına {{size}}",
+    "newer": "Daha yeni",
+    "older": "Daha eski"
+  },
+  "memory": {
+    "title": "Çalışma alanı belleği",
+    "description": "Her yapay zekâ uygulamasının başlamadan önce okuduğu notlar: nesneleri nasıl adlandırdığınız, her grubun ne için olduğu, proxy kuralları, çalışma saatleri ve asla yapmaması gerekenler. Düz Markdown.",
+    "updated": "Kaydedildi {{when}}",
+    "loadError": "Bellek yüklenemedi: {{message}}",
+    "editorLabel": "Çalışma alanı belleği (Markdown)",
+    "placeholder": "Yapay zekâ uygulamaları için notları buraya Markdown ile yazın.",
+    "usage": "{{limit}} KB içinden {{used}} KB · {{chars}} karakter",
+    "over": "Sınır aşıldı. Kaydetmek için kısaltın.",
+    "discard": "Değişikliklerden vazgeç",
+    "reset": "Varsayılana sıfırla",
+    "unsaved": "Kaydedilmemiş değişiklikler",
+    "tip": "İpucu: kaydetmek için Ctrl+S'ye basın. Kısa ve net tutun: yapay zekâ uygulamaları her seferinde hepsini okur.",
+    "guidesTitle": "Yerleşik kılavuzlar",
+    "guidesDescription": "SoftGlaze bu kılavuzları da her yapay zekâ uygulamasına verir. Salt okunurdur.",
+    "resetTitle": "Bellek varsayılana sıfırlansın mı?",
+    "resetBody": "Notlarınız SoftGlaze şablonuyla değiştirilir. Bu işlem geri alınamaz.",
+    "guides": {
+      "howItWorks": {
+        "title": "SoftGlaze nasıl çalışır",
+        "body": "Profiller, parmak izleri, proxy'ler, gruplar, oturumlar, makrolar ve plan sınırları ile araçları iyi kullanma yolları."
+      },
+      "acceptableUse": {
+        "title": "Kabul edilebilir kullanım",
+        "body": "SoftGlaze'in ne için kullanılabileceği ve kullanılamayacağı. Yapay zekâ uygulamalarına yasak olan her şeyi reddetmeleri söylenir."
+      }
+    },
+    "readGuide": "Kılavuzu okuyun",
+    "hideGuide": "Gizle",
+    "guideReadOnly": "Salt okunur. SoftGlaze tarafından güncel tutulur."
+  },
+  "prompts": {
+    "loadError": "İstemler yüklenemedi: {{message}}",
+    "emptyTitle": "Henüz istem yok",
+    "emptyBody": "AI sunucusu kullanılabilir olduğunda hazır istemler burada görünür.",
+    "search": "İstemlerde ara",
+    "listLabel": "İstemler",
+    "noMatch": "Eşleşen istem yok.",
+    "inClaudeCode": "Claude Code'da:",
+    "arguments": "Doldurduğunuz ayrıntılar",
+    "noArguments": "Bu istem ayrıntı gerektirmez.",
+    "argName": "Ad",
+    "argRequired": "Gerekli",
+    "argDescription": "Nedir",
+    "required": "Zorunlu",
+    "optional": "İsteğe bağlı",
+    "text": "İstem metni",
+    "howTitle": "İstemler nasıl kullanılır",
+    "howIntro": "İstemler hazır görevlerdir. Yapay zekâ uygulamanız ayrıntıları doldurur ve SoftGlaze ile yürütür.",
+    "howClaudeCode": "/ yazın ve bir softglaze istemi seçin.",
+    "howClaudeDesktop": "sohbet kutusunun altındaki +'ya tıklayın ve SoftGlaze'i bulun.",
+    "howVsCode": "Copilot Chat'te / yazın ve bir SoftGlaze istemi seçin.",
+    "howCursor": "istemler listelenmiyorsa aşağıdaki metni kopyalayın.",
+    "howOther": "Herhangi bir uygulama: istem metnini kopyalayın, sohbete yapıştırın ve ayrıntıları doldurun."
+  },
+  "settings": {
+    "loadError": "Ayarlar yüklenemedi: {{message}}",
+    "ownerOnly": "Yalnızca sahip",
+    "ownerOnlyHint": "Bunu yalnızca çalışma alanı Sahibi değiştirebilir.",
+    "remove": "Kaldır: {{value}}",
+    "approvals": {
+      "title": "SoftGlaze size ne zaman sorar",
+      "description": "SoftGlaze, yapay zekâ uygulamasının kendi ayarları ne olursa olsun, bir yapay zekâ uygulaması bir şey yapmadan önce uygulamanın içinde sorar.",
+      "read": {
+        "title": "Salt okunur araçlar",
+        "body": "Profillere, proxy'lere, gruplara ve etkinliğe bakma."
+      },
+      "operate": {
+        "title": "Kullanım araçları",
+        "body": "Profil oluşturma ve başlatma, makro çalıştırma, sayfalarda işlem yapma."
+      },
+      "full": {
+        "title": "Tam araçlar",
+        "body": "Uzman araçları, yalnızca Uzman modu açıkken."
+      },
+      "alwaysAsk": "Bazı işlemler her seferinde sorar; örneğin aynı anda çok sayıda profili başlatma veya durdurma ve uzman araçları."
+    },
+    "modes": {
+      "never": "Asla sorma",
+      "ask-hour": "Saatte bir sor",
+      "ask-always": "Her seferinde sor"
+    },
+    "domains": {
+      "title": "Yapay zekânın çalışabileceği siteler",
+      "description": "Sayfa araçları (sayfa açma, tıklama, yazma, metin okuma) yalnızca bu listedeki sitelerde ve alt alan adlarında çalışır.",
+      "placeholder": "example.com",
+      "invalid": "example.com gibi bir site adı girin.",
+      "empty": "Henüz site yok. Sayfa araçları herhangi bir siteyi açabilir ve yine önce size sorulur.",
+      "add": "Site ekle"
+    },
+    "hosts": {
+      "title": "Ek izinli sunucu adları",
+      "description": "AI sunucusu yalnızca 127.0.0.1'e gönderilen isteklere yanıt verir. Docker'da çalışan n8n veya diğer araçlar için host.docker.internal ekleyin.",
+      "invalid": "host.docker.internal gibi, port veya yol içermeyen bir sunucu adı girin.",
+      "empty": "Yok. Yalnızca 127.0.0.1'e izin verilir.",
+      "add": "Sunucu ekle"
+    },
+    "expert": {
+      "title": "Uzman modu",
+      "description": "Bir yapay zekâ uygulamasının çalışan bir profili Playwright, Puppeteer veya Chrome DevTools ile devralmasına izin verir.",
+      "warning": "Tespit edilebilir. Harici araçlar tarayıcıyı web sitelerinin fark edebileceği şekilde kontrol eder, bu yüzden profiller işaretlenebilir veya engellenebilir. Varsayılan olarak kapalı. Yalnızca sahip.",
+      "switch": "Uzman modu",
+      "isOn": "Açık. Tam token'a sahip yapay zekâ uygulamaları çalışan bir profili devralmak isteyebilir. Her seferinde size sorulur.",
+      "isOff": "Kapalı. Hiçbir yapay zekâ uygulaması çalışan bir profili devralamaz.",
+      "confirmTitle": "Uzman modu açılsın mı?",
+      "confirmBody": "Tam token'a sahip yapay zekâ uygulamaları bundan sonra çalışan profilleri doğrudan kontrol etmek isteyebilir. Web siteleri bunu tespit edebilir ve bu profillerdeki hesaplar işaretlenebilir.",
+      "confirm": "Aç",
+      "ack": "Bunun tespit edilebileceğini ve profillerin işaretlenmesine yol açabileceğini anlıyorum."
+    },
+    "port": {
+      "title": "Sunucu portu",
+      "description": "Yapay zekâ uygulamaları bu porttan http://127.0.0.1 adresine bağlanır.",
+      "label": "Port",
+      "invalid": "{{min}} ile {{max}} arasında bir sayı kullanın.",
+      "hint": "Değiştirdikten sonra bağlı her yapay zekâ uygulamasında adresi güncelleyin. Bağlan sekmesi yeni kurulumu gösterir."
+    }
+  }
+}

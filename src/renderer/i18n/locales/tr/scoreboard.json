@@ -1,0 +1,43 @@
+{
+  "title": "Sağlayıcı puan tablosu",
+  "note": "Son {{days}} gündeki kendi proxy kontrollerinizden.",
+  "refresh": "Yenile",
+  "show": "Sağlayıcı puan tablosunu göster",
+  "hide": "Sağlayıcı puan tablosunu gizle",
+  "loading": "Puan tablosu yükleniyor...",
+  "loadError": "Puan tablosu yüklenemedi: {{message}}",
+  "empty": "Henüz proxy yok. Bir sağlayıcıdan çekin veya kendinizinkini ekleyin, ardından her sağlayıcının durumunu görmek için kontrol edin.",
+  "truncated": "Yalnızca en yeni {{max}} kontrol sayıldı.",
+  "scoreHelp": "100 üzerinden puan. En çok kontrol başarısı sayılır, ardından kara listede ne kadar az proxy olduğu, sonra hız, sonra proxy başına site engelleri. {{min}} kontrolden az olan satırlar puanlanmaz.",
+  "own": "Kendi proxy'leriniz",
+  "free": "Ücretsiz proxy'ler",
+  "col": {
+    "vendor": "Sağlayıcı",
+    "score": "Puan",
+    "success": "Kontrol başarısı",
+    "speed": "Ortanca hız",
+    "blocklisted": "Kara listede",
+    "datacenter": "Veri merkezi",
+    "blocks": "Site engelleri",
+    "proxies": "Proxy'ler",
+    "lastChecked": "Son kontrol"
+  },
+  "sortBy": "Sırala: {{column}}",
+  "notEnough": "Yeterli veri yok",
+  "notEnoughTitle_one": "Son {{days}} günde yalnızca {{count}} kontrol. Puan için {{min}} gerekir.",
+  "notEnoughTitle_other": "Son {{days}} günde yalnızca {{count}} kontrol. Puan için {{min}} gerekir.",
+  "level": {
+    "good": "İyi",
+    "fair": "Orta",
+    "poor": "Zayıf"
+  },
+  "scoreTitle": "{{level}}: 100 üzerinden {{score}}",
+  "checks_one": "{{count}} kontrol",
+  "checks_other": "{{count}} kontrol",
+  "ms": "{{ms}} ms",
+  "working": "{{pct}} çalışıyor",
+  "noData": "Veri yok",
+  "never": "Hiç",
+  "openProvider": "Aç: {{name}}",
+  "topSites": "En çok engel: {{sites}}"
+}
