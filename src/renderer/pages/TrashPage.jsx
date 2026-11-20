@@ -9,13 +9,6 @@ import GuardedButton from '@/components/ui/GuardedButton.jsx';
 import { formatDateTime } from '@/lib/utils.js';
 import { softglazeApi } from '@/lib/softglazeApi.js';
 import { usePermissions } from '@/lib/usePermissions.js';
-import i18n from '@/i18n/index.js';
-import trashEn from '@/i18n/locales/en/trash.json';
-import trashEs from '@/i18n/locales/es/trash.json';
-
-// Register the "trash" namespace here; the central i18n config only bundles "common".
-if (!i18n.hasResourceBundle('en', 'trash')) i18n.addResourceBundle('en', 'trash', trashEn);
-if (!i18n.hasResourceBundle('es', 'trash')) i18n.addResourceBundle('es', 'trash', trashEs);
 
 const Checkbox = ({ checked, onChange }) => (
   <button

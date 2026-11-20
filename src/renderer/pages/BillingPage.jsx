@@ -13,6 +13,7 @@ import { errorText } from '@/lib/signupFlow.mjs';
 import { isStoreMethod, storeOutcome, storePrice, storeDowngradeBlocked, methodsForPlan, sellablePlans, storeHasBothPeriods, STORE_POLL, MANAGE_SUBSCRIPTIONS_URL } from '@/lib/storePurchase.mjs';
 import { BILLING_PERIODS, hasBothPeriods, plansForPeriod, yearlyDeal, isCurrentPlan, initialPeriod } from '@/lib/planPeriods.mjs';
 import { FreePlanBillingSection } from '@/components/FreePlan.jsx';
+import { fmtDate } from '@/lib/intl.mjs';
 
 // The built-in plan catalog (main's DEFAULT_BILLING_PLANS) is English data. Its taglines and features
 // show in the UI language through billing.planText, matched on the exact English text; anything the
@@ -32,7 +33,7 @@ function statusTone(license, t) {
   if (!license) return { color: '#9ca3af', label: t('status.loading') };
   if (license.isExempt) return { color: '#10b981', label: t('status.sourceOwner') };
   switch (license.state) {
-    case 'paid': return { color: '#10b981', label: license.endsAt ? t('status.activeRenews', { date: new Date(license.endsAt).toLocaleDateString() }) : t('status.active') };
+    case 'paid': return { color: '#10b981', label: license.endsAt ? t('status.activeRenews', { date: fmtDate(license.endsAt) }) : t('status.active') };
     case 'free': return { color: '#3b82f6', label: t('status.free') };
     case 'trialing': return { color: '#3b82f6', label: t('status.trialDaysLeft', { days: license.daysLeftTrial }) };
     case 'grace': return { color: '#f59e0b', label: t('status.graceDaysLeft', { days: license.daysLeftGrace }) };
@@ -274,9 +275,9 @@ export default function BillingPage() {
           <ShieldCheck className="w-4 h-4 text-emerald-400 shrink-0" />
           <span className="text-[12.5px] text-foreground">
             {backend.lease && backend.lease.type === 'trial'
-              ? <>{t('backend.trialVerified')}{backend.lease.currentPeriodEnd ? ` · ${t('backend.trialEnds', { date: new Date(backend.lease.currentPeriodEnd).toLocaleDateString() })}` : ''}</>
+              ? <>{t('backend.trialVerified')}{backend.lease.currentPeriodEnd ? ` · ${t('backend.trialEnds', { date: fmtDate(backend.lease.currentPeriodEnd) })}` : ''}</>
               : backend.lease
-                ? <>{t('backend.licensedVerified')} · <span className="capitalize">{backend.lease.tier}</span>{backend.lease.currentPeriodEnd ? ` · ${t('backend.renews', { date: new Date(backend.lease.currentPeriodEnd).toLocaleDateString() })}` : ''}</>
+                ? <>{t('backend.licensedVerified')} · <span className="capitalize">{backend.lease.tier}</span>{backend.lease.currentPeriodEnd ? ` · ${t('backend.renews', { date: fmtDate(backend.lease.currentPeriodEnd) })}` : ''}</>
                 : <>{t('backend.noLicense')}</>}
           </span>
           <span className="ml-auto text-[10.5px] text-muted-foreground font-mono">{backend.tenantId}</span>
@@ -646,7 +647,7 @@ function InvoicesSection() {
             <tbody className="divide-y divide-border/60">
               {invoices.map((inv) => (
                 <tr key={inv.id} className="text-foreground/90">
-                  <td className="py-2 pr-3 whitespace-nowrap">{inv.issuedAt ? new Date(inv.issuedAt).toLocaleDateString() : '-'}</td>
+                  <td className="py-2 pr-3 whitespace-nowrap">{inv.issuedAt ? fmtDate(inv.issuedAt) : '-'}</td>
                   {canEdit && <td className="py-2 pr-3">{inv.ownerName || (inv.ownerMemberId != null ? `#${inv.ownerMemberId}` : '-')}</td>}
                   <td className="py-2 pr-3 whitespace-nowrap">{money(inv.amount, inv.currency)}</td>
                   <td className="py-2 pr-3 capitalize">{inv.provider || '-'}{inv.source === 'manual' ? ` · ${t('invoices.manualSuffix')}` : ''}</td>
@@ -971,10 +972,10 @@ function SubscribersSection() {
                     <div className="font-medium text-foreground">{r.ownerName}</div>
                     {r.ownerEmail && <div className="text-[11px] text-muted-foreground">{r.ownerEmail}</div>}
                   </td>
-                  <td className="py-2 pr-3 whitespace-nowrap">{r.joinedAt ? new Date(r.joinedAt).toLocaleDateString() : '-'}</td>
+                  <td className="py-2 pr-3 whitespace-nowrap">{r.joinedAt ? fmtDate(r.joinedAt) : '-'}</td>
                   <td className="py-2 pr-3 whitespace-nowrap"><span className="capitalize">{r.planName || r.tier}</span>{!r.isPaid && r.isTrial ? <span className="text-[10px] text-blue-400"> · {t('subscribers.trialSuffix')}</span> : ''}</td>
                   <td className="py-2 pr-3"><span className={`font-semibold ${stateTone(r)}`}>{stateLabel(r)}</span>{r.isPaid && r.daysLeft != null ? '' : (r.daysLeft != null ? <span className="text-muted-foreground"> · {t('subscribers.daysLeftShort', { days: r.daysLeft })}</span> : '')}</td>
-                  <td className="py-2 pr-3 whitespace-nowrap">{r.endsAt ? new Date(r.endsAt).toLocaleDateString() : '-'}</td>
+                  <td className="py-2 pr-3 whitespace-nowrap">{r.endsAt ? fmtDate(r.endsAt) : '-'}</td>
                   <td className="py-2 pr-3 whitespace-nowrap">{r.teamSize}</td>
                   <td className="py-2 text-right whitespace-nowrap">
                     <button onClick={() => setAssigning(r)} title={t('subscribers.assignTitle')} className="h-8 px-2.5 rounded-lg text-[12px] font-medium bg-secondary hover:bg-secondary/70 text-foreground inline-flex items-center gap-1.5"><UserPlus className="w-3.5 h-3.5" /> {t('subscribers.assign')}</button>

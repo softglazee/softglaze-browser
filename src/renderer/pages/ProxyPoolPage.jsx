@@ -33,6 +33,7 @@ import { blacklistOf, countBuckets, measuredMs, proxyHealthOf, residentialOf, so
 import { formatDateTime } from '@/lib/utils.js';
 import { providerTagLabel, pulledProviderNames } from '@/lib/providerTags.mjs';
 import { PartnerDealsCard } from '@/components/FreePlan.jsx';
+import { fmtDateTime } from '@/lib/intl.mjs';
 
 const initialProxyForm = { id: null, name: '', type: 'HTTP', host: '', port: '', username: '', password: '' };
 
@@ -1461,7 +1462,7 @@ export default function ProxyPoolPage() {
               <div className="space-y-4">
                 <div>
                   <p className="text-[11px] uppercase tracking-wider text-muted-foreground mb-2">{t('history.latencyOverTime')}</p>
-                  <AreaChart data={historyData.filter((e) => typeof e.latencyMs === 'number').map((e) => ({ x: new Date(e.ts).toLocaleString(), y: e.latencyMs }))} height={160} />
+                  <AreaChart data={historyData.filter((e) => typeof e.latencyMs === 'number').map((e) => ({ x: fmtDateTime(e.ts), y: e.latencyMs }))} height={160} />
                 </div>
                 <div className="flex gap-4 text-[12px] text-muted-foreground">
                   <span><span className="text-emerald-400 font-semibold">{historyData.filter((e) => e.status === 'ok').length}</span> {t('history.ok')}</span>

@@ -4,6 +4,7 @@ import { Trash2, X, Loader2, AlertTriangle, HardDrive } from 'lucide-react';
 import Button from '@/components/ui/Button.jsx';
 import { useDialog } from '@/lib/useDialog.js';
 import { softglazeApi } from '@/lib/softglazeApi.js';
+import { fmtNumber } from '@/lib/intl.mjs';
 
 function formatBytes(n) {
   if (!n) return '0 B';
@@ -59,7 +60,7 @@ export default function DeleteProfileModal({ profile, onClose, onDeleted }) {
             {loading ? (
               <span className="text-muted flex items-center gap-2"><Loader2 className="w-3.5 h-3.5 animate-spin" /> {t('deleteProfile.readingData')}</span>
             ) : info && info.exists ? (
-              <span className="text-foreground">{t('deleteProfile.storedData')} <strong>{formatBytes(info.bytes)}</strong> <span className="text-muted">{t('deleteProfile.storedFiles', { count: info.files, files: info.files.toLocaleString() })}</span></span>
+              <span className="text-foreground">{t('deleteProfile.storedData')} <strong>{formatBytes(info.bytes)}</strong> <span className="text-muted">{t('deleteProfile.storedFiles', { count: info.files, files: fmtNumber(info.files) })}</span></span>
             ) : (
               <span className="text-muted">{t('deleteProfile.noData')}</span>
             )}

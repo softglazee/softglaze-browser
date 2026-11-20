@@ -1,4 +1,5 @@
 // Display rules for the provider Account section. Pure, so tests import it directly.
+import { intlLocale } from './intl.mjs';
 
 const DAY_MS = 24 * 60 * 60 * 1000;
 export const EXPIRY_WARN_DAYS = 7;
@@ -49,7 +50,7 @@ export function formatGb(value, lang) {
   if (typeof value !== 'number' || !Number.isFinite(value)) return '';
   const digits = value !== 0 && Math.abs(value) < 10 ? 2 : 1;
   try {
-    return `${new Intl.NumberFormat(lang || undefined, { maximumFractionDigits: digits }).format(value)} GB`;
+    return `${new Intl.NumberFormat(intlLocale(lang), { maximumFractionDigits: digits }).format(value)} GB`;
   } catch (e) {
     return `${value.toFixed(digits)} GB`;
   }
@@ -59,9 +60,9 @@ export function formatMoney(amount, currency, lang) {
   if (typeof amount !== 'number' || !Number.isFinite(amount)) return '';
   const code = String(currency || '').toUpperCase();
   if (/^[A-Z]{3}$/.test(code)) {
-    try { return new Intl.NumberFormat(lang || undefined, { style: 'currency', currency: code }).format(amount); } catch (e) { /* unknown code */ }
+    try { return new Intl.NumberFormat(intlLocale(lang), { style: 'currency', currency: code }).format(amount); } catch (e) { /* unknown code */ }
   }
-  const n = new Intl.NumberFormat(lang || undefined, { maximumFractionDigits: 2 }).format(amount);
+  const n = new Intl.NumberFormat(intlLocale(lang), { maximumFractionDigits: 2 }).format(amount);
   return code ? `${n} ${code}` : n;
 }
 

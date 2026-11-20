@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next';
 import { Smartphone, Globe, Loader2, QrCode, Copy, Check, X, ShieldCheck, Trash2, Pencil, RefreshCw, Wifi, WifiOff, FolderSync, AlertTriangle } from 'lucide-react';
 import Switch from '@/components/ui/Switch.jsx';
 import { softglazeApi } from '@/lib/softglazeApi.js';
+import { fmtDateTime, fmtTime } from '@/lib/intl.mjs';
 
 // Settings > Phones: pair the SoftGlaze phone app by QR, confirm the 6-digit code, choose who the
 // phone acts as and what it may do, rename or remove phones, and pick profiles that sync.
@@ -280,7 +281,7 @@ function DeviceRow({ t, device, members, busy, run }) {
           <p className="text-[13px] font-medium text-foreground truncate">{device.name}</p>
           <p className="text-[11.5px] text-muted-foreground">
             {device.kind === 'browser' ? `${t('devices.kindBrowser')} · ` : ''}
-            {device.online ? t('devices.online') : device.lastSeenAt ? t('devices.lastSeen', { when: new Date(device.lastSeenAt).toLocaleString() }) : t('devices.offline')}
+            {device.online ? t('devices.online') : device.lastSeenAt ? t('devices.lastSeen', { when: fmtDateTime(device.lastSeenAt) }) : t('devices.offline')}
             {member ? ` · ${t('devices.actsAs', { name: member.name })}` : ''}
           </p>
         </div>
@@ -333,7 +334,7 @@ function SyncSection({ t, status, profiles, busy, run }) {
         </button>
       </div>
       {!linked && <p className="text-[12px] text-amber-400 flex items-start gap-1.5"><AlertTriangle className="w-3.5 h-3.5 mt-0.5 shrink-0" aria-hidden="true" /> {t('sync.noPhone')}</p>}
-      {report && <p className="text-[11.5px] text-muted-foreground">{report.ok ? t('sync.lastOk', { when: new Date(report.at).toLocaleTimeString() }) : t('sync.lastError', { code: report.error || 'error' })}</p>}
+      {report && <p className="text-[11.5px] text-muted-foreground">{report.ok ? t('sync.lastOk', { when: fmtTime(report.at) }) : t('sync.lastError', { code: report.error || 'error' })}</p>}
       <p className="text-[11.5px] text-muted-foreground">{t('sync.limits')}</p>
       <input value={filter} onChange={(e) => setFilter(e.target.value)} placeholder={t('sync.search')} aria-label={t('sync.search')} className="w-full h-10 bg-input-background border border-border rounded-lg px-3 text-[13px] text-foreground outline-none focus:border-primary" />
       <ul className="max-h-80 overflow-y-auto space-y-1.5">

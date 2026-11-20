@@ -4,6 +4,7 @@ import { useTranslation } from 'react-i18next';
 import { softglazeApi } from '@/lib/softglazeApi.js';
 import { methodRows } from '@/lib/signInFlow.mjs';
 import SignInPanel, { GithubMark, GoogleMark, MicrosoftMark, FacebookMark, LinkedinMark } from '@/components/SignInPanel.jsx';
+import { intlLocale } from '@/lib/intl.mjs';
 
 // Settings > Account: the SoftGlaze account's sign-in methods (Google, Microsoft, Facebook, LinkedIn, GitHub, email code) and Sign out (1.0.26).
 // Only the workspace Owner (or the Super Admin) sees it; main decides what can be done (oneClickSignIn.js).
@@ -12,7 +13,7 @@ function formatDate(value, lang) {
   if (!value) return '';
   const d = new Date(value);
   if (Number.isNaN(d.getTime())) return '';
-  try { return d.toLocaleDateString(lang || undefined, { year: 'numeric', month: 'short', day: 'numeric' }); } catch (_) { return d.toISOString().slice(0, 10); }
+  try { return d.toLocaleDateString(intlLocale(lang), { year: 'numeric', month: 'short', day: 'numeric' }); } catch (_) { return d.toISOString().slice(0, 10); }
 }
 
 export default function SignInMethodsCard({ isOwner }) {

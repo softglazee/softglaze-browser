@@ -8,6 +8,7 @@ import { cn, formatDateTime } from '@/lib/utils.js';
 import {
   TONE_CLASS, accountRows, daysLeft, expiryTone, formatGb, formatMoney, parseExpiry, statusTone, trafficTone
 } from '@/lib/providerAccountView.mjs';
+import { intlLocale } from '@/lib/intl.mjs';
 
 const STATUS_KEY = { active: 'statusActive', expired: 'statusExpired', suspended: 'statusSuspended', unknown: 'statusUnknown' };
 
@@ -24,7 +25,7 @@ function expiryText(t, value, lang) {
   const day = parseExpiry(value);
   if (!day) return '';
   let date;
-  try { date = day.toLocaleDateString(lang, { day: 'numeric', month: 'short', year: 'numeric' }); } catch (e) { date = day.toDateString(); }
+  try { date = day.toLocaleDateString(intlLocale(lang), { day: 'numeric', month: 'short', year: 'numeric' }); } catch (e) { date = day.toDateString(); }
   const left = daysLeft(value);
   const rel = left < 0 ? t('providerAccount.endedAgo', { count: -left }) : left === 0 ? t('providerAccount.endsToday') : t('providerAccount.daysLeft', { count: left });
   return `${date} · ${rel}`;

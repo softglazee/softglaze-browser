@@ -3,14 +3,6 @@
 // vendor logos (trademark-safe).
 
 import { useTranslation } from 'react-i18next';
-import i18n from '@/i18n/index.js';
-import cmpUiEn from '@/i18n/locales/en/cmpUi.json';
-import cmpUiEs from '@/i18n/locales/es/cmpUi.json';
-
-// Registers the shared cmpUi namespace without touching the central i18n config; the guard keeps
-// it safe across hot reloads and other components that register it.
-if (!i18n.hasResourceBundle('en', 'cmpUi')) i18n.addResourceBundle('en', 'cmpUi', cmpUiEn);
-if (!i18n.hasResourceBundle('es', 'cmpUi')) i18n.addResourceBundle('es', 'cmpUi', cmpUiEs);
 
 export const BROWSER_BRANDS = [
   { id: 'Chrome', label: 'Chrome', accent: '#4285F4' },

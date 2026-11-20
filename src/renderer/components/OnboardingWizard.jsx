@@ -5,14 +5,6 @@ import { softglazeApi } from '@/lib/softglazeApi.js';
 import { useDialog } from '@/lib/useDialog.js';
 import { loadCurrentMember } from '@/lib/usePermissions.js';
 import { ONBOARDING_STEPS, onboardingStepDenials } from '@/lib/memberPermissions.mjs';
-import i18n from '@/i18n/index.js';
-import cmpOverlaysEn from '@/i18n/locales/en/cmpOverlays.json';
-import cmpOverlaysEs from '@/i18n/locales/es/cmpOverlays.json';
-
-// Registers cmpOverlays without touching the central i18n config; the guard keeps it safe across
-// hot reloads and the CommandPalette's identical registration.
-if (!i18n.hasResourceBundle('en', 'cmpOverlays')) i18n.addResourceBundle('en', 'cmpOverlays', cmpOverlaysEn);
-if (!i18n.hasResourceBundle('es', 'cmpOverlays')) i18n.addResourceBundle('es', 'cmpOverlays', cmpOverlaysEs);
 
 // First-run setup over the existing SMTP / proxy / profile flows; every step is skippable. Each member
 // has their own "done" flag (main: the Owner's is globalSettings.onboardingDone, every other member's is

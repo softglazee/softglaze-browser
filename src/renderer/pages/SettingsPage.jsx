@@ -20,16 +20,9 @@ import NumberInput from '@/components/ui/NumberInput.jsx';
 import { softglazeApi } from '@/lib/softglazeApi.js';
 import { usePermissions } from '@/lib/usePermissions.js';
 import { formatDateTime } from '@/lib/utils.js';
-import { getStoredLang, setLang, SUPPORTED_LANGS } from '@/lib/lang.js';
+import { getStoredLang, setLang, SUPPORTED_LANGS, langOptionLabel } from '@/lib/lang.js';
 import { SHOW_UNAPPLIED_SETTINGS, visibleSectionOrder } from '@/lib/unappliedSettings.mjs';
 import { showRatingEntry } from '@/lib/storeRating.mjs';
-import i18n from '@/i18n/index.js';
-import settingsExtraEn from '@/i18n/locales/en/settingsExtra.json';
-import settingsExtraEs from '@/i18n/locales/es/settingsExtra.json';
-
-// Register the "settingsExtra" namespace here; the central i18n config only bundles "common".
-if (!i18n.hasResourceBundle('en', 'settingsExtra')) i18n.addResourceBundle('en', 'settingsExtra', settingsExtraEn);
-if (!i18n.hasResourceBundle('es', 'settingsExtra')) i18n.addResourceBundle('es', 'settingsExtra', settingsExtraEs);
 
 // Lowercased live search query, shared with every section/row so they can hide
 // themselves when they do not match. Empty string = show everything.
@@ -53,11 +46,11 @@ function CustomSelect({ value, onChange, className = '', children, disabled, id 
         value={value}
         onChange={onChange}
         disabled={disabled}
-        className="w-full appearance-none bg-input-background border border-border rounded pl-3 pr-9 py-1.5 text-foreground text-sm outline-none focus:border-primary focus:ring-1 focus:ring-primary transition disabled:opacity-50 text-ellipsis overflow-hidden whitespace-nowrap cursor-pointer hover:border-muted-dark"
+        className="w-full appearance-none bg-input-background border border-border rounded ps-3 pe-9 py-1.5 text-foreground text-sm outline-none focus:border-primary focus:ring-1 focus:ring-primary transition disabled:opacity-50 text-ellipsis overflow-hidden whitespace-nowrap cursor-pointer hover:border-muted-dark"
       >
         {children}
       </select>
-      <div className="absolute right-3 pointer-events-none text-muted-foreground">
+      <div className="absolute end-3 pointer-events-none text-muted-foreground">
         <ChevronDown className="w-4 h-4" />
       </div>
     </div>
@@ -759,7 +752,7 @@ function LanguageSection({ sec }) {
         control={
           <CustomSelect id="settings-language-select" className="w-full sm:w-56" value={lang} onChange={(e) => setLangState(setLang(e.target.value))}>
             {SUPPORTED_LANGS.map((l) => (
-              <option key={l.code} value={l.code}>{l.native}</option>
+              <option key={l.code} value={l.code} lang={l.code}>{langOptionLabel(l)}</option>
             ))}
           </CustomSelect>
         }

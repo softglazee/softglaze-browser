@@ -38,12 +38,6 @@ import { webrtcMode as webrtcModeOf, hardwareAccelerationChoice, chromeVersionPi
 import { formatDate, formatDateTime } from '@/lib/utils.js';
 import { PlanCounters, usePlanUsage } from '@/components/FreePlan.jsx';
 import i18n from '@/i18n/index.js';
-import profilesEn from '@/i18n/locales/en/profiles.json';
-import profilesEs from '@/i18n/locales/es/profiles.json';
-
-// Register the "profiles" namespace here instead of in the central i18n config.
-if (!i18n.hasResourceBundle('en', 'profiles')) i18n.addResourceBundle('en', 'profiles', profilesEn);
-if (!i18n.hasResourceBundle('es', 'profiles')) i18n.addResourceBundle('es', 'profiles', profilesEs);
 
 // Compact relative time; the cell's title keeps the absolute timestamp on hover.
 function relTime(iso) {

@@ -11,14 +11,7 @@ import { useDialog } from '@/lib/useDialog.js';
 import NameDialog from '@/components/NameDialog.jsx';
 import NumberInput from '@/components/ui/NumberInput.jsx';
 import WarmAutopilotCard from '@/components/WarmAutopilotCard.jsx';
-import i18n from '@/i18n/index.js';
-import automationEn from '@/i18n/locales/en/automation.json';
-import automationEs from '@/i18n/locales/es/automation.json';
-
-// Registers the automation namespace without touching the central i18n config; the guard keeps
-// it safe across hot reloads.
-if (!i18n.hasResourceBundle('en', 'automation')) i18n.addResourceBundle('en', 'automation', automationEn);
-if (!i18n.hasResourceBundle('es', 'automation')) i18n.addResourceBundle('es', 'automation', automationEs);
+import { fmtDateTime, fmtTime } from '@/lib/intl.mjs';
 
 const TABS = [
   { key: 'macros', label: 'My Macros', icon: Workflow },
@@ -1865,8 +1858,8 @@ function ConsoleToolbar({ logs, onClear, format, filename = 'console.log', t }) 
 // --- helpers ---
 function fmt(value) {
   if (!value) return '-';
-  try { return new Date(value).toLocaleString(); } catch (e) { return '-'; }
+  return fmtDateTime(value);
 }
 function ts(value) {
-  try { return new Date(value || Date.now()).toLocaleTimeString(); } catch (e) { return ''; }
+  return fmtTime(value || Date.now());
 }

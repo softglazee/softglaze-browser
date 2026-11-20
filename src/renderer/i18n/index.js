@@ -1,138 +1,117 @@
-// Offline i18n: translations are bundled JSON (local-first). Single source of the language list and
-// storage key; lib/lang.js builds on it, so never import from there (cycle). Init is synchronous, so
-// useSuspense is off. Every namespace registers here so pages resolve in any load order.
+// Offline i18n: translations are bundled JSON (local-first). English is bundled eagerly and is the
+// per-key fallback; every other language is its own lazy chunk (Vite import.meta.glob), loaded
+// before the first render (main.jsx waits for `i18nReady`) or when the user switches language.
+// A language whose folder is missing or incomplete still works: missing keys fall back to English.
+// Single source of the language list and storage key (langs.mjs); lib/lang.js builds on it, so
+// never import from there (cycle).
 import i18n from 'i18next';
 import { initReactI18next } from 'react-i18next';
+import { LANG_KEY, SUPPORTED_LANGS, LANG_CODES, detectLang, langDir, isRtl, applyDocumentLang } from './langs.mjs';
+import { setIntlLanguage } from '../lib/intl.mjs';
 
-import commonEn from './locales/en/common.json';
-import commonEs from './locales/es/common.json';
-import proxiesEn from './locales/en/proxies.json';
-import proxiesEs from './locales/es/proxies.json';
-import groupsEn from './locales/en/groups.json';
-import groupsEs from './locales/es/groups.json';
-import extensionsEn from './locales/en/extensions.json';
-import extensionsEs from './locales/es/extensions.json';
-import browsersEn from './locales/en/browsers.json';
-import browsersEs from './locales/es/browsers.json';
-import trashEn from './locales/en/trash.json';
-import trashEs from './locales/es/trash.json';
-import personasEn from './locales/en/personas.json';
-import personasEs from './locales/es/personas.json';
-import batchImportEn from './locales/en/batchImport.json';
-import batchImportEs from './locales/es/batchImport.json';
-import accountEn from './locales/en/account.json';
-import accountEs from './locales/es/account.json';
-import membersEn from './locales/en/members.json';
-import membersEs from './locales/es/members.json';
-import billingEn from './locales/en/billing.json';
-import billingEs from './locales/es/billing.json';
-import automationEn from './locales/en/automation.json';
-import automationEs from './locales/es/automation.json';
-import gateEn from './locales/en/gate.json';
-import gateEs from './locales/es/gate.json';
-import profilesEn from './locales/en/profiles.json';
-import profilesEs from './locales/es/profiles.json';
-import settingsExtraEn from './locales/en/settingsExtra.json';
-import settingsExtraEs from './locales/es/settingsExtra.json';
-import cmpModalsAEn from './locales/en/cmpModalsA.json';
-import cmpModalsAEs from './locales/es/cmpModalsA.json';
-import cmpModalsBEn from './locales/en/cmpModalsB.json';
-import cmpModalsBEs from './locales/es/cmpModalsB.json';
-import cmpModalsCEn from './locales/en/cmpModalsC.json';
-import cmpModalsCEs from './locales/es/cmpModalsC.json';
-import cmpOverlaysEn from './locales/en/cmpOverlays.json';
-import cmpOverlaysEs from './locales/es/cmpOverlays.json';
-import cmpSettingsAEn from './locales/en/cmpSettingsA.json';
-import cmpSettingsAEs from './locales/es/cmpSettingsA.json';
-import cmpSettingsBEn from './locales/en/cmpSettingsB.json';
-import cmpSettingsBEs from './locales/es/cmpSettingsB.json';
-import cmpSettingsCEn from './locales/en/cmpSettingsC.json';
-import cmpSettingsCEs from './locales/es/cmpSettingsC.json';
-import cmpUiEn from './locales/en/cmpUi.json';
-import cmpUiEs from './locales/es/cmpUi.json';
-import captchaEn from './locales/en/captcha.json';
-import captchaEs from './locales/es/captcha.json';
-import scoreboardEn from './locales/en/scoreboard.json';
-import scoreboardEs from './locales/es/scoreboard.json';
-import aiEn from './locales/en/ai.json';
-import aiEs from './locales/es/ai.json';
-import signinEn from './locales/en/signin.json';
-import signinEs from './locales/es/signin.json';
-import mobileEn from './locales/en/mobile.json';
-import mobileEs from './locales/es/mobile.json';
-import planEn from './locales/en/plan.json';
-import planEs from './locales/es/plan.json';
+export { LANG_KEY, SUPPORTED_LANGS, isRtl, langDir, applyDocumentLang };
 
-export const LANG_KEY = 'softglaze-lang';
+// ./locales/en/<ns>.json, eagerly (the fallback must be there synchronously).
+const EN_FILES = import.meta.glob('./locales/en/*.json', { eager: true, import: 'default' });
+// ./locales/<code>/<ns>.json for every other language, as lazy loaders.
+const LAZY_FILES = import.meta.glob(['./locales/*/*.json', '!./locales/en/*.json'], { import: 'default' });
 
-// Languages the UI ships translations for. `native` is shown in the picker so a
-// speaker recognizes their own language regardless of the current UI language.
-export const SUPPORTED_LANGS = [
-  { code: 'en', label: 'English', native: 'English' },
-  { code: 'es', label: 'Spanish', native: 'Español' },
-];
+const fileParts = (p) => {
+  const m = p.match(/\.\/locales\/([^/]+)\/([^/]+)\.json$/);
+  return m ? { code: m[1], ns: m[2] } : null;
+};
 
-const CODES = SUPPORTED_LANGS.map((l) => l.code);
+// Every namespace is an English file name; pages resolve in any load order.
+export const NAMESPACES = Object.keys(EN_FILES).map((p) => fileParts(p).ns).sort();
 
-const NAMESPACES = [
-  'common', 'proxies', 'groups', 'extensions', 'browsers', 'trash', 'personas',
-  'batchImport', 'account', 'members', 'billing', 'automation', 'gate', 'profiles',
-  'settingsExtra',
-  // Shared components
-  'cmpModalsA', 'cmpModalsB', 'cmpModalsC', 'cmpOverlays', 'cmpSettingsA',
-  'cmpSettingsB', 'cmpSettingsC', 'cmpUi', 'captcha', 'scoreboard',
-  // SoftGlaze AI page and the app-wide approval dialog
-  'ai',
-  // One-click sign-in (first screen, Settings > Account)
-  'signin',
-  // Settings > Phones (the SoftGlaze phone companion)
-  'mobile',
-  // Free forever plan: upgrade prompt, counters, day 8 screen, Billing compare table, partner deals
-  'plan',
-];
+const enResources = {};
+for (const [p, data] of Object.entries(EN_FILES)) enResources[fileParts(p).ns] = data;
 
-export function readStoredLang() {
+// code -> [{ ns, load }]
+const LOADERS = {};
+for (const [p, load] of Object.entries(LAZY_FILES)) {
+  const parts = fileParts(p);
+  if (!parts || !LANG_CODES.includes(parts.code)) continue;
+  (LOADERS[parts.code] ||= []).push({ ns: parts.ns, load });
+}
+
+// Languages that ship at least one translated file in this build.
+export const AVAILABLE_LANGS = ['en', ...Object.keys(LOADERS)];
+
+function navigatorLanguages() {
   try {
-    const v = localStorage.getItem(LANG_KEY);
-    return CODES.includes(v) ? v : 'en';
+    const list = Array.isArray(navigator.languages) && navigator.languages.length ? navigator.languages : [navigator.language];
+    return list.filter(Boolean);
   } catch (e) {
-    return 'en';
+    return [];
   }
 }
 
-const lng = readStoredLang();
-try { document.documentElement.setAttribute('lang', lng); } catch (e) { /* SSR / no DOM */ }
+// The saved choice; on first run (nothing saved) the OS / Electron locale when we support it,
+// else English. Detection is not persisted, so only an explicit choice sticks.
+export function readStoredLang() {
+  try {
+    const v = localStorage.getItem(LANG_KEY);
+    if (LANG_CODES.includes(v)) return v;
+  } catch (e) { /* storage blocked */ }
+  return detectLang(navigatorLanguages());
+}
+
+
+const loading = new Map();
+
+// Loads every namespace file a language has. Resolves (never rejects) once they are registered;
+// a file that fails to load is skipped and its keys fall back to English.
+export function loadLanguage(code) {
+  if (code === 'en' || !LANG_CODES.includes(code)) return Promise.resolve(code);
+  if (loading.has(code)) return loading.get(code);
+  const files = LOADERS[code] || [];
+  const p = Promise.all(files.map(({ ns, load }) => load().then(
+    (data) => { i18n.addResourceBundle(code, ns, data, true, true); },
+    (err) => { console.warn(`[i18n] ${code}/${ns}.json failed to load`, err); },
+  ))).then(() => code);
+  loading.set(code, p);
+  return p;
+}
+
+// Switch language; the UI keeps the current language until the new one is loaded (no blank state).
+export async function switchLanguage(code) {
+  const next = LANG_CODES.includes(code) ? code : 'en';
+  await loadLanguage(next);
+  await i18n.changeLanguage(next);
+  return next;
+}
+
+i18n.on('languageChanged', (code) => {
+  applyDocumentLang(code);
+  setIntlLanguage(code);
+});
+
+const initialLang = readStoredLang();
+applyDocumentLang(initialLang);
+setIntlLanguage(initialLang);
 
 i18n.use(initReactI18next).init({
-  resources: {
-    en: {
-      common: commonEn, proxies: proxiesEn, groups: groupsEn, extensions: extensionsEn,
-      browsers: browsersEn, trash: trashEn, personas: personasEn, batchImport: batchImportEn,
-      account: accountEn, members: membersEn, billing: billingEn, automation: automationEn,
-      gate: gateEn, profiles: profilesEn, settingsExtra: settingsExtraEn,
-      cmpModalsA: cmpModalsAEn, cmpModalsB: cmpModalsBEn, cmpModalsC: cmpModalsCEn,
-      cmpOverlays: cmpOverlaysEn, cmpSettingsA: cmpSettingsAEn, cmpSettingsB: cmpSettingsBEn,
-      cmpSettingsC: cmpSettingsCEn, cmpUi: cmpUiEn, captcha: captchaEn, scoreboard: scoreboardEn,
-      ai: aiEn, signin: signinEn, mobile: mobileEn, plan: planEn,
-    },
-    es: {
-      common: commonEs, proxies: proxiesEs, groups: groupsEs, extensions: extensionsEs,
-      browsers: browsersEs, trash: trashEs, personas: personasEs, batchImport: batchImportEs,
-      account: accountEs, members: membersEs, billing: billingEs, automation: automationEs,
-      gate: gateEs, profiles: profilesEs, settingsExtra: settingsExtraEs,
-      cmpModalsA: cmpModalsAEs, cmpModalsB: cmpModalsBEs, cmpModalsC: cmpModalsCEs,
-      cmpOverlays: cmpOverlaysEs, cmpSettingsA: cmpSettingsAEs, cmpSettingsB: cmpSettingsBEs,
-      cmpSettingsC: cmpSettingsCEs, cmpUi: cmpUiEs, captcha: captchaEs, scoreboard: scoreboardEs,
-      ai: aiEs, signin: signinEs, mobile: mobileEs, plan: planEs,
-    },
-  },
-  lng,
+  resources: { en: enResources },
+  partialBundledLanguages: true,
+  lng: 'en',
   fallbackLng: 'en',
+  supportedLngs: LANG_CODES,
+  nonExplicitSupportedLngs: false,
+  load: 'currentOnly',
   defaultNS: 'common',
   ns: NAMESPACES,
   interpolation: { escapeValue: false }, // React already escapes against XSS
   returnNull: false,
-  react: { useSuspense: false },
+  returnEmptyString: false, // an empty translation falls back to English
+  react: { useSuspense: false, bindI18nStore: 'added' },
 });
+
+// Resolves when the starting language is loaded and active; main.jsx renders after it. A failed or
+// slow load never blocks the app: after 4 s it renders in English and switches when ready.
+export const i18nReady = Promise.race([
+  switchLanguage(initialLang),
+  new Promise((resolve) => setTimeout(resolve, 4000)),
+]).catch(() => undefined);
 
 export default i18n;

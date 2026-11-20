@@ -7,7 +7,7 @@ import {
 import { useTranslation } from 'react-i18next';
 import { softglazeApi } from '@/lib/softglazeApi.js';
 import { getStoredTheme, setTheme } from '@/lib/theme.js';
-import { getStoredLang, setLang, SUPPORTED_LANGS } from '@/lib/lang.js';
+import { getStoredLang, setLang, SUPPORTED_LANGS, filterLangs } from '@/lib/lang.js';
 import { errorText, otpExtras, phaseForLicense, trialNeedsCode, trialPayload, paidPlans, defaultPlanId, formatPrice, confirmPhase, isOurSideError } from '@/lib/signupFlow.mjs';
 import { USE_CASES, leadError, leadPayload, LEAD_LIMITS } from '@/lib/signupLead.mjs';
 import billingEn from '@/i18n/locales/en/billing.json';
@@ -323,31 +323,60 @@ function ThemeLangControls() {
   const [theme, setThemeState] = useState(getStoredTheme());
   const [lang, setLangState] = useState(getStoredLang());
   const [open, setOpen] = useState(false);
+  const [query, setQuery] = useState('');
+  const { t } = useTranslation('automation');
   const isDark = theme === 'dark';
   const cur = SUPPORTED_LANGS.find((l) => l.code === lang) || SUPPORTED_LANGS[0];
+  const shown = filterLangs(query);
+  const pick = (code) => { setLangState(setLang(code)); setOpen(false); setQuery(''); };
   return (
     <div className="flex items-center gap-2">
-      <div className="relative">
+      <div
+        className="relative"
+        onBlur={(e) => { if (!e.currentTarget.contains(e.relatedTarget)) setTimeout(() => { setOpen(false); setQuery(''); }, 120); }}
+      >
         <button
           type="button"
           onClick={() => setOpen((o) => !o)}
-          onBlur={() => setTimeout(() => setOpen(false), 120)}
+          aria-haspopup="listbox"
+          aria-expanded={open}
           className="inline-flex items-center gap-1.5 h-9 px-3 rounded-lg border border-border text-[12.5px] text-muted-foreground hover:text-foreground hover:border-muted-dark transition-colors"
         >
-          <Globe className="w-4 h-4" /> {cur.native} <ChevronDown className="w-3.5 h-3.5" />
+          <Globe className="w-4 h-4" /> <span lang={cur.code}>{cur.native}</span> <ChevronDown className="w-3.5 h-3.5" />
         </button>
         {open && (
-          <div className="absolute right-0 mt-1 w-40 rounded-lg border border-border bg-popover shadow-xl py-1 z-50">
-            {SUPPORTED_LANGS.map((l) => (
-              <button
-                key={l.code}
-                type="button"
-                onMouseDown={() => { setLangState(setLang(l.code)); setOpen(false); }}
-                className={`w-full flex items-center gap-2 px-3 py-1.5 text-[12.5px] text-left hover:bg-secondary ${l.code === lang ? 'text-primary' : 'text-foreground'}`}
-              >
-                {l.native}{l.code === lang && <Check className="w-3.5 h-3.5 ml-auto" />}
-              </button>
-            ))}
+          <div className="absolute end-0 mt-1 w-56 rounded-lg border border-border bg-popover shadow-xl z-50">
+            <div className="p-1.5 border-b border-border">
+              <input
+                autoFocus
+                type="search"
+                value={query}
+                onChange={(e) => setQuery(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter' && shown[0]) { e.preventDefault(); pick(shown[0].code); }
+                  if (e.key === 'Escape') { setOpen(false); setQuery(''); }
+                }}
+                aria-label={t('parallel.searchPlaceholder')}
+                placeholder={t('parallel.searchPlaceholder')}
+                className="w-full h-7 px-2 rounded-md bg-input-background border border-border text-[12px] text-foreground outline-none focus:border-primary"
+              />
+            </div>
+            <div role="listbox" className="max-h-72 overflow-y-auto py-1">
+              {shown.map((l) => (
+                <button
+                  key={l.code}
+                  type="button"
+                  role="option"
+                  aria-selected={l.code === lang}
+                  onMouseDown={(e) => { e.preventDefault(); pick(l.code); }}
+                  className={`w-full flex items-center gap-2 px-3 py-1.5 text-[12.5px] text-start hover:bg-secondary ${l.code === lang ? 'text-primary' : 'text-foreground'}`}
+                >
+                  <span lang={l.code}>{l.native}</span>
+                  {l.native !== l.label && <span className="text-[11px] text-muted-foreground">{l.label}</span>}
+                  {l.code === lang && <Check className="w-3.5 h-3.5 ms-auto" />}
+                </button>
+              ))}
+            </div>
           </div>
         )}
       </div>

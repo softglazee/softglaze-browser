@@ -12,6 +12,7 @@ import { softglazeApi } from '@/lib/softglazeApi.js';
 import { usePermissions } from '@/lib/usePermissions.js';
 import { normalStart, showRatingCard } from '@/lib/storeRating.mjs';
 import { Sparkline, Bars, Donut, Legend, HBars, Meter } from '@/components/dashboard/DashCharts.jsx';
+import { fmtDate, fmtTime, fmtShortTime, intlLocale } from '@/lib/intl.mjs';
 
 // Brand chart palette - themes in light + dark via index.css tokens.
 const CHART = ['var(--chart-1)', 'var(--chart-2)', 'var(--chart-3)', 'var(--chart-4)', 'var(--chart-5)'];
@@ -150,15 +151,15 @@ function WelcomeBanner() {
     return () => clearInterval(id);
   }, []);
 
-  const locale = i18n.language || undefined;
+  const locale = intlLocale(i18n.language);
   let timeStr = '';
   let dateStr = '';
   try {
     timeStr = new Intl.DateTimeFormat(locale, { hour: '2-digit', minute: '2-digit', second: '2-digit' }).format(now);
     dateStr = new Intl.DateTimeFormat(locale, { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' }).format(now);
   } catch (e) {
-    timeStr = now.toLocaleTimeString();
-    dateStr = now.toLocaleDateString();
+    timeStr = fmtTime(now);
+    dateStr = fmtDate(now);
   }
   const greeting = t(greetingKey(now.getHours()));
   const motivation = t('dashboard.motivation', { returnObjects: true });
@@ -434,7 +435,7 @@ export default function DashboardPage() {
       setSysInfo(info);
 
       // Rolling timeline sampled over the app's runtime.
-      const label = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+      const label = fmtShortTime(new Date());
       const point = { x: label, sessions: (Array.isArray(realSessions) ? realSessions.length : 0), proxies: Array.isArray(arr) ? arr.length : 0 };
       setHistory((prev) => {
         let next = prev;
@@ -499,7 +500,7 @@ export default function DashboardPage() {
     );
   }
 
-  const { days, labels: dayLabels } = last7Days(i18n.language);
+  const { days, labels: dayLabels } = last7Days(intlLocale(i18n.language));
 
   // Proxy pool health = latest check result per proxy (ok / fail / never checked).
   const health = proxies.reduce((a, p) => {

@@ -13,17 +13,10 @@ import { Card, CardContent } from '@/components/ui/Card.jsx';
 import { Dialog, DialogBody, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/Dialog.jsx';
 import Input from '@/components/ui/Input.jsx';
 import Pager from '@/components/ui/Pager.jsx';
-import i18n from '@/i18n/index.js';
-import personasEn from '@/i18n/locales/en/personas.json';
-import personasEs from '@/i18n/locales/es/personas.json';
 import { softglazeApi } from '@/lib/softglazeApi.js';
 import { formatDateTime } from '@/lib/utils.js';
 import { intersectSelection } from '@/lib/uiGuards.mjs';
 import { usePermissions } from '@/lib/usePermissions.js';
-
-// Register the "personas" namespace here; the central i18n config only bundles "common".
-if (!i18n.hasResourceBundle('en', 'personas')) i18n.addResourceBundle('en', 'personas', personasEn);
-if (!i18n.hasResourceBundle('es', 'personas')) i18n.addResourceBundle('es', 'personas', personasEs);
 
 // The five fields the schema requires (NOT NULL). Marked with * in the forms.
 const CORE_FIELDS = new Set(['firstName', 'lastName', 'email', 'username', 'password']);

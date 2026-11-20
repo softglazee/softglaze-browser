@@ -10,13 +10,7 @@ import { getLogo } from '@/lib/providerLogos.js';
 import { countryOptions } from '@/lib/countries.mjs';
 import { countBlankFor, countryForPool, geoForPool, lifeBlankLabel, lifeOptionsFor, stickyForPool } from '@/lib/gatewayPull.mjs';
 import i18n from '@/i18n/index.js';
-import cmpSettingsCEn from '@/i18n/locales/en/cmpSettingsC.json';
-import cmpSettingsCEs from '@/i18n/locales/es/cmpSettingsC.json';
-
-// Registers cmpSettingsC without touching the central i18n config; the guard keeps it safe across
-// hot reloads and IpProvidersSettings' identical registration.
-if (!i18n.hasResourceBundle('en', 'cmpSettingsC')) i18n.addResourceBundle('en', 'cmpSettingsC', cmpSettingsCEn);
-if (!i18n.hasResourceBundle('es', 'cmpSettingsC')) i18n.addResourceBundle('es', 'cmpSettingsC', cmpSettingsCEs);
+import { fmtNumber } from '@/lib/intl.mjs';
 
 // PacketStream's dashboard Location list. Its password takes the country's dashboard name, and an
 // unknown one is ignored (the exit lands anywhere), so the picker offers only these. Mirrors
@@ -715,7 +709,7 @@ export default function ProxyProviders({ onSynced, onCredsChanged, selectedKey: 
     // country's own name.
     const diCountries = geoOptions.country
       .filter((c) => /^[A-Za-z]{2}$/.test(String(c.key)))
-      .map((c) => ({ key: c.key, label: c.label && String(c.label).toUpperCase() !== String(c.key).toUpperCase() ? `${c.label} · ${c.count.toLocaleString()} IPs` : '' }));
+      .map((c) => ({ key: c.key, label: c.label && String(c.label).toUpperCase() !== String(c.key).toUpperCase() ? `${c.label} · ${fmtNumber(c.count)} IPs` : '' }));
     return (
       <div className="space-y-4 max-w-2xl">
         <section className={sectionCls}>
@@ -795,12 +789,12 @@ export default function ProxyProviders({ onSynced, onCredsChanged, selectedKey: 
             <div>
               <label className={labelCls}>{t('proxyProviders.geo.stateLabel')} {optMarker}</label>
               <input list="sg-di-state" value={form.state} onChange={(e) => set('state', e.target.value)} disabled={!form.country} className={inputCls + ' font-mono disabled:opacity-60'} placeholder={t('proxyProviders.geo.anyState', 'Any state')} />
-              <datalist id="sg-di-state">{geoOptions.state.map((o) => <option key={o.key} value={o.key}>{`${o.label} · ${o.count.toLocaleString()} IPs`}</option>)}</datalist>
+              <datalist id="sg-di-state">{geoOptions.state.map((o) => <option key={o.key} value={o.key}>{`${o.label} · ${fmtNumber(o.count)} IPs`}</option>)}</datalist>
             </div>
             <div>
               <label className={labelCls}>{t('proxyProviders.geo.cityLabel')} {optMarker}</label>
               <input list="sg-di-city" value={form.city} onChange={(e) => set('city', e.target.value)} disabled={!form.country} className={inputCls + ' font-mono disabled:opacity-60'} placeholder={t('proxyProviders.geo.anyCity', 'Any city')} />
-              <datalist id="sg-di-city">{geoOptions.city.map((o) => <option key={o.key} value={o.key}>{`${o.label} · ${o.count.toLocaleString()} IPs`}</option>)}</datalist>
+              <datalist id="sg-di-city">{geoOptions.city.map((o) => <option key={o.key} value={o.key}>{`${o.label} · ${fmtNumber(o.count)} IPs`}</option>)}</datalist>
             </div>
           </div>
           <div className="flex flex-wrap items-center gap-2">

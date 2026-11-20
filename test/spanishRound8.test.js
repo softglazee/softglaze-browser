@@ -401,7 +401,12 @@ test('15: the Store package declares English and Spanish; the manifest fix-up le
     if (old === undefined) delete process.env.SG_STORE_COMMERCE; else process.env.SG_STORE_COMMERCE = old;
     delete require.cache[cfgPath];
   }
-  assert.deepEqual(fs.readdirSync(path.join(ROOT, 'src', 'renderer', 'i18n', 'locales')).sort(), ['en', 'es'], 'the app\'s own languages');
+  // The app ships more UI languages than the Store package declares (each declared language needs
+  // its own Store listing); every locale folder must be a supported UI language.
+  const localeDirs = fs.readdirSync(path.join(ROOT, 'src', 'renderer', 'i18n', 'locales'));
+  assert.ok(localeDirs.includes('en') && localeDirs.includes('es'), 'the app\'s own languages');
+  const i18nSrc = read('src', 'renderer', 'i18n', 'langs.mjs');
+  for (const d of localeDirs) assert.match(i18nSrc, new RegExp(`code: '${d}'`), `${d} is a supported language`);
   // electron-builder writes one <Resource Language> per entry (AppxTarget resourceLanguageTag).
   const target = fs.readFileSync(require.resolve('app-builder-lib/out/targets/AppxTarget.js'), 'utf8');
   assert.match(target, /userLanguages\.map\(it => `<Resource Language="\$\{it\.replace\(\/_\/g, "-"\)\}" \/>`\)/);

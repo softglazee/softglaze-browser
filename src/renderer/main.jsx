@@ -14,7 +14,7 @@ import App from './App.jsx';
 import './index.css';
 import { initTheme } from './lib/theme.js';
 import { installDialogFocusFix } from './lib/dialogFocusFix.mjs';
-import './i18n/index.js'; // initializes i18next synchronously from the saved language
+import { i18nReady } from './i18n/index.js'; // English now; the saved / OS language loads before render
 
 // Apply the saved theme before first paint to avoid a flash of the wrong theme.
 initTheme();
@@ -23,10 +23,14 @@ initTheme();
 // the main process re-focuses it after each one (see lib/dialogFocusFix.mjs).
 installDialogFocusFix(window, () => window.softglaze?.ui?.refocusAfterDialog?.());
 
-ReactDOM.createRoot(document.getElementById('root')).render(
-  <React.StrictMode>
-    <HashRouter>
-      <App />
-    </HashRouter>
-  </React.StrictMode>
-);
+// Render once the starting language is loaded (a lazy chunk, a few ms from disk) so the first paint
+// is already in the user's language; i18nReady never rejects and gives up after 4 s.
+i18nReady.then(() => {
+  ReactDOM.createRoot(document.getElementById('root')).render(
+    <React.StrictMode>
+      <HashRouter>
+        <App />
+      </HashRouter>
+    </React.StrictMode>
+  );
+});

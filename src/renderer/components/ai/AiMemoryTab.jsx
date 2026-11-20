@@ -8,6 +8,7 @@ import { AI_TONE, ConfirmDialog, InlineError, PrimaryButton, SaveNote, SectionCa
 import { softglazeApi } from '@/lib/softglazeApi.js';
 import { MEMORY_LIMIT_BYTES, errorText, formatKb, memoryUsage, relativeTime } from '@/lib/aiCore.mjs';
 import { formatDateTime } from '@/lib/utils.js';
+import { fmtNumber } from '@/lib/intl.mjs';
 
 // The built-in guides the AI reads first (spec §6). Their text comes from the engine when it sends
 // `guides`; otherwise the page names them and links to the online guide.
@@ -115,7 +116,7 @@ export default function AiMemoryTab({ lang }) {
               </div>
               <p className="text-[12px] tabular-nums" style={usage.over ? toneText('danger') : undefined}>
                 <span className={usage.over ? '' : 'text-muted-foreground'}>
-                  {t('memory.usage', { used: formatKb(usage.bytes), limit: formatKb(MEMORY_LIMIT_BYTES), chars: draft.length.toLocaleString(lang) })}
+                  {t('memory.usage', { used: formatKb(usage.bytes), limit: formatKb(MEMORY_LIMIT_BYTES), chars: fmtNumber(draft.length, undefined, lang) })}
                 </span>
                 {usage.over && <> {t('memory.over')}</>}
               </p>

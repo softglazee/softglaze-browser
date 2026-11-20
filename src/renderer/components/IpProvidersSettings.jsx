@@ -2,14 +2,6 @@ import { useCallback, useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Network, Loader2, Check, ExternalLink, ChevronDown, KeyRound, ShieldCheck } from 'lucide-react';
 import { softglazeApi } from '@/lib/softglazeApi.js';
-import i18n from '@/i18n/index.js';
-import cmpSettingsCEn from '@/i18n/locales/en/cmpSettingsC.json';
-import cmpSettingsCEs from '@/i18n/locales/es/cmpSettingsC.json';
-
-// Registers cmpSettingsC without touching the central i18n config; the guard keeps it safe across
-// hot reloads and ProxyProviders' identical registration.
-if (!i18n.hasResourceBundle('en', 'cmpSettingsC')) i18n.addResourceBundle('en', 'cmpSettingsC', cmpSettingsCEn);
-if (!i18n.hasResourceBundle('es', 'cmpSettingsC')) i18n.addResourceBundle('es', 'cmpSettingsC', cmpSettingsCEs);
 
 // Brand accent + initials per provider (lucide has no brand glyphs), by the row's stored name. Smartproxy
 // is now Decodo: it shows as "Decodo (Smartproxy)" (main's label) with Decodo's initials.

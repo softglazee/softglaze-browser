@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 
 import { PROVIDERS } from '@/components/ProxyProviders.jsx';
 import { softglazeApi } from '@/lib/softglazeApi.js';
+import { intlLocale } from './intl.mjs';
 
 // Per-provider state, built only from real data: the pool (each row is tagged with the provider
 // it was pulled from), which providers have a saved key (no secret values are kept), and for the
@@ -29,7 +30,7 @@ export function daysUntil(day) {
   return Math.round((day.getTime() - today.getTime()) / DAY);
 }
 export function shortDate(day, lang) {
-  try { return day.toLocaleDateString(lang, { day: 'numeric', month: 'short', year: day.getFullYear() === new Date().getFullYear() ? undefined : 'numeric' }); }
+  try { return day.toLocaleDateString(intlLocale(lang), { day: 'numeric', month: 'short', year: day.getFullYear() === new Date().getFullYear() ? undefined : 'numeric' }); }
   catch (e) { return day.toDateString(); }
 }
 

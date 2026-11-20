@@ -7,12 +7,13 @@ import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { softglazeApi } from '@/lib/softglazeApi.js';
 import Switch from '@/components/ui/Switch.jsx';
+import { fmtDate } from '@/lib/intl.mjs';
 
 function statusTone(license, t) {
   if (!license) return { color: '#9ca3af', label: t('billing.status.loading') };
   if (license.isExempt) return { color: '#10b981', label: t('billing.status.sourceOwner') };
   switch (license.state) {
-    case 'paid': return { color: '#10b981', label: license.endsAt ? t('billing.status.activeUntil', { date: new Date(license.endsAt).toLocaleDateString() }) : t('billing.status.active') };
+    case 'paid': return { color: '#10b981', label: license.endsAt ? t('billing.status.activeUntil', { date: fmtDate(license.endsAt) }) : t('billing.status.active') };
     case 'trialing': return { color: '#3b82f6', label: t('billing.status.trialDaysLeft', { count: license.daysLeftTrial }) };
     case 'grace': return { color: '#f59e0b', label: t('billing.status.graceDaysLeft', { count: license.daysLeftGrace }) };
     case 'banned': return { color: '#ef4444', label: t('billing.status.subscriptionEnded') };

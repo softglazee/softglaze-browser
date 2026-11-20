@@ -2,14 +2,6 @@ import { useEffect, useRef, useState, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 import { ChevronDown, Download, Check, Loader2, Play } from 'lucide-react';
 import { softglazeApi } from '@/lib/softglazeApi.js';
-import i18n from '@/i18n/index.js';
-import cmpUiEn from '@/i18n/locales/en/cmpUi.json';
-import cmpUiEs from '@/i18n/locales/es/cmpUi.json';
-
-// Registers the shared cmpUi namespace without touching the central i18n config; the guard keeps
-// it safe across hot reloads and other components that register it.
-if (!i18n.hasResourceBundle('en', 'cmpUi')) i18n.addResourceBundle('en', 'cmpUi', cmpUiEn);
-if (!i18n.hasResourceBundle('es', 'cmpUi')) i18n.addResourceBundle('es', 'cmpUi', cmpUiEs);
 
 // Each version row has its own install control: installed ones show Ready, missing ones stream
 // an inline progress bar. Covers Chromium (Chrome-for-Testing) and Firefox.

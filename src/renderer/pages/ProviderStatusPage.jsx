@@ -8,12 +8,7 @@ import Button from '@/components/ui/Button.jsx';
 import { Card } from '@/components/ui/Card.jsx';
 import { TONE, daysUntil, parseDay, shortDate, toneText, useProviderStates } from '@/lib/providerStates.js';
 import { cn } from '@/lib/utils.js';
-import i18n from '@/i18n/index.js';
-import providersPageEn from '@/i18n/locales/en/providersPage.json';
-import providersPageEs from '@/i18n/locales/es/providersPage.json';
 
-if (!i18n.hasResourceBundle('en', 'providersPage')) i18n.addResourceBundle('en', 'providersPage', providersPageEn);
-if (!i18n.hasResourceBundle('es', 'providersPage')) i18n.addResourceBundle('es', 'providersPage', providersPageEs);
 
 // Super Admin only, for in-house vendor testing; customers buy their own proxies and never see it.
 // The role exists only on the machine holding the source owner's certificate.

@@ -18,13 +18,6 @@ import { softglazeApi } from '@/lib/softglazeApi.js';
 import { usePermissions } from '@/lib/usePermissions.js';
 import { TONE, daysUntil, parseDay, shortDate, toneText, useProviderStates } from '@/lib/providerStates.js';
 import { cn, formatDateTime } from '@/lib/utils.js';
-import i18n from '@/i18n/index.js';
-import providersPageEn from '@/i18n/locales/en/providersPage.json';
-import providersPageEs from '@/i18n/locales/es/providersPage.json';
-
-// Own namespace, registered here so the shared locale files stay untouched.
-if (!i18n.hasResourceBundle('en', 'providersPage')) i18n.addResourceBundle('en', 'providersPage', providersPageEn);
-if (!i18n.hasResourceBundle('es', 'providersPage')) i18n.addResourceBundle('es', 'providersPage', providersPageEs);
 
 // The connector forms are the ProxyProviders component in `embedded` mode, so IPC, drafts and
 // pool sync share one code path. Needs-attention and trials live on the Provider status page.

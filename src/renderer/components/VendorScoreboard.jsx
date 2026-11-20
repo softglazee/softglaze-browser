@@ -8,6 +8,7 @@ import { Card } from '@/components/ui/Card.jsx';
 import { toneText } from '@/lib/providerStates.js';
 import { softglazeApi } from '@/lib/softglazeApi.js';
 import { cn, formatDateTime } from '@/lib/utils.js';
+import { intlLocale } from '@/lib/intl.mjs';
 
 // Per-vendor success rate, speed and blocklist rate from the workspace's own proxy checks
 // (main/vendorScoreboard.js builds the rows). A collapsible section on the Proxy providers page.
@@ -130,10 +131,10 @@ export default function VendorScoreboard({ onSelect }) {
   useEffect(() => { if (open && !data) load(); }, [open, data, load]);
 
   const fmt = useMemo(() => {
-    const pct = new Intl.NumberFormat(lang, { style: 'percent', maximumFractionDigits: 0 });
-    const num = new Intl.NumberFormat(lang);
+    const pct = new Intl.NumberFormat(intlLocale(lang), { style: 'percent', maximumFractionDigits: 0 });
+    const num = new Intl.NumberFormat(intlLocale(lang));
     let when;
-    try { when = new Intl.DateTimeFormat(lang, { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' }); } catch (e) { when = null; }
+    try { when = new Intl.DateTimeFormat(intlLocale(lang), { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' }); } catch (e) { when = null; }
     return {
       pct: (n) => pct.format(n / 100),
       num: (n) => num.format(n),
