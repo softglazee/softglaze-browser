@@ -49,6 +49,7 @@ model Tenant {
   authCodes         AuthCode[]
   authSessions      AuthSession[]
   mobileDevices     MobileDevice[]
+  partnerDeals      PartnerDeal[]
 }
 
 model TenantPaymentConfig {
@@ -70,7 +71,7 @@ model Plan {
   tenantId    String
   key         String // stable id used by the client, e.g. "pro"
   name        String
-  tier        String   @default("pro") // pro | enterprise (feature tier the client enforces)
+  tier        String   @default("pro") // free | pro | enterprise (feature tier the client enforces; free is never sold)
   amount      Int // price in minor units (cents)
   currency    String   @default("USD")
   interval    String   @default("month")
@@ -80,7 +81,7 @@ model Plan {
   description String?  @db.Text
   highlight   Boolean  @default(false) // the plan the pricing page features
   features    Json? // ["Unlimited profiles", ...]
-  limits      Json? // { seats, maxParallel, auditExport }; null = the tier defaults
+  limits      Json? // { seats, maxParallel, auditExport, profiles, devices, aiActionsPerDay, sync, phoneControl, partnerDeals }; null = the tier defaults
   sortOrder   Int      @default(0)
   createdAt   DateTime @default(now())
   updatedAt   DateTime @default(now()) @updatedAt
@@ -701,4 +702,31 @@ model MobileDevice {
   tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
 
   @@index([tenantId, customerId])
+}
+
+// Partner offers the app shows to Free users (GET /v1/partner-deals, migration 20261120120000). url and logoUrl are
+// https only; clicks counts POST /v1/partner-deals/:id/click (no personal data is stored). Managed with
+// /v1/admin/partner-deals. Seeded empty.
+model PartnerDeal {
+  id          String    @id @default(cuid())
+  tenantId    String
+  title       String    @db.VarChar(120)
+  vendor      String    @db.VarChar(80)
+  description String?   @db.VarChar(300)
+  url         String    @db.VarChar(500)
+  code        String?   @db.VarChar(60) // discount code
+  badge       String?   @db.VarChar(40) // e.g. "20% off"
+  logoUrl     String?   @db.VarChar(500)
+  active      Boolean   @default(true)
+  startsAt    DateTime?
+  endsAt      DateTime?
+  sortOrder   Int       @default(0)
+  clicks      Int       @default(0)
+  lastClickAt DateTime?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @default(now()) @updatedAt
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@index([tenantId, active, sortOrder])
 }

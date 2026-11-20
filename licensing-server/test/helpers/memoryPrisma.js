@@ -34,7 +34,8 @@ const UNIQUE = {
   authState: [['stateHash']],
   authCode: [['codeHash']],
   authSession: [['tokenHash'], ['refreshHash']],
-  mobileDevice: [['authSessionId']]
+  mobileDevice: [['authSessionId']],
+  partnerDeal: []
 };
 const ID_FIELD = { jobLock: 'name' };
 
@@ -71,6 +72,7 @@ const DEFAULTS = {
     refreshHash: null, prevRefreshHash: null, userAgent: null
   }),
   mobileDevice: () => ({ model: null, appVersion: null, installationId: null, lastSeenAt: null, revokedAt: null }),
+  partnerDeal: () => ({ description: null, code: null, badge: null, logoUrl: null, active: true, startsAt: null, endsAt: null, sortOrder: 0, clicks: 0, lastClickAt: null }),
   storeEntitlement: () => ({
     customerId: null, licenseId: null, account: null, planKey: null, tier: 'pro', status: 'active', verified: false, verifyNote: null,
     expiresAt: null, accessUntil: null, autoRenew: null, recurrenceId: null, recurrenceState: null, storeId: null, skuStoreId: null,
@@ -78,9 +80,9 @@ const DEFAULTS = {
     movedAt: null, firstClaimAt: new Date(), lastClaimAt: null, lastCheckedAt: null, lastCheckError: null
   })
 };
-const HAS_UPDATED_AT = new Set(['plan', 'license', 'customer', 'emailTemplate', 'emailOutbox', 'setting', 'segment', 'metricSnapshot', 'tenantPaymentConfig', 'storeEntitlement']);
+const HAS_UPDATED_AT = new Set(['plan', 'license', 'customer', 'emailTemplate', 'emailOutbox', 'setting', 'segment', 'metricSnapshot', 'tenantPaymentConfig', 'storeEntitlement', 'partnerDeal']);
 const HAS_CREATED_AT = new Set(['tenant', 'plan', 'install', 'license', 'payment', 'licenseCode', 'customer', 'customerEvent', 'emailVerification',
-  'emailTemplate', 'emailOutbox', 'adminKey', 'segment', 'metricSnapshot', 'storeEntitlement', 'identity', 'authState', 'authCode', 'authSession', 'mobileDevice']);
+  'emailTemplate', 'emailOutbox', 'adminKey', 'segment', 'metricSnapshot', 'storeEntitlement', 'identity', 'authState', 'authCode', 'authSession', 'mobileDevice', 'partnerDeal']);
 
 const isObj = (v) => v && typeof v === 'object' && !(v instanceof Date) && !Array.isArray(v);
 const val = (v) => (v instanceof Date ? v.getTime() : v);

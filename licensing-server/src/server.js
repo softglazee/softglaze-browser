@@ -46,6 +46,8 @@ app.use('/v1/account', require('./routes/accountApi'));
 app.use('/v1/account', verifyLimiter, require('./routes/account'));
 app.use('/v1/trial', verifyLimiter, require('./routes/trial'));
 app.use('/v1/plans', publicLimiter, require('./routes/plansPublic'));
+// The Free plan's partner offers (app 1.0.27+): public list and click counter.
+app.use('/v1/partner-deals', publicLimiter, require('./routes/partnerDeals'));
 app.use('/v1/store', publicLimiter, require('./routes/store'));
 app.use('/v1/email', publicLimiter, require('./routes/emailPublic'));
 app.use('/v1/tenant', require('./routes/tenantAdmin'));
