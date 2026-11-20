@@ -41,12 +41,55 @@ function summaryFrom(d, now) {
   };
 }
 
+// The Free plan block (definitions in docs/ADMIN-API.md, "Free plan"). A customer is a Free user when they are
+// not deleted, have a verified email or an install, and have no active licence (paid or complimentary) and no
+// running trial. freeInactive12m only counts the archive candidates: nothing is archived or deleted.
+function freeBlock(d, installs, deals, { now, days }) {
+  const nowMs = ms(now);
+  const active = d.licences.filter((l) => l.status === 'active' && l.currentPeriodEnd && ms(l.currentPeriodEnd) > nowMs);
+  const licensedCustomers = new Set(active.map((l) => l.customerId).filter(Boolean));
+  const licensedInstalls = new Set(active.map((l) => l.installId).filter(Boolean));
+  const installsOf = new Map();
+  for (const i of installs) {
+    if (!i.customerId) continue;
+    if (!installsOf.has(i.customerId)) installsOf.set(i.customerId, []);
+    installsOf.get(i.customerId).push(i.id);
+  }
+  const inTrial = new Set(d.trials.filter((t) => t.customerId && ms(t.endsAt) > nowMs).map((t) => t.customerId));
+  const free = d.customers.filter((c) => {
+    if (c.deletedAt) return false;
+    const own = installsOf.get(c.id) || [];
+    if (!c.emailVerifiedAt && !own.length) return false;
+    if (licensedCustomers.has(c.id) || own.some((id) => licensedInstalls.has(id))) return false;
+    return !inTrial.has(c.id);
+  });
+  const seen = (c) => ms(c.lastSeenAt) || ms(c.createdAt) || 0;
+  const since = nowMs - days * DAY;
+  const trialEndsBy = new Map();
+  for (const t of d.trials) {
+    if (!t.customerId) continue;
+    const e = ms(t.endsAt);
+    if (!trialEndsBy.has(t.customerId) || e < trialEndsBy.get(t.customerId)) trialEndsBy.set(t.customerId, e);
+  }
+  const freeToPaid = d.customers.filter((c) => !c.deletedAt && c.paidSince && ms(c.paidSince) >= since && ms(c.paidSince) <= nowMs
+    && trialEndsBy.has(c.id) && trialEndsBy.get(c.id) <= ms(c.paidSince)).length;
+  return {
+    freeUsers: free.length,
+    activeFree7d: free.filter((c) => c.lastSeenAt && ms(c.lastSeenAt) >= nowMs - 7 * DAY).length,
+    freeToPaid,
+    freeToPaidWindowDays: days,
+    dealClicks: deals.reduce((s, x) => s + (Number(x.clicks) || 0), 0),
+    freeInactive12m: free.filter((c) => seen(c) < nowMs - 365 * DAY).length
+  };
+}
+
 // opts: { from: 'YYYY-MM', to: 'YYYY-MM', days: 30 }
 async function computeMetrics(db, tenantId, { now = Date.now(), from, to, days = 30 } = {}) {
   // Installs are read here only (one column), not in loadAll, so the cron snapshot does not load them.
-  const [d, installs] = await Promise.all([
+  const [d, installs, deals] = await Promise.all([
     loadAll(db, tenantId),
-    db.install.findMany({ where: { tenantId }, select: { channel: true } })
+    db.install.findMany({ where: { tenantId }, select: { id: true, channel: true, customerId: true } }),
+    db.partnerDeal.findMany({ where: { tenantId }, select: { clicks: true } })
   ]);
   const toKey = to || monthKey(now);
   const fromKey = from || monthKey(Date.UTC(new Date(now).getUTCFullYear(), new Date(now).getUTCMonth() - 11, 1));
@@ -111,7 +154,8 @@ async function computeMetrics(db, tenantId, { now = Date.now(), from, to, days =
     churn,
     revenue,
     monthly,
-    topCountries: M.topCountries(d.customers)
+    topCountries: M.topCountries(d.customers),
+    free: freeBlock(d, installs, deals, { now, days: Math.max(1, Math.min(days, 366)) })
   };
 }
 
