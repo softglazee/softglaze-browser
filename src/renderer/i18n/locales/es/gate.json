@@ -244,31 +244,41 @@
     "CONFIRM_OFFLINE": "Conéctate a internet para confirmar tu correo."
   },
   "panel": {
-    "label": "Acerca de SoftGlaze",
-    "freePlan": "Plan gratuito",
-    "profilesUnit": "perfiles de navegador",
-    "freeBody": "Sin tarjeta, y el plan gratuito no caduca. También puedes probar Pro gratis durante 7 días.",
-    "returnLabel": "Tu espacio de trabajo",
-    "returnTitle": "Tus perfiles están en este equipo",
-    "returnBody": "Inicia sesión para abrirlos. Cada perfil guarda sus propias cookies, almacenamiento, proxy y huella digital.",
-    "exampleCaption": "Ejemplo de la página Perfiles",
-    "direct": "Directo",
-    "facts": {
+    "label": "Recorrido por SoftGlaze",
+    "carousel": "carrusel",
+    "slide": "diapositiva",
+    "slideOf": "{{n}} de {{total}}",
+    "prev": "Diapositiva anterior",
+    "next": "Diapositiva siguiente",
+    "pause": "Pausar las diapositivas",
+    "play": "Reproducir las diapositivas",
+    "goTo": "Ver la diapositiva {{n}}: {{title}}",
+    "trust": "Los perfiles, las cookies y las sesiones se quedan en este equipo.",
+    "slides": {
+      "free": {
+        "title": "Empieza con 25 perfiles de navegador gratis",
+        "body": "Sin tarjeta y sin límite de tiempo. Cada cuenta nueva también puede probar Pro gratis durante 7 días.",
+        "alt": "La página Perfiles con diez perfiles, sus proxies y su último uso"
+      },
       "fingerprint": {
-        "term": "Huella digital",
-        "detail": "Canvas, WebGL, fuentes, audio y hardware, propios de cada perfil e iguales en cada inicio"
+        "title": "Cada perfil mantiene su propia huella digital",
+        "body": "Canvas, WebGL, fuentes, audio y zona horaria se configuran por perfil y se mantienen en cada inicio. Asigna a cada uno tu propio proxy HTTP, HTTPS o SOCKS5.",
+        "alt": "La pestaña Huella digital de un perfil junto a su resumen del entorno"
       },
-      "proxy": {
-        "term": "Proxy",
-        "detail": "Usa los tuyos: HTTP, HTTPS, SOCKS4 o SOCKS5, uno por perfil"
-      },
-      "storage": {
-        "term": "Almacenamiento",
-        "detail": "Las cookies, las sesiones y el historial se quedan en este equipo"
+      "ai": {
+        "title": "Los agentes de IA trabajan y tú apruebas",
+        "body": "Claude, ChatGPT, Cursor y otras apps MCP ejecutan tareas en tus perfiles. Tú decides qué acciones necesitan tu aprobación, y cada paso queda registrado.",
+        "alt": "Una solicitud de aprobación de Claude Desktop para rellenar un formulario de inicio de sesión"
       },
       "phone": {
-        "term": "Teléfono",
-        "detail": "Las acciones de IA pueden esperar a que las permitas en tu teléfono, en todos los planes"
+        "title": "Aprueba solicitudes desde tu teléfono",
+        "body": "La app del teléfono y la app web de SoftGlaze muestran cada solicitud con sus detalles. Permítela una vez, durante una hora, o recházala. Incluido en todos los planes.",
+        "alt": "La pantalla Aprobaciones en un teléfono con una solicitud pendiente de respuesta"
+      },
+      "team": {
+        "title": "Trabaja en equipo con roles claros",
+        "body": "Los roles Propietario, Administrador, Gerente y Operador controlan quién puede ver y abrir cada perfil. Pro incluye 3 plazas y Enterprise 25.",
+        "alt": "La página Miembros con cinco miembros del equipo y sus roles"
       }
     }
   },

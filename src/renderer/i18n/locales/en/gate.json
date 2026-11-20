@@ -244,31 +244,41 @@
     "CONFIRM_OFFLINE": "Connect to the internet to confirm your email."
   },
   "panel": {
-    "label": "About SoftGlaze",
-    "freePlan": "Free plan",
-    "profilesUnit": "browser profiles",
-    "freeBody": "No card needed, and the Free plan does not run out. You can also try Pro free for 7 days.",
-    "returnLabel": "Your workspace",
-    "returnTitle": "Your profiles are on this computer",
-    "returnBody": "Sign in to open them. Each profile keeps its own cookies, storage, proxy and fingerprint.",
-    "exampleCaption": "Example of the Profiles page",
-    "direct": "Direct",
-    "facts": {
+    "label": "SoftGlaze product tour",
+    "carousel": "carousel",
+    "slide": "slide",
+    "slideOf": "{{n}} of {{total}}",
+    "prev": "Previous slide",
+    "next": "Next slide",
+    "pause": "Pause the slides",
+    "play": "Play the slides",
+    "goTo": "Show slide {{n}}: {{title}}",
+    "trust": "Profiles, cookies and logins stay on this computer.",
+    "slides": {
+      "free": {
+        "title": "Start with 25 browser profiles, free",
+        "body": "No card and no time limit. Every new account can also try Pro free for 7 days.",
+        "alt": "The Profiles page with ten profiles, their proxies and when each was last used"
+      },
       "fingerprint": {
-        "term": "Fingerprint",
-        "detail": "Canvas, WebGL, fonts, audio and hardware, set per profile and kept the same on every launch"
+        "title": "Each profile keeps its own fingerprint",
+        "body": "Canvas, WebGL, fonts, audio and timezone are set per profile and stay the same on every launch. Give each one your own HTTP, HTTPS or SOCKS5 proxy.",
+        "alt": "The Fingerprint tab of a profile next to its environment overview"
       },
-      "proxy": {
-        "term": "Proxy",
-        "detail": "Bring your own: HTTP, HTTPS, SOCKS4 or SOCKS5, one per profile"
-      },
-      "storage": {
-        "term": "Storage",
-        "detail": "Cookies, logins and history stay on this computer"
+      "ai": {
+        "title": "AI agents do the work, you approve it",
+        "body": "Claude, ChatGPT, Cursor and other MCP apps run tasks in your profiles. You decide which actions need your approval, and every step is logged.",
+        "alt": "An approval request from Claude Desktop to fill in a sign-in form"
       },
       "phone": {
-        "term": "Phone",
-        "detail": "AI actions can wait until you allow them on your phone, on every plan"
+        "title": "Approve requests from your phone",
+        "body": "The SoftGlaze phone app and web app show each request with its details. Allow it once, for an hour, or deny it. Included on every plan.",
+        "alt": "The Approvals screen on a phone with a request waiting for an answer"
+      },
+      "team": {
+        "title": "Work as a team with clear roles",
+        "body": "Owner, Admin, Manager and Operator roles control who can see and open each profile. Pro includes 3 seats and Enterprise 25.",
+        "alt": "The Members page with five team members and their roles"
       }
     }
   },

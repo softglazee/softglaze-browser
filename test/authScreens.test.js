@@ -27,10 +27,35 @@ test('product panel and controls: every key exists in en and es, same shape', ()
   const en = locale('en', 'gate'); const es = locale('es', 'gate');
   const used = [...PANEL.matchAll(/\bt\('([a-zA-Z.]+)'/g), ...GATE.matchAll(/\bt\('(controls\.[a-zA-Z.]+)'/g)].map((m) => m[1]);
   for (const k of used) { assert.equal(typeof get(en, k), 'string', `en gate.json has ${k}`); assert.equal(typeof get(es, k), 'string', `es gate.json has ${k}`); }
-  for (const f of ['fingerprint', 'proxy', 'storage', 'phone']) assert.ok(en.panel.facts[f].term && es.panel.facts[f].detail, f);
-  // The panel reuses the Profiles page's own column names and relative times.
-  assert.match(PANEL, /tp\('table\.name'\)/);
-  assert.match(PANEL, /tp\(`relTime\.\$\{r\.used\[0\]\}`/);
+  // Every slide has a title (8 words at most), a body and an image description, in both languages.
+  const slideKeys = [...PANEL.matchAll(/\{ key: '([a-z]+)', kind:/g)].map((m) => m[1]);
+  assert.deepEqual(slideKeys, ['free', 'fingerprint', 'ai', 'phone', 'team']);
+  for (const k of slideKeys) {
+    for (const loc of [en, es]) for (const part of ['title', 'body', 'alt']) assert.equal(typeof loc.panel.slides[k][part], 'string', `${k}.${part}`);
+    assert.ok(en.panel.slides[k].title.split(/\s+/).length <= 8, `${k}: short title`);
+  }
+});
+
+test('slider: real screenshots in both themes, small, lazy, accessible, calm', () => {
+  const dir = path.join(R, 'assets', 'signin');
+  let total = 0;
+  for (const k of ['profiles', 'fingerprint', 'ai', 'phone', 'team']) for (const t of ['dark', 'light']) {
+    const file = path.join(dir, `${k}-${t}.webp`);
+    assert.ok(fs.existsSync(file), file);
+    assert.match(PANEL, new RegExp(`import ${k}${t[0].toUpperCase()}${t.slice(1)} from '@/assets/signin/${k}-${t}\\.webp'`));
+    total += fs.statSync(file).size;
+  }
+  assert.ok(total < 2.5 * 1024 * 1024, `slider images ${total} bytes`);
+  assert.match(PANEL, /export const SLIDE_MS = 6000;/);
+  assert.match(PANEL, /const running = !reduced && !stopped && !hover && !focusIn && !away;/, 'pauses on hover, focus, background window, Pause, reduced motion');
+  assert.match(PANEL, /useState\(\(\) => new Set\(\[0, 1\]\)\)/, 'only the first two slides load at once');
+  assert.match(PANEL, /aria-roledescription=\{t\('panel\.carousel'\)\}/);
+  assert.match(PANEL, /aria-roledescription=\{t\('panel\.slide'\)\}/);
+  assert.match(PANEL, /aria-live=\{running \? 'off' : 'polite'\}/);
+  assert.match(PANEL, /aria-label=\{t\('panel\.prev'\)\}/);
+  assert.match(PANEL, /aria-label=\{t\('panel\.next'\)\}/);
+  assert.match(PANEL, /\[height:44px\]/);
+  assert.match(PANEL, /motion-reduce:transition-none/);
 });
 
 test('sign-in copy: no dashes, no hype words, no invented proof', () => {
@@ -44,15 +69,14 @@ test('sign-in copy: no dashes, no hype words, no invented proof', () => {
     assert.ok(!/\b(seamless|elevate|unlock|curated|empower|supercharge|revolutionary|cutting-edge)\b/i.test(t), 'no hype words');
     assert.ok(!/\b(reviews?|rating|trusted by|users worldwide|stars?)\b/i.test(t), 'no ratings or user counts');
     assert.ok(!/\b(get started|learn more|explore)\b/i.test(t), 'no generic calls to action');
+    assert.ok(!/(antidetect|anti-detect|undetectable|bypass|evade|spoof|stealth|\bban\b|\bfake\b|anonymous)/i.test(t), 'no words the stores and the owner rule out');
+    assert.ok(!/!/.test(t.replace(/"[^"]*":/g, '')), 'no exclamation marks');
   }
-  // The example table is labelled as an example, with documentation IP ranges only.
-  assert.match(PANEL, /panel\.exampleCaption/);
-  for (const ip of PANEL.match(/\b\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}\b/g)) assert.match(ip, /^(192\.0\.2|198\.51\.100|203\.0\.113)\./, ip);
 });
 
 test('Gate layout: two columns, no carousel, both doors call the same sign-in', () => {
   assert.doesNotMatch(GATE, /CarouselPanel|AuthAura|backdrop-blur|shadow-glow|bg-gradient-to/);
-  assert.match(GATE, /<AuthProductPanel variant=\{phase === 'register' \? 'signup' : 'return'\} \/>/);
+  assert.match(GATE, /<AuthProductPanel \/>/);
   assert.match(GATE, /<SignInPanel purpose="signup" info=\{signin\} onDone=\{afterSignIn\} entry=\{entry\} onEntry=\{setEntry\}/);
   assert.match(GATE, /onPasswordLogin=\{\(\) => \{ setPhase\('login'\); setErr\(''\); \}\}/, 'the password screen stays reachable');
   assert.match(GATE, /onMoreOptions=\{\(\) => \{ setStep\('details'\); setErr\(''\); \}\}/, 'the name + password form stays reachable');

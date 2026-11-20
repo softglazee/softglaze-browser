@@ -277,22 +277,73 @@
 }
 
 /* ------------------------------------------------------------------ */
-/*  Sign-in / sign-up (Gate): the form column and the product panel     */
-/*  (components/AuthProductPanel.jsx). Flat surfaces, no glow.           */
+/*  Sign-in / sign-up (Gate): the form column on the page, and the     */
+/*  product tour on a brand panel (components/AuthProductPanel.jsx).   */
 /* ------------------------------------------------------------------ */
-:root, .dark { --auth-proxy-chip: #7cb3fb; --auth-error-fg: #fca5a5; --auth-cta: #2563eb; --auth-cta-hover: #1d4ed8; }
-.light { --auth-proxy-chip: #1d4ed8; --auth-error-fg: #b91c1c; }
+:root, .dark { --auth-error-fg: #fca5a5; --auth-cta: #2563eb; --auth-cta-hover: #1d4ed8; }
+.light { --auth-error-fg: #b91c1c; }
 /* --auth-cta: a primary button dark enough for white text (5.2:1) in both themes. Inside the sign-in screens the
    secondary and dimmest greys are a step darker on the light theme so 13-15 px text passes WCAG AA. */
 .auth-screen { --muted-dim: #7d8699; }
 .light .auth-screen { --muted-foreground: #526073; --muted-dim: #66758a; }
-/* Short windows (the app's minimum is 1180 x 720): tighter panel so nothing scrolls. */
-@media (max-height: 800px) {
-  .auth-panel { gap: 1.25rem; padding-top: 1.5rem; padding-bottom: 1.5rem; }
-  .auth-facts dt, .auth-facts dd { padding-top: 0.45rem; padding-bottom: 0.45rem; }
+
+/* The brand panel: deep navy from the logo's blues on the dark theme, a pale blue on the light one, a faint grid,
+   and the screenshots on top with a soft drop shadow. Text on it: 10:1 or more in both themes. */
+.auth-brand {
+  --auth-panel-fg: #f3f6fc;
+  --auth-panel-muted: #b9c6dc;
+  --auth-panel-dot: rgba(255, 255, 255, 0.34);
+  --auth-panel-ctrl-border: rgba(255, 255, 255, 0.24);
+  --auth-panel-ctrl-hover: rgba(255, 255, 255, 0.08);
+  --auth-shot-border: rgba(255, 255, 255, 0.14);
+  --auth-shot-bar: #0c111c;
+  --auth-shot-bar-fg: rgba(255, 255, 255, 0.62);
+  --auth-shot-shadow: 0 34px 70px -28px rgba(0, 0, 0, 0.75), 0 12px 24px -12px rgba(0, 0, 0, 0.45);
+  background:
+    radial-gradient(900px 560px at 88% -8%, rgba(40, 128, 222, 0.42), transparent 62%),
+    radial-gradient(720px 520px at -6% 104%, rgba(22, 80, 172, 0.36), transparent 60%),
+    linear-gradient(165deg, #0c2554 0%, #081b40 46%, #050f27 100%);
 }
-/* Narrow windows: the example table drops its "Last used" column before it would crowd. */
-@media (max-width: 1240px) { .auth-col-used { display: none; } }
+.light .auth-brand {
+  --auth-panel-fg: #0b1b3a;
+  --auth-panel-muted: #34486c;
+  --auth-panel-dot: rgba(11, 27, 58, 0.3);
+  --auth-panel-ctrl-border: rgba(11, 27, 58, 0.22);
+  --auth-panel-ctrl-hover: rgba(11, 27, 58, 0.06);
+  --auth-shot-border: rgba(11, 27, 58, 0.12);
+  --auth-shot-bar: #f8fafd;
+  --auth-shot-bar-fg: #4a5b78;
+  --auth-shot-shadow: 0 30px 60px -28px rgba(20, 52, 110, 0.38), 0 10px 22px -12px rgba(20, 52, 110, 0.22);
+  background:
+    radial-gradient(900px 560px at 88% -8%, rgba(59, 130, 246, 0.22), transparent 62%),
+    linear-gradient(165deg, #edf4ff 0%, #dfeafd 52%, #d1e1f9 100%);
+}
+.auth-brand::before {
+  content: "";
+  position: absolute; inset: 0; pointer-events: none;
+  background-image:
+    linear-gradient(to right, rgba(255, 255, 255, 0.045) 1px, transparent 1px),
+    linear-gradient(to bottom, rgba(255, 255, 255, 0.045) 1px, transparent 1px);
+  background-size: 56px 56px;
+  -webkit-mask-image: radial-gradient(ellipse 80% 70% at 60% 30%, #000 30%, transparent 80%);
+          mask-image: radial-gradient(ellipse 80% 70% at 60% 30%, #000 30%, transparent 80%);
+}
+.light .auth-brand::before {
+  background-image:
+    linear-gradient(to right, rgba(11, 27, 58, 0.05) 1px, transparent 1px),
+    linear-gradient(to bottom, rgba(11, 27, 58, 0.05) 1px, transparent 1px);
+}
+.auth-brand > * { position: relative; }
+.auth-shot { box-shadow: var(--auth-shot-shadow); }
+/* Short windows (the app's minimum is 1180 x 720): a tighter panel so nothing scrolls. */
+@media (max-height: 800px) {
+  .auth-panel { padding-top: 1.75rem; }
+  .auth-caption { margin-top: 0.85rem; }
+  .auth-caption h2 { font-size: 26px; }
+  .auth-caption p { font-size: 15px; margin-top: 0.4rem; }
+  .auth-controls { margin-top: 0.6rem; }
+  .auth-stage { margin-top: 1.25rem; }
+}
 
 /* Respect reduced-motion: freeze the ambient auth animations. */
 @media (prefers-reduced-motion: reduce) {

@@ -1322,7 +1322,7 @@ export default function Gate({ children }) {
           {showSuper && <SuperLink />}
         </footer>
       </main>
-      <AuthProductPanel variant={phase === 'register' ? 'signup' : 'return'} />
+      <AuthProductPanel />
     </div>
   );
 }
