@@ -320,12 +320,16 @@ export function checkLocaleFile(code, enData, data, rel, problems) {
     const trSet = new Set(placeholders(value));
     const optional = OPTIONAL_PLACEHOLDERS[`${path.basename(rel)}:${key}`] || [];
     const realMissing = missingUnique.filter((x) => !trSet.has(x) && !optional.includes(x));
-    const realExtra = extraUnique.filter((x) => !enSet.has(x));
+    // A plural form may always show the number (Russian _one also covers 21, 31...).
+    const realExtra = extraUnique.filter((x) => !enSet.has(x) && !(isPluralKey && x === '{{count}}'));
     if (realMissing.length) problems.error(rel, `${key}: missing placeholder(s) ${realMissing.join(' ')}`);
     if (realExtra.length) problems.error(rel, `${key}: unknown placeholder(s) ${realExtra.join(' ')}`);
     const countOnly = [...missingUnique, ...extraUnique].filter((x) => enSet.has(x) && trSet.has(x));
     if (countOnly.length) problems.warn(rel, `${key}: placeholder used a different number of times: ${[...new Set(countOnly)].join(' ')}`);
-    if (softMissing.length && !trSet.has('{{count}}')) problems.warn(rel, `${key}: plural form without {{count}}`);
+    // Without the number is natural for zero / one / two ("one file", Arabic dual); for the
+    // other forms it usually means the count was lost.
+    const suffix = (String(p[p.length - 1]).match(PLURAL_RE) || [])[2];
+    if (softMissing.length && !trSet.has('{{count}}') && !['zero', 'one', 'two'].includes(suffix)) problems.warn(rel, `${key}: plural form without {{count}}`);
     // Banned words.
     if (code !== 'en') {
       const hits = bannedHits(value);

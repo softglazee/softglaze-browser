@@ -63,6 +63,12 @@ test('plural forms: missing required form is an error, foreign forms are rejecte
   assert.match(msgs(de), /plural form "few" is not used by de/);
   const ja = checkLocale('ja', { root: fixture('ja', { ...base, files_other: '{{count}} 件', ...long }) });
   assert.deepEqual(ja.errors, []);
+  // English "One file" has no number; Russian _one also covers 21, so it may add {{count}}.
+  const root = fixture('ru', { title: 'П', nested: base.nested, files_one: '{{count}} файл', files_few: '{{count}} файла', files_many: '{{count}} файлов', files_other: '{{count}} файла', long: 'Длинное предложение.' });
+  const enOne = JSON.parse(fs.readFileSync(path.join(root, 'en', 'a.json'), 'utf8'));
+  enOne.files_one = 'One file';
+  fs.writeFileSync(path.join(root, 'en', 'a.json'), JSON.stringify(enOne, null, 2));
+  assert.deepEqual(checkLocale('ru', { root }).errors, []);
 });
 
 test('placeholders must match exactly', async () => {
