@@ -116,6 +116,7 @@ test('banned words, empty strings, BOM and broken JSON are errors; untranslated 
   assert.deepEqual(bannedHits('Unbekannte Bandbreite'), []);
   // Non-Latin terms match at the start of a word only.
   assert.deepEqual(bannedHits('Бангладеш'), []);
+  assert.deepEqual(bannedHits('Tây Ban Nha'), [], 'Vietnamese for Spain');
   assert.deepEqual(bannedHits('Это необходимо сделать'), []);
   assert.ok(bannedHits('Обход защиты').length);
   assert.ok(bannedHits('аккаунт забанен').length);

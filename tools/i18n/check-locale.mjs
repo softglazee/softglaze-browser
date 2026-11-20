@@ -107,8 +107,12 @@ function multisetDiff(a, b) {
   return { missing, extra };
 }
 
-export function bannedHits(str) {
-  if (typeof str !== 'string') return [];
+// Ordinary words that contain a banned term in another language (Vietnamese "Tây Ban Nha" = Spain).
+const ALLOWED_PHRASES = [/Tây Ban Nha/giu];
+
+export function bannedHits(input) {
+  if (typeof input !== 'string') return [];
+  const str = ALLOWED_PHRASES.reduce((s, rx) => s.replace(rx, ' '), input);
   const hits = [];
   for (const b of BANNED) {
     const m = str.match(b.rx);
