@@ -71,6 +71,9 @@ function walk(dir, out) {
     const full = path.join(dir, ent.name);
     if (ent.isDirectory()) {
       if (ent.name === 'node_modules' || ent.name === '.git') continue;
+      // Vendored single-file bundles inline their dependencies (src/main/mobile/vendor: @noble/* and valibot
+      // are bundled in, see VENDOR.json); their source comments name those packages but nothing is required.
+      if (ent.name === 'vendor') continue;
       walk(full, out);
     } else if (ent.isFile() && SCAN_EXTS.has(path.extname(ent.name))) {
       out.push(full);
