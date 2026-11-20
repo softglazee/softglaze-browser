@@ -1,6 +1,6 @@
 'use strict';
-// One-click sign-in (1.0.26): "Continue with Google", "Continue with GitHub" and "Continue with email" (a 6-digit
-// code, no password).
+// One-click sign-in (1.0.26): "Continue with Google", "Continue with Facebook", "Continue with GitHub" and
+// "Continue with email" (a 6-digit code, no password).
 // What main does with a verified sign-in, for three purposes:
 //
 //   signup  a new workspace: the Owner is created from the verified name and email (no long form) and the
@@ -32,6 +32,7 @@ const MESSAGES = Object.freeze({
   SIGNIN_ACCOUNT_MISMATCH: 'This workspace belongs to a different SoftGlaze account. Sign in with the account you created it with.',
   SIGNIN_EMAIL_MISMATCH: 'Use the email address of this workspace.',
   SIGNIN_EMAIL_NOT_VERIFIED: 'The account you signed in with has no verified email address. Verify it there (on GitHub: Settings > Emails), or continue with email.',
+  SIGNIN_EMAIL_MISSING: "Your Facebook account didn't share an email. Use Google or email sign-in, or allow email access.",
   SIGNIN_DISPOSABLE_EMAIL: 'Please use a permanent email address.',
   SIGNIN_UNAVAILABLE: 'This sign-in is not available yet. Continue with email, or use More options.',
   SIGNIN_FAILED: "The sign-in didn't finish. Try again in a minute.",
@@ -56,6 +57,7 @@ function mapError(e, context = null) {
   if (code === 'invalid_grant') return coded('SIGNIN_EXPIRED');
   if (code === 'account_mismatch') return coded('SIGNIN_ACCOUNT_MISMATCH');
   if (code === 'email_not_verified') return coded('SIGNIN_EMAIL_NOT_VERIFIED');
+  if (code === 'email_missing') return coded('SIGNIN_EMAIL_MISSING');
   if (code === 'session_invalid') return coded('SIGNIN_SESSION_ENDED');
   if (code === 'move_limit') return coded('MOVE_LIMIT', { retryAt: e.retryAt || null });
   // A server without the /auth routes (deployed before this release) answers a plain 404.
@@ -177,14 +179,15 @@ function createOneClickSignIn(d) {
     return (await workspaceAccount()).customerId;
   }
 
-  // --- Provider sign-in (Google, GitHub) ---
-  async function start({ provider, purpose, mode } = {}) {
+  // --- Provider sign-in (Google, Facebook, GitHub) ---
+  // rerequest: "Allow email access" after a Facebook sign-in that shared no email.
+  async function start({ provider, purpose, mode, rerequest = false } = {}) {
     await assertPurpose(purpose);
     if (!tenant()) throw coded('SIGNIN_UNAVAILABLE');
     if (!PROVIDERS.includes(provider)) throw coded('SIGNIN_UNAVAILABLE');
     const inst = await install();
     const expectCustomerId = await expectedCustomer(purpose);
-    const got = await d.flow.begin(provider, { mode: mode === 'loopback' ? 'loopback' : 'auto' });
+    const got = await d.flow.begin(provider, { mode: mode === 'loopback' ? 'loopback' : 'auto', rerequest: rerequest === true && provider === 'facebook' });
     let body;
     try {
       body = await d.api.authExchange({ installId: inst.installId, installSecret: inst.installSecret, code: got.code, codeVerifier: got.codeVerifier, expectCustomerId });

@@ -43,10 +43,16 @@ test('PKCE, the start URL and the protocol result are built and read exactly', (
   assert.equal(url.origin + url.pathname, 'https://api.softglaze.com/auth/start');
   assert.deepEqual(Object.fromEntries(url.searchParams), { provider: 'github', tenant: 't1', app_redirect: 'softglaze://auth', code_challenge: p.challenge, code_challenge_method: 'S256', state: st });
   assert.throws(() => auth.startUrl({ apiBaseUrl: 'http://evil.example', tenantId: 't', provider: 'github', appRedirect: 'softglaze://auth', codeChallenge: p.challenge, state: st }));
-  assert.throws(() => auth.startUrl({ apiBaseUrl: 'https://api.softglaze.com', tenantId: 't', provider: 'facebook', appRedirect: 'softglaze://auth', codeChallenge: p.challenge, state: st }));
+  assert.throws(() => auth.startUrl({ apiBaseUrl: 'https://api.softglaze.com', tenantId: 't', provider: 'myspace', appRedirect: 'softglaze://auth', codeChallenge: p.challenge, state: st }));
   const g = new URL(auth.startUrl({ apiBaseUrl: 'https://api.softglaze.com', tenantId: 't1', provider: 'google', appRedirect: 'softglaze://auth', codeChallenge: p.challenge, state: st }));
   assert.equal(g.searchParams.get('provider'), 'google');
-  assert.deepEqual(auth.PROVIDERS, ['google', 'github']);
+  assert.deepEqual(auth.PROVIDERS, ['google', 'facebook', 'github']);
+  const fbUrl = new URL(auth.startUrl({ apiBaseUrl: 'https://api.softglaze.com', tenantId: 't1', provider: 'facebook', appRedirect: 'softglaze://auth', codeChallenge: p.challenge, state: st }));
+  assert.equal(fbUrl.searchParams.get('provider'), 'facebook');
+  assert.equal(fbUrl.searchParams.get('auth_type'), null);
+  const again = new URL(auth.startUrl({ apiBaseUrl: 'https://api.softglaze.com', tenantId: 't1', provider: 'facebook', appRedirect: 'softglaze://auth', codeChallenge: p.challenge, state: st, rerequest: true }));
+  assert.equal(again.searchParams.get('auth_type'), 'rerequest');
+  assert.deepEqual(auth.parseProtocolUrl(`softglaze://auth?error=email_missing&state=${st}`), { error: 'email_missing', state: st });
 
   const code = b64();
   assert.deepEqual(auth.parseProtocolUrl(`softglaze://auth?code=${code}&state=${st}`), { code, state: st });
@@ -123,6 +129,9 @@ test('the browser flow: softglaze://auth with its own state, errors, cancel and 
 
   const e = flowWith({ onOpen: (url, f) => f.handleProtocolUrl(`softglaze://auth?error=email_not_verified&state=${url.searchParams.get('state')}`) });
   await assert.rejects(e.flow.begin('github'), (x) => x.code === 'SIGNIN_EMAIL_NOT_VERIFIED');
+  const m = flowWith({ onOpen: (url, f) => f.handleProtocolUrl(`softglaze://auth?error=email_missing&state=${url.searchParams.get('state')}`) });
+  await assert.rejects(m.flow.begin('facebook', { rerequest: true }), (x) => x.code === 'SIGNIN_EMAIL_MISSING' && /didn't share an email/.test(x.message));
+  assert.equal(new URL(m.opened[0]).searchParams.get('auth_type'), 'rerequest', '"Allow email access" asks Facebook again');
 
   const c = flowWith();
   const first = c.flow.begin('github');
@@ -283,14 +292,25 @@ function harness({ tenant = true, members = [], settings = {}, server = fakeServ
 
 test('Continue with Google: listed in the app order when the server has its keys, signs in like GitHub', async () => {
   const h = harness();
-  h.server.providers = ['github', 'google', 'facebook'];
+  h.server.providers = ['github', 'google', 'myspace'];
   assert.deepEqual((await h.svc.info()).providers, ['google', 'github'], 'known providers only, Google first');
   const r = await h.svc.start({ provider: 'google', purpose: 'signup' });
   assert.equal(r.outcome, 'created');
   assert.equal(r.provider, 'google');
   const ex = h.server.calls.find((c) => c.name === 'exchange');
   assert.ok(ex, 'the code was traded with the server');
-  await assert.rejects(h.svc.start({ provider: 'facebook', purpose: 'link' }), (e) => /^SIGNIN_/.test(e.code));
+  await assert.rejects(h.svc.start({ provider: 'myspace', purpose: 'link' }), (e) => /^SIGNIN_/.test(e.code));
+});
+
+test('Continue with Facebook: between Google and GitHub, signs in like Google; no email = SIGNIN_EMAIL_MISSING', async () => {
+  const h = harness();
+  h.server.providers = ['github', 'facebook', 'google'];
+  assert.deepEqual((await h.svc.info()).providers, ['google', 'facebook', 'github']);
+  const r = await h.svc.start({ provider: 'facebook', purpose: 'signup' });
+  assert.equal(r.outcome, 'created');
+  assert.equal(r.provider, 'facebook');
+  h.server.api.authExchange = async () => { throw httpErr(403, 'email_missing'); };
+  await assert.rejects(h.svc.start({ provider: 'facebook', purpose: 'link' }), (e) => e.code === 'SIGNIN_EMAIL_MISSING');
 });
 
 test('Continue with GitHub on a new workspace: the Owner from the verified name and email, opened with a sealed key', async () => {
@@ -659,10 +679,13 @@ test('renderer rules and texts (en and es)', async () => {
   assert.equal(f.canOfferMove({ state: 'elsewhere' }), true);
   assert.equal(f.canOfferMove({ state: 'store' }), false);
   assert.equal(f.moveErrorKey({ code: 'MOVE_LIMIT' }), 'store.result.moveLimit');
-  assert.deepEqual(f.methodRows([{ provider: 'email', email: 'a@x' }, { provider: 'google' }, { provider: 'github', login: 'a' }, { provider: 'facebook' }]).map((m) => m.provider), ['google', 'github', 'email']);
+  assert.deepEqual(f.methodRows([{ provider: 'email', email: 'a@x' }, { provider: 'google' }, { provider: 'github', login: 'a' }, { provider: 'facebook' }, { provider: 'myspace' }]).map((m) => m.provider), ['google', 'facebook', 'github', 'email']);
   assert.equal(f.showGoogle({ tenant: true, providers: ['google', 'github'] }), true);
   assert.equal(f.showGoogle({ tenant: true, providers: ['github'] }), false, 'server without Google keys: hidden');
-  assert.deepEqual(f.providerButtons({ tenant: true, providers: ['github', 'google', 'facebook'] }), ['google', 'github'], 'known providers, Google first');
+  assert.deepEqual(f.providerButtons({ tenant: true, providers: ['github', 'google', 'facebook', 'myspace'] }), ['google', 'facebook', 'github'], 'known providers, Google first');
+  assert.equal(f.showFacebook({ tenant: true, providers: ['google'] }), false, 'server without Facebook keys: hidden');
+  assert.equal(f.offerEmailRerequest({ code: 'SIGNIN_EMAIL_MISSING' }), true);
+  assert.equal(f.offerEmailRerequest({ code: 'SIGNIN_FAILED' }), false);
   assert.deepEqual(f.providerButtons({ tenant: false, providers: ['google'] }), []);
   assert.equal(f.sixDigits(' 12-34 567 '), '123456');
 

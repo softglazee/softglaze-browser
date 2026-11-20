@@ -706,7 +706,7 @@ const api = Object.freeze({
     info: () => invoke(CHANNELS.SIGNIN_INFO),
     // Opens the system browser and resolves when the sign-in came back (or rejects: SIGNIN_CANCELLED, ...).
     // mode 'loopback' = "Try another way". -> { outcome: created | unlocked | linked, askUseCase, licence }
-    start: (provider, purpose, mode) => invoke(CHANNELS.SIGNIN_START, { provider, purpose, mode }),
+    start: (provider, purpose, mode, rerequest) => invoke(CHANNELS.SIGNIN_START, { provider, purpose, mode, rerequest: rerequest === true }),
     cancel: () => invoke(CHANNELS.SIGNIN_CANCEL),
     emailStart: (email, purpose, lang) => invoke(CHANNELS.SIGNIN_EMAIL_START, { email, purpose, lang }),
     emailVerify: (email, code, purpose) => invoke(CHANNELS.SIGNIN_EMAIL_VERIFY, { email, code, purpose }),

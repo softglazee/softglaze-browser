@@ -3,9 +3,9 @@ import { KeyRound, LogOut, Loader2, Mail, WifiOff, CheckCircle2, AlertTriangle }
 import { useTranslation } from 'react-i18next';
 import { softglazeApi } from '@/lib/softglazeApi.js';
 import { methodRows } from '@/lib/signInFlow.mjs';
-import SignInPanel, { GithubMark, GoogleMark } from '@/components/SignInPanel.jsx';
+import SignInPanel, { GithubMark, GoogleMark, FacebookMark } from '@/components/SignInPanel.jsx';
 
-// Settings > Account: the SoftGlaze account's sign-in methods (Google, GitHub, email code) and Sign out (1.0.26).
+// Settings > Account: the SoftGlaze account's sign-in methods (Google, Facebook, GitHub, email code) and Sign out (1.0.26).
 // Only the workspace Owner (or the Super Admin) sees it; main decides what can be done (oneClickSignIn.js).
 
 function formatDate(value, lang) {
@@ -61,10 +61,10 @@ export default function SignInMethodsCard({ isOwner }) {
             {rows.map((m) => (
               <li key={`${m.provider}-${m.login || m.email}`} className="flex items-center gap-3 px-3 py-2.5 min-w-0">
                 <span className="w-8 h-8 rounded-lg bg-secondary grid place-items-center shrink-0 text-foreground">
-                  {m.provider === 'google' ? <GoogleMark className="w-4 h-4" /> : m.provider === 'github' ? <GithubMark className="w-4 h-4" /> : <Mail className="w-4 h-4" />}
+                  {m.provider === 'google' ? <GoogleMark className="w-4 h-4" /> : m.provider === 'facebook' ? <FacebookMark className="w-4 h-4" /> : m.provider === 'github' ? <GithubMark className="w-4 h-4" /> : <Mail className="w-4 h-4" />}
                 </span>
                 <span className="min-w-0 flex-1">
-                  <span className="block text-[13px] font-medium text-foreground truncate">{m.provider === 'google' ? t('account.google') : m.provider === 'github' ? (m.login ? t('account.githubLogin', { login: m.login }) : t('account.github')) : t('account.email')}</span>
+                  <span className="block text-[13px] font-medium text-foreground truncate">{m.provider === 'google' ? t('account.google') : m.provider === 'facebook' ? t('account.facebook') : m.provider === 'github' ? (m.login ? t('account.githubLogin', { login: m.login }) : t('account.github')) : t('account.email')}</span>
                   <span className="block text-[11.5px] text-muted-foreground truncate">{m.email || ''}</span>
                 </span>
                 <span className="text-[11px] text-muted-foreground shrink-0 hidden sm:block">

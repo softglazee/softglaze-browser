@@ -4,10 +4,10 @@ import { useTranslation } from 'react-i18next';
 import { softglazeApi } from '@/lib/softglazeApi.js';
 import { getStoredLang } from '@/lib/lang.js';
 import { USE_CASES, LEAD_LIMITS } from '@/lib/signupLead.mjs';
-import { signInErrorText, providerButtons, PROVIDER_NAMES, sixDigits, canOfferMove, moveErrorKey } from '@/lib/signInFlow.mjs';
+import { signInErrorText, providerButtons, PROVIDER_NAMES, offerEmailRerequest, sixDigits, canOfferMove, moveErrorKey } from '@/lib/signInFlow.mjs';
 
-// One-click sign-in (1.0.26): "Continue with Google" and "Continue with GitHub" (the system browser, then back to
-// the app) and "Continue with email" (a 6-digit code). Used by the Gate for a new workspace (purpose 'signup') and for a one-click
+// One-click sign-in (1.0.26): "Continue with Google", "Continue with Facebook" and "Continue with GitHub" (the
+// system browser, then back to the app) and "Continue with email" (a 6-digit code). Used by the Gate for a new workspace (purpose 'signup') and for a one-click
 // workspace after Sign out ('unlock'), and by Settings > Account ('link'). Main does the work and keeps the
 // session token; this only draws the steps.
 
@@ -19,6 +19,8 @@ const githubBtn = `${bigBtn} bg-foreground text-background hover:opacity-90 shad
 // Google's own light button (branding guidelines): white, a thin grey border, dark text and the four-colour G, in
 // both themes. The colours are the --google-btn-* tokens in index.css.
 const googleBtn = `${bigBtn} border border-[var(--google-btn-border)] bg-[var(--google-btn-bg)] text-[var(--google-btn-fg)] hover:bg-[var(--google-btn-hover)] shadow-sm`;
+// Meta's brand button: Facebook blue, the white "f" logo, white text. The colours are the --facebook-btn-* tokens.
+const facebookBtn = `${bigBtn} bg-[var(--facebook-btn-bg)] text-[var(--facebook-btn-fg)] hover:bg-[var(--facebook-btn-hover)] shadow-sm`;
 const emailBtn = `${bigBtn} border border-border bg-background/60 text-foreground hover:bg-secondary`;
 const primaryBtn = 'mt-5 w-full h-11 rounded-xl bg-gradient-to-b from-primary to-primary-hover text-white font-semibold text-[13px] flex items-center justify-center gap-2 disabled:opacity-60 shadow-glow transition-all duration-200';
 const linkBtn = 'text-[12px] text-muted-dark hover:text-primary transition-colors disabled:opacity-60';
@@ -43,8 +45,22 @@ export function GoogleMark({ className = 'w-[18px] h-[18px]' }) {
   );
 }
 
+// The Facebook logo (Meta brand resources: the blue circle with the "f" knocked out, not redrawn or recoloured).
+// On the blue "Continue with Facebook" button Meta uses the white logo, the "f" showing the blue button through it.
+const FACEBOOK_LOGO = 'M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z';
+export function FacebookMark({ className = 'w-[18px] h-[18px]', onBlue = false }) {
+  return (
+    <svg viewBox="0 0 24 24" aria-hidden="true" className={className}>
+      {!onBlue && <circle cx="12" cy="12" r="11.5" fill="#ffffff" />}
+      <path fill={onBlue ? '#ffffff' : '#1877F2'} d={FACEBOOK_LOGO} />
+    </svg>
+  );
+}
+
 export function ProviderMark({ provider, className }) {
-  return provider === 'google' ? <GoogleMark className={className} /> : <GithubMark className={className} />;
+  if (provider === 'google') return <GoogleMark className={className} />;
+  if (provider === 'facebook') return <FacebookMark className={className} />;
+  return <GithubMark className={className} />;
 }
 
 // purpose: 'signup' | 'unlock' | 'link'. info: signin.info() ({ tenant, providers, account }). lockedEmail: the
@@ -58,6 +74,7 @@ export default function SignInPanel({ purpose, info, lockedEmail = '', onDone, o
   const [devCode, setDevCode] = useState('');
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState('');
+  const [rerequest, setRerequest] = useState(false); // offer "Allow email access" (Facebook shared no email)
   const [resendIn, setResendIn] = useState(0);
   const [provider, setProvider] = useState('github'); // the provider of the browser sign-in in progress
   const attempt = useRef(0); // only the newest provider attempt may change the screen
@@ -72,18 +89,18 @@ export default function SignInPanel({ purpose, info, lockedEmail = '', onDone, o
     return () => clearInterval(id);
   }, [resendIn]);
 
-  async function startProvider(which, mode) {
+  async function startProvider(which, mode, again = false) {
     const mine = ++attempt.current;
     setProvider(which);
-    setErr(''); setStep('waiting');
+    setErr(''); setRerequest(false); setStep('waiting');
     try {
-      const r = await softglazeApi.signin.start(which, purpose, mode);
+      const r = await softglazeApi.signin.start(which, purpose, mode, again);
       if (!live.current || mine !== attempt.current) return;
       onDone(r);
     } catch (e) {
       if (!live.current || mine !== attempt.current) return;
       const text = signInErrorText(t, tg, e);
-      setErr(text || ''); setStep('choose');
+      setErr(text || ''); setRerequest(which === 'facebook' && offerEmailRerequest(e)); setStep('choose');
     }
   }
 
@@ -197,6 +214,11 @@ export default function SignInPanel({ purpose, info, lockedEmail = '', onDone, o
             <GoogleMark /> {t('choose.google')}
           </button>
         )}
+        {buttons.includes('facebook') && (
+          <button type="button" onClick={() => startProvider('facebook', 'auto')} className={facebookBtn}>
+            <FacebookMark onBlue /> {t('choose.facebook')}
+          </button>
+        )}
         {buttons.includes('github') && (
           <button type="button" onClick={() => startProvider('github', 'auto')} className={githubBtn}>
             <GithubMark /> {t('choose.github')}
@@ -207,6 +229,11 @@ export default function SignInPanel({ purpose, info, lockedEmail = '', onDone, o
         </button>
       </div>
       {errBox}
+      {rerequest && buttons.includes('facebook') && (
+        <button type="button" onClick={() => startProvider('facebook', 'auto', true)} className={`${linkBtn} mt-2 underline underline-offset-2`}>
+          {t('choose.allowEmail')}
+        </button>
+      )}
       {onMoreOptions && (
         <>
           <div className="flex items-center gap-3 my-5" aria-hidden="true">

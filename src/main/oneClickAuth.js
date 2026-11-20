@@ -9,9 +9,10 @@ const PROTOCOL = 'softglaze';
 const PROTOCOL_REDIRECT = 'softglaze://auth';
 // Sign-in providers the app knows, in button order. A button appears only when the server lists the provider in
 // GET /auth/providers (its keys are set there). Microsoft would be added the same way.
-const PROVIDERS = Object.freeze(['google', 'github']);
+const PROVIDERS = Object.freeze(['google', 'facebook', 'github']);
 // Errors the server may send back with the redirect (licensing-server/src/auth/flow.js).
-const RESULT_ERRORS = Object.freeze(['cancelled', 'email_not_verified', 'disposable_email', 'failed']);
+// email_missing: a Facebook account that shared no email and is not linked yet (the panel offers "Allow email access").
+const RESULT_ERRORS = Object.freeze(['cancelled', 'email_not_verified', 'email_missing', 'disposable_email', 'failed']);
 
 const CODE_RE = /^[A-Za-z0-9_-]{43}$/;
 const STATE_RE = /^[A-Za-z0-9_-]{16,128}$/;
@@ -35,8 +36,9 @@ function sameState(a, b) {
   return x.length > 0 && x.length === y.length && crypto.timingSafeEqual(x, y);
 }
 
-// The page on our server that starts a provider sign-in.
-function startUrl({ apiBaseUrl, tenantId, provider, appRedirect, codeChallenge, state }) {
+// The page on our server that starts a provider sign-in. `rerequest` (Facebook) asks again for the email
+// permission the person declined (auth_type=rerequest).
+function startUrl({ apiBaseUrl, tenantId, provider, appRedirect, codeChallenge, state, rerequest = false }) {
   if (!PROVIDERS.includes(provider)) throw new Error(`Unknown sign-in provider: ${provider}`);
   const base = String(apiBaseUrl || '').replace(/\/+$/, '');
   if (!/^https:\/\//i.test(base) && !/^http:\/\/(127\.0\.0\.1|localhost)(:\d+)?$/i.test(base)) throw new Error('The licensing server address is not set.');
@@ -48,6 +50,7 @@ function startUrl({ apiBaseUrl, tenantId, provider, appRedirect, codeChallenge, 
     code_challenge_method: 'S256',
     state
   });
+  if (rerequest) q.set('auth_type', 'rerequest');
   return `${base}/auth/start?${q.toString()}`;
 }
 
