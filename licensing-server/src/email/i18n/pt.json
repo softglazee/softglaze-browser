@@ -1,0 +1,43 @@
+{
+  "_meta": {
+    "greetingNamed": "Olá, {{name}},",
+    "greetingNoName": "Olá,",
+    "sentBy": "Este e-mail foi enviado por {{company}} para {{email}}.",
+    "unsub": "Não quer mais receber estes e-mails?",
+    "unsubLink": "Cancelar inscrição",
+    "essential": "Você recebeu este e-mail porque este endereço foi informado no app.",
+    "purchase": "Você recebeu este e-mail porque este endereço foi usado em uma compra no nosso site."
+  },
+  "verify_code": {
+    "subject": "Seu código de verificação do SoftGlaze",
+    "html": "<p>{{greeting}}</p>\n<p>Seu código de verificação é:</p>\n<p style=\"font-size:28px;font-weight:700;letter-spacing:6px;margin:16px 0;color:#111827;\">{{code}}</p>\n<p>Digite-o no {{appName}} para confirmar este endereço de e-mail. O código vale por {{codeMinutes}} minutos.</p>\n<p>Se você não pediu este código, pode ignorar este e-mail. Nada muda enquanto o código não for digitado.</p>"
+  },
+  "welcome": {
+    "subject": "Boas-vindas ao SoftGlaze Browser",
+    "html": "<p>{{greeting}}</p>\n<p>Obrigado por experimentar o {{appName}}. Seu teste grátis está ativo até {{trialEndsAt}} e, durante o teste, você pode usar os recursos do {{plan}}.</p>\n<p>Um bom primeiro passo: crie um perfil, dê a ele um proxy se você usa um, e abra o perfil. Cada perfil guarda os próprios cookies e configurações, separados dos outros.</p>\n<p>Se algo não estiver claro ou não funcionar, responda a este e-mail. Lemos todas as respostas.</p>\n<p>Equipe SoftGlaze</p>"
+  },
+  "tips": {
+    "subject": "Três coisas para testar no SoftGlaze Browser",
+    "html": "<p>{{greeting}}</p>\n<p>Estas são três coisas que as pessoas acham úteis na primeira semana:</p>\n<ol>\n<li><strong>Um perfil por conta.</strong> Mantenha cada conta no próprio perfil, assim cookies e logins nunca se misturam.</li>\n<li><strong>Verifique um proxy antes de usar.</strong> A lista de proxies pode testar um proxy e mostrar de onde ele se conecta.</li>\n<li><strong>Convide sua equipe.</strong> Adicione membros da equipe no app; cada pessoa entra com o próprio login.</li>\n</ol>\n<p>Seu teste vai até {{trialEndsAt}}. Perguntas são bem-vindas: é só responder a este e-mail.</p>"
+  },
+  "trial_ending": {
+    "subject": "Seu teste do SoftGlaze termina em {{trialEndsAt}}",
+    "html": "<p>{{greeting}}</p>\n<p>Um lembrete rápido: seu teste grátis do {{appName}} termina em {{trialEndsAt}}.</p>\n<p>Depois disso, você passa automaticamente para o plano Free. Nada é bloqueado e nada é apagado: você mantém todos os seus perfis (25 podem ser abertos), seus proxies e impressões digitais, e o app para celular e web.</p>\n<p>Para manter perfis ilimitados, 3 abertos ao mesmo tempo, vagas para a equipe, sincronização na nuvem e ações de IA ilimitadas, escolha o Pro no app (abra Cobrança), a partir de US$ 5 por mês. Se preferir pagar por fatura, responda a este e-mail e enviaremos uma.</p>"
+  },
+  "trial_ended": {
+    "subject": "Agora você está no plano Free do SoftGlaze",
+    "html": "<p>{{greeting}}</p>\n<p>Seu teste terminou. Agora você está no plano Free.</p>\n<p>Você mantém: todos os seus perfis (25 podem ser abertos), seus proxies e impressões digitais, o app para celular e web.</p>\n<p>O Pro adiciona: perfis ilimitados, 3 abertos ao mesmo tempo, vagas para a equipe, sincronização na nuvem e ações de IA ilimitadas, a partir de US$ 5 por mês. Para fazer o upgrade, abra Cobrança no app ou responda a este e-mail para pagar por fatura. Se você já tem um código de compra, digite-o em Cobrança.</p>\n<p>Obrigado por experimentar o {{appName}}.</p>"
+  },
+  "come_back": {
+    "subject": "O SoftGlaze Browser ainda está nos seus planos?",
+    "html": "<p>{{greeting}}</p>\n<p>Seu teste do SoftGlaze terminou há uma semana. Se você ainda procura um jeito de manter muitas contas separadas, o app está pronto quando você estiver: seus perfis continuam no seu computador.</p>\n<p>Se algo impediu você, gostaríamos de saber o quê. Responda a este e-mail; lemos todas as respostas.</p>\n<p>A versão mais recente está aqui: <a href=\"{{downloadUrl}}\">{{downloadUrl}}</a></p>"
+  },
+  "activation_code": {
+    "subject": "Seu código de ativação do SoftGlaze Browser",
+    "html": "<p>{{greeting}}</p>\n<p>Obrigado por comprar o {{appName}}. Seu pagamento do plano {{plan}} ({{term}}) foi concluído.</p>\n<p>Seu código de ativação é:</p>\n<p style=\"font-size:28px;font-weight:700;letter-spacing:6px;margin:16px 0;color:#111827;\">{{code}}</p>\n<p>Como usar:</p>\n<ol>\n<li>Instale o {{appName}}, se ainda não instalou: <a href=\"{{downloadUrl}}\">{{downloadUrl}}</a></li>\n<li>Abra o app e vá em Cobrança.</li>\n<li>Em \"Tem um código de compra?\", cole o código e clique em Aplicar.</li>\n</ol>\n<p>O código funciona uma vez, no computador em que você o digitar. Guarde este e-mail até usar o código.</p>\n<p>Se algo não funcionar, responda a este e-mail ou escreva para {{supportEmail}}. Vamos ajudar, reenviar o código ou devolver o seu dinheiro.</p>\n<p>Equipe SoftGlaze</p>"
+  },
+  "free_plan_launch": {
+    "subject": "Boa notícia: o SoftGlaze agora tem um plano grátis",
+    "html": "<p>{{greeting}}</p>\n<p>Quando seu teste do {{appName}} terminou, o app parou de abrir perfis. Isso mudou: o SoftGlaze agora tem um plano Free, e ele é seu assim que você atualizar o app.</p>\n<p>No plano Free você pode:</p>\n<ul>\n<li>manter 25 perfis de navegador e abrir 1 por vez</li>\n<li>usar todas as configurações de impressão digital e seus próprios proxies</li>\n<li>ver perfis e aprovar pedidos de IA pelo app para celular e web</li>\n<li>fazer 25 ações de IA por dia</li>\n</ul>\n<p>Seus perfis, proxies e configurações continuam no seu computador. Baixe a versão mais recente aqui: <a href=\"{{downloadUrl}}\">{{downloadUrl}}</a></p>\n<p>Se precisar de mais, o Pro adiciona perfis ilimitados, 3 abertos ao mesmo tempo, vagas para a equipe, sincronização na nuvem e ações de IA ilimitadas, a partir de US$ 5 por mês.</p>\n<p>Equipe SoftGlaze</p>"
+  }
+}

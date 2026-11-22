@@ -1,0 +1,43 @@
+{
+  "_meta": {
+    "greetingNamed": "Cześć {{name}},",
+    "greetingNoName": "Cześć,",
+    "sentBy": "Ten e-mail wysłała firma {{company}} na adres {{email}}.",
+    "unsub": "Nie chcesz dostawać tych wiadomości?",
+    "unsubLink": "Wypisz się",
+    "essential": "Dostajesz ten e-mail, ponieważ ten adres został wpisany w aplikacji.",
+    "purchase": "Dostajesz ten e-mail, ponieważ ten adres został użyty przy zakupie na naszej stronie."
+  },
+  "verify_code": {
+    "subject": "Twój kod weryfikacyjny SoftGlaze",
+    "html": "<p>{{greeting}}</p>\n<p>Twój kod weryfikacyjny to:</p>\n<p style=\"font-size:28px;font-weight:700;letter-spacing:6px;margin:16px 0;color:#111827;\">{{code}}</p>\n<p>Wpisz go w {{appName}}, aby potwierdzić ten adres e-mail. Kod jest ważny przez {{codeMinutes}} min.</p>\n<p>Jeśli prośba o ten kod nie pochodziła od Ciebie, możesz zignorować tę wiadomość. Nic się nie zmieni, dopóki kod nie zostanie wpisany.</p>"
+  },
+  "welcome": {
+    "subject": "Witaj w SoftGlaze Browser",
+    "html": "<p>{{greeting}}</p>\n<p>Dziękujemy, że wypróbowujesz {{appName}}. Twój bezpłatny okres próbny trwa do {{trialEndsAt}}, a w tym czasie możesz korzystać z funkcji planu {{plan}}.</p>\n<p>Dobry pierwszy krok: utwórz profil, przypisz mu proxy, jeśli go używasz, i otwórz go. Każdy profil ma własne pliki cookie i ustawienia, oddzielone od pozostałych.</p>\n<p>Jeśli coś jest niejasne albo nie działa, odpowiedz na tę wiadomość. Czytamy każdą odpowiedź.</p>\n<p>Zespół SoftGlaze</p>"
+  },
+  "tips": {
+    "subject": "Trzy rzeczy, które warto wypróbować w SoftGlaze Browser",
+    "html": "<p>{{greeting}}</p>\n<p>Oto trzy rzeczy, które użytkownicy uznają za przydatne w pierwszym tygodniu:</p>\n<ol>\n<li><strong>Jeden profil na konto.</strong> Trzymaj każde konto w osobnym profilu, aby pliki cookie i logowania nigdy się nie mieszały.</li>\n<li><strong>Sprawdź proxy, zanim go użyjesz.</strong> Lista proxy pozwala przetestować proxy i zobaczyć, skąd się łączy.</li>\n<li><strong>Zaproś swój zespół.</strong> Dodaj członków zespołu w aplikacji; każda osoba loguje się własnymi danymi.</li>\n</ol>\n<p>Twój okres próbny trwa do {{trialEndsAt}}. Chętnie odpowiemy na pytania: po prostu odpisz na tę wiadomość.</p>"
+  },
+  "trial_ending": {
+    "subject": "Twój okres próbny SoftGlaze kończy się {{trialEndsAt}}",
+    "html": "<p>{{greeting}}</p>\n<p>Krótkie przypomnienie: Twój bezpłatny okres próbny {{appName}} kończy się {{trialEndsAt}}.</p>\n<p>Potem automatycznie przejdziesz na plan Free. Nic nie zostanie zablokowane ani usunięte: zachowasz wszystkie profile (25 można otwierać), swoje proxy i odciski przeglądarki oraz aplikację na telefon i w przeglądarce.</p>\n<p>Aby zachować nielimitowane profile, 3 profile uruchomione naraz, miejsca dla zespołu, synchronizację w chmurze i nielimitowane akcje AI, wybierz Pro w aplikacji (otwórz Płatności), od 5 US$ miesięcznie. Jeśli wolisz zapłacić na fakturę, odpowiedz na tę wiadomość, a ją wyślemy.</p>"
+  },
+  "trial_ended": {
+    "subject": "Korzystasz teraz z planu SoftGlaze Free",
+    "html": "<p>{{greeting}}</p>\n<p>Twój okres próbny się zakończył. Korzystasz teraz z planu Free.</p>\n<p>Zachowujesz: wszystkie profile (25 można otwierać), swoje proxy i odciski przeglądarki, aplikację na telefon i w przeglądarce.</p>\n<p>Pro dodaje: nielimitowane profile, 3 profile uruchomione naraz, miejsca dla zespołu, synchronizację w chmurze i nielimitowane akcje AI, od 5 US$ miesięcznie. Aby przejść na Pro, otwórz Płatności w aplikacji albo odpowiedz na tę wiadomość, aby zapłacić na fakturę. Jeśli masz już kod zakupu, wpisz go w sekcji Płatności.</p>\n<p>Dziękujemy za wypróbowanie {{appName}}.</p>"
+  },
+  "come_back": {
+    "subject": "Czy SoftGlaze Browser jest nadal na Twojej liście?",
+    "html": "<p>{{greeting}}</p>\n<p>Twój okres próbny SoftGlaze zakończył się tydzień temu. Jeśli nadal szukasz sposobu, by trzymać wiele kont osobno, aplikacja czeka na Ciebie: Twoje profile wciąż są na Twoim komputerze.</p>\n<p>Jeśli coś Cię zatrzymało, chętnie dowiemy się, co to było. Odpowiedz na tę wiadomość; czytamy każdą odpowiedź.</p>\n<p>Najnowsza wersja jest tutaj: <a href=\"{{downloadUrl}}\">{{downloadUrl}}</a></p>"
+  },
+  "activation_code": {
+    "subject": "Twój kod aktywacyjny SoftGlaze Browser",
+    "html": "<p>{{greeting}}</p>\n<p>Dziękujemy za zakup {{appName}}. Płatność za plan {{plan}} ({{term}}) została zrealizowana.</p>\n<p>Twój kod aktywacyjny to:</p>\n<p style=\"font-size:28px;font-weight:700;letter-spacing:6px;margin:16px 0;color:#111827;\">{{code}}</p>\n<p>Jak go użyć:</p>\n<ol>\n<li>Zainstaluj {{appName}}, jeśli jeszcze go nie masz: <a href=\"{{downloadUrl}}\">{{downloadUrl}}</a></li>\n<li>Otwórz aplikację i przejdź do Płatności.</li>\n<li>W sekcji „Masz kod zakupu?” wklej kod i kliknij Zastosuj.</li>\n</ol>\n<p>Kod działa raz, na komputerze, na którym go wpiszesz. Zachowaj tę wiadomość, dopóki go nie użyjesz.</p>\n<p>Jeśli coś nie działa, odpowiedz na tę wiadomość lub napisz na {{supportEmail}}. Pomożemy, wyślemy kod ponownie albo zwrócimy pieniądze.</p>\n<p>Zespół SoftGlaze</p>"
+  },
+  "free_plan_launch": {
+    "subject": "Dobra wiadomość: SoftGlaze ma teraz darmowy plan",
+    "html": "<p>{{greeting}}</p>\n<p>Gdy skończył się Twój okres próbny {{appName}}, aplikacja przestała otwierać profile. To się zmieniło: SoftGlaze ma teraz plan Free i będzie Twój, gdy tylko zaktualizujesz aplikację.</p>\n<p>W planie Free możesz:</p>\n<ul>\n<li>mieć 25 profili przeglądarki i uruchamiać 1 naraz</li>\n<li>korzystać ze wszystkich ustawień odcisku przeglądarki i własnych proxy</li>\n<li>przeglądać profile i zatwierdzać prośby AI w aplikacji na telefon i w przeglądarce</li>\n<li>wykonywać 25 akcji AI dziennie</li>\n</ul>\n<p>Twoje profile, proxy i ustawienia wciąż są na Twoim komputerze. Najnowszą wersję pobierzesz tutaj: <a href=\"{{downloadUrl}}\">{{downloadUrl}}</a></p>\n<p>Jeśli potrzebujesz więcej, Pro dodaje nielimitowane profile, 3 profile uruchomione naraz, miejsca dla zespołu, synchronizację w chmurze i nielimitowane akcje AI, od 5 US$ miesięcznie.</p>\n<p>Zespół SoftGlaze</p>"
+  }
+}

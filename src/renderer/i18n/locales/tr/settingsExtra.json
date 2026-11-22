@@ -36,7 +36,8 @@
     "experimental": "Deneysel",
     "savedIdle": "Tüm değişiklikler kaydedildi",
     "saving": "Değişiklikler kaydediliyor…",
-    "saveError": "Değişiklikler kaydedilemedi"
+    "saveError": "Değişiklikler kaydedilemedi",
+    "sectionsLabel": "Ayar bölümleri"
   },
   "localRuntime": {
     "title": "Yerel Çalışma Ortamı",
@@ -407,5 +408,12 @@
     "updateScheduler": "Zamanlayıcı güncellenemedi.",
     "loadGlobal": "Genel ayarlar yüklenemedi.",
     "saveSetting": "Ayar kaydedilemedi."
+  },
+  "resilienceToasts": {
+    "aProfile": "Bir profil",
+    "crashed": "{{profile}} beklenmedik şekilde durdu.",
+    "crashedRestarting": "{{profile}} beklenmedik şekilde durdu. Yeniden başlatılıyor…",
+    "lowMemory_one": "Bellek az: {{count}} profil kapatıldı (boş bellek %{{free}}).",
+    "lowMemory_other": "Bellek az: {{count}} profil kapatıldı (boş bellek %{{free}})."
   }
 }

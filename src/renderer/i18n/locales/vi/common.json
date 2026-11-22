@@ -223,7 +223,25 @@
     "resRunningVal": "{{count}} đang chạy",
     "resStoredVal": "{{count}} đã lưu",
     "restoreDesc": "{{count}} hồ sơ đang mở khi bạn đóng SoftGlaze lần trước.",
-    "runningCount": "{{count}} đang chạy"
+    "runningCount": "{{count}} đang chạy",
+    "update": {
+      "failedTitle": "Tải bản cập nhật thất bại",
+      "failedTitleVersion": "Tải bản cập nhật thất bại ({{version}})",
+      "checkingTitle": "Đang kiểm tra cập nhật…",
+      "readyTitle": "Bản cập nhật {{version}} đã sẵn sàng",
+      "downloadingTitle": "Đang tải bản cập nhật {{version}}…",
+      "availableTitle": "Có bản cập nhật mới {{version}}",
+      "failedDesc": "Không tải được bản cập nhật. Hãy kiểm tra kết nối và thử lại.",
+      "checkingDesc": "Đang kết nối máy chủ cập nhật…",
+      "readyDesc": "Bấm cài đặt để khởi động lại và dùng phiên bản mới.",
+      "downloadingDesc": "Đã tải {{percent}}%",
+      "availableDesc": "Bản cập nhật sẽ tải trong nền.",
+      "install": "Cài đặt và khởi động lại",
+      "retry": "Thử lại",
+      "whatsNew": "Có gì mới",
+      "hideNotes": "Ẩn ghi chú",
+      "dismiss": "Đóng thông báo cập nhật"
+    }
   },
   "settings": {
     "eyebrow": "Ứng dụng",
@@ -233,7 +251,13 @@
       "title": "Ngôn ngữ",
       "description": "Chọn ngôn ngữ hiển thị cho giao diện SoftGlaze.",
       "label": "Ngôn ngữ hiển thị",
-      "hint": "Thay đổi có hiệu lực ngay trong toàn ứng dụng."
+      "hint": "Thay đổi có hiệu lực ngay trong toàn ứng dụng.",
+      "urduFont": {
+        "label": "Phông chữ tiếng Urdu",
+        "hint": "Nastaliq là kiểu chữ viết truyền thống của tiếng Urdu. Phông này có sẵn trong ứng dụng và chỉ tải khi bạn chọn.",
+        "default": "Phông hệ thống (mặc định)",
+        "nastaliq": "Nastaliq (Noto Nastaliq Urdu)"
+      }
     }
   },
   "startLinks": {
@@ -243,7 +267,24 @@
     "loadError": "Không tải được liên kết của bạn ({{error}}). Đã tắt lưu để danh sách đã lưu không bị ghi đè.",
     "retry": "Thử lại",
     "droppedRows_one": "{{count}} dòng không được lưu vì URL không phải địa chỉ http(s) hợp lệ: {{rows}}",
-    "droppedRows_other": "{{count}} dòng không được lưu vì URL không phải địa chỉ http(s) hợp lệ: {{rows}}"
+    "droppedRows_other": "{{count}} dòng không được lưu vì URL không phải địa chỉ http(s) hợp lệ: {{rows}}",
+    "saved": "Đã lưu",
+    "save": "Lưu",
+    "links": "Liên kết",
+    "autoLabel": "Tự đặt nhãn",
+    "autoLabelHint": "Điền nhãn trống từ URL",
+    "add": "Thêm",
+    "loading": "Đang tải…",
+    "empty": "Chưa có liên kết nào. Dùng Thêm hàng loạt hoặc Thêm.",
+    "labelPlaceholder": "Nhãn",
+    "urlLabel": "Địa chỉ liên kết",
+    "remove": "Xóa",
+    "bulkTitle": "Thêm hàng loạt",
+    "bulkHint": "Dán nhiều URL, mỗi dòng một URL. Mỗi URL được đặt nhãn theo tên miền, bạn có thể sửa nhãn trong danh sách. Các dòng trùng lặp và dòng không phải http(s) sẽ bị bỏ qua.",
+    "addAll": "Thêm tất cả",
+    "clear": "Xóa hết",
+    "bulkResult": "Đã thêm: {{added}}. Bỏ qua: {{skipped}} (trùng lặp hoặc không phải http/https).",
+    "saveFailed": "Không lưu được."
   },
   "storeRating": {
     "cardTitle": "Bạn thích SoftGlaze Browser?",
@@ -283,5 +324,11 @@
     },
     "cta": "Xem ưu đãi",
     "dismiss": "Ẩn ưu đãi này"
+  },
+  "errorBoundary": {
+    "title": "Đã xảy ra lỗi trên trang này.",
+    "body": "Phần còn lại của ứng dụng vẫn đang chạy. Hãy thử lại hoặc mở trang khác từ thanh bên.",
+    "retry": "Thử lại",
+    "unknown": "Lỗi không xác định"
   }
 }

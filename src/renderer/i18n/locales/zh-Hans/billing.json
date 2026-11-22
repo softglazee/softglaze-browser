@@ -98,7 +98,7 @@
   },
   "redeem": {
     "label": "有购买码？",
-    "apply": "应用",
+    "apply": "使用",
     "success": "购买码已应用，谢谢！",
     "errors": {
       "empty": "请输入你的购买码。",

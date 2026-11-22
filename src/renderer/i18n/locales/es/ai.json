@@ -394,7 +394,24 @@
     "page_scroll": "Desplazarse por una página",
     "page_screenshot": "Hacer una captura de pantalla",
     "page_extract_text": "Copiar texto de una página",
-    "page_wait_for": "Esperar algo en una página"
+    "page_wait_for": "Esperar algo en una página",
+    "workspace_summary": "Leer el resumen del espacio de trabajo",
+    "list_profiles": "Listar perfiles",
+    "get_profile": "Leer un perfil",
+    "profile_health": "Comprobar el estado de un perfil y su riesgo de CAPTCHA",
+    "list_sessions": "Listar perfiles en ejecución",
+    "stop_all_profiles": "Detener todos los perfiles",
+    "list_proxies": "Listar proxies",
+    "check_proxy": "Comprobar un proxy",
+    "get_proxy_health": "Leer el historial de estado de un proxy",
+    "list_groups": "Listar grupos",
+    "list_macros": "Listar macros",
+    "get_macro": "Leer una macro",
+    "get_run_status": "Comprobar el estado de una ejecución",
+    "get_activity": "Leer la actividad reciente",
+    "read_memory": "Leer la memoria del espacio de trabajo",
+    "update_memory": "Actualizar la memoria del espacio de trabajo",
+    "get_cdp_endpoint": "Pasar un perfil a Playwright o DevTools (Experto)"
   },
   "tokens": {
     "search": "Buscar tokens",
@@ -568,7 +585,57 @@
     "howClaudeDesktop": "haz clic en + debajo del chat y busca SoftGlaze.",
     "howVsCode": "escribe / en Copilot Chat y elige un prompt de SoftGlaze.",
     "howCursor": "si no aparecen los prompts, copia el texto de abajo.",
-    "howOther": "Cualquier app: copia el texto del prompt, pégalo en el chat y rellena los datos."
+    "howOther": "Cualquier app: copia el texto del prompt, pégalo en el chat y rellena los datos.",
+    "items": {
+      "daily_health_check": {
+        "title": "Revisión diaria",
+        "description": "Revisa cada perfil en ejecución o usado hace poco y su proxy, y luego informa de los problemas con la solución de cada uno."
+      },
+      "diagnose_captcha": {
+        "title": "¿Por qué este perfil recibe CAPTCHA?",
+        "description": "Explica por qué un perfil sigue recibiendo CAPTCHA o páginas de bloqueo, usando profile_health, y propone soluciones."
+      },
+      "create_geo_profiles": {
+        "title": "Crear perfiles para un país",
+        "description": "Crea varios perfiles en un grupo, cada uno con un proxy de ese país que funcione."
+      },
+      "fix_proxy_mismatches": {
+        "title": "Corregir desajustes de zona horaria, idioma y ubicación",
+        "description": "Busca perfiles cuya zona horaria, idioma o ubicación no coinciden con su proxy y propone correcciones para aprobar."
+      },
+      "rotate_bad_proxies": {
+        "title": "Sustituir proxies que fallan o están en listas de bloqueo",
+        "description": "Busca proxies que fallan o están en listas de bloqueo y luego cambia su IP o mueve sus perfiles a proxies en buen estado."
+      },
+      "warm_up_profiles": {
+        "title": "Calentar perfiles",
+        "description": "Planifica e inicia un calentamiento con el Cookie Warmer para que los perfiles nuevos acumulen un historial de navegación normal."
+      },
+      "write_macro": {
+        "title": "Escribir una macro a partir de una descripción",
+        "description": "Convierte una tarea descrita con palabras sencillas en una macro, guárdala y pruébala en seco en un perfil."
+      },
+      "run_macro_on_group": {
+        "title": "Ejecutar una macro en un grupo",
+        "description": "Ejecuta una macro guardada en los perfiles de un grupo dentro de los límites del plan e informa de los resultados."
+      },
+      "qa_test_site": {
+        "title": "Probar un sitio desde varios países",
+        "description": "Abre un sitio en perfiles de varios países e informa de las diferencias (QA, pruebas geográficas, verificación de anuncios)."
+      },
+      "price_check": {
+        "title": "Comparar precios por país",
+        "description": "Compara los precios o el contenido que muestra una página en distintos países (estudio de mercado)."
+      },
+      "team_access_review": {
+        "title": "Revisar el acceso del equipo",
+        "description": "Resume qué miembros pueden abrir qué perfiles (solo lectura) y sugiere cómo restringir el acceso."
+      },
+      "weekly_report": {
+        "title": "Informe semanal",
+        "description": "Resume la semana: actividad del espacio de trabajo, tendencias del estado de los proxies y la clasificación de proveedores."
+      }
+    }
   },
   "settings": {
     "loadError": "No se pudo cargar la configuración: {{message}}",

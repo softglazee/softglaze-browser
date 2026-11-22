@@ -36,7 +36,8 @@
     "experimental": "Experimental",
     "savedIdle": "Todos los cambios guardados",
     "saving": "Guardando cambios…",
-    "saveError": "No se pudieron guardar los cambios"
+    "saveError": "No se pudieron guardar los cambios",
+    "sectionsLabel": "Secciones de la configuración"
   },
   "localRuntime": {
     "title": "Entorno local",
@@ -407,5 +408,12 @@
     "updateScheduler": "No se pudo actualizar el programador.",
     "loadGlobal": "No se pudo cargar la configuración global.",
     "saveSetting": "No se pudo guardar el ajuste."
+  },
+  "resilienceToasts": {
+    "aProfile": "Un perfil",
+    "crashed": "{{profile}} se detuvo de forma inesperada.",
+    "crashedRestarting": "{{profile}} se detuvo de forma inesperada. Reiniciando…",
+    "lowMemory_one": "Poca memoria: se cerró {{count}} perfil (memoria libre {{free}}%).",
+    "lowMemory_other": "Poca memoria: se cerraron {{count}} perfiles (memoria libre {{free}}%)."
   }
 }

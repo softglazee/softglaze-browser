@@ -223,7 +223,25 @@
     "resRunningVal": "{{count}} running",
     "resStoredVal": "{{count}} stored",
     "restoreDesc": "{{count}} profiles were open when you last closed SoftGlaze.",
-    "runningCount": "{{count}} running"
+    "runningCount": "{{count}} running",
+    "update": {
+      "failedTitle": "Update download failed",
+      "failedTitleVersion": "Update download failed ({{version}})",
+      "checkingTitle": "Checking for updates…",
+      "readyTitle": "Update ready {{version}}",
+      "downloadingTitle": "Downloading update {{version}}…",
+      "availableTitle": "New update available {{version}}",
+      "failedDesc": "Could not download the update. Check your connection and retry.",
+      "checkingDesc": "Contacting the update server…",
+      "readyDesc": "Click install to restart and apply the new version.",
+      "downloadingDesc": "{{percent}}% downloaded",
+      "availableDesc": "It will download in the background.",
+      "install": "Install & restart",
+      "retry": "Retry",
+      "whatsNew": "What's new",
+      "hideNotes": "Hide notes",
+      "dismiss": "Dismiss update notice"
+    }
   },
   "settings": {
     "eyebrow": "Application",
@@ -233,7 +251,13 @@
       "title": "Language",
       "description": "Choose the display language for the SoftGlaze interface.",
       "label": "Display language",
-      "hint": "Changes apply instantly across the app."
+      "hint": "Changes apply instantly across the app.",
+      "urduFont": {
+        "label": "Urdu font",
+        "hint": "Nastaliq is the traditional style of Urdu writing. It is built into the app and loads only when you choose it.",
+        "default": "System font (default)",
+        "nastaliq": "Nastaliq (Noto Nastaliq Urdu)"
+      }
     }
   },
   "startLinks": {
@@ -243,7 +267,24 @@
     "loadError": "Could not load your links ({{error}}). Saving is disabled so the stored list is not overwritten.",
     "retry": "Retry",
     "droppedRows_one": "{{count}} row was not saved because its URL is not a valid http(s) address: {{rows}}",
-    "droppedRows_other": "{{count}} rows were not saved because their URL is not a valid http(s) address: {{rows}}"
+    "droppedRows_other": "{{count}} rows were not saved because their URL is not a valid http(s) address: {{rows}}",
+    "saved": "Saved",
+    "save": "Save",
+    "links": "Links",
+    "autoLabel": "Auto-label",
+    "autoLabelHint": "Fill any empty label from its URL",
+    "add": "Add",
+    "loading": "Loading…",
+    "empty": "No links yet. Use Bulk add or Add.",
+    "labelPlaceholder": "Label",
+    "urlLabel": "Link address",
+    "remove": "Remove",
+    "bulkTitle": "Bulk add",
+    "bulkHint": "Paste several URLs, one per line. Each gets a label from its domain, which you can edit in the list. Duplicates and lines that are not http(s) are skipped.",
+    "addAll": "Add all",
+    "clear": "Clear",
+    "bulkResult": "Added: {{added}}. Skipped: {{skipped}} (duplicate or not http/https).",
+    "saveFailed": "Could not save."
   },
   "storeRating": {
     "cardTitle": "Enjoying SoftGlaze Browser?",
@@ -283,5 +324,11 @@
     },
     "cta": "See the offer",
     "dismiss": "Hide this offer"
+  },
+  "errorBoundary": {
+    "title": "Something went wrong on this page.",
+    "body": "The rest of the app is still running. Try again, or open another page from the sidebar.",
+    "retry": "Try again",
+    "unknown": "Unknown error"
   }
 }

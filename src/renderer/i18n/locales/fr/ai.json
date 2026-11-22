@@ -398,7 +398,24 @@
     "page_scroll": "Faire défiler une page",
     "page_screenshot": "Prendre une capture d'écran",
     "page_extract_text": "Copier le texte d'une page",
-    "page_wait_for": "Attendre un élément sur une page"
+    "page_wait_for": "Attendre un élément sur une page",
+    "workspace_summary": "Lire le résumé de l'espace de travail",
+    "list_profiles": "Lister les profils",
+    "get_profile": "Lire un profil",
+    "profile_health": "Vérifier l'état d'un profil et son risque de CAPTCHA",
+    "list_sessions": "Lister les profils en cours",
+    "stop_all_profiles": "Arrêter tous les profils",
+    "list_proxies": "Lister les proxys",
+    "check_proxy": "Vérifier un proxy",
+    "get_proxy_health": "Lire l'historique d'état d'un proxy",
+    "list_groups": "Lister les groupes",
+    "list_macros": "Lister les macros",
+    "get_macro": "Lire une macro",
+    "get_run_status": "Vérifier l'état d'une exécution",
+    "get_activity": "Lire l'activité récente",
+    "read_memory": "Lire la mémoire de l'espace de travail",
+    "update_memory": "Mettre à jour la mémoire de l'espace de travail",
+    "get_cdp_endpoint": "Confier un profil à Playwright ou DevTools (Expert)"
   },
   "tokens": {
     "search": "Rechercher des jetons",
@@ -576,7 +593,57 @@
     "howClaudeDesktop": "cliquez sur + sous la zone de discussion et cherchez SoftGlaze.",
     "howVsCode": "tapez / dans Copilot Chat et choisissez un prompt SoftGlaze.",
     "howCursor": "si les prompts ne sont pas listés, copiez le texte ci-dessous.",
-    "howOther": "Toute application : copiez le texte du prompt, collez-le dans la discussion et renseignez les détails."
+    "howOther": "Toute application : copiez le texte du prompt, collez-le dans la discussion et renseignez les détails.",
+    "items": {
+      "daily_health_check": {
+        "title": "Bilan de santé quotidien",
+        "description": "Vérifie chaque profil en cours ou utilisé récemment et son proxy, puis signale les problèmes avec la solution pour chacun."
+      },
+      "diagnose_captcha": {
+        "title": "Pourquoi ce profil reçoit-il des CAPTCHA ?",
+        "description": "Explique, à l'aide de profile_health, pourquoi un profil reçoit sans cesse des CAPTCHA ou des pages de blocage, et propose des solutions."
+      },
+      "create_geo_profiles": {
+        "title": "Créer des profils pour un pays",
+        "description": "Crée plusieurs profils dans un groupe, chacun avec un proxy fonctionnel de ce pays."
+      },
+      "fix_proxy_mismatches": {
+        "title": "Corriger les écarts de fuseau, langue et position",
+        "description": "Trouve les profils dont le fuseau horaire, la langue ou la position ne concordent pas avec leur proxy, et propose des corrections à approuver."
+      },
+      "rotate_bad_proxies": {
+        "title": "Remplacer les proxys défaillants ou sur liste de blocage",
+        "description": "Trouve les proxys défaillants ou sur liste de blocage, puis change leur IP ou déplace leurs profils vers des proxys en bon état."
+      },
+      "warm_up_profiles": {
+        "title": "Préchauffer des profils",
+        "description": "Planifie et lance un préchauffage avec le Cookie Warmer pour que les nouveaux profils se constituent un historique de navigation normal."
+      },
+      "write_macro": {
+        "title": "Écrire une macro à partir d'une description",
+        "description": "Transforme une tâche décrite en langage courant en macro, l'enregistre et la teste à blanc sur un profil."
+      },
+      "run_macro_on_group": {
+        "title": "Exécuter une macro sur un groupe",
+        "description": "Exécute une macro enregistrée sur les profils d'un groupe, dans les limites du forfait, et présente les résultats."
+      },
+      "qa_test_site": {
+        "title": "Tester un site depuis plusieurs pays",
+        "description": "Ouvre un site dans des profils de plusieurs pays et signale les différences (QA, tests géographiques, vérification d'annonces)."
+      },
+      "price_check": {
+        "title": "Comparer les prix par pays",
+        "description": "Compare les prix ou le contenu qu'une page affiche selon les pays (étude de marché)."
+      },
+      "team_access_review": {
+        "title": "Vérifier les accès de l'équipe",
+        "description": "Résume quels membres peuvent ouvrir quels profils (lecture seule) et suggère comment restreindre les accès."
+      },
+      "weekly_report": {
+        "title": "Rapport hebdomadaire",
+        "description": "Résume la semaine : activité de l'espace de travail, tendances de l'état des proxys et classement des fournisseurs."
+      }
+    }
   },
   "settings": {
     "loadError": "Impossible de charger les paramètres : {{message}}",

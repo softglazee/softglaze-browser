@@ -6,7 +6,7 @@ import { BellRing, ChevronDown, ChevronRight, Clock, ShieldAlert, X } from 'luci
 
 import Button from '@/components/ui/Button.jsx';
 import { useAiApprovals } from '@/components/ai/AiApprovalsProvider.jsx';
-import { AI_TONE, PrimaryButton, clientLabel, toneSurface, toneText } from '@/components/ai/AiShared.jsx';
+import { AI_TONE, PrimaryButton, clientLabel, toneSurface, toneText, toolTitle } from '@/components/ai/AiShared.jsx';
 import { crossedThreshold, currentApproval, formatCountdown, fractionLeft, secondsLeft, urgency } from '@/lib/aiApprovals.mjs';
 import { canAllowHour, prettyArgs } from '@/lib/aiCore.mjs';
 import { cn } from '@/lib/utils.js';
@@ -64,7 +64,9 @@ export function ApprovalDetails({ approval, defaultOpen = false }) {
         <div id={id} className="mt-2 space-y-2">
           <dl className="grid grid-cols-[auto_minmax(0,1fr)] gap-x-3 gap-y-1 text-[12.5px]">
             <dt className="text-muted-foreground">{t('approval.tool')}</dt>
-            <dd className="font-mono text-foreground break-all">{approval.tool || '-'}</dd>
+            <dd className="text-foreground break-words">
+              {approval.tool ? <>{toolTitle(t, approval.tool)} <code className="font-mono text-[11.5px] text-muted-foreground break-all">({approval.tool})</code></> : '-'}
+            </dd>
             <dt className="text-muted-foreground">{t('approval.token')}</dt>
             <dd className="text-foreground break-words">{approval.tokenName || '-'}</dd>
           </dl>

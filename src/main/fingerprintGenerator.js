@@ -430,7 +430,7 @@ function deviceGpuCoherence({ deviceClass, os, webglRenderer } = {}) {
   const osStr = String(os || '');
   const isMobile = String(deviceClass || '').toLowerCase() === 'mobile'
     || /android|ios|iphone|ipad/i.test(osStr);
-  if (!renderer) return { status: 'warn', detail: 'No WebGL renderer set - GPU coherence not verified.' };
+  if (!renderer) return { status: 'warn', code: 'noRenderer', detail: 'No WebGL renderer set - GPU coherence not verified.' };
   const mobileGpu = /mali|adreno|powervr|apple gpu|apple a\d/i.test(renderer);
   const desktopGpu = /direct3d|d3d11|geforce|nvidia|radeon|\bamd\b|intel|metal renderer|apple m\d|opengl 4/i.test(renderer);
 
@@ -447,26 +447,26 @@ function deviceGpuCoherence({ deviceClass, os, webglRenderer } = {}) {
     linux: /linux|ubuntu|debian|fedora|arch|chromeos/i.test(osStr)
   };
   if (claims.mac && api.d3d) {
-    return { status: 'fail', detail: 'macOS profile reports a Direct3D (Windows-only) GPU - the host OS leaks through. Set WebGL Metadata to Custom with an Apple/Metal renderer, or use the host OS.' };
+    return { status: 'fail', code: 'macD3d', detail: 'macOS profile reports a Direct3D (Windows-only) GPU - the host OS leaks through. Set WebGL Metadata to Custom with an Apple/Metal renderer, or use the host OS.' };
   }
   if (claims.linux && api.d3d) {
-    return { status: 'fail', detail: 'Linux profile reports a Direct3D (Windows-only) GPU - the host OS leaks through. Use a Mesa/OpenGL renderer, or the host OS.' };
+    return { status: 'fail', code: 'linuxD3d', detail: 'Linux profile reports a Direct3D (Windows-only) GPU - the host OS leaks through. Use a Mesa/OpenGL renderer, or the host OS.' };
   }
   if (claims.windows && (api.metal || api.mesa)) {
-    return { status: 'fail', detail: `Windows profile reports a ${api.metal ? 'Metal (Apple-only)' : 'Mesa (Linux-only)'} GPU - an obvious mismatch.` };
+    return { status: 'fail', code: api.metal ? 'windowsMetal' : 'windowsMesa', detail: `Windows profile reports a ${api.metal ? 'Metal (Apple-only)' : 'Mesa (Linux-only)'} GPU - an obvious mismatch.` };
   }
   if (isMobile && api.d3d) {
-    return { status: 'fail', detail: 'Mobile profile reports a Direct3D (Windows desktop) GPU - an obvious mismatch.' };
+    return { status: 'fail', code: 'mobileD3d', detail: 'Mobile profile reports a Direct3D (Windows desktop) GPU - an obvious mismatch.' };
   }
 
   if (isMobile) {
     return mobileGpu
-      ? { status: 'pass', detail: 'Mobile profile reports a mobile GPU.' }
-      : { status: 'fail', detail: 'Mobile profile reports a desktop GPU - an obvious mismatch.' };
+      ? { status: 'pass', code: 'mobileOk', detail: 'Mobile profile reports a mobile GPU.' }
+      : { status: 'fail', code: 'mobileDesktopGpu', detail: 'Mobile profile reports a desktop GPU - an obvious mismatch.' };
   }
   return (mobileGpu && !desktopGpu)
-    ? { status: 'fail', detail: 'Desktop profile reports a mobile GPU - an obvious mismatch.' }
-    : { status: 'pass', detail: 'Desktop profile reports a GPU consistent with its OS.' };
+    ? { status: 'fail', code: 'desktopMobileGpu', detail: 'Desktop profile reports a mobile GPU - an obvious mismatch.' }
+    : { status: 'pass', code: 'desktopOk', detail: 'Desktop profile reports a GPU consistent with its OS.' };
 }
 
 // Signature of the visible GPU + screen + CPU + RAM + UA-major combo; batches keep it unique per run.

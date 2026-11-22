@@ -1,0 +1,43 @@
+{
+  "_meta": {
+    "greetingNamed": "{{name}}，你好：",
+    "greetingNoName": "你好：",
+    "sentBy": "本郵件由 {{company}} 寄送至 {{email}}。",
+    "unsub": "不想再收到這類郵件？",
+    "unsubLink": "取消訂閱",
+    "essential": "你收到這封郵件，是因為有人在應用程式中輸入了這個地址。",
+    "purchase": "你收到這封郵件，是因為這個地址曾用於在我們網站上購買。"
+  },
+  "verify_code": {
+    "subject": "你的 SoftGlaze 驗證碼",
+    "html": "<p>{{greeting}}</p>\n<p>你的驗證碼是：</p>\n<p style=\"font-size:28px;font-weight:700;letter-spacing:6px;margin:16px 0;color:#111827;\">{{code}}</p>\n<p>請在 {{appName}} 中輸入此驗證碼，以確認這個電子郵件地址。驗證碼在 {{codeMinutes}} 分鐘內有效。</p>\n<p>如果你沒有申請此驗證碼，可以忽略這封郵件。在輸入驗證碼之前，什麼都不會改變。</p>"
+  },
+  "welcome": {
+    "subject": "歡迎使用 SoftGlaze Browser",
+    "html": "<p>{{greeting}}</p>\n<p>感謝你試用 {{appName}}。你的免費試用有效至 {{trialEndsAt}}，試用期間可以使用 {{plan}} 的功能。</p>\n<p>建議第一步：建立一個設定檔，如果你使用代理就為它指定一個，然後開啟它。每個設定檔都有自己的 Cookie 和設定，與其他設定檔互不影響。</p>\n<p>如果有不清楚或無法使用的地方，直接回覆這封郵件即可。每封回覆我們都會閱讀。</p>\n<p>SoftGlaze 團隊</p>"
+  },
+  "tips": {
+    "subject": "SoftGlaze Browser 值得一試的三件事",
+    "html": "<p>{{greeting}}</p>\n<p>以下三件事是大家在第一週覺得最實用的：</p>\n<ol>\n<li><strong>一個帳號對應一個設定檔。</strong>把每個帳號放在各自的設定檔裡，Cookie 和登入資訊就不會混在一起。</li>\n<li><strong>使用前先檢測代理。</strong>代理清單可以測試代理，並顯示它從哪裡連線。</li>\n<li><strong>邀請你的團隊。</strong>在應用程式中新增團隊成員，每個人用自己的帳號登入。</li>\n</ol>\n<p>你的試用期至 {{trialEndsAt}}。有任何問題，直接回覆這封郵件即可。</p>"
+  },
+  "trial_ending": {
+    "subject": "你的 SoftGlaze 試用將於 {{trialEndsAt}} 結束",
+    "html": "<p>{{greeting}}</p>\n<p>貼心提醒：你的 {{appName}} 免費試用將於 {{trialEndsAt}} 結束。</p>\n<p>之後你會自動轉為 Free 方案。不會鎖定任何內容，也不會刪除任何內容：你的所有設定檔（可開啟 25 個）、代理和指紋，以及手機和網頁應用程式都會保留。</p>\n<p>如需繼續使用無限設定檔、同時執行 3 個、團隊席位、雲同步和無限 AI 操作，請在應用程式中選擇 Pro（開啟「帳單」），每月 US$5 起。如果你希望以發票付款，請回覆這封郵件，我們會寄發票給你。</p>"
+  },
+  "trial_ended": {
+    "subject": "你現在使用的是 SoftGlaze Free 方案",
+    "html": "<p>{{greeting}}</p>\n<p>你的試用已結束，現在使用的是 Free 方案。</p>\n<p>你保留：所有設定檔（可開啟 25 個）、代理和指紋、手機和網頁應用程式。</p>\n<p>Pro 增加：無限設定檔、同時執行 3 個、團隊席位、雲同步和無限 AI 操作，每月 US$5 起。如需升級，請在應用程式中開啟「帳單」，或回覆這封郵件以發票付款。如果你已有購買碼，請在「帳單」中輸入。</p>\n<p>感謝你試用 {{appName}}。</p>"
+  },
+  "come_back": {
+    "subject": "SoftGlaze Browser 還在你的清單上嗎？",
+    "html": "<p>{{greeting}}</p>\n<p>你的 SoftGlaze 試用已在一週前結束。如果你仍在尋找讓多個帳號彼此分開的方法，應用程式隨時可用：你的設定檔仍保存在你的電腦上。</p>\n<p>如果是什麼原因讓你停了下來，我們很想知道。請回覆這封郵件，每封回覆我們都會閱讀。</p>\n<p>最新版本在這裡：<a href=\"{{downloadUrl}}\">{{downloadUrl}}</a></p>"
+  },
+  "activation_code": {
+    "subject": "你的 SoftGlaze Browser 啟用碼",
+    "html": "<p>{{greeting}}</p>\n<p>感謝你購買 {{appName}}。你的 {{plan}} 方案（{{term}}）已付款完成。</p>\n<p>你的啟用碼是：</p>\n<p style=\"font-size:28px;font-weight:700;letter-spacing:6px;margin:16px 0;color:#111827;\">{{code}}</p>\n<p>使用方法：</p>\n<ol>\n<li>如果還沒有安裝 {{appName}}，請先安裝：<a href=\"{{downloadUrl}}\">{{downloadUrl}}</a></li>\n<li>開啟應用程式，前往「帳單」。</li>\n<li>在「有購買碼？」下方貼上啟用碼，然後按「套用」。</li>\n</ol>\n<p>啟用碼只能使用一次，僅對輸入它的電腦有效。使用之前請保留這封郵件。</p>\n<p>如果遇到問題，請回覆這封郵件或寫信至 {{supportEmail}}。我們會協助你、重新寄送啟用碼，或為你退款。</p>\n<p>SoftGlaze 團隊</p>"
+  },
+  "free_plan_launch": {
+    "subject": "好消息：SoftGlaze 現在有免費方案了",
+    "html": "<p>{{greeting}}</p>\n<p>你的 {{appName}} 試用結束時，應用程式無法再開啟設定檔。現在情況不同了：SoftGlaze 推出了 Free 方案，只要更新應用程式就能使用。</p>\n<p>在 Free 方案中，你可以：</p>\n<ul>\n<li>保留 25 個瀏覽器設定檔，一次執行 1 個</li>\n<li>使用所有指紋設定和你自己的代理</li>\n<li>透過手機和網頁應用程式查看設定檔並核准 AI 請求</li>\n<li>每天執行 25 次 AI 操作</li>\n</ul>\n<p>你的設定檔、代理和設定仍保存在你的電腦上。在這裡取得最新版本：<a href=\"{{downloadUrl}}\">{{downloadUrl}}</a></p>\n<p>如果你需要更多，Pro 提供無限設定檔、同時執行 3 個、團隊席位、雲同步和無限 AI 操作，每月 US$5 起。</p>\n<p>SoftGlaze 團隊</p>"
+  }
+}

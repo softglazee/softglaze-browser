@@ -36,7 +36,8 @@
     "experimental": "Experimental",
     "savedIdle": "All changes saved",
     "saving": "Saving changes…",
-    "saveError": "Couldn't save changes"
+    "saveError": "Couldn't save changes",
+    "sectionsLabel": "Settings sections"
   },
   "localRuntime": {
     "title": "Local Runtime",
@@ -407,5 +408,12 @@
     "updateScheduler": "Failed to update scheduler.",
     "loadGlobal": "Failed to load global settings.",
     "saveSetting": "Failed to save setting."
+  },
+  "resilienceToasts": {
+    "aProfile": "A profile",
+    "crashed": "{{profile}} stopped unexpectedly.",
+    "crashedRestarting": "{{profile}} stopped unexpectedly. Restarting…",
+    "lowMemory_one": "Low memory: closed {{count}} profile (free memory {{free}}%).",
+    "lowMemory_other": "Low memory: closed {{count}} profiles (free memory {{free}}%)."
   }
 }

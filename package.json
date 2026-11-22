@@ -150,6 +150,26 @@
       "createDesktopShortcut": "always",
       "createStartMenuShortcut": true,
       "shortcutName": "SoftGlaze Browser",
+      "multiLanguageInstaller": true,
+      "installerLanguages": [
+        "en_US",
+        "es_ES",
+        "ar_SA",
+        "de_DE",
+        "fr_FR",
+        "id_ID",
+        "pt_BR",
+        "ru_RU",
+        "tr_TR",
+        "vi_VN",
+        "zh_CN",
+        "zh_TW",
+        "ja_JP",
+        "th_TH",
+        "uk_UA",
+        "hi_IN",
+        "pl_PL"
+      ],
       "include": "build/installer.nsh"
     },
     "publish": [

@@ -48,7 +48,7 @@ function validateCustomer(b, { create }) {
   }
   if (has('lang')) {
     if (b.lang === null || b.lang === '') data.lang = null;
-    else if (typeof b.lang !== 'string' || !/^[a-z]{2}$/.test(b.lang)) errors.lang = 'two-letter language code';
+    else if (typeof b.lang !== 'string' || !(/^[a-z]{2}$/.test(b.lang) || b.lang === 'zh-Hant')) errors.lang = 'two-letter language code (or zh-Hant)';
     else data.lang = b.lang;
   }
   if (create || has('source')) {

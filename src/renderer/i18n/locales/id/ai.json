@@ -390,7 +390,24 @@
     "page_scroll": "Gulir halaman",
     "page_screenshot": "Ambil tangkapan layar",
     "page_extract_text": "Salin teks dari halaman",
-    "page_wait_for": "Tunggu sesuatu di halaman"
+    "page_wait_for": "Tunggu sesuatu di halaman",
+    "workspace_summary": "Baca ringkasan ruang kerja",
+    "list_profiles": "Daftar profil",
+    "get_profile": "Baca profil",
+    "profile_health": "Cek kesehatan profil dan risiko CAPTCHA",
+    "list_sessions": "Daftar profil yang berjalan",
+    "stop_all_profiles": "Hentikan semua profil",
+    "list_proxies": "Daftar proxy",
+    "check_proxy": "Cek proxy",
+    "get_proxy_health": "Baca riwayat kesehatan proxy",
+    "list_groups": "Daftar grup",
+    "list_macros": "Daftar makro",
+    "get_macro": "Baca makro",
+    "get_run_status": "Cek status proses",
+    "get_activity": "Baca aktivitas terbaru",
+    "read_memory": "Baca memori ruang kerja",
+    "update_memory": "Perbarui memori ruang kerja",
+    "get_cdp_endpoint": "Serahkan profil ke Playwright atau DevTools (Ahli)"
   },
   "tokens": {
     "search": "Cari token",
@@ -560,7 +577,57 @@
     "howClaudeDesktop": "klik + di bawah kotak chat dan cari SoftGlaze.",
     "howVsCode": "ketik / di Copilot Chat lalu pilih prompt SoftGlaze.",
     "howCursor": "jika prompt tidak tercantum, salin teks di bawah.",
-    "howOther": "Aplikasi apa pun: salin teks prompt, tempel ke chat, lalu isi detailnya."
+    "howOther": "Aplikasi apa pun: salin teks prompt, tempel ke chat, lalu isi detailnya.",
+    "items": {
+      "daily_health_check": {
+        "title": "Cek kesehatan harian",
+        "description": "Periksa setiap profil yang berjalan dan baru dipakai beserta proxy-nya, lalu laporkan masalah dengan solusi untuk masing-masing."
+      },
+      "diagnose_captcha": {
+        "title": "Kenapa profil ini kena CAPTCHA?",
+        "description": "Jelaskan kenapa satu profil terus mendapat CAPTCHA atau halaman blokir, dengan profile_health, dan usulkan perbaikannya."
+      },
+      "create_geo_profiles": {
+        "title": "Buat profil untuk satu negara",
+        "description": "Buat sejumlah profil dalam satu grup, masing-masing dengan proxy yang berfungsi dari negara itu."
+      },
+      "fix_proxy_mismatches": {
+        "title": "Perbaiki ketidakcocokan zona waktu, bahasa, dan lokasi",
+        "description": "Cari profil yang zona waktu, bahasa, atau lokasinya tidak cocok dengan proxy-nya, lalu usulkan perbaikan untuk disetujui."
+      },
+      "rotate_bad_proxies": {
+        "title": "Ganti proxy yang gagal atau masuk daftar blokir",
+        "description": "Cari proxy yang gagal atau masuk daftar blokir, lalu ganti IP-nya atau pindahkan profilnya ke proxy yang sehat."
+      },
+      "warm_up_profiles": {
+        "title": "Panaskan profil",
+        "description": "Rencanakan dan mulai pemanasan dengan Cookie Warmer agar profil baru membangun riwayat browsing yang wajar."
+      },
+      "write_macro": {
+        "title": "Tulis makro dari deskripsi",
+        "description": "Ubah tugas dalam bahasa sehari-hari menjadi makro, simpan, lalu uji coba di satu profil."
+      },
+      "run_macro_on_group": {
+        "title": "Jalankan makro di grup",
+        "description": "Jalankan makro tersimpan di profil-profil satu grup sesuai batas paket, lalu laporkan hasilnya."
+      },
+      "qa_test_site": {
+        "title": "Uji situs dari beberapa negara",
+        "description": "Buka situs di profil dari beberapa negara dan laporkan perbedaannya (QA, uji geo, verifikasi iklan)."
+      },
+      "price_check": {
+        "title": "Bandingkan harga per negara",
+        "description": "Bandingkan harga atau konten yang ditampilkan halaman di berbagai negara (riset pasar)."
+      },
+      "team_access_review": {
+        "title": "Tinjau akses tim",
+        "description": "Ringkas anggota mana yang bisa membuka profil mana (hanya baca) dan sarankan cara memperketat akses."
+      },
+      "weekly_report": {
+        "title": "Laporan mingguan",
+        "description": "Ringkas minggu ini: aktivitas ruang kerja, tren kesehatan proxy, dan papan skor vendor."
+      }
+    }
   },
   "settings": {
     "loadError": "Tidak bisa memuat pengaturan: {{message}}",

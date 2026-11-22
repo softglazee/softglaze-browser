@@ -394,7 +394,24 @@
     "page_scroll": "滚动页面",
     "page_screenshot": "截图",
     "page_extract_text": "从页面复制文本",
-    "page_wait_for": "等待页面上的内容"
+    "page_wait_for": "等待页面上的内容",
+    "workspace_summary": "读取工作区概要",
+    "list_profiles": "列出配置文件",
+    "get_profile": "读取配置文件",
+    "profile_health": "检查配置文件的健康状况和 CAPTCHA 风险",
+    "list_sessions": "列出运行中的配置文件",
+    "stop_all_profiles": "停止所有配置文件",
+    "list_proxies": "列出代理",
+    "check_proxy": "检测代理",
+    "get_proxy_health": "读取代理的健康历史",
+    "list_groups": "列出分组",
+    "list_macros": "列出宏",
+    "get_macro": "读取宏",
+    "get_run_status": "查看运行状态",
+    "get_activity": "读取最近的活动",
+    "read_memory": "读取工作区记忆",
+    "update_memory": "更新工作区记忆",
+    "get_cdp_endpoint": "将配置文件交给 Playwright 或 DevTools（专家）"
   },
   "tokens": {
     "search": "搜索令牌",
@@ -568,7 +585,57 @@
     "howClaudeDesktop": "点击聊天框下方的 +，找到 SoftGlaze。",
     "howVsCode": "在 Copilot Chat 中输入 / 并选择一个 SoftGlaze 提示词。",
     "howCursor": "如果没有列出提示词，请复制下方文本。",
-    "howOther": "任何应用：复制提示词文本，粘贴到聊天中并填写详情。"
+    "howOther": "任何应用：复制提示词文本，粘贴到聊天中并填写详情。",
+    "items": {
+      "daily_health_check": {
+        "title": "每日健康检查",
+        "description": "检查每个运行中和最近使用的配置文件及其代理，然后报告问题，并给出每个问题的修复方法。"
+      },
+      "diagnose_captcha": {
+        "title": "这个配置文件为什么总遇到 CAPTCHA？",
+        "description": "使用 profile_health 解释某个配置文件为什么反复遇到 CAPTCHA 或拦截页面，并提出修复建议。"
+      },
+      "create_geo_profiles": {
+        "title": "为某个国家创建配置文件",
+        "description": "在一个分组中创建多个配置文件，每个都配有来自该国家且可用的代理。"
+      },
+      "fix_proxy_mismatches": {
+        "title": "修复时区、语言和位置不一致",
+        "description": "找出时区、语言或位置与其代理不一致的配置文件，并提出修复方案供你批准。"
+      },
+      "rotate_bad_proxies": {
+        "title": "替换失效或进入黑名单的代理",
+        "description": "找出失效或进入黑名单的代理，然后更换其 IP，或将其配置文件移到健康的代理上。"
+      },
+      "warm_up_profiles": {
+        "title": "预热配置文件",
+        "description": "使用 Cookie Warmer（Cookie 预热）规划并开始预热，让新配置文件积累正常的浏览记录。"
+      },
+      "write_macro": {
+        "title": "根据描述编写宏",
+        "description": "将用日常语言描述的任务转换为宏并保存，然后在一个配置文件上试运行。"
+      },
+      "run_macro_on_group": {
+        "title": "在分组上运行宏",
+        "description": "在套餐限制内，对分组中的配置文件运行已保存的宏，并报告结果。"
+      },
+      "qa_test_site": {
+        "title": "从多个国家测试网站",
+        "description": "在来自多个国家的配置文件中打开网站，并报告差异（QA、地区测试、广告验证）。"
+      },
+      "price_check": {
+        "title": "按国家比较价格",
+        "description": "比较同一页面在不同国家显示的价格或内容（市场调研）。"
+      },
+      "team_access_review": {
+        "title": "审查团队访问权限",
+        "description": "汇总哪些成员可以打开哪些配置文件（只读），并建议如何收紧访问权限。"
+      },
+      "weekly_report": {
+        "title": "每周报告",
+        "description": "总结本周情况：工作区活动、代理健康趋势和服务商排行榜。"
+      }
+    }
   },
   "settings": {
     "loadError": "无法加载设置：{{message}}",

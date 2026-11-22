@@ -394,7 +394,24 @@
     "page_scroll": "Cuộn trang",
     "page_screenshot": "Chụp ảnh màn hình",
     "page_extract_text": "Sao chép văn bản từ trang",
-    "page_wait_for": "Chờ một phần tử trên trang"
+    "page_wait_for": "Chờ một phần tử trên trang",
+    "workspace_summary": "Đọc tóm tắt không gian làm việc",
+    "list_profiles": "Liệt kê hồ sơ",
+    "get_profile": "Đọc một hồ sơ",
+    "profile_health": "Kiểm tra tình trạng hồ sơ và rủi ro CAPTCHA",
+    "list_sessions": "Liệt kê hồ sơ đang chạy",
+    "stop_all_profiles": "Dừng mọi hồ sơ",
+    "list_proxies": "Liệt kê proxy",
+    "check_proxy": "Kiểm tra một proxy",
+    "get_proxy_health": "Đọc lịch sử tình trạng proxy",
+    "list_groups": "Liệt kê nhóm",
+    "list_macros": "Liệt kê macro",
+    "get_macro": "Đọc một macro",
+    "get_run_status": "Kiểm tra trạng thái lượt chạy",
+    "get_activity": "Đọc hoạt động gần đây",
+    "read_memory": "Đọc ghi nhớ không gian làm việc",
+    "update_memory": "Cập nhật ghi nhớ không gian làm việc",
+    "get_cdp_endpoint": "Giao hồ sơ cho Playwright hoặc DevTools (Chuyên gia)"
   },
   "tokens": {
     "search": "Tìm token",
@@ -568,7 +585,57 @@
     "howClaudeDesktop": "bấm + bên dưới ô trò chuyện và tìm SoftGlaze.",
     "howVsCode": "gõ / trong Copilot Chat và chọn một prompt SoftGlaze.",
     "howCursor": "nếu prompt không có trong danh sách, hãy sao chép văn bản bên dưới.",
-    "howOther": "Ứng dụng bất kỳ: sao chép nội dung prompt, dán vào khung trò chuyện và điền thông tin."
+    "howOther": "Ứng dụng bất kỳ: sao chép nội dung prompt, dán vào khung trò chuyện và điền thông tin.",
+    "items": {
+      "daily_health_check": {
+        "title": "Kiểm tra hằng ngày",
+        "description": "Kiểm tra mọi hồ sơ đang chạy và vừa dùng cùng proxy của chúng, rồi báo các vấn đề kèm cách sửa cho từng vấn đề."
+      },
+      "diagnose_captcha": {
+        "title": "Vì sao hồ sơ này gặp CAPTCHA?",
+        "description": "Dùng profile_health để giải thích vì sao một hồ sơ liên tục gặp CAPTCHA hoặc trang chặn, và đề xuất cách sửa."
+      },
+      "create_geo_profiles": {
+        "title": "Tạo hồ sơ cho một quốc gia",
+        "description": "Tạo một số hồ sơ trong một nhóm, mỗi hồ sơ có một proxy hoạt động từ quốc gia đó."
+      },
+      "fix_proxy_mismatches": {
+        "title": "Sửa lệch múi giờ, ngôn ngữ và vị trí",
+        "description": "Tìm các hồ sơ có múi giờ, ngôn ngữ hoặc vị trí không khớp với proxy, và đề xuất cách sửa để bạn duyệt."
+      },
+      "rotate_bad_proxies": {
+        "title": "Thay proxy lỗi hoặc nằm trong danh sách chặn",
+        "description": "Tìm proxy lỗi hoặc nằm trong danh sách chặn, rồi đổi IP của chúng hoặc chuyển hồ sơ sang proxy hoạt động tốt."
+      },
+      "warm_up_profiles": {
+        "title": "Làm nóng hồ sơ",
+        "description": "Lên kế hoạch và bắt đầu làm nóng bằng Cookie Warmer (làm nóng cookie) để hồ sơ mới có lịch sử duyệt web bình thường."
+      },
+      "write_macro": {
+        "title": "Viết macro từ mô tả",
+        "description": "Biến một tác vụ mô tả bằng lời thường thành macro, lưu lại và chạy thử trên một hồ sơ."
+      },
+      "run_macro_on_group": {
+        "title": "Chạy macro trên một nhóm",
+        "description": "Chạy một macro đã lưu trên các hồ sơ trong nhóm, trong giới hạn của gói, và báo kết quả."
+      },
+      "qa_test_site": {
+        "title": "Kiểm tra trang web từ nhiều quốc gia",
+        "description": "Mở một trang web trong các hồ sơ từ nhiều quốc gia và báo các điểm khác biệt (QA, kiểm thử theo vùng, xác minh quảng cáo)."
+      },
+      "price_check": {
+        "title": "So sánh giá theo quốc gia",
+        "description": "So sánh giá hoặc nội dung một trang hiển thị ở các quốc gia khác nhau (nghiên cứu thị trường)."
+      },
+      "team_access_review": {
+        "title": "Rà soát quyền truy cập của nhóm",
+        "description": "Tóm tắt thành viên nào mở được hồ sơ nào (chỉ đọc) và đề xuất cách siết quyền truy cập."
+      },
+      "weekly_report": {
+        "title": "Báo cáo hằng tuần",
+        "description": "Tóm tắt tuần: hoạt động không gian làm việc, xu hướng tình trạng proxy và bảng xếp hạng nhà cung cấp."
+      }
+    }
   },
   "settings": {
     "loadError": "Không tải được cài đặt: {{message}}",

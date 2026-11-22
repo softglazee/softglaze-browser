@@ -36,7 +36,8 @@
     "experimental": "Thử nghiệm",
     "savedIdle": "Đã lưu mọi thay đổi",
     "saving": "Đang lưu thay đổi…",
-    "saveError": "Không lưu được thay đổi"
+    "saveError": "Không lưu được thay đổi",
+    "sectionsLabel": "Các mục cài đặt"
   },
   "localRuntime": {
     "title": "Môi trường chạy cục bộ",
@@ -407,5 +408,11 @@
     "updateScheduler": "Không cập nhật được lịch kiểm tra.",
     "loadGlobal": "Không tải được cài đặt chung.",
     "saveSetting": "Không lưu được cài đặt."
+  },
+  "resilienceToasts": {
+    "aProfile": "Một hồ sơ",
+    "crashed": "{{profile}} đã dừng đột ngột.",
+    "crashedRestarting": "{{profile}} đã dừng đột ngột. Đang khởi động lại…",
+    "lowMemory_other": "Sắp hết bộ nhớ: đã đóng {{count}} hồ sơ (bộ nhớ trống {{free}}%)."
   }
 }

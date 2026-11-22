@@ -402,7 +402,24 @@
     "page_scroll": "Przewiń stronę",
     "page_screenshot": "Zrób zrzut ekranu",
     "page_extract_text": "Skopiuj tekst ze strony",
-    "page_wait_for": "Poczekaj na coś na stronie"
+    "page_wait_for": "Poczekaj na coś na stronie",
+    "workspace_summary": "Odczytaj podsumowanie obszaru roboczego",
+    "list_profiles": "Wyświetl listę profili",
+    "get_profile": "Odczytaj profil",
+    "profile_health": "Sprawdź kondycję profilu i ryzyko CAPTCHA",
+    "list_sessions": "Wyświetl uruchomione profile",
+    "stop_all_profiles": "Zatrzymaj wszystkie profile",
+    "list_proxies": "Wyświetl listę proxy",
+    "check_proxy": "Sprawdź proxy",
+    "get_proxy_health": "Odczytaj historię kondycji proxy",
+    "list_groups": "Wyświetl listę grup",
+    "list_macros": "Wyświetl listę makr",
+    "get_macro": "Odczytaj makro",
+    "get_run_status": "Sprawdź stan uruchomienia",
+    "get_activity": "Odczytaj ostatnią aktywność",
+    "read_memory": "Odczytaj pamięć obszaru roboczego",
+    "update_memory": "Zaktualizuj pamięć obszaru roboczego",
+    "get_cdp_endpoint": "Przekaż profil do Playwright lub DevTools (Ekspert)"
   },
   "tokens": {
     "search": "Szukaj tokenów",
@@ -584,7 +601,57 @@
     "howClaudeDesktop": "kliknij + pod polem czatu i znajdź SoftGlaze.",
     "howVsCode": "wpisz / w Copilot Chat i wybierz prompt SoftGlaze.",
     "howCursor": "jeśli promptów nie ma na liście, skopiuj tekst poniżej.",
-    "howOther": "Dowolna aplikacja: skopiuj tekst promptu, wklej go do czatu i uzupełnij szczegóły."
+    "howOther": "Dowolna aplikacja: skopiuj tekst promptu, wklej go do czatu i uzupełnij szczegóły.",
+    "items": {
+      "daily_health_check": {
+        "title": "Codzienna kontrola",
+        "description": "Sprawdza każdy uruchomiony i niedawno używany profil oraz jego proxy, a potem zgłasza problemy wraz z rozwiązaniem dla każdego."
+      },
+      "diagnose_captcha": {
+        "title": "Dlaczego ten profil dostaje CAPTCHA?",
+        "description": "Wyjaśnia za pomocą profile_health, dlaczego profil ciągle dostaje CAPTCHA lub strony blokady, i proponuje poprawki."
+      },
+      "create_geo_profiles": {
+        "title": "Utwórz profile dla kraju",
+        "description": "Tworzy kilka profili w grupie, każdy z działającym proxy z tego kraju."
+      },
+      "fix_proxy_mismatches": {
+        "title": "Popraw niezgodności strefy czasowej, języka i lokalizacji",
+        "description": "Znajduje profile, których strefa czasowa, język lub lokalizacja nie zgadzają się z proxy, i proponuje poprawki do zatwierdzenia."
+      },
+      "rotate_bad_proxies": {
+        "title": "Wymień niedziałające proxy lub te z list blokad",
+        "description": "Znajduje niedziałające proxy lub te z list blokad, a potem zmienia ich IP albo przenosi ich profile na sprawne proxy."
+      },
+      "warm_up_profiles": {
+        "title": "Rozgrzej profile",
+        "description": "Planuje i uruchamia rozgrzewanie za pomocą Cookie Warmer, aby nowe profile zbudowały zwykłą historię przeglądania."
+      },
+      "write_macro": {
+        "title": "Napisz makro na podstawie opisu",
+        "description": "Zamienia zadanie opisane prostymi słowami w makro, zapisuje je i wykonuje próbę na jednym profilu."
+      },
+      "run_macro_on_group": {
+        "title": "Uruchom makro w grupie",
+        "description": "Uruchamia zapisane makro na profilach grupy w ramach limitów planu i zgłasza wyniki."
+      },
+      "qa_test_site": {
+        "title": "Przetestuj stronę z kilku krajów",
+        "description": "Otwiera stronę w profilach z kilku krajów i zgłasza różnice (QA, testy geograficzne, weryfikacja reklam)."
+      },
+      "price_check": {
+        "title": "Porównaj ceny w krajach",
+        "description": "Porównuje ceny lub treści, które strona pokazuje w różnych krajach (badanie rynku)."
+      },
+      "team_access_review": {
+        "title": "Przejrzyj dostęp zespołu",
+        "description": "Podsumowuje, którzy członkowie mogą otwierać które profile (tylko odczyt), i podpowiada, jak ograniczyć dostęp."
+      },
+      "weekly_report": {
+        "title": "Raport tygodniowy",
+        "description": "Podsumowuje tydzień: aktywność obszaru roboczego, trendy kondycji proxy i ranking dostawców."
+      }
+    }
   },
   "settings": {
     "loadError": "Nie udało się wczytać ustawień: {{message}}",

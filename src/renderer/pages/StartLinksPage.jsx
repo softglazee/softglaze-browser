@@ -82,7 +82,7 @@ export default function StartLinksPage() {
       added.push({ label: labelFromUrl(u), url: u });
     }
     if (added.length) { setItems((p) => [...p, ...added]); setBulk(''); markDirty(); }
-    setErr(skipped ? `Added ${added.length}, skipped ${skipped} (duplicate or not http/https).` : '');
+    setErr(skipped ? t('startLinks.bulkResult', { added: added.length, skipped }) : '');
   };
 
   const autoLabelAll = () => {
@@ -108,7 +108,7 @@ export default function StartLinksPage() {
       setItems(clean); setDirty(false);
       setDropped(bad);
       setSaved(true); setTimeout(() => setSaved(false), 2000);
-    } catch (e) { setErr((e && e.message) || 'Could not save.'); }
+    } catch (e) { setErr((e && e.message) || t('startLinks.saveFailed')); }
     finally { setSaving(false); }
   };
 
@@ -124,9 +124,9 @@ export default function StartLinksPage() {
         description={t('startLinks.desc', { defaultValue: "Links shown on every profile's browser start page, next to the built-in check-links. Each opens in a new tab through the profile's proxy (http/https only)." })}
         actions={(
           <div className="flex items-center gap-2">
-            {saved && <span className="text-xs text-emerald-500 inline-flex items-center gap-1"><Check className="w-3.5 h-3.5" /> Saved</span>}
+            {saved && <span className="text-xs text-emerald-500 inline-flex items-center gap-1"><Check className="w-3.5 h-3.5" /> {t('startLinks.saved')}</span>}
             <GuardedButton deny={deny} variant="primary" size="sm" onClick={save} disabled={saving || !dirty || loading || !!loadErr}>
-              {saving ? <Loader2 className="w-4 h-4 animate-spin me-1" /> : <Check className="w-4 h-4 me-1" />} Save
+              {saving ? <Loader2 className="w-4 h-4 animate-spin me-1" /> : <Check className="w-4 h-4 me-1" />} {t('startLinks.save')}
             </GuardedButton>
           </div>
         )}
@@ -156,17 +156,17 @@ export default function StartLinksPage() {
         <Card className="bg-card border border-border rounded-xl">
           <CardContent className="p-0">
             <div className="flex flex-wrap items-center justify-between gap-2 px-5 py-3 border-b border-border">
-              <h3 className="text-sm font-semibold text-foreground">Links <span className="text-muted-foreground font-normal">· {validCount}</span></h3>
+              <h3 className="text-sm font-semibold text-foreground">{t('startLinks.links')} <span className="text-muted-foreground font-normal">· {validCount}</span></h3>
               <div className="flex items-center gap-1.5">
-                <Button variant="ghost" size="sm" onClick={autoLabelAll} disabled={items.length === 0} title="Fill any empty label from its URL"><Wand2 className="w-3.5 h-3.5 me-1" /> Auto-label</Button>
-                <Button variant="ghost" size="sm" onClick={add}><Plus className="w-3.5 h-3.5 me-1" /> Add</Button>
+                <Button variant="ghost" size="sm" onClick={autoLabelAll} disabled={items.length === 0} title={t('startLinks.autoLabelHint')}><Wand2 className="w-3.5 h-3.5 me-1" /> {t('startLinks.autoLabel')}</Button>
+                <Button variant="ghost" size="sm" onClick={add}><Plus className="w-3.5 h-3.5 me-1" /> {t('startLinks.add')}</Button>
               </div>
             </div>
             <div className="p-4 space-y-2 max-h-[54vh] overflow-y-auto">
               {loading ? (
-                <div className="flex items-center justify-center gap-2 text-sm text-muted-foreground py-8"><Loader2 className="w-4 h-4 animate-spin" /> Loading…</div>
+                <div className="flex items-center justify-center gap-2 text-sm text-muted-foreground py-8"><Loader2 className="w-4 h-4 animate-spin" /> {t('startLinks.loading')}</div>
               ) : items.length === 0 ? (
-                <div className="text-center py-12 text-sm text-muted-foreground">No links yet. Use <span className="text-foreground font-medium">Bulk add</span> on the right, or <span className="text-foreground font-medium">Add</span>.</div>
+                <div className="text-center py-12 text-sm text-muted-foreground">{t('startLinks.empty')}</div>
               ) : items.map((it, i) => {
                 const bad = it.url.trim() && !normalizeUrl(it.url);
                 return (
@@ -175,16 +175,17 @@ export default function StartLinksPage() {
                   <div key={i} className="flex items-start gap-2 sm:items-center">
                     <span className="shrink-0 w-6 pt-2.5 sm:pt-0 text-center text-[11px] text-muted-foreground tabular-nums">{i + 1}</span>
                     <div className="flex min-w-0 flex-1 flex-col gap-2 sm:flex-row sm:items-center">
-                      <input className={`${inputCls} w-full sm:w-44 sm:shrink-0`} placeholder="Label" value={it.label} onChange={(e) => update(i, 'label', e.target.value)} />
+                      <input className={`${inputCls} w-full sm:w-44 sm:shrink-0`} placeholder={t('startLinks.labelPlaceholder')} aria-label={t('startLinks.labelPlaceholder')} value={it.label} onChange={(e) => update(i, 'label', e.target.value)} />
                       <input
                         className={`${inputCls} w-full min-w-0 sm:w-auto sm:flex-1 ${bad ? 'border-red-500/60 focus:border-red-500' : ''}`}
                         placeholder="https://example.com"
+                        aria-label={t('startLinks.urlLabel')}
                         value={it.url}
                         onChange={(e) => update(i, 'url', e.target.value)}
                         onBlur={() => { if (!it.label.trim() && normalizeUrl(it.url)) update(i, 'label', labelFromUrl(it.url)); }}
                       />
                     </div>
-                    <button type="button" onClick={() => removeAt(i)} className="shrink-0 w-9 h-9 grid place-items-center rounded-lg text-muted-foreground hover:text-red-400 hover:bg-red-500/10" title="Remove"><X className="w-4 h-4" /></button>
+                    <button type="button" onClick={() => removeAt(i)} className="shrink-0 w-9 h-9 grid place-items-center rounded-lg text-muted-foreground hover:text-red-400 hover:bg-red-500/10" title={t('startLinks.remove')} aria-label={t('startLinks.remove')}><X className="w-4 h-4" /></button>
                   </div>
                 );
               })}
@@ -197,9 +198,9 @@ export default function StartLinksPage() {
           <CardContent className="p-5 space-y-3">
             <div className="flex items-center gap-2">
               <ClipboardList className="w-4 h-4 text-primary" />
-              <h3 className="text-sm font-semibold text-foreground">Bulk add</h3>
+              <h3 className="text-sm font-semibold text-foreground">{t('startLinks.bulkTitle')}</h3>
             </div>
-            <p className="text-xs text-muted-foreground leading-relaxed">Paste multiple URLs - one per line. Each gets a label from its domain automatically; edit any label in the list. Duplicates and non-http(s) lines are skipped.</p>
+            <p className="text-xs text-muted-foreground leading-relaxed">{t('startLinks.bulkHint')}</p>
             <textarea
               className={`${inputCls} w-full h-44 font-mono text-xs resize-y leading-relaxed`}
               placeholder={"whoer.net\nbrowserleaks.com\nhttps://pixelscan.net"}
@@ -207,8 +208,8 @@ export default function StartLinksPage() {
               onChange={(e) => setBulk(e.target.value)}
             />
             <div className="flex items-center gap-3">
-              <Button variant="primary" size="sm" onClick={bulkAdd} disabled={!bulk.trim()}><Plus className="w-3.5 h-3.5 me-1" /> Add all</Button>
-              {bulk.trim() && <button type="button" className="text-xs text-muted-foreground hover:text-foreground" onClick={() => setBulk('')}>Clear</button>}
+              <Button variant="primary" size="sm" onClick={bulkAdd} disabled={!bulk.trim()}><Plus className="w-3.5 h-3.5 me-1" /> {t('startLinks.addAll')}</Button>
+              {bulk.trim() && <button type="button" className="text-xs text-muted-foreground hover:text-foreground" onClick={() => setBulk('')}>{t('startLinks.clear')}</button>}
             </div>
           </CardContent>
         </Card>

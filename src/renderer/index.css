@@ -377,6 +377,18 @@
 :root:lang(ur) body { line-height: 1.8; }
 :root:lang(ar) body { line-height: 1.6; }
 
+/* Urdu with the Nastaliq setting (Settings > Language). lib/urduFont.js sets data-urdu-font on <html>
+   only while the UI is in Urdu, and loads the bundled face then. Nastaliq letters stack diagonally
+   and reach far above and below the line, so lines get more room: one-line labels that clip their
+   overflow (.truncate), form controls and the tight leading-* utilities would otherwise cut them off. */
+[data-urdu-font="nastaliq"]:lang(ur), [data-urdu-font="nastaliq"] :lang(ur) {
+  --font-script: "SoftGlaze Nastaliq", "Noto Nastaliq Urdu", "Jameel Noori Nastaleeq", "Urdu Typesetting", "Segoe UI", Tahoma, Arial;
+}
+:root[data-urdu-font="nastaliq"]:lang(ur) body { line-height: 2.2; }
+:root[data-urdu-font="nastaliq"]:lang(ur) body :is(button, input, select, textarea, label, .truncate, [class*="leading-"]) {
+  line-height: 2.1 !important;
+}
+
 /* RTL: layout uses logical utilities (ms/me, ps/pe, inset-s/e, text-start/end, border-s/e).
    Arrows that mean "forward / back" point the other way; logos, numbers, code and URLs do not. */
 [dir="rtl"] :is(.lucide-arrow-right, .lucide-arrow-left, .lucide-chevron-right, .lucide-chevron-left,

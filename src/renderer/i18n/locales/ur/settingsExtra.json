@@ -36,7 +36,8 @@
     "experimental": "تجرباتی",
     "savedIdle": "تمام تبدیلیاں محفوظ ہیں",
     "saving": "تبدیلیاں محفوظ ہو رہی ہیں…",
-    "saveError": "تبدیلیاں محفوظ نہیں ہو سکیں"
+    "saveError": "تبدیلیاں محفوظ نہیں ہو سکیں",
+    "sectionsLabel": "سیٹنگز کے سیکشنز"
   },
   "localRuntime": {
     "title": "لوکل رن ٹائم",
@@ -407,5 +408,12 @@
     "updateScheduler": "شیڈولر اپ ڈیٹ نہیں ہو سکا۔",
     "loadGlobal": "عمومی سیٹنگز لوڈ نہیں ہو سکیں۔",
     "saveSetting": "سیٹنگ محفوظ نہیں ہو سکی۔"
+  },
+  "resilienceToasts": {
+    "aProfile": "ایک پروفائل",
+    "crashed": "{{profile}} اچانک رک گیا۔",
+    "crashedRestarting": "{{profile}} اچانک رک گیا۔ دوبارہ شروع ہو رہا ہے…",
+    "lowMemory_one": "میموری کم ہے: {{count}} پروفائل بند کیا گیا (خالی میموری {{free}}%)۔",
+    "lowMemory_other": "میموری کم ہے: {{count}} پروفائلز بند کیے گئے (خالی میموری {{free}}%)۔"
   }
 }

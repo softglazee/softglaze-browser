@@ -45,7 +45,7 @@ function ScoreBadge({ score }) {
       <div className="min-w-0">
         <div className="flex items-center gap-2">
           <span className={`text-xl font-bold ${style.text}`}>{score.grade}</span>
-          <span className={`text-sm font-semibold ${style.text}`}>{score.label}</span>
+          <span className={`text-sm font-semibold ${style.text}`}>{t(`leakCheck.grades.${score.grade}`, { defaultValue: score.label })}</span>
         </div>
         <p className="text-xs text-muted mt-1">
           {t('leakCheck.trustScoreFrom', { pass: score.summary.pass, warn: score.summary.warn, fail: score.summary.fail })}
@@ -55,18 +55,23 @@ function ScoreBadge({ score }) {
   );
 }
 
+// Main sends the English label and detail (also read by AI apps) plus keys to show them in the UI
+// language; an unknown key falls back to the English text.
 function CheckRow({ c }) {
+  const { t } = useTranslation('cmpModalsA');
   const cfg = STATUS[c.status] || STATUS.warn;
+  const label = t(`leakCheck.checks.${c.labelKey || c.key}`, { defaultValue: c.label });
+  const detail = c.detailKey ? t(`leakCheck.details.${c.detailKey}`, { ...(c.params || {}), defaultValue: c.detail }) : c.detail;
   const Icon = cfg.Icon;
   return (
     <div className={`flex items-start gap-4 rounded border px-4 py-3 shadow-sm ${cfg.bg}`}>
       <Icon className={`w-4 h-4 mt-0.5 shrink-0 ${cfg.color}`} />
       <div className="min-w-0">
         <div className="flex items-center gap-2">
-          <span className="text-sm font-semibold text-foreground">{c.label}</span>
-          <span className={`text-[10px] uppercase font-bold tracking-wider px-1.5 py-0.5 rounded border border-current ${cfg.color}`}>{c.status}</span>
+          <span className="text-sm font-semibold text-foreground">{label}</span>
+          <span className={`text-[10px] uppercase font-bold tracking-wider px-1.5 py-0.5 rounded border border-current ${cfg.color}`}>{t(`leakCheck.status.${c.status}`, { defaultValue: c.status })}</span>
         </div>
-        <p className="text-xs text-muted mt-1 break-words leading-relaxed">{c.detail}</p>
+        <p className="text-xs text-muted mt-1 break-words leading-relaxed">{detail}</p>
       </div>
     </div>
   );

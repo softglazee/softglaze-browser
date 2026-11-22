@@ -223,7 +223,25 @@
     "resRunningVal": "{{count}} 個執行中",
     "resStoredVal": "已儲存 {{count}} 個",
     "restoreDesc": "上次關閉 SoftGlaze 時，有 {{count}} 個設定檔處於開啟狀態。",
-    "runningCount": "{{count}} 個執行中"
+    "runningCount": "{{count}} 個執行中",
+    "update": {
+      "failedTitle": "更新下載失敗",
+      "failedTitleVersion": "更新下載失敗（{{version}}）",
+      "checkingTitle": "正在檢查更新…",
+      "readyTitle": "更新 {{version}} 已準備就緒",
+      "downloadingTitle": "正在下載更新 {{version}}…",
+      "availableTitle": "有新的更新 {{version}}",
+      "failedDesc": "無法下載更新。請檢查網路連線後重試。",
+      "checkingDesc": "正在連線到更新伺服器…",
+      "readyDesc": "點選安裝即可重新啟動並套用新版本。",
+      "downloadingDesc": "已下載 {{percent}}%",
+      "availableDesc": "將在背景下載。",
+      "install": "安裝並重新啟動",
+      "retry": "重試",
+      "whatsNew": "新功能",
+      "hideNotes": "隱藏說明",
+      "dismiss": "關閉更新通知"
+    }
   },
   "settings": {
     "eyebrow": "應用程式",
@@ -233,7 +251,13 @@
       "title": "語言",
       "description": "選擇 SoftGlaze 介面的顯示語言。",
       "label": "顯示語言",
-      "hint": "更改會立即套用到整個應用程式。"
+      "hint": "更改會立即套用到整個應用程式。",
+      "urduFont": {
+        "label": "烏爾都語字型",
+        "hint": "波斯體（Nastaliq）是烏爾都語的傳統書寫風格。它已內建在應用程式中，只有在你選擇時才會載入。",
+        "default": "系統字型（預設）",
+        "nastaliq": "波斯體（Noto Nastaliq Urdu）"
+      }
     }
   },
   "startLinks": {
@@ -243,7 +267,24 @@
     "loadError": "無法載入你的連結（{{error}}）。為避免覆蓋已儲存的清單，儲存功能已停用。",
     "retry": "重試",
     "droppedRows_one": "有 {{count}} 列未儲存，因為其 URL 不是有效的 http(s) 網址：{{rows}}",
-    "droppedRows_other": "有 {{count}} 列未儲存，因為其 URL 不是有效的 http(s) 網址：{{rows}}"
+    "droppedRows_other": "有 {{count}} 列未儲存，因為其 URL 不是有效的 http(s) 網址：{{rows}}",
+    "saved": "已儲存",
+    "save": "儲存",
+    "links": "連結",
+    "autoLabel": "自動標籤",
+    "autoLabelHint": "用 URL 填入空白的標籤",
+    "add": "新增",
+    "loading": "正在載入…",
+    "empty": "還沒有連結。請使用「批次新增」或「新增」。",
+    "labelPlaceholder": "標籤",
+    "urlLabel": "連結網址",
+    "remove": "移除",
+    "bulkTitle": "批次新增",
+    "bulkHint": "貼上多個 URL，每行一個。每個連結會依網域取得一個標籤，你可以在清單中修改。重複的行和非 http(s) 的行會略過。",
+    "addAll": "全部新增",
+    "clear": "清除",
+    "bulkResult": "已新增：{{added}}。已略過：{{skipped}}（重複或非 http/https）。",
+    "saveFailed": "無法儲存。"
   },
   "storeRating": {
     "cardTitle": "喜歡 SoftGlaze Browser 嗎？",
@@ -283,5 +324,11 @@
     },
     "cta": "查看優惠",
     "dismiss": "隱藏此優惠"
+  },
+  "errorBoundary": {
+    "title": "此頁面發生問題。",
+    "body": "應用程式的其他部分仍在正常執行。請重試，或從側邊欄開啟其他頁面。",
+    "retry": "重試",
+    "unknown": "未知的錯誤"
   }
 }

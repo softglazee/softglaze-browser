@@ -8,6 +8,7 @@ import i18n from 'i18next';
 import { initReactI18next } from 'react-i18next';
 import { LANG_KEY, SUPPORTED_LANGS, LANG_CODES, detectLang, langDir, isRtl, applyDocumentLang } from './langs.mjs';
 import { setIntlLanguage } from '../lib/intl.mjs';
+import { applyUrduFont } from '../lib/urduFont.js';
 
 export { LANG_KEY, SUPPORTED_LANGS, isRtl, langDir, applyDocumentLang };
 
@@ -88,12 +89,14 @@ function tellMainProcess(code) {
 
 i18n.on('languageChanged', (code) => {
   applyDocumentLang(code);
+  applyUrduFont(code);
   setIntlLanguage(code);
   tellMainProcess(code);
 });
 
 const initialLang = readStoredLang();
 applyDocumentLang(initialLang);
+applyUrduFont(initialLang); // Urdu + Nastaliq starts loading the bundled font before the first render
 setIntlLanguage(initialLang);
 tellMainProcess(initialLang);
 

@@ -337,9 +337,9 @@ test('a refund voids the code if it was not used yet', async () => {
   assert.equal((await H.call('POST', '/v1/redeem', { body: { tenantId: T, code, ...inst } })).status, 409);
 });
 
-test('the activation email copy has both languages, known placeholders only and no dashes', () => {
+test('the activation email copy has every language, known placeholders only and no dashes', () => {
   const rows = allDefaultRows().filter((r) => r.key === 'activation_code');
-  assert.deepEqual(rows.map((r) => r.lang).sort(), ['en', 'es']);
+  assert.deepEqual(rows.map((r) => r.lang).sort(), [...require('../src/email/translations').EMAIL_LANGS].sort());
   const { unknownPlaceholders } = require('../src/email/render');
   for (const r of rows) {
     assert.equal(r.category, 'essential');

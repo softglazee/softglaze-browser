@@ -1,0 +1,43 @@
+{
+  "_meta": {
+    "greetingNamed": "Chào {{name}},",
+    "greetingNoName": "Xin chào,",
+    "sentBy": "Email này được {{company}} gửi tới {{email}}.",
+    "unsub": "Bạn không muốn nhận các email này?",
+    "unsubLink": "Hủy đăng ký",
+    "essential": "Bạn nhận được email này vì địa chỉ này đã được nhập trong ứng dụng.",
+    "purchase": "Bạn nhận được email này vì địa chỉ này đã được dùng để mua hàng trên trang web của chúng tôi."
+  },
+  "verify_code": {
+    "subject": "Mã xác minh SoftGlaze của bạn",
+    "html": "<p>{{greeting}}</p>\n<p>Mã xác minh của bạn là:</p>\n<p style=\"font-size:28px;font-weight:700;letter-spacing:6px;margin:16px 0;color:#111827;\">{{code}}</p>\n<p>Nhập mã này trong {{appName}} để xác nhận địa chỉ email này. Mã có hiệu lực trong {{codeMinutes}} phút.</p>\n<p>Nếu bạn không yêu cầu mã này, bạn có thể bỏ qua email. Sẽ không có gì thay đổi cho đến khi mã được nhập.</p>"
+  },
+  "welcome": {
+    "subject": "Chào mừng bạn đến với SoftGlaze Browser",
+    "html": "<p>{{greeting}}</p>\n<p>Cảm ơn bạn đã dùng thử {{appName}}. Bản dùng thử miễn phí của bạn có hiệu lực đến {{trialEndsAt}}, và trong thời gian dùng thử bạn có thể dùng các tính năng của gói {{plan}}.</p>\n<p>Bước đầu tiên nên làm: tạo một hồ sơ, gán proxy nếu bạn dùng proxy, rồi mở hồ sơ. Mỗi hồ sơ giữ cookie và cài đặt riêng, tách biệt với các hồ sơ khác.</p>\n<p>Nếu có gì chưa rõ hoặc không hoạt động, hãy trả lời email này. Chúng tôi đọc mọi thư trả lời.</p>\n<p>Đội ngũ SoftGlaze</p>"
+  },
+  "tips": {
+    "subject": "Ba điều nên thử trong SoftGlaze Browser",
+    "html": "<p>{{greeting}}</p>\n<p>Đây là ba điều người dùng thấy hữu ích trong tuần đầu tiên:</p>\n<ol>\n<li><strong>Mỗi tài khoản một hồ sơ.</strong> Giữ mỗi tài khoản trong hồ sơ riêng để cookie và thông tin đăng nhập không bao giờ lẫn vào nhau.</li>\n<li><strong>Kiểm tra proxy trước khi dùng.</strong> Danh sách proxy có thể kiểm tra một proxy và cho biết proxy kết nối từ đâu.</li>\n<li><strong>Mời nhóm của bạn.</strong> Thêm thành viên trong ứng dụng; mỗi người đăng nhập bằng tài khoản riêng.</li>\n</ol>\n<p>Bản dùng thử của bạn kéo dài đến {{trialEndsAt}}. Nếu có câu hỏi, cứ trả lời email này.</p>"
+  },
+  "trial_ending": {
+    "subject": "Bản dùng thử SoftGlaze của bạn kết thúc vào {{trialEndsAt}}",
+    "html": "<p>{{greeting}}</p>\n<p>Nhắc nhanh: bản dùng thử miễn phí {{appName}} của bạn kết thúc vào {{trialEndsAt}}.</p>\n<p>Sau đó bạn sẽ tự động chuyển sang gói Free. Không có gì bị khóa và không có gì bị xóa: bạn vẫn giữ mọi hồ sơ (mở được 25 hồ sơ), proxy và dấu vân tay, cùng ứng dụng điện thoại và ứng dụng web.</p>\n<p>Để có hồ sơ không giới hạn, 3 hồ sơ chạy cùng lúc, chỗ cho nhóm, đồng bộ đám mây và thao tác AI không giới hạn, hãy chọn Pro trong ứng dụng (mở Thanh toán), từ 5 US$ mỗi tháng. Nếu bạn muốn thanh toán bằng hóa đơn, hãy trả lời email này và chúng tôi sẽ gửi hóa đơn.</p>"
+  },
+  "trial_ended": {
+    "subject": "Bạn đang dùng gói SoftGlaze Free",
+    "html": "<p>{{greeting}}</p>\n<p>Bản dùng thử của bạn đã kết thúc. Bạn đang dùng gói Free.</p>\n<p>Bạn vẫn giữ: mọi hồ sơ (mở được 25 hồ sơ), proxy và dấu vân tay, ứng dụng điện thoại và ứng dụng web.</p>\n<p>Pro có thêm: hồ sơ không giới hạn, 3 hồ sơ chạy cùng lúc, chỗ cho nhóm, đồng bộ đám mây và thao tác AI không giới hạn, từ 5 US$ mỗi tháng. Để nâng cấp, hãy mở Thanh toán trong ứng dụng, hoặc trả lời email này để thanh toán bằng hóa đơn. Nếu bạn đã có mã mua hàng, hãy nhập mã trong Thanh toán.</p>\n<p>Cảm ơn bạn đã dùng thử {{appName}}.</p>"
+  },
+  "come_back": {
+    "subject": "SoftGlaze Browser vẫn còn trong danh sách của bạn chứ?",
+    "html": "<p>{{greeting}}</p>\n<p>Bản dùng thử SoftGlaze của bạn đã kết thúc một tuần trước. Nếu bạn vẫn đang tìm cách tách riêng nhiều tài khoản, ứng dụng luôn sẵn sàng khi bạn cần: các hồ sơ của bạn vẫn còn trên máy tính.</p>\n<p>Nếu có điều gì khiến bạn dừng lại, chúng tôi rất muốn biết đó là gì. Hãy trả lời email này; chúng tôi đọc mọi thư trả lời.</p>\n<p>Phiên bản mới nhất ở đây: <a href=\"{{downloadUrl}}\">{{downloadUrl}}</a></p>"
+  },
+  "activation_code": {
+    "subject": "Mã kích hoạt SoftGlaze Browser của bạn",
+    "html": "<p>{{greeting}}</p>\n<p>Cảm ơn bạn đã mua {{appName}}. Thanh toán cho gói {{plan}} ({{term}}) đã hoàn tất.</p>\n<p>Mã kích hoạt của bạn là:</p>\n<p style=\"font-size:28px;font-weight:700;letter-spacing:6px;margin:16px 0;color:#111827;\">{{code}}</p>\n<p>Cách dùng:</p>\n<ol>\n<li>Cài đặt {{appName}} nếu bạn chưa cài: <a href=\"{{downloadUrl}}\">{{downloadUrl}}</a></li>\n<li>Mở ứng dụng và vào Thanh toán.</li>\n<li>Tại \"Có mã mua hàng?\", dán mã và bấm Áp dụng.</li>\n</ol>\n<p>Mã chỉ dùng được một lần, trên máy tính mà bạn nhập mã. Hãy giữ email này cho đến khi bạn đã dùng mã.</p>\n<p>Nếu có gì không hoạt động, hãy trả lời email này hoặc viết tới {{supportEmail}}. Chúng tôi sẽ hỗ trợ, gửi lại mã hoặc hoàn tiền cho bạn.</p>\n<p>Đội ngũ SoftGlaze</p>"
+  },
+  "free_plan_launch": {
+    "subject": "Tin vui: SoftGlaze đã có gói miễn phí",
+    "html": "<p>{{greeting}}</p>\n<p>Khi bản dùng thử {{appName}} của bạn kết thúc, ứng dụng đã ngừng mở hồ sơ. Giờ điều đó đã thay đổi: SoftGlaze đã có gói Free, và bạn có ngay gói này khi cập nhật ứng dụng.</p>\n<p>Với gói Free, bạn có thể:</p>\n<ul>\n<li>giữ 25 hồ sơ trình duyệt và chạy 1 hồ sơ mỗi lần</li>\n<li>dùng mọi cài đặt dấu vân tay và proxy của riêng bạn</li>\n<li>xem hồ sơ và duyệt yêu cầu AI từ ứng dụng điện thoại và ứng dụng web</li>\n<li>chạy 25 thao tác AI mỗi ngày</li>\n</ul>\n<p>Hồ sơ, proxy và cài đặt của bạn vẫn còn trên máy tính. Tải phiên bản mới nhất tại đây: <a href=\"{{downloadUrl}}\">{{downloadUrl}}</a></p>\n<p>Nếu bạn cần nhiều hơn, Pro có thêm hồ sơ không giới hạn, 3 hồ sơ chạy cùng lúc, chỗ cho nhóm, đồng bộ đám mây và thao tác AI không giới hạn, từ 5 US$ mỗi tháng.</p>\n<p>Đội ngũ SoftGlaze</p>"
+  }
+}

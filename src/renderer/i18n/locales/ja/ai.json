@@ -390,7 +390,24 @@
     "page_scroll": "ページをスクロール",
     "page_screenshot": "スクリーンショットを撮る",
     "page_extract_text": "ページからテキストをコピー",
-    "page_wait_for": "ページ上の要素を待機"
+    "page_wait_for": "ページ上の要素を待機",
+    "workspace_summary": "ワークスペースの概要を読み取る",
+    "list_profiles": "プロファイルを一覧表示",
+    "get_profile": "プロファイルを読み取る",
+    "profile_health": "プロファイルの状態とCAPTCHAリスクを確認",
+    "list_sessions": "実行中のプロファイルを一覧表示",
+    "stop_all_profiles": "すべてのプロファイルを停止",
+    "list_proxies": "プロキシを一覧表示",
+    "check_proxy": "プロキシを確認",
+    "get_proxy_health": "プロキシの状態の履歴を読み取る",
+    "list_groups": "グループを一覧表示",
+    "list_macros": "マクロを一覧表示",
+    "get_macro": "マクロを読み取る",
+    "get_run_status": "実行の状態を確認",
+    "get_activity": "最近のアクティビティを読み取る",
+    "read_memory": "ワークスペースのメモリを読み取る",
+    "update_memory": "ワークスペースのメモリを更新",
+    "get_cdp_endpoint": "プロファイルをPlaywrightまたはDevToolsに渡す（上級者向け）"
   },
   "tokens": {
     "search": "トークンを検索",
@@ -560,7 +577,57 @@
     "howClaudeDesktop": "チャット欄の下の + をクリックし、SoftGlazeを探します。",
     "howVsCode": "Copilot Chatで / と入力し、SoftGlazeのプロンプトを選びます。",
     "howCursor": "プロンプトが一覧にない場合は、下のテキストをコピーします。",
-    "howOther": "どのアプリでも: プロンプトのテキストをコピーしてチャットに貼り付け、詳細を入力します。"
+    "howOther": "どのアプリでも: プロンプトのテキストをコピーしてチャットに貼り付け、詳細を入力します。",
+    "items": {
+      "daily_health_check": {
+        "title": "毎日の状態チェック",
+        "description": "実行中および最近使ったすべてのプロファイルとそのプロキシを確認し、問題ごとに修正方法を添えて報告します。"
+      },
+      "diagnose_captcha": {
+        "title": "このプロファイルにCAPTCHAが出る理由は？",
+        "description": "profile_healthを使って、あるプロファイルにCAPTCHAやブロックページが繰り返し表示される理由を説明し、修正案を示します。"
+      },
+      "create_geo_profiles": {
+        "title": "国別のプロファイルを作成",
+        "description": "グループ内に複数のプロファイルを作成し、それぞれにその国の使えるプロキシを割り当てます。"
+      },
+      "fix_proxy_mismatches": {
+        "title": "タイムゾーン、言語、位置の不一致を修正",
+        "description": "タイムゾーン、言語、位置がプロキシと一致しないプロファイルを見つけ、承認用の修正案を示します。"
+      },
+      "rotate_bad_proxies": {
+        "title": "失敗中またはブロックリスト入りのプロキシを交換",
+        "description": "失敗しているプロキシやブロックリストに載ったプロキシを見つけ、IPを切り替えるか、プロファイルを正常なプロキシに移します。"
+      },
+      "warm_up_profiles": {
+        "title": "プロファイルをウォームアップ",
+        "description": "Cookie Warmer（Cookieウォーマー）でウォームアップを計画して開始し、新しいプロファイルに通常の閲覧履歴を作ります。"
+      },
+      "write_macro": {
+        "title": "説明からマクロを作成",
+        "description": "普段の言葉で書いたタスクをマクロに変換して保存し、1つのプロファイルで試験実行します。"
+      },
+      "run_macro_on_group": {
+        "title": "グループでマクロを実行",
+        "description": "保存したマクロをプランの上限内でグループのプロファイルに実行し、結果を報告します。"
+      },
+      "qa_test_site": {
+        "title": "複数の国からサイトをテスト",
+        "description": "複数の国のプロファイルでサイトを開き、違いを報告します（QA、地域別テスト、広告の確認）。"
+      },
+      "price_check": {
+        "title": "国別に価格を比較",
+        "description": "ページが国ごとに表示する価格や内容を比較します（市場調査）。"
+      },
+      "team_access_review": {
+        "title": "チームのアクセスを確認",
+        "description": "どのメンバーがどのプロファイルを開けるかをまとめ（読み取りのみ）、アクセスを絞る方法を提案します。"
+      },
+      "weekly_report": {
+        "title": "週次レポート",
+        "description": "1週間のまとめ: ワークスペースのアクティビティ、プロキシの状態の推移、ベンダースコアボード。"
+      }
+    }
   },
   "settings": {
     "loadError": "設定を読み込めませんでした: {{message}}",

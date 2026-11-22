@@ -1635,7 +1635,7 @@ export default function ProfilesPage() {
                             onClick={() => updatePd('antidetectEngine', !pd.antidetectEngine)}
                             className="relative inline-flex h-6 w-11 items-center rounded-full transition-colors shrink-0 mt-0.5"
                             style={{ background: pd.antidetectEngine ? '#06b6d4' : 'var(--switch-background, #3f3f46)' }}
-                            title="Toggle the native fingerprint engine for this profile"
+                            aria-label={t('general.antidetectLabel', 'Fingerprint engine (fingerprint-chromium)')}
                           >
                             <span
                               className={`inline-block transform rounded-full bg-white shadow transition-transform ${pd.antidetectEngine ? 'translate-x-5 rtl:-translate-x-5' : 'translate-x-1 rtl:-translate-x-1'}`}

@@ -1,0 +1,43 @@
+{
+  "_meta": {
+    "greetingNamed": "Merhaba {{name}},",
+    "greetingNoName": "Merhaba,",
+    "sentBy": "Bu e-posta {{company}} tarafından {{email}} adresine gönderildi.",
+    "unsub": "Bu e-postaları almak istemiyor musunuz?",
+    "unsubLink": "Abonelikten çık",
+    "essential": "Bu e-postayı, bu adres uygulamaya girildiği için alıyorsunuz.",
+    "purchase": "Bu e-postayı, bu adres web sitemizdeki bir satın alma işleminde kullanıldığı için alıyorsunuz."
+  },
+  "verify_code": {
+    "subject": "SoftGlaze doğrulama kodunuz",
+    "html": "<p>{{greeting}}</p>\n<p>Doğrulama kodunuz:</p>\n<p style=\"font-size:28px;font-weight:700;letter-spacing:6px;margin:16px 0;color:#111827;\">{{code}}</p>\n<p>Bu e-posta adresini onaylamak için kodu {{appName}} uygulamasına girin. Kod {{codeMinutes}} dakika geçerlidir.</p>\n<p>Bu kodu siz istemediyseniz bu e-postayı yok sayabilirsiniz. Kod girilmedikçe hiçbir şey değişmez.</p>"
+  },
+  "welcome": {
+    "subject": "SoftGlaze Browser'a hoş geldiniz",
+    "html": "<p>{{greeting}}</p>\n<p>{{appName}} uygulamasını denediğiniz için teşekkürler. Ücretsiz deneme süreniz {{trialEndsAt}} tarihine kadar etkin ve deneme boyunca {{plan}} özelliklerini kullanabilirsiniz.</p>\n<p>İyi bir ilk adım: bir profil oluşturun, kullanıyorsanız bir proxy ekleyin ve profili açın. Her profil kendi çerezlerini ve ayarlarını diğerlerinden ayrı tutar.</p>\n<p>Anlaşılmayan ya da çalışmayan bir şey olursa bu e-postayı yanıtlayın. Her yanıtı okuyoruz.</p>\n<p>SoftGlaze ekibi</p>"
+  },
+  "tips": {
+    "subject": "SoftGlaze Browser'da denemeniz gereken üç şey",
+    "html": "<p>{{greeting}}</p>\n<p>Kullanıcıların ilk haftalarında en çok işine yarayan üç şey:</p>\n<ol>\n<li><strong>Her hesap için bir profil.</strong> Her hesabı kendi profilinde tutun; böylece çerezler ve oturumlar asla karışmaz.</li>\n<li><strong>Proxy'yi kullanmadan önce kontrol edin.</strong> Proxy listesi bir proxy'yi test edip nereden bağlandığını gösterebilir.</li>\n<li><strong>Ekibinizi davet edin.</strong> Ekip üyelerini uygulamadan ekleyin; herkes kendi hesabıyla giriş yapar.</li>\n</ol>\n<p>Deneme süreniz {{trialEndsAt}} tarihine kadar sürüyor. Sorularınızı bekliyoruz: bu e-postayı yanıtlamanız yeterli.</p>"
+  },
+  "trial_ending": {
+    "subject": "SoftGlaze deneme süreniz {{trialEndsAt}} tarihinde bitiyor",
+    "html": "<p>{{greeting}}</p>\n<p>Kısa bir hatırlatma: {{appName}} ücretsiz deneme süreniz {{trialEndsAt}} tarihinde bitiyor.</p>\n<p>Sonrasında otomatik olarak Free planına geçersiniz. Hiçbir şey kilitlenmez, hiçbir şey silinmez: tüm profilleriniz (25'i açılabilir), proxy'leriniz ve parmak izleriniz ile telefon ve web uygulaması sizde kalır.</p>\n<p>Sınırsız profil, aynı anda 3 çalışan profil, ekip koltukları, bulut eşitleme ve sınırsız AI işlemi için uygulamada Pro'yu seçin (Faturalandırma'yı açın); ayda 5 US$'dan başlayan fiyatlarla. Faturayla ödemeyi tercih ederseniz bu e-postayı yanıtlayın, size bir fatura gönderelim.</p>"
+  },
+  "trial_ended": {
+    "subject": "Artık SoftGlaze Free planındasınız",
+    "html": "<p>{{greeting}}</p>\n<p>Deneme süreniz sona erdi. Artık Free planındasınız.</p>\n<p>Sizde kalanlar: tüm profilleriniz (25'i açılabilir), proxy'leriniz ve parmak izleriniz, telefon ve web uygulaması.</p>\n<p>Pro ile gelenler: sınırsız profil, aynı anda 3 çalışan profil, ekip koltukları, bulut eşitleme ve sınırsız AI işlemi; ayda 5 US$'dan başlayan fiyatlarla. Yükseltmek için uygulamada Faturalandırma'yı açın ya da faturayla ödemek için bu e-postayı yanıtlayın. Zaten bir satın alma kodunuz varsa Faturalandırma'ya girin.</p>\n<p>{{appName}} uygulamasını denediğiniz için teşekkürler.</p>"
+  },
+  "come_back": {
+    "subject": "SoftGlaze Browser hâlâ listenizde mi?",
+    "html": "<p>{{greeting}}</p>\n<p>SoftGlaze deneme süreniz bir hafta önce bitti. Hâlâ birçok hesabı birbirinden ayrı tutmanın bir yolunu arıyorsanız uygulama siz hazır olduğunuzda hazır: profilleriniz hâlâ bilgisayarınızda.</p>\n<p>Sizi durduran bir şey olduysa ne olduğunu duymak isteriz. Bu e-postayı yanıtlayın; her yanıtı okuyoruz.</p>\n<p>En son sürüm burada: <a href=\"{{downloadUrl}}\">{{downloadUrl}}</a></p>"
+  },
+  "activation_code": {
+    "subject": "SoftGlaze Browser etkinleştirme kodunuz",
+    "html": "<p>{{greeting}}</p>\n<p>{{appName}} satın aldığınız için teşekkürler. {{plan}} planı ({{term}}) için ödemeniz tamamlandı.</p>\n<p>Etkinleştirme kodunuz:</p>\n<p style=\"font-size:28px;font-weight:700;letter-spacing:6px;margin:16px 0;color:#111827;\">{{code}}</p>\n<p>Nasıl kullanılır:</p>\n<ol>\n<li>Henüz yüklemediyseniz {{appName}} uygulamasını yükleyin: <a href=\"{{downloadUrl}}\">{{downloadUrl}}</a></li>\n<li>Uygulamayı açın ve Faturalandırma'ya gidin.</li>\n<li>\"Satın alma kodunuz mu var?\" bölümüne kodu yapıştırın ve Uygula'ya basın.</li>\n</ol>\n<p>Kod bir kez, girildiği bilgisayarda çalışır. Kodu kullanana kadar bu e-postayı saklayın.</p>\n<p>Bir şey çalışmazsa bu e-postayı yanıtlayın veya {{supportEmail}} adresine yazın. Yardım eder, kodu yeniden gönderir ya da ücretinizi iade ederiz.</p>\n<p>SoftGlaze ekibi</p>"
+  },
+  "free_plan_launch": {
+    "subject": "İyi haber: SoftGlaze'in artık ücretsiz bir planı var",
+    "html": "<p>{{greeting}}</p>\n<p>{{appName}} deneme süreniz bittiğinde uygulama profil açmayı durdurmuştu. Bu değişti: SoftGlaze'in artık bir Free planı var ve uygulamayı güncellediğiniz anda sizin olur.</p>\n<p>Free planında şunları yapabilirsiniz:</p>\n<ul>\n<li>25 tarayıcı profili tutun ve aynı anda 1 tanesini çalıştırın</li>\n<li>tüm parmak izi ayarlarını ve kendi proxy'lerinizi kullanın</li>\n<li>telefon ve web uygulamasından profilleri görüntüleyin ve AI isteklerini onaylayın</li>\n<li>günde 25 AI işlemi çalıştırın</li>\n</ul>\n<p>Profilleriniz, proxy'leriniz ve ayarlarınız hâlâ bilgisayarınızda. En son sürümü buradan alın: <a href=\"{{downloadUrl}}\">{{downloadUrl}}</a></p>\n<p>Daha fazlasına ihtiyacınız olursa Pro; sınırsız profil, aynı anda 3 çalışan profil, ekip koltukları, bulut eşitleme ve sınırsız AI işlemi ekler, ayda 5 US$'dan başlayan fiyatlarla.</p>\n<p>SoftGlaze ekibi</p>"
+  }
+}

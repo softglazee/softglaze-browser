@@ -36,7 +36,8 @@
     "experimental": "Expérimental",
     "savedIdle": "Toutes les modifications sont enregistrées",
     "saving": "Enregistrement des modifications…",
-    "saveError": "Impossible d'enregistrer les modifications"
+    "saveError": "Impossible d'enregistrer les modifications",
+    "sectionsLabel": "Sections des paramètres"
   },
   "localRuntime": {
     "title": "Exécution locale",
@@ -407,5 +408,13 @@
     "updateScheduler": "Échec de la mise à jour du planificateur.",
     "loadGlobal": "Échec du chargement des paramètres globaux.",
     "saveSetting": "Échec de l'enregistrement du paramètre."
+  },
+  "resilienceToasts": {
+    "aProfile": "Un profil",
+    "crashed": "{{profile}} s'est arrêté de manière inattendue.",
+    "crashedRestarting": "{{profile}} s'est arrêté de manière inattendue. Redémarrage…",
+    "lowMemory_one": "Mémoire faible : {{count}} profil fermé (mémoire libre {{free}} %).",
+    "lowMemory_many": "Mémoire faible : {{count}} profils fermés (mémoire libre {{free}} %).",
+    "lowMemory_other": "Mémoire faible : {{count}} profils fermés (mémoire libre {{free}} %)."
   }
 }

@@ -394,7 +394,24 @@
     "page_scroll": "Seite scrollen",
     "page_screenshot": "Screenshot aufnehmen",
     "page_extract_text": "Text von einer Seite kopieren",
-    "page_wait_for": "Auf etwas auf einer Seite warten"
+    "page_wait_for": "Auf etwas auf einer Seite warten",
+    "workspace_summary": "Übersicht des Arbeitsbereichs lesen",
+    "list_profiles": "Profile auflisten",
+    "get_profile": "Profil lesen",
+    "profile_health": "Zustand und CAPTCHA-Risiko eines Profils prüfen",
+    "list_sessions": "Laufende Profile auflisten",
+    "stop_all_profiles": "Alle Profile stoppen",
+    "list_proxies": "Proxys auflisten",
+    "check_proxy": "Proxy prüfen",
+    "get_proxy_health": "Zustandsverlauf eines Proxys lesen",
+    "list_groups": "Gruppen auflisten",
+    "list_macros": "Makros auflisten",
+    "get_macro": "Makro lesen",
+    "get_run_status": "Status eines Laufs prüfen",
+    "get_activity": "Letzte Aktivität lesen",
+    "read_memory": "Speicher des Arbeitsbereichs lesen",
+    "update_memory": "Speicher des Arbeitsbereichs aktualisieren",
+    "get_cdp_endpoint": "Profil an Playwright oder DevTools übergeben (Experte)"
   },
   "tokens": {
     "search": "Tokens suchen",
@@ -568,7 +585,57 @@
     "howClaudeDesktop": "unter dem Chatfeld auf + klicken und nach SoftGlaze suchen.",
     "howVsCode": "in Copilot Chat / eingeben und einen SoftGlaze-Prompt wählen.",
     "howCursor": "wenn keine Prompts aufgeführt sind, den Text unten kopieren.",
-    "howOther": "Jede App: Prompt-Text kopieren, in den Chat einfügen und die Details ausfüllen."
+    "howOther": "Jede App: Prompt-Text kopieren, in den Chat einfügen und die Details ausfüllen.",
+    "items": {
+      "daily_health_check": {
+        "title": "Täglicher Zustandscheck",
+        "description": "Prüft jedes laufende und kürzlich genutzte Profil samt Proxy und meldet Probleme jeweils mit Lösung."
+      },
+      "diagnose_captcha": {
+        "title": "Warum bekommt dieses Profil CAPTCHAs?",
+        "description": "Erklärt mit profile_health, warum ein Profil immer wieder CAPTCHAs oder Sperrseiten bekommt, und schlägt Lösungen vor."
+      },
+      "create_geo_profiles": {
+        "title": "Profile für ein Land erstellen",
+        "description": "Erstellt mehrere Profile in einer Gruppe, jedes mit einem funktionierenden Proxy aus diesem Land."
+      },
+      "fix_proxy_mismatches": {
+        "title": "Abweichungen bei Zeitzone, Sprache und Standort beheben",
+        "description": "Findet Profile, deren Zeitzone, Sprache oder Standort nicht zum Proxy passen, und schlägt Korrekturen zur Freigabe vor."
+      },
+      "rotate_bad_proxies": {
+        "title": "Proxys mit Fehlern oder auf Blocklisten ersetzen",
+        "description": "Findet fehlerhafte Proxys oder solche auf Blocklisten und wechselt ihre IP oder verschiebt ihre Profile auf funktionierende Proxys."
+      },
+      "warm_up_profiles": {
+        "title": "Profile aufwärmen",
+        "description": "Plant und startet ein Aufwärmen mit dem Cookie Warmer, damit neue Profile einen normalen Browserverlauf aufbauen."
+      },
+      "write_macro": {
+        "title": "Makro aus einer Beschreibung schreiben",
+        "description": "Macht aus einer Aufgabe in einfachen Worten ein Makro, speichert es und testet es probeweise in einem Profil."
+      },
+      "run_macro_on_group": {
+        "title": "Makro für eine Gruppe ausführen",
+        "description": "Führt ein gespeichertes Makro für die Profile einer Gruppe im Rahmen der Tariflimits aus und meldet die Ergebnisse."
+      },
+      "qa_test_site": {
+        "title": "Website aus mehreren Ländern testen",
+        "description": "Öffnet eine Website in Profilen aus mehreren Ländern und meldet die Unterschiede (QA, Geo-Tests, Anzeigenprüfung)."
+      },
+      "price_check": {
+        "title": "Preise nach Land vergleichen",
+        "description": "Vergleicht die Preise oder Inhalte, die eine Seite in verschiedenen Ländern zeigt (Marktforschung)."
+      },
+      "team_access_review": {
+        "title": "Teamzugriff prüfen",
+        "description": "Fasst zusammen, welche Mitglieder welche Profile öffnen können (nur lesend), und schlägt vor, wie sich der Zugriff enger fassen lässt."
+      },
+      "weekly_report": {
+        "title": "Wochenbericht",
+        "description": "Fasst die Woche zusammen: Aktivität im Arbeitsbereich, Trends beim Proxy-Zustand und die Anbieter-Rangliste."
+      }
+    }
   },
   "settings": {
     "loadError": "Einstellungen konnten nicht geladen werden: {{message}}",

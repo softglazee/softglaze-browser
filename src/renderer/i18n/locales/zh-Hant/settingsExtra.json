@@ -36,7 +36,8 @@
     "experimental": "實驗性",
     "savedIdle": "所有更改已儲存",
     "saving": "正在儲存更改…",
-    "saveError": "無法儲存更改"
+    "saveError": "無法儲存更改",
+    "sectionsLabel": "設定區段"
   },
   "localRuntime": {
     "title": "本機執行階段",
@@ -407,5 +408,11 @@
     "updateScheduler": "無法更新排程。",
     "loadGlobal": "無法載入全域設定。",
     "saveSetting": "無法儲存設定。"
+  },
+  "resilienceToasts": {
+    "aProfile": "某個設定檔",
+    "crashed": "{{profile}} 意外停止。",
+    "crashedRestarting": "{{profile}} 意外停止。正在重新啟動…",
+    "lowMemory_other": "記憶體不足：已關閉 {{count}} 個設定檔（可用記憶體 {{free}}%）。"
   }
 }

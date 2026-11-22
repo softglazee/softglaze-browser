@@ -235,7 +235,25 @@
     "resRunningVal": "{{count}} abertos",
     "resStoredVal": "{{count}} salvos",
     "restoreDesc": "{{count}} perfis estavam abertos quando você fechou o SoftGlaze pela última vez.",
-    "runningCount": "{{count}} abertos"
+    "runningCount": "{{count}} abertos",
+    "update": {
+      "failedTitle": "Falha ao baixar a atualização",
+      "failedTitleVersion": "Falha ao baixar a atualização ({{version}})",
+      "checkingTitle": "Procurando atualizações…",
+      "readyTitle": "Atualização {{version}} pronta",
+      "downloadingTitle": "Baixando a atualização {{version}}…",
+      "availableTitle": "Nova atualização disponível: {{version}}",
+      "failedDesc": "Não foi possível baixar a atualização. Verifique sua conexão e tente de novo.",
+      "checkingDesc": "Conectando ao servidor de atualizações…",
+      "readyDesc": "Clique em instalar para reiniciar e aplicar a nova versão.",
+      "downloadingDesc": "{{percent}}% baixado",
+      "availableDesc": "Ela será baixada em segundo plano.",
+      "install": "Instalar e reiniciar",
+      "retry": "Tentar de novo",
+      "whatsNew": "Novidades",
+      "hideNotes": "Ocultar notas",
+      "dismiss": "Fechar aviso de atualização"
+    }
   },
   "settings": {
     "eyebrow": "Aplicativo",
@@ -245,7 +263,13 @@
       "title": "Idioma",
       "description": "Escolha o idioma da interface do SoftGlaze.",
       "label": "Idioma da interface",
-      "hint": "As alterações valem na hora em todo o app."
+      "hint": "As alterações valem na hora em todo o app.",
+      "urduFont": {
+        "label": "Fonte para urdu",
+        "hint": "Nastaliq é o estilo tradicional da escrita urdu. Ele já vem no app e só é carregado quando você o escolhe.",
+        "default": "Fonte do sistema (padrão)",
+        "nastaliq": "Nastaliq (Noto Nastaliq Urdu)"
+      }
     }
   },
   "startLinks": {
@@ -256,7 +280,24 @@
     "retry": "Tentar de novo",
     "droppedRows_one": "{{count}} linha não foi salva porque a URL não é um endereço http(s) válido: {{rows}}",
     "droppedRows_many": "{{count}} linhas não foram salvas porque a URL não é um endereço http(s) válido: {{rows}}",
-    "droppedRows_other": "{{count}} linhas não foram salvas porque a URL não é um endereço http(s) válido: {{rows}}"
+    "droppedRows_other": "{{count}} linhas não foram salvas porque a URL não é um endereço http(s) válido: {{rows}}",
+    "saved": "Salvo",
+    "save": "Salvar",
+    "links": "Links",
+    "autoLabel": "Rótulo automático",
+    "autoLabelHint": "Preenche rótulos vazios a partir da URL",
+    "add": "Adicionar",
+    "loading": "Carregando…",
+    "empty": "Ainda não há links. Use Adicionar vários ou Adicionar.",
+    "labelPlaceholder": "Rótulo",
+    "urlLabel": "Endereço do link",
+    "remove": "Remover",
+    "bulkTitle": "Adicionar vários",
+    "bulkHint": "Cole várias URLs, uma por linha. Cada uma recebe um rótulo com base no domínio, que você pode editar na lista. Duplicadas e linhas que não são http(s) são ignoradas.",
+    "addAll": "Adicionar todos",
+    "clear": "Limpar",
+    "bulkResult": "Adicionados: {{added}}. Ignorados: {{skipped}} (duplicados ou não http/https).",
+    "saveFailed": "Não foi possível salvar."
   },
   "storeRating": {
     "cardTitle": "Está gostando do SoftGlaze Browser?",
@@ -296,5 +337,11 @@
     },
     "cta": "Ver a oferta",
     "dismiss": "Ocultar esta oferta"
+  },
+  "errorBoundary": {
+    "title": "Algo deu errado nesta página.",
+    "body": "O resto do app continua funcionando. Tente de novo ou abra outra página pela barra lateral.",
+    "retry": "Tentar de novo",
+    "unknown": "Erro desconhecido"
   }
 }
