@@ -233,17 +233,17 @@ function UpdateBanner() {
   }
 
   const title = notice ? t('dashboard.updateNoticeTitle', { version })
-    : isError ? `Update download failed${v ? ` (${v})` : ''}`
-    : isChecking ? 'Checking for updates…'
-    : downloaded ? `Update ready ${v}`
-    : status === 'downloading' ? `Downloading update ${v}…`
-    : `New update available ${v}`;
+    : isError ? (v ? t('dashboard.update.failedTitleVersion', { version: v }) : t('dashboard.update.failedTitle'))
+    : isChecking ? t('dashboard.update.checkingTitle')
+    : downloaded ? t('dashboard.update.readyTitle', { version: v }).trim()
+    : status === 'downloading' ? t('dashboard.update.downloadingTitle', { version: v })
+    : t('dashboard.update.availableTitle', { version: v }).trim();
   const subtitle = notice ? t('dashboard.updateNoticeDesc')
-    : isError ? (state.error ? String(state.error).slice(0, 140) : 'Could not download the update. Check your connection and retry.')
-    : isChecking ? 'Contacting the update server…'
-    : downloaded ? 'Click install to restart and apply the new version.'
-    : status === 'downloading' ? `${percent || 0}% downloaded`
-    : 'It will download in the background.';
+    : isError ? (state.error ? String(state.error).slice(0, 140) : t('dashboard.update.failedDesc'))
+    : isChecking ? t('dashboard.update.checkingDesc')
+    : downloaded ? t('dashboard.update.readyDesc')
+    : status === 'downloading' ? t('dashboard.update.downloadingDesc', { percent: percent || 0 })
+    : t('dashboard.update.availableDesc');
 
   return (
     <div className="rounded-xl border px-4 py-3 animate-fade-up" style={{ background: `color-mix(in srgb, ${accent} 10%, var(--card))`, borderColor: `color-mix(in srgb, ${accent} 30%, transparent)` }}>
@@ -257,17 +257,17 @@ function UpdateBanner() {
         </div>
         {downloaded && (
           <Button variant="primary" size="sm" onClick={install} disabled={installing}>
-            {installing ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <RefreshCw className="h-3.5 w-3.5" />} Install &amp; restart
+            {installing ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <RefreshCw className="h-3.5 w-3.5" />} {t('dashboard.update.install')}
           </Button>
         )}
         {isError && (
           <Button variant="secondary" size="sm" onClick={retry}>
-            <RefreshCw className="h-3.5 w-3.5" /> Retry
+            <RefreshCw className="h-3.5 w-3.5" /> {t('dashboard.update.retry')}
           </Button>
         )}
         {(downloaded || status === 'available' || notice) && releaseNotes && (
-          <button onClick={() => setShowNotes((s) => !s)} className="shrink-0 px-1 text-[11px] text-primary hover:underline" title="What's new">
-            {showNotes ? 'Hide notes' : "What's new"}
+          <button onClick={() => setShowNotes((s) => !s)} className="shrink-0 px-1 text-[11px] text-primary hover:underline" title={t('dashboard.update.whatsNew')}>
+            {showNotes ? t('dashboard.update.hideNotes') : t('dashboard.update.whatsNew')}
           </button>
         )}
         {notice && (
@@ -279,7 +279,7 @@ function UpdateBanner() {
           </>
         )}
         {!notice && (
-          <button onClick={() => setDismissed(true)} className="grid h-7 w-7 shrink-0 place-items-center rounded-lg text-muted-foreground hover:bg-secondary hover:text-foreground" aria-label="Dismiss update notice">
+          <button onClick={() => setDismissed(true)} className="grid h-7 w-7 shrink-0 place-items-center rounded-lg text-muted-foreground hover:bg-secondary hover:text-foreground" aria-label={t('dashboard.update.dismiss')}>
             <X className="h-4 w-4" />
           </button>
         )}

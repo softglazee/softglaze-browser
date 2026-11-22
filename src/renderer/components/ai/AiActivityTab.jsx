@@ -5,7 +5,7 @@ import { ChevronLeft, ChevronRight, RefreshCw, Search } from 'lucide-react';
 import Button from '@/components/ui/Button.jsx';
 import Input from '@/components/ui/Input.jsx';
 import EmptyState from '@/components/EmptyState.jsx';
-import { InlineError, SUBTLE_TEXT, Segmented, TonePill, clientLabel, toneText } from '@/components/ai/AiShared.jsx';
+import { InlineError, SUBTLE_TEXT, Segmented, TonePill, clientLabel, toneText, toolTitle } from '@/components/ai/AiShared.jsx';
 import { softglazeApi } from '@/lib/softglazeApi.js';
 import { ACTIVITY_REFRESH_DEBOUNCE_MS, AUDIT_PAGE_SIZE, approvalPath, buildAuditQuery, createDebounced, errorText, extractRunId, filterAuditItems, formatDuration, relativeTime } from '@/lib/aiCore.mjs';
 import { formatDateTime } from '@/lib/utils.js';
@@ -180,7 +180,10 @@ export default function AiActivityTab({ lang, clients, active = true }) {
                         <span className="block max-w-[11rem] truncate text-foreground" title={it.clientName || ''}>{clientLabel(t, it.clientName) || '-'}</span>
                         <span className="block max-w-[11rem] truncate text-[11.5px] text-muted-foreground" title={it.tokenName || ''}>{it.tokenName || ''}</span>
                       </td>
-                      <td className="px-4 py-2.5"><code className="block truncate font-mono text-[12px] text-foreground" title={it.tool || ''}>{it.tool || '-'}</code></td>
+                      <td className="px-4 py-2.5">
+                        <span className="block max-w-[14rem] truncate text-[12.5px] text-foreground" title={toolTitle(t, it.tool)}>{toolTitle(t, it.tool) || '-'}</span>
+                        {it.tool && <code className="block max-w-[14rem] truncate font-mono text-[11px] text-muted-foreground" title={it.tool}>{it.tool}</code>}
+                      </td>
                       <td className="px-4 py-2.5 text-[12.5px] text-foreground">
                         <span className="line-clamp-2 break-words" title={it.summary || ''}>{it.summary || ''}</span>
                         {extractRunId(it) && (

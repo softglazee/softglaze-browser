@@ -394,7 +394,24 @@
     "page_scroll": "滾動頁面",
     "page_screenshot": "截圖",
     "page_extract_text": "從頁面複製文字",
-    "page_wait_for": "等待頁面上的內容"
+    "page_wait_for": "等待頁面上的內容",
+    "workspace_summary": "讀取工作區摘要",
+    "list_profiles": "列出設定檔",
+    "get_profile": "讀取設定檔",
+    "profile_health": "檢查設定檔的健康狀況和 CAPTCHA 風險",
+    "list_sessions": "列出執行中的設定檔",
+    "stop_all_profiles": "停止所有設定檔",
+    "list_proxies": "列出代理",
+    "check_proxy": "檢測代理",
+    "get_proxy_health": "讀取代理的健康紀錄",
+    "list_groups": "列出群組",
+    "list_macros": "列出巨集",
+    "get_macro": "讀取巨集",
+    "get_run_status": "查看執行狀態",
+    "get_activity": "讀取最近的活動",
+    "read_memory": "讀取工作區記憶",
+    "update_memory": "更新工作區記憶",
+    "get_cdp_endpoint": "將設定檔交給 Playwright 或 DevTools（專家）"
   },
   "tokens": {
     "search": "搜尋權杖",
@@ -568,7 +585,57 @@
     "howClaudeDesktop": "點選聊天框下方的 +，找到 SoftGlaze。",
     "howVsCode": "在 Copilot Chat 中輸入 / 並選擇一個 SoftGlaze 提示詞。",
     "howCursor": "如果沒有列出提示詞，請複製下方文字。",
-    "howOther": "任何應用程式：複製提示詞文字，貼上到聊天中並填寫詳情。"
+    "howOther": "任何應用程式：複製提示詞文字，貼上到聊天中並填寫詳情。",
+    "items": {
+      "daily_health_check": {
+        "title": "每日健康檢查",
+        "description": "檢查每個執行中和最近使用的設定檔及其代理，然後回報問題，並提供每個問題的修正方法。"
+      },
+      "diagnose_captcha": {
+        "title": "這個設定檔為什麼一直遇到 CAPTCHA？",
+        "description": "使用 profile_health 說明某個設定檔為什麼反覆遇到 CAPTCHA 或攔截頁面，並提出修正建議。"
+      },
+      "create_geo_profiles": {
+        "title": "為某個國家建立設定檔",
+        "description": "在一個群組中建立多個設定檔，每個都配有來自該國家且可用的代理。"
+      },
+      "fix_proxy_mismatches": {
+        "title": "修正時區、語言和位置不一致",
+        "description": "找出時區、語言或位置與其代理不一致的設定檔，並提出修正方案供你核准。"
+      },
+      "rotate_bad_proxies": {
+        "title": "替換失效或列入黑名單的代理",
+        "description": "找出失效或列入黑名單的代理，然後更換其 IP，或將其設定檔移到健康的代理。"
+      },
+      "warm_up_profiles": {
+        "title": "預熱設定檔",
+        "description": "使用 Cookie Warmer（Cookie 預熱）規劃並開始預熱，讓新設定檔累積正常的瀏覽紀錄。"
+      },
+      "write_macro": {
+        "title": "依描述撰寫巨集",
+        "description": "將用日常語言描述的工作轉換為巨集並儲存，然後在一個設定檔上試執行。"
+      },
+      "run_macro_on_group": {
+        "title": "在群組上執行巨集",
+        "description": "在方案限制內，對群組中的設定檔執行已儲存的巨集，並回報結果。"
+      },
+      "qa_test_site": {
+        "title": "從多個國家測試網站",
+        "description": "在來自多個國家的設定檔中開啟網站，並回報差異（QA、地區測試、廣告驗證）。"
+      },
+      "price_check": {
+        "title": "依國家比較價格",
+        "description": "比較同一頁面在不同國家顯示的價格或內容（市場研究）。"
+      },
+      "team_access_review": {
+        "title": "檢視團隊存取權限",
+        "description": "彙整哪些成員可以開啟哪些設定檔（唯讀），並建議如何收緊存取權限。"
+      },
+      "weekly_report": {
+        "title": "每週報告",
+        "description": "總結本週情況：工作區活動、代理健康趨勢和供應商排行榜。"
+      }
+    }
   },
   "settings": {
     "loadError": "無法載入設定：{{message}}",

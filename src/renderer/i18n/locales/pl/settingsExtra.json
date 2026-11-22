@@ -36,7 +36,8 @@
     "experimental": "Eksperymentalne",
     "savedIdle": "Wszystkie zmiany zapisane",
     "saving": "Zapisywanie zmian…",
-    "saveError": "Nie udało się zapisać zmian"
+    "saveError": "Nie udało się zapisać zmian",
+    "sectionsLabel": "Sekcje ustawień"
   },
   "localRuntime": {
     "title": "Środowisko lokalne",
@@ -407,5 +408,14 @@
     "updateScheduler": "Nie udało się zaktualizować harmonogramu.",
     "loadGlobal": "Nie udało się wczytać ustawień globalnych.",
     "saveSetting": "Nie udało się zapisać ustawienia."
+  },
+  "resilienceToasts": {
+    "aProfile": "Profil",
+    "crashed": "{{profile}} nieoczekiwanie się zatrzymał.",
+    "crashedRestarting": "{{profile}} nieoczekiwanie się zatrzymał. Ponowne uruchamianie…",
+    "lowMemory_one": "Mało pamięci: zamknięto {{count}} profil (wolna pamięć {{free}}%).",
+    "lowMemory_few": "Mało pamięci: zamknięto {{count}} profile (wolna pamięć {{free}}%).",
+    "lowMemory_many": "Mało pamięci: zamknięto {{count}} profili (wolna pamięć {{free}}%).",
+    "lowMemory_other": "Mało pamięci: zamknięto {{count}} profilu (wolna pamięć {{free}}%)."
   }
 }

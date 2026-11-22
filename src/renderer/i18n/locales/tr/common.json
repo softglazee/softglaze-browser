@@ -223,7 +223,25 @@
     "resRunningVal": "{{count}} çalışıyor",
     "resStoredVal": "{{count}} kayıtlı",
     "restoreDesc": "SoftGlaze'i son kapattığınızda {{count}} profil açıktı.",
-    "runningCount": "{{count}} çalışıyor"
+    "runningCount": "{{count}} çalışıyor",
+    "update": {
+      "failedTitle": "Güncelleme indirilemedi",
+      "failedTitleVersion": "Güncelleme indirilemedi ({{version}})",
+      "checkingTitle": "Güncellemeler denetleniyor…",
+      "readyTitle": "{{version}} güncellemesi hazır",
+      "downloadingTitle": "{{version}} güncellemesi indiriliyor…",
+      "availableTitle": "Yeni güncelleme var: {{version}}",
+      "failedDesc": "Güncelleme indirilemedi. Bağlantınızı kontrol edip tekrar deneyin.",
+      "checkingDesc": "Güncelleme sunucusuna bağlanılıyor…",
+      "readyDesc": "Yeniden başlatıp yeni sürümü uygulamak için Yükle'ye tıklayın.",
+      "downloadingDesc": "%{{percent}} indirildi",
+      "availableDesc": "Arka planda indirilecek.",
+      "install": "Yükle ve yeniden başlat",
+      "retry": "Tekrar dene",
+      "whatsNew": "Yenilikler",
+      "hideNotes": "Notları gizle",
+      "dismiss": "Güncelleme bildirimini kapat"
+    }
   },
   "settings": {
     "eyebrow": "Uygulama",
@@ -233,7 +251,13 @@
       "title": "Dil",
       "description": "SoftGlaze arayüzünün görüntüleme dilini seçin.",
       "label": "Arayüz dili",
-      "hint": "Değişiklikler uygulamanın her yerinde anında uygulanır."
+      "hint": "Değişiklikler uygulamanın her yerinde anında uygulanır.",
+      "urduFont": {
+        "label": "Urduca yazı tipi",
+        "hint": "Nestalik, Urduca yazının geleneksel stilidir. Uygulamada yerleşik olarak gelir ve yalnızca siz seçtiğinizde yüklenir.",
+        "default": "Sistem yazı tipi (varsayılan)",
+        "nastaliq": "Nestalik (Noto Nastaliq Urdu)"
+      }
     }
   },
   "startLinks": {
@@ -243,7 +267,24 @@
     "loadError": "Bağlantılarınız yüklenemedi ({{error}}). Kayıtlı listenin üzerine yazılmaması için kaydetme devre dışı.",
     "retry": "Tekrar dene",
     "droppedRows_one": "URL'si geçerli bir http(s) adresi olmadığı için {{count}} satır kaydedilmedi: {{rows}}",
-    "droppedRows_other": "URL'leri geçerli bir http(s) adresi olmadığı için {{count}} satır kaydedilmedi: {{rows}}"
+    "droppedRows_other": "URL'leri geçerli bir http(s) adresi olmadığı için {{count}} satır kaydedilmedi: {{rows}}",
+    "saved": "Kaydedildi",
+    "save": "Kaydet",
+    "links": "Bağlantılar",
+    "autoLabel": "Otomatik etiket",
+    "autoLabelHint": "Boş etiketleri URL'den doldur",
+    "add": "Ekle",
+    "loading": "Yükleniyor…",
+    "empty": "Henüz bağlantı yok. Toplu ekle veya Ekle'yi kullanın.",
+    "labelPlaceholder": "Etiket",
+    "urlLabel": "Bağlantı adresi",
+    "remove": "Kaldır",
+    "bulkTitle": "Toplu ekle",
+    "bulkHint": "Her satıra bir tane olacak şekilde birden fazla URL yapıştırın. Her biri alan adından bir etiket alır, bunu listede düzenleyebilirsiniz. Yinelenenler ve http(s) olmayan satırlar atlanır.",
+    "addAll": "Tümünü ekle",
+    "clear": "Temizle",
+    "bulkResult": "Eklenen: {{added}}. Atlanan: {{skipped}} (yinelenen veya http/https değil).",
+    "saveFailed": "Kaydedilemedi."
   },
   "storeRating": {
     "cardTitle": "SoftGlaze Browser'ı beğendiniz mi?",
@@ -283,5 +324,11 @@
     },
     "cta": "Teklifi gör",
     "dismiss": "Bu teklifi gizle"
+  },
+  "errorBoundary": {
+    "title": "Bu sayfada bir şeyler ters gitti.",
+    "body": "Uygulamanın geri kalanı çalışmaya devam ediyor. Tekrar deneyin veya kenar çubuğundan başka bir sayfa açın.",
+    "retry": "Tekrar dene",
+    "unknown": "Bilinmeyen hata"
   }
 }

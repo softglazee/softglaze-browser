@@ -23,6 +23,13 @@ export const toneSurface = (tone, bg = 10, border = 28) => ({
   borderColor: `color-mix(in srgb, ${AI_TONE[tone] || AI_TONE.muted} ${border}%, transparent)`
 });
 
+// A tool's name in the UI language ("start_profile" -> "Start a profile"); the MCP name itself stays
+// English because AI apps read it. Unknown tools show their name.
+export function toolTitle(t, name) {
+  if (!name) return '';
+  return t(`tools.${name}`, { defaultValue: String(name) });
+}
+
 // AI apps report raw ids ("claude-code"); show the name people know ("Claude Code").
 export function clientLabel(t, name) {
   if (!name) return '';

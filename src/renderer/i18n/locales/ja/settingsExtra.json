@@ -36,7 +36,8 @@
     "experimental": "試験運用",
     "savedIdle": "すべての変更を保存しました",
     "saving": "変更を保存中…",
-    "saveError": "変更を保存できませんでした"
+    "saveError": "変更を保存できませんでした",
+    "sectionsLabel": "設定のセクション"
   },
   "localRuntime": {
     "title": "ローカルランタイム",
@@ -407,5 +408,11 @@
     "updateScheduler": "スケジューラーを更新できませんでした。",
     "loadGlobal": "全体の設定を読み込めませんでした。",
     "saveSetting": "設定を保存できませんでした。"
+  },
+  "resilienceToasts": {
+    "aProfile": "プロファイル",
+    "crashed": "{{profile}} が予期せず停止しました。",
+    "crashedRestarting": "{{profile}} が予期せず停止しました。再起動中…",
+    "lowMemory_other": "メモリ不足: プロファイルを {{count}} 個閉じました（空きメモリ {{free}}%）。"
   }
 }

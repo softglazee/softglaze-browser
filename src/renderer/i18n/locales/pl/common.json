@@ -247,7 +247,25 @@
     "resRunningVal": "Uruchomione: {{count}}",
     "resStoredVal": "Zapisane: {{count}}",
     "restoreDesc": "Profile otwarte przy ostatnim zamknięciu SoftGlaze: {{count}}.",
-    "runningCount": "Uruchomione: {{count}}"
+    "runningCount": "Uruchomione: {{count}}",
+    "update": {
+      "failedTitle": "Nie udało się pobrać aktualizacji",
+      "failedTitleVersion": "Nie udało się pobrać aktualizacji ({{version}})",
+      "checkingTitle": "Sprawdzanie aktualizacji…",
+      "readyTitle": "Aktualizacja {{version}} gotowa",
+      "downloadingTitle": "Pobieranie aktualizacji {{version}}…",
+      "availableTitle": "Dostępna nowa aktualizacja {{version}}",
+      "failedDesc": "Nie udało się pobrać aktualizacji. Sprawdź połączenie i spróbuj ponownie.",
+      "checkingDesc": "Łączenie z serwerem aktualizacji…",
+      "readyDesc": "Kliknij Zainstaluj, aby uruchomić ponownie i zastosować nową wersję.",
+      "downloadingDesc": "Pobrano {{percent}}%",
+      "availableDesc": "Pobierze się w tle.",
+      "install": "Zainstaluj i zrestartuj",
+      "retry": "Ponów",
+      "whatsNew": "Co nowego",
+      "hideNotes": "Ukryj informacje",
+      "dismiss": "Zamknij powiadomienie"
+    }
   },
   "settings": {
     "eyebrow": "Aplikacja",
@@ -257,7 +275,13 @@
       "title": "Język",
       "description": "Wybierz język interfejsu SoftGlaze.",
       "label": "Język interfejsu",
-      "hint": "Zmiany działają od razu w całej aplikacji."
+      "hint": "Zmiany działają od razu w całej aplikacji.",
+      "urduFont": {
+        "label": "Czcionka dla urdu",
+        "hint": "Nastaliq to tradycyjny styl pisma urdu. Jest wbudowany w aplikację i wczytuje się tylko wtedy, gdy go wybierzesz.",
+        "default": "Czcionka systemowa (domyślna)",
+        "nastaliq": "Nastaliq (Noto Nastaliq Urdu)"
+      }
     }
   },
   "startLinks": {
@@ -269,7 +293,24 @@
     "droppedRows_one": "{{count}} wiersz nie został zapisany, bo jego URL nie jest poprawnym adresem http(s): {{rows}}",
     "droppedRows_few": "{{count}} wiersze nie zostały zapisane, bo ich URL nie jest poprawnym adresem http(s): {{rows}}",
     "droppedRows_many": "{{count}} wierszy nie zostało zapisanych, bo ich URL nie jest poprawnym adresem http(s): {{rows}}",
-    "droppedRows_other": "{{count}} wiersza nie zapisano, bo ich URL nie jest poprawnym adresem http(s): {{rows}}"
+    "droppedRows_other": "{{count}} wiersza nie zapisano, bo ich URL nie jest poprawnym adresem http(s): {{rows}}",
+    "saved": "Zapisano",
+    "save": "Zapisz",
+    "links": "Linki",
+    "autoLabel": "Auto-etykiety",
+    "autoLabelHint": "Uzupełnij puste etykiety na podstawie URL",
+    "add": "Dodaj",
+    "loading": "Wczytywanie…",
+    "empty": "Brak linków. Użyj Dodaj wiele lub Dodaj.",
+    "labelPlaceholder": "Etykieta",
+    "urlLabel": "Adres linku",
+    "remove": "Usuń",
+    "bulkTitle": "Dodaj wiele",
+    "bulkHint": "Wklej kilka adresów URL, po jednym w wierszu. Każdy dostaje etykietę z nazwy domeny, którą możesz zmienić na liście. Duplikaty i wiersze, które nie są http(s), są pomijane.",
+    "addAll": "Dodaj wszystkie",
+    "clear": "Wyczyść",
+    "bulkResult": "Dodano: {{added}}. Pominięto: {{skipped}} (duplikaty lub nie http/https).",
+    "saveFailed": "Nie udało się zapisać."
   },
   "storeRating": {
     "cardTitle": "Podoba Ci się SoftGlaze Browser?",
@@ -309,5 +350,11 @@
     },
     "cta": "Zobacz ofertę",
     "dismiss": "Ukryj tę ofertę"
+  },
+  "errorBoundary": {
+    "title": "Na tej stronie coś poszło nie tak.",
+    "body": "Reszta aplikacji nadal działa. Spróbuj ponownie lub otwórz inną stronę z paska bocznego.",
+    "retry": "Spróbuj ponownie",
+    "unknown": "Nieznany błąd"
   }
 }

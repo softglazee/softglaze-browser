@@ -36,7 +36,8 @@
     "experimental": "实验性",
     "savedIdle": "所有更改已保存",
     "saving": "正在保存更改…",
-    "saveError": "无法保存更改"
+    "saveError": "无法保存更改",
+    "sectionsLabel": "设置分区"
   },
   "localRuntime": {
     "title": "本地运行时",
@@ -407,5 +408,11 @@
     "updateScheduler": "无法更新计划。",
     "loadGlobal": "无法加载全局设置。",
     "saveSetting": "无法保存设置。"
+  },
+  "resilienceToasts": {
+    "aProfile": "某个配置文件",
+    "crashed": "{{profile}} 意外停止。",
+    "crashedRestarting": "{{profile}} 意外停止。正在重新启动…",
+    "lowMemory_other": "内存不足：已关闭 {{count}} 个配置文件（可用内存 {{free}}%）。"
   }
 }

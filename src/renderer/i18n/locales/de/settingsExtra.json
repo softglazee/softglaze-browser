@@ -36,7 +36,8 @@
     "experimental": "Experimentell",
     "savedIdle": "Alle Änderungen gespeichert",
     "saving": "Änderungen werden gespeichert…",
-    "saveError": "Änderungen konnten nicht gespeichert werden"
+    "saveError": "Änderungen konnten nicht gespeichert werden",
+    "sectionsLabel": "Einstellungsbereiche"
   },
   "localRuntime": {
     "title": "Lokale Laufzeit",
@@ -407,5 +408,12 @@
     "updateScheduler": "Planer konnte nicht aktualisiert werden.",
     "loadGlobal": "Globale Einstellungen konnten nicht geladen werden.",
     "saveSetting": "Einstellung konnte nicht gespeichert werden."
+  },
+  "resilienceToasts": {
+    "aProfile": "Ein Profil",
+    "crashed": "{{profile}} wurde unerwartet beendet.",
+    "crashedRestarting": "{{profile}} wurde unerwartet beendet. Neustart…",
+    "lowMemory_one": "Wenig Arbeitsspeicher: {{count}} Profil geschlossen (freier Speicher {{free}} %).",
+    "lowMemory_other": "Wenig Arbeitsspeicher: {{count}} Profile geschlossen (freier Speicher {{free}} %)."
   }
 }

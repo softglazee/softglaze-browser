@@ -271,7 +271,25 @@
     "resRunningVal": "قيد التشغيل: {{count}}",
     "resStoredVal": "المخزّنة: {{count}}",
     "restoreDesc": "عدد الملفات التي كانت مفتوحة عند آخر إغلاق لـ SoftGlaze: {{count}}.",
-    "runningCount": "قيد التشغيل: {{count}}"
+    "runningCount": "قيد التشغيل: {{count}}",
+    "update": {
+      "failedTitle": "فشل تنزيل التحديث",
+      "failedTitleVersion": "فشل تنزيل التحديث ({{version}})",
+      "checkingTitle": "جارٍ البحث عن تحديثات…",
+      "readyTitle": "التحديث {{version}} جاهز",
+      "downloadingTitle": "جارٍ تنزيل التحديث {{version}}…",
+      "availableTitle": "يتوفر تحديث جديد {{version}}",
+      "failedDesc": "تعذّر تنزيل التحديث. تحقّق من اتصالك وأعد المحاولة.",
+      "checkingDesc": "جارٍ الاتصال بخادم التحديثات…",
+      "readyDesc": "انقر على تثبيت لإعادة التشغيل وتطبيق الإصدار الجديد.",
+      "downloadingDesc": "تم تنزيل {{percent}}%",
+      "availableDesc": "سيُنزَّل في الخلفية.",
+      "install": "تثبيت وإعادة التشغيل",
+      "retry": "إعادة المحاولة",
+      "whatsNew": "الجديد",
+      "hideNotes": "إخفاء الملاحظات",
+      "dismiss": "إغلاق إشعار التحديث"
+    }
   },
   "settings": {
     "eyebrow": "التطبيق",
@@ -281,7 +299,13 @@
       "title": "اللغة",
       "description": "اختر لغة العرض لواجهة SoftGlaze.",
       "label": "لغة العرض",
-      "hint": "تُطبَّق التغييرات فورًا في كامل التطبيق."
+      "hint": "تُطبَّق التغييرات فورًا في كامل التطبيق.",
+      "urduFont": {
+        "label": "خط الأردية",
+        "hint": "النستعليق هو الأسلوب التقليدي لكتابة الأردية. وهو مدمج في التطبيق ولا يُحمَّل إلا عند اختياره.",
+        "default": "خط النظام (افتراضي)",
+        "nastaliq": "النستعليق (Noto Nastaliq Urdu)"
+      }
     }
   },
   "startLinks": {
@@ -295,7 +319,24 @@
     "droppedRows_two": "لم يُحفظ صفان لأن عنوان URL الخاص بهما ليس عنوان http(s) صالحًا: {{rows}}",
     "droppedRows_few": "لم تُحفظ {{count}} صفوف لأن عناوين URL الخاصة بها ليست عناوين http(s) صالحة: {{rows}}",
     "droppedRows_many": "لم يُحفظ {{count}} صفًا لأن عناوين URL الخاصة بها ليست عناوين http(s) صالحة: {{rows}}",
-    "droppedRows_other": "لم يُحفظ {{count}} صف لأن عناوين URL الخاصة بها ليست عناوين http(s) صالحة: {{rows}}"
+    "droppedRows_other": "لم يُحفظ {{count}} صف لأن عناوين URL الخاصة بها ليست عناوين http(s) صالحة: {{rows}}",
+    "saved": "تم الحفظ",
+    "save": "حفظ",
+    "links": "الروابط",
+    "autoLabel": "تسمية تلقائية",
+    "autoLabelHint": "املأ كل تسمية فارغة من عنوان URL الخاص بها",
+    "add": "إضافة",
+    "loading": "جارٍ التحميل…",
+    "empty": "لا توجد روابط بعد. استخدم الإضافة المجمّعة أو إضافة.",
+    "labelPlaceholder": "التسمية",
+    "urlLabel": "عنوان الرابط",
+    "remove": "إزالة",
+    "bulkTitle": "إضافة مجمّعة",
+    "bulkHint": "الصق عدة عناوين URL، عنوانًا في كل سطر. يحصل كل عنوان على تسمية من نطاقه، ويمكنك تعديلها في القائمة. تُتخطّى الأسطر المكررة والأسطر التي ليست http(s).",
+    "addAll": "إضافة الكل",
+    "clear": "مسح",
+    "bulkResult": "أُضيف: {{added}}. تم تخطّي: {{skipped}} (مكرر أو ليس http/https).",
+    "saveFailed": "تعذّر الحفظ."
   },
   "storeRating": {
     "cardTitle": "هل يعجبك SoftGlaze Browser؟",
@@ -335,5 +376,11 @@
     },
     "cta": "اطّلع على العرض",
     "dismiss": "إخفاء هذا العرض"
+  },
+  "errorBoundary": {
+    "title": "حدث خطأ ما في هذه الصفحة.",
+    "body": "بقية التطبيق ما زالت تعمل. حاول مرة أخرى، أو افتح صفحة أخرى من الشريط الجانبي.",
+    "retry": "حاول مرة أخرى",
+    "unknown": "خطأ غير معروف"
   }
 }

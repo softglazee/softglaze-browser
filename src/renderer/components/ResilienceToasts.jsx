@@ -31,7 +31,8 @@ export default function ResilienceToasts() {
     const offs = [];
     if (softglazeApi.sessions.onCrash) offs.push(softglazeApi.sessions.onCrash((d) => {
       if (!d) return;
-      add('crash', `${d.title || 'A profile'} stopped unexpectedly${d.restarted ? ' - restarting…' : ''}.`);
+      const profile = d.title || (d.profileId != null ? `#${d.profileId}` : txRef.current('resilienceToasts.aProfile'));
+      add('crash', txRef.current(d.restarted ? 'resilienceToasts.crashedRestarting' : 'resilienceToasts.crashed', { profile }));
     }));
     if (softglazeApi.sessions.onBlocked) offs.push(softglazeApi.sessions.onBlocked((d) => {
       if (!d) return;
@@ -39,7 +40,7 @@ export default function ResilienceToasts() {
     }));
     if (softglazeApi.sessions.onMemoryPressure) offs.push(softglazeApi.sessions.onMemoryPressure((d) => {
       if (!d) return;
-      add('memory', `Low memory - closed ${d.closed} profile${d.closed === 1 ? '' : 's'} (free ${d.freePct}%).`);
+      add('memory', txRef.current('resilienceToasts.lowMemory', { count: Number(d.closed) || 0, free: d.freePct }));
     }));
     return () => offs.forEach((off) => { if (typeof off === 'function') off(); });
   }, []);

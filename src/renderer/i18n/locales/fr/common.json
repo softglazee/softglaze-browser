@@ -235,7 +235,25 @@
     "resRunningVal": "{{count}} en cours",
     "resStoredVal": "{{count}} enregistrés",
     "restoreDesc": "{{count}} profils étaient ouverts lors de votre dernière fermeture de SoftGlaze.",
-    "runningCount": "{{count}} en cours"
+    "runningCount": "{{count}} en cours",
+    "update": {
+      "failedTitle": "Échec du téléchargement de la mise à jour",
+      "failedTitleVersion": "Échec du téléchargement de la mise à jour ({{version}})",
+      "checkingTitle": "Recherche de mises à jour…",
+      "readyTitle": "Mise à jour {{version}} prête",
+      "downloadingTitle": "Téléchargement de la mise à jour {{version}}…",
+      "availableTitle": "Nouvelle mise à jour disponible : {{version}}",
+      "failedDesc": "Impossible de télécharger la mise à jour. Vérifiez votre connexion et réessayez.",
+      "checkingDesc": "Connexion au serveur de mises à jour…",
+      "readyDesc": "Cliquez sur Installer pour redémarrer et appliquer la nouvelle version.",
+      "downloadingDesc": "{{percent}} % téléchargés",
+      "availableDesc": "Elle sera téléchargée en arrière-plan.",
+      "install": "Installer et redémarrer",
+      "retry": "Réessayer",
+      "whatsNew": "Nouveautés",
+      "hideNotes": "Masquer les notes",
+      "dismiss": "Fermer l'avis de mise à jour"
+    }
   },
   "settings": {
     "eyebrow": "Application",
@@ -245,7 +263,13 @@
       "title": "Langue",
       "description": "Choisissez la langue d'affichage de l'interface SoftGlaze.",
       "label": "Langue d'affichage",
-      "hint": "Les changements s'appliquent immédiatement dans toute l'application."
+      "hint": "Les changements s'appliquent immédiatement dans toute l'application.",
+      "urduFont": {
+        "label": "Police ourdou",
+        "hint": "Le nastaliq est le style d'écriture traditionnel de l'ourdou. Il est intégré à l'application et ne se charge que si vous le choisissez.",
+        "default": "Police du système (par défaut)",
+        "nastaliq": "Nastaliq (Noto Nastaliq Urdu)"
+      }
     }
   },
   "startLinks": {
@@ -256,7 +280,24 @@
     "retry": "Réessayer",
     "droppedRows_one": "{{count}} ligne n'a pas été enregistrée, car son URL n'est pas une adresse http(s) valide : {{rows}}",
     "droppedRows_other": "{{count}} lignes n'ont pas été enregistrées, car leur URL n'est pas une adresse http(s) valide : {{rows}}",
-    "droppedRows_many": "{{count}} lignes n'ont pas été enregistrées, car leur URL n'est pas une adresse http(s) valide : {{rows}}"
+    "droppedRows_many": "{{count}} lignes n'ont pas été enregistrées, car leur URL n'est pas une adresse http(s) valide : {{rows}}",
+    "saved": "Enregistré",
+    "save": "Enregistrer",
+    "links": "Liens",
+    "autoLabel": "Libellé auto",
+    "autoLabelHint": "Remplir les libellés vides à partir de l'URL",
+    "add": "Ajouter",
+    "loading": "Chargement…",
+    "empty": "Aucun lien pour l'instant. Utilisez Ajout groupé ou Ajouter.",
+    "labelPlaceholder": "Libellé",
+    "urlLabel": "Adresse du lien",
+    "remove": "Retirer",
+    "bulkTitle": "Ajout groupé",
+    "bulkHint": "Collez plusieurs URL, une par ligne. Chacune reçoit un libellé tiré de son domaine, que vous pouvez modifier dans la liste. Les doublons et les lignes qui ne sont pas en http(s) sont ignorés.",
+    "addAll": "Tout ajouter",
+    "clear": "Vider",
+    "bulkResult": "Ajoutés : {{added}}. Ignorés : {{skipped}} (doublons ou pas en http/https).",
+    "saveFailed": "Impossible d'enregistrer."
   },
   "storeRating": {
     "cardTitle": "Vous aimez SoftGlaze Browser ?",
@@ -296,5 +337,11 @@
     },
     "cta": "Voir l'offre",
     "dismiss": "Masquer cette offre"
+  },
+  "errorBoundary": {
+    "title": "Un problème est survenu sur cette page.",
+    "body": "Le reste de l'application fonctionne toujours. Réessayez ou ouvrez une autre page depuis la barre latérale.",
+    "retry": "Réessayer",
+    "unknown": "Erreur inconnue"
   }
 }

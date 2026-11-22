@@ -394,7 +394,24 @@
     "page_scroll": "Scroll a page",
     "page_screenshot": "Take a screenshot",
     "page_extract_text": "Copy text from a page",
-    "page_wait_for": "Wait for something on a page"
+    "page_wait_for": "Wait for something on a page",
+    "workspace_summary": "Read the workspace summary",
+    "list_profiles": "List profiles",
+    "get_profile": "Read a profile",
+    "profile_health": "Check a profile's health and CAPTCHA risk",
+    "list_sessions": "List running profiles",
+    "stop_all_profiles": "Stop all profiles",
+    "list_proxies": "List proxies",
+    "check_proxy": "Check a proxy",
+    "get_proxy_health": "Read a proxy's health history",
+    "list_groups": "List groups",
+    "list_macros": "List macros",
+    "get_macro": "Read a macro",
+    "get_run_status": "Check a run's status",
+    "get_activity": "Read recent activity",
+    "read_memory": "Read the workspace memory",
+    "update_memory": "Update the workspace memory",
+    "get_cdp_endpoint": "Hand a profile to Playwright or DevTools (Expert)"
   },
   "tokens": {
     "search": "Search tokens",
@@ -568,7 +585,57 @@
     "howClaudeDesktop": "click + below the chat box and look for SoftGlaze.",
     "howVsCode": "type / in Copilot Chat and pick a SoftGlaze prompt.",
     "howCursor": "if prompts are not listed, copy the text below.",
-    "howOther": "Any app: copy the prompt text, paste it into the chat and fill in the details."
+    "howOther": "Any app: copy the prompt text, paste it into the chat and fill in the details.",
+    "items": {
+      "daily_health_check": {
+        "title": "Daily health check",
+        "description": "Check every running and recently used profile and its proxy, then report problems with the fix for each."
+      },
+      "diagnose_captcha": {
+        "title": "Why does this profile get CAPTCHAs?",
+        "description": "Explain why one profile keeps getting CAPTCHAs or block pages, using profile_health, and propose fixes."
+      },
+      "create_geo_profiles": {
+        "title": "Create profiles for a country",
+        "description": "Create a number of profiles in a group, each with a working proxy from that country."
+      },
+      "fix_proxy_mismatches": {
+        "title": "Fix timezone, language and location mismatches",
+        "description": "Find profiles whose timezone, language or location disagree with their proxy, and propose fixes for approval."
+      },
+      "rotate_bad_proxies": {
+        "title": "Replace failing or blocklisted proxies",
+        "description": "Find failing or blocklisted proxies, then rotate their IP or move their profiles to healthy proxies."
+      },
+      "warm_up_profiles": {
+        "title": "Warm up profiles",
+        "description": "Plan and start a warm-up with the Cookie Warmer so new profiles build normal browsing history."
+      },
+      "write_macro": {
+        "title": "Write a macro from a description",
+        "description": "Turn a plain-language task into a macro, save it, and dry-run it on one profile."
+      },
+      "run_macro_on_group": {
+        "title": "Run a macro on a group",
+        "description": "Run a saved macro across the profiles in a group within the plan limits and report the results."
+      },
+      "qa_test_site": {
+        "title": "Test a site from several countries",
+        "description": "Open a site in profiles from several countries and report the differences (QA, geo testing, ad verification)."
+      },
+      "price_check": {
+        "title": "Compare prices by country",
+        "description": "Compare the prices or content a page shows in different countries (market research)."
+      },
+      "team_access_review": {
+        "title": "Review team access",
+        "description": "Summarise which members can open which profiles (read-only) and suggest how to tighten access."
+      },
+      "weekly_report": {
+        "title": "Weekly report",
+        "description": "Summarise the week: workspace activity, proxy health trends and the vendor scoreboard."
+      }
+    }
   },
   "settings": {
     "loadError": "Could not load settings: {{message}}",

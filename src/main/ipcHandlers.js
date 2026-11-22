@@ -6280,15 +6280,19 @@ async function analyzeProfileLeaks(payload) {
       password: profile.proxy.password
     });
     if (geo.success) {
+      const exit = `${geo.ip || '?'}${geo.country ? ` · ${geo.country}` : ''}${geo.isp ? ` · ${geo.isp}` : ''}`;
       checks.push({
         key: 'ip', label: 'IP / Proxy', status: 'pass',
-        detail: `Exit ${geo.ip || '?'}${geo.country ? ` · ${geo.country}` : ''}${geo.isp ? ` · ${geo.isp}` : ''} (${geo.latencyMs}ms)`
+        detail: `Exit ${exit} (${geo.latencyMs}ms)`,
+        detailKey: 'ipExit', params: { exit, latency: geo.latencyMs }
       });
+    } else if (geo.error) {
+      checks.push({ key: 'ip', label: 'IP / Proxy', status: 'fail', detail: `Proxy failed: ${geo.error}`, detailKey: 'ipFailed', params: { error: geo.error } });
     } else {
-      checks.push({ key: 'ip', label: 'IP / Proxy', status: 'fail', detail: `Proxy failed: ${geo.error || 'no connection'}` });
+      checks.push({ key: 'ip', label: 'IP / Proxy', status: 'fail', detail: 'Proxy failed: no connection', detailKey: 'ipNoConnection' });
     }
   } else {
-    checks.push({ key: 'ip', label: 'IP / Proxy', status: 'warn', detail: 'No profile proxy in use - the machine\'s real IP is exposed.' });
+    checks.push({ key: 'ip', label: 'IP / Proxy', status: 'warn', detail: 'No profile proxy in use - the machine\'s real IP is exposed.', detailKey: 'ipNoProxy' });
   }
 
   const webrtc = profile.webrtc || 'Forward';
@@ -6296,41 +6300,47 @@ async function analyzeProfileLeaks(payload) {
     // Firefox profiles always run with WebRTC off (firefoxEngine's user.js), whatever the setting says,
     // so the setting is not graded: the same status as "Disabled", which also leaks nothing. The CAPTCHA
     // score says the same (captchaScore.js).
-    checks.push({ key: 'webrtc', label: 'WebRTC', status: 'pass', detail: 'WebRTC is off in Firefox profiles - real IP not leaked via WebRTC.' });
+    checks.push({ key: 'webrtc', label: 'WebRTC', status: 'pass', detail: 'WebRTC is off in Firefox profiles - real IP not leaked via WebRTC.', detailKey: 'webrtcFirefox' });
   } else if (webrtc === 'Real' && usesProxy) {
-    checks.push({ key: 'webrtc', label: 'WebRTC', status: 'fail', detail: 'Set to "Real" - WebRTC can expose the real IP behind the proxy.' });
+    checks.push({ key: 'webrtc', label: 'WebRTC', status: 'fail', detail: 'Set to "Real" - WebRTC can expose the real IP behind the proxy.', detailKey: 'webrtcRealProxy' });
   } else if (webrtc === 'Real') {
     // No proxy: WebRTC shows the IP every site already sees (the IP / Proxy row says so), so there is no
     // mismatch to flag. The CAPTCHA score says the same (captchaScore.js).
-    checks.push({ key: 'webrtc', label: 'WebRTC', status: 'pass', detail: 'Set to "Real" with no proxy - sites already see this computer\'s IP, so WebRTC shows them nothing new.' });
+    checks.push({ key: 'webrtc', label: 'WebRTC', status: 'pass', detail: 'Set to "Real" with no proxy - sites already see this computer\'s IP, so WebRTC shows them nothing new.', detailKey: 'webrtcRealNoProxy' });
   } else {
-    checks.push({ key: 'webrtc', label: 'WebRTC', status: 'pass', detail: `Mode "${webrtc}" - real IP not leaked via WebRTC.` });
+    checks.push({ key: 'webrtc', label: 'WebRTC', status: 'pass', detail: `Mode "${webrtc}" - real IP not leaked via WebRTC.`, detailKey: 'webrtcMode', params: { mode: webrtc } });
   }
 
   const tzType = profile.timezoneType || 'Based on IP';
   if (tzType === 'Based on IP') {
     checks.push({
       key: 'timezone', label: 'Timezone', status: usesProxy ? 'pass' : 'warn',
-      detail: usesProxy ? `Auto from proxy${geo && geo.timezone ? ` (${geo.timezone})` : ''}.` : 'Based on IP, but no proxy is set.'
+      detail: usesProxy ? `Auto from proxy${geo && geo.timezone ? ` (${geo.timezone})` : ''}.` : 'Based on IP, but no proxy is set.',
+      detailKey: !usesProxy ? 'tzNoProxy' : (geo && geo.timezone ? 'tzAutoProxy' : 'tzAutoProxyUnknown'),
+      params: { timezone: (geo && geo.timezone) || '' }
     });
   } else if (tzType === 'Real') {
-    checks.push({ key: 'timezone', label: 'Timezone', status: 'warn', detail: 'Using the host timezone - may not match the proxy location.' });
+    checks.push({ key: 'timezone', label: 'Timezone', status: 'warn', detail: 'Using the host timezone - may not match the proxy location.', detailKey: 'tzHost' });
   } else {
     const want = optionalString(profile.timezoneCustom);
     if (usesProxy && geo && geo.success && geo.timezone && want) {
       const match = geo.timezone === want;
       checks.push({
         key: 'timezone', label: 'Timezone', status: match ? 'pass' : 'fail',
-        detail: match ? `Custom ${want} matches proxy.` : `Custom ${want} \u2260 proxy ${geo.timezone}.`
+        detail: match ? `Custom ${want} matches proxy.` : `Custom ${want} \u2260 proxy ${geo.timezone}.`,
+        detailKey: match ? 'tzCustomMatch' : 'tzCustomMismatch', params: { timezone: want, proxyTimezone: geo.timezone }
       });
     } else {
-      checks.push({ key: 'timezone', label: 'Timezone', status: 'warn', detail: `Custom ${want || '(unset)'} - could not compare to proxy.` });
+      checks.push({
+        key: 'timezone', label: 'Timezone', status: 'warn', detail: `Custom ${want || '(unset)'} - could not compare to proxy.`,
+        detailKey: want ? 'tzCustomUnknown' : 'tzUnsetUnknown', params: { timezone: want || '' }
+      });
     }
   }
 
   const langType = profile.languageType || 'Based on IP';
   if (langType === 'Based on IP') {
-    checks.push({ key: 'language', label: 'Language', status: 'pass', detail: usesProxy ? 'Auto from proxy country.' : 'Based on IP.' });
+    checks.push({ key: 'language', label: 'Language', status: 'pass', detail: usesProxy ? 'Auto from proxy country.' : 'Based on IP.', detailKey: usesProxy ? 'langAutoProxy' : 'langAuto' });
   } else {
     const lc = optionalString(profile.languageCustom) || '';
     const m = lc.match(/[a-z]{2}-([A-Z]{2})/);
@@ -6339,34 +6349,40 @@ async function analyzeProfileLeaks(payload) {
       const match = region === geo.country;
       checks.push({
         key: 'language', label: 'Language', status: match ? 'pass' : 'warn',
-        detail: match ? `Locale region ${region} matches proxy.` : `Locale ${region} \u2260 proxy country ${geo.country}.`
+        detail: match ? `Locale region ${region} matches proxy.` : `Locale ${region} \u2260 proxy country ${geo.country}.`,
+        detailKey: match ? 'langMatch' : 'langMismatch', params: { region, country: geo.country }
       });
     } else {
-      checks.push({ key: 'language', label: 'Language', status: 'warn', detail: `Custom (${lc || 'unset'}) - could not compare to proxy.` });
+      checks.push({
+        key: 'language', label: 'Language', status: 'warn', detail: `Custom (${lc || 'unset'}) - could not compare to proxy.`,
+        detailKey: lc ? 'langCustomUnknown' : 'langUnsetUnknown', params: { language: lc }
+      });
     }
   }
 
   const locType = profile.locationType || 'Based on IP';
   if (locType === 'Based on IP') {
-    checks.push({ key: 'geo', label: 'Geolocation', status: 'pass', detail: 'Auto from IP.' });
+    checks.push({ key: 'geo', label: 'Geolocation', status: 'pass', detail: 'Auto from IP.', detailKey: 'geoAuto' });
   } else if (locType === 'Block') {
-    checks.push({ key: 'geo', label: 'Geolocation', status: 'pass', detail: 'Blocked - no location shared.' });
+    checks.push({ key: 'geo', label: 'Geolocation', status: 'pass', detail: 'Blocked - no location shared.', detailKey: 'geoBlocked' });
   } else {
     checks.push({
       key: 'geo', label: 'Geolocation', status: 'warn',
-      detail: `Custom (${optionalString(profile.locationLat) || '?'}, ${optionalString(profile.locationLng) || '?'}) - verify it matches the proxy region.`
+      detail: `Custom (${optionalString(profile.locationLat) || '?'}, ${optionalString(profile.locationLng) || '?'}) - verify it matches the proxy region.`,
+      detailKey: 'geoCustom', params: { lat: optionalString(profile.locationLat) || '?', lng: optionalString(profile.locationLng) || '?' }
     });
   }
 
   const noiseOn = profile.canvasNoise && profile.webglImageNoise && profile.audioContextNoise;
   checks.push({
     key: 'fp', label: 'Fingerprint noise', status: noiseOn ? 'pass' : 'warn',
-    detail: noiseOn ? 'Canvas / WebGL / Audio noise enabled.' : 'One or more fingerprint-noise toggles are off.'
+    detail: noiseOn ? 'Canvas / WebGL / Audio noise enabled.' : 'One or more fingerprint-noise toggles are off.',
+    detailKey: noiseOn ? 'fpOn' : 'fpOff'
   });
 
   // A mobile UA with a desktop GPU (or the reverse) is an easily scored mismatch.
   const coh = deviceGpuCoherence({ deviceClass: profile.deviceClass, os: profile.os, webglRenderer: profile.webglRenderer });
-  checks.push({ key: 'device', label: 'Device coherence', status: coh.status, detail: coh.detail });
+  checks.push({ key: 'device', label: 'Device coherence', status: coh.status, detail: coh.detail, detailKey: coh.code ? `device.${coh.code}` : undefined });
 
   const score = computeTrustScore(checks);
   return { profileId: id, title: profile.title, usesProxy, geo, checks, summary: score.summary, score };
@@ -9719,25 +9735,30 @@ async function liveProfileLeak(payload) {
   const checks = [];
 
   checks.push({
-    key: 'ip', label: 'Exit IP', status: exitIp ? 'pass' : 'warn',
-    detail: exitIp ? `${exitIp}${exit.country ? ` · ${exit.country}` : ''}` : 'Could not read the exit IP from the page.'
+    key: 'ip', label: 'Exit IP', labelKey: 'exitIp', status: exitIp ? 'pass' : 'warn',
+    detail: exitIp ? `${exitIp}${exit.country ? ` · ${exit.country}` : ''}` : 'Could not read the exit IP from the page.',
+    detailKey: exitIp ? undefined : 'liveIpUnknown'
   });
 
   const publicIps = webrtcIps.filter((ip) => !isPrivateIp(ip));
   const leaking = publicIps.filter((ip) => exitIp && ip !== exitIp);
   if (webrtcIps.length === 0) {
-    checks.push({ key: 'webrtc', label: 'WebRTC', status: 'pass', detail: 'No WebRTC candidates were exposed.' });
+    checks.push({ key: 'webrtc', label: 'WebRTC', status: 'pass', detail: 'No WebRTC candidates were exposed.', detailKey: 'liveWebrtcNone' });
   } else if (leaking.length > 0) {
-    checks.push({ key: 'webrtc', label: 'WebRTC', status: 'fail', detail: `Public IP exposed via WebRTC differs from exit IP: ${leaking.join(', ')}` });
+    checks.push({ key: 'webrtc', label: 'WebRTC', status: 'fail', detail: `Public IP exposed via WebRTC differs from exit IP: ${leaking.join(', ')}`, detailKey: 'liveWebrtcLeak', params: { ips: leaking.join(', ') } });
   } else {
-    checks.push({ key: 'webrtc', label: 'WebRTC', status: 'pass', detail: `Candidates: ${webrtcIps.join(', ')} - no public IP leak vs exit.` });
+    checks.push({ key: 'webrtc', label: 'WebRTC', status: 'pass', detail: `Candidates: ${webrtcIps.join(', ')} - no public IP leak vs exit.`, detailKey: 'liveWebrtcOk', params: { ips: webrtcIps.join(', ') } });
   }
 
   if (exit && exit.timezone && env.timezone) {
     const match = exit.timezone === env.timezone;
-    checks.push({ key: 'timezone', label: 'Timezone', status: match ? 'pass' : 'fail', detail: match ? `Browser ${env.timezone} matches exit.` : `Browser ${env.timezone} \u2260 exit ${exit.timezone}.` });
+    checks.push({
+      key: 'timezone', label: 'Timezone', status: match ? 'pass' : 'fail',
+      detail: match ? `Browser ${env.timezone} matches exit.` : `Browser ${env.timezone} \u2260 exit ${exit.timezone}.`,
+      detailKey: match ? 'liveTzMatch' : 'liveTzMismatch', params: { timezone: env.timezone, exitTimezone: exit.timezone }
+    });
   } else if (env.timezone) {
-    checks.push({ key: 'timezone', label: 'Timezone', status: 'warn', detail: `Browser timezone ${env.timezone}; exit timezone unknown.` });
+    checks.push({ key: 'timezone', label: 'Timezone', status: 'warn', detail: `Browser timezone ${env.timezone}; exit timezone unknown.`, detailKey: 'liveTzUnknown', params: { timezone: env.timezone } });
   }
 
   const score = computeTrustScore(checks);

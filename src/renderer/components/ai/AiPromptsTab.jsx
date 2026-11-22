@@ -10,6 +10,11 @@ import { softglazeApi } from '@/lib/softglazeApi.js';
 import { errorText } from '@/lib/aiCore.mjs';
 import { cn } from '@/lib/utils.js';
 
+// Prompt titles in the UI language; the prompt text itself stays English (AI apps read it).
+function promptTitle(t, p) {
+  return t(`prompts.items.${p.name}.title`, { defaultValue: p.title || p.name });
+}
+
 export default function AiPromptsTab() {
   const { t } = useTranslation('ai');
   const [prompts, setPrompts] = useState([]);
@@ -35,8 +40,8 @@ export default function AiPromptsTab() {
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();
     if (!q) return prompts;
-    return prompts.filter((p) => [p.name, p.title, p.description].some((v) => String(v || '').toLowerCase().includes(q)));
-  }, [prompts, query]);
+    return prompts.filter((p) => [p.name, p.title, p.description, promptTitle(t, p)].some((v) => String(v || '').toLowerCase().includes(q)));
+  }, [prompts, query, t]);
 
   useEffect(() => {
     if (!filtered.length) return;
@@ -80,7 +85,7 @@ export default function AiPromptsTab() {
                       className={cn('w-full rounded-lg border px-3 py-2 text-start transition-colors', on ? '' : 'border-transparent hover:bg-secondary')}
                       style={on ? { background: 'color-mix(in srgb, var(--primary) 12%, transparent)', borderColor: 'color-mix(in srgb, var(--primary) 26%, transparent)' } : undefined}
                     >
-                      <span className="block truncate text-[13px] font-medium text-foreground">{p.title || p.name}</span>
+                      <span className="block truncate text-[13px] font-medium text-foreground">{promptTitle(t, p)}</span>
                       <span className={cn('block truncate font-mono text-[11px]', SUBTLE_TEXT)}>{p.name}</span>
                     </button>
                   </li>
@@ -103,8 +108,8 @@ function PromptDetail({ prompt }) {
   return (
     <article className="min-w-0 rounded-xl border border-border bg-card" aria-labelledby="ai-prompt-title">
       <header className="border-b border-border px-5 py-4">
-        <h2 id="ai-prompt-title" className="text-[16px] font-semibold text-foreground font-display">{prompt.title || prompt.name}</h2>
-        {prompt.description && <p className="mt-1 text-[13px] leading-relaxed text-muted-foreground">{prompt.description}</p>}
+        <h2 id="ai-prompt-title" className="text-[16px] font-semibold text-foreground font-display">{promptTitle(t, prompt)}</h2>
+        {prompt.description && <p className="mt-1 text-[13px] leading-relaxed text-muted-foreground">{t(`prompts.items.${prompt.name}.description`, { defaultValue: prompt.description })}</p>}
         <p className="mt-2 text-[12px] text-muted-foreground">
           {t('prompts.inClaudeCode')} <code className="rounded bg-secondary px-1.5 py-0.5 font-mono text-[11.5px] text-foreground">/softglaze:{prompt.name}</code>
         </p>

@@ -394,7 +394,24 @@
     "page_scroll": "Sayfayı kaydır",
     "page_screenshot": "Ekran görüntüsü al",
     "page_extract_text": "Sayfadan metin kopyala",
-    "page_wait_for": "Sayfada bir şeyi bekle"
+    "page_wait_for": "Sayfada bir şeyi bekle",
+    "workspace_summary": "Çalışma alanı özetini oku",
+    "list_profiles": "Profilleri listele",
+    "get_profile": "Profil oku",
+    "profile_health": "Profilin sağlığını ve CAPTCHA riskini kontrol et",
+    "list_sessions": "Çalışan profilleri listele",
+    "stop_all_profiles": "Tüm profilleri durdur",
+    "list_proxies": "Proxy'leri listele",
+    "check_proxy": "Proxy kontrol et",
+    "get_proxy_health": "Proxy sağlık geçmişini oku",
+    "list_groups": "Grupları listele",
+    "list_macros": "Makroları listele",
+    "get_macro": "Makro oku",
+    "get_run_status": "Çalıştırma durumunu kontrol et",
+    "get_activity": "Son etkinlikleri oku",
+    "read_memory": "Çalışma alanı belleğini oku",
+    "update_memory": "Çalışma alanı belleğini güncelle",
+    "get_cdp_endpoint": "Profili Playwright veya DevTools'a ver (Uzman)"
   },
   "tokens": {
     "search": "Token'larda ara",
@@ -568,7 +585,57 @@
     "howClaudeDesktop": "sohbet kutusunun altındaki +'ya tıklayın ve SoftGlaze'i bulun.",
     "howVsCode": "Copilot Chat'te / yazın ve bir SoftGlaze istemi seçin.",
     "howCursor": "istemler listelenmiyorsa aşağıdaki metni kopyalayın.",
-    "howOther": "Herhangi bir uygulama: istem metnini kopyalayın, sohbete yapıştırın ve ayrıntıları doldurun."
+    "howOther": "Herhangi bir uygulama: istem metnini kopyalayın, sohbete yapıştırın ve ayrıntıları doldurun.",
+    "items": {
+      "daily_health_check": {
+        "title": "Günlük sağlık kontrolü",
+        "description": "Çalışan ve yakın zamanda kullanılan tüm profilleri ve proxy'lerini kontrol et, ardından sorunları her birinin çözümüyle birlikte bildir."
+      },
+      "diagnose_captcha": {
+        "title": "Bu profil neden CAPTCHA alıyor?",
+        "description": "profile_health kullanarak bir profilin neden sürekli CAPTCHA veya engelleme sayfası aldığını açıkla ve çözümler öner."
+      },
+      "create_geo_profiles": {
+        "title": "Bir ülke için profil oluştur",
+        "description": "Bir grupta, her biri o ülkeden çalışan bir proxy'ye sahip birkaç profil oluştur."
+      },
+      "fix_proxy_mismatches": {
+        "title": "Saat dilimi, dil ve konum uyumsuzluklarını düzelt",
+        "description": "Saat dilimi, dili veya konumu proxy'siyle uyuşmayan profilleri bul ve onaya sunulacak düzeltmeler öner."
+      },
+      "rotate_bad_proxies": {
+        "title": "Bozuk veya kara listedeki proxy'leri değiştir",
+        "description": "Çalışmayan veya kara listedeki proxy'leri bul, ardından IP'lerini değiştir ya da profillerini sağlam proxy'lere taşı."
+      },
+      "warm_up_profiles": {
+        "title": "Profilleri ısındır",
+        "description": "Yeni profillerin normal bir tarama geçmişi oluşturması için Cookie Warmer (çerez ısındırıcı) ile bir ısınma planla ve başlat."
+      },
+      "write_macro": {
+        "title": "Açıklamadan makro yaz",
+        "description": "Sade bir dille anlatılan görevi makroya dönüştür, kaydet ve tek bir profilde deneme çalıştırması yap."
+      },
+      "run_macro_on_group": {
+        "title": "Bir grupta makro çalıştır",
+        "description": "Kayıtlı bir makroyu plan sınırları içinde bir gruptaki profillerde çalıştır ve sonuçları bildir."
+      },
+      "qa_test_site": {
+        "title": "Bir siteyi birkaç ülkeden test et",
+        "description": "Bir siteyi birkaç ülkeden profillerde aç ve farkları bildir (QA, coğrafi test, reklam doğrulama)."
+      },
+      "price_check": {
+        "title": "Fiyatları ülkeye göre karşılaştır",
+        "description": "Bir sayfanın farklı ülkelerde gösterdiği fiyatları veya içeriği karşılaştır (pazar araştırması)."
+      },
+      "team_access_review": {
+        "title": "Ekip erişimini gözden geçir",
+        "description": "Hangi üyenin hangi profilleri açabildiğini özetle (salt okunur) ve erişimin nasıl sıkılaştırılacağını öner."
+      },
+      "weekly_report": {
+        "title": "Haftalık rapor",
+        "description": "Haftayı özetle: çalışma alanı etkinliği, proxy sağlık eğilimleri ve sağlayıcı puan tablosu."
+      }
+    }
   },
   "settings": {
     "loadError": "Ayarlar yüklenemedi: {{message}}",

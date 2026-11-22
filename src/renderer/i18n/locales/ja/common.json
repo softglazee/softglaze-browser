@@ -211,7 +211,25 @@
     "resRunningVal": "{{count}}件稼働中",
     "resStoredVal": "{{count}}件保存済み",
     "restoreDesc": "前回SoftGlazeを閉じたとき、{{count}}件のプロファイルが開いていました。",
-    "runningCount": "{{count}}件稼働中"
+    "runningCount": "{{count}}件稼働中",
+    "update": {
+      "failedTitle": "アップデートをダウンロードできませんでした",
+      "failedTitleVersion": "アップデートをダウンロードできませんでした（{{version}}）",
+      "checkingTitle": "アップデートを確認中…",
+      "readyTitle": "アップデート {{version}} の準備ができました",
+      "downloadingTitle": "アップデート {{version}} をダウンロード中…",
+      "availableTitle": "新しいアップデート {{version}} があります",
+      "failedDesc": "アップデートをダウンロードできませんでした。接続を確認して再試行してください。",
+      "checkingDesc": "アップデートサーバーに接続中…",
+      "readyDesc": "インストールをクリックすると再起動し、新しいバージョンが適用されます。",
+      "downloadingDesc": "{{percent}}% ダウンロード済み",
+      "availableDesc": "バックグラウンドでダウンロードされます。",
+      "install": "インストールして再起動",
+      "retry": "再試行",
+      "whatsNew": "新機能",
+      "hideNotes": "ノートを隠す",
+      "dismiss": "アップデートの通知を閉じる"
+    }
   },
   "settings": {
     "eyebrow": "アプリケーション",
@@ -221,7 +239,13 @@
       "title": "言語",
       "description": "SoftGlazeの画面に表示する言語を選択します。",
       "label": "表示言語",
-      "hint": "変更はアプリ全体にすぐ反映されます。"
+      "hint": "変更はアプリ全体にすぐ反映されます。",
+      "urduFont": {
+        "label": "ウルドゥー語フォント",
+        "hint": "ナスタアリーク体はウルドゥー語の伝統的な書体です。アプリに組み込まれており、選択したときだけ読み込まれます。",
+        "default": "システムフォント（既定）",
+        "nastaliq": "ナスタアリーク体（Noto Nastaliq Urdu）"
+      }
     }
   },
   "startLinks": {
@@ -230,7 +254,24 @@
     "loadFailed": "保存済みのリンクを読み込めませんでした。",
     "loadError": "リンクを読み込めませんでした（{{error}}）。保存済みのリストが上書きされないよう、保存は無効になっています。",
     "retry": "再試行",
-    "droppedRows_other": "{{count}}行はURLが有効なhttp(s)アドレスではないため保存されませんでした: {{rows}}"
+    "droppedRows_other": "{{count}}行はURLが有効なhttp(s)アドレスではないため保存されませんでした: {{rows}}",
+    "saved": "保存しました",
+    "save": "保存",
+    "links": "リンク",
+    "autoLabel": "自動ラベル",
+    "autoLabelHint": "空のラベルをURLから入力します",
+    "add": "追加",
+    "loading": "読み込み中…",
+    "empty": "リンクはまだありません。「一括追加」または「追加」を使ってください。",
+    "labelPlaceholder": "ラベル",
+    "urlLabel": "リンクのアドレス",
+    "remove": "削除",
+    "bulkTitle": "一括追加",
+    "bulkHint": "複数のURLを1行に1つずつ貼り付けます。各リンクにはドメインからラベルが付き、リストで編集できます。重複している行とhttp(s)でない行はスキップされます。",
+    "addAll": "すべて追加",
+    "clear": "クリア",
+    "bulkResult": "追加: {{added}}。スキップ: {{skipped}}（重複またはhttp/https以外）。",
+    "saveFailed": "保存できませんでした。"
   },
   "storeRating": {
     "cardTitle": "SoftGlaze Browserを気に入っていただけましたか？",
@@ -270,5 +311,11 @@
     },
     "cta": "オファーを見る",
     "dismiss": "このオファーを非表示"
+  },
+  "errorBoundary": {
+    "title": "このページで問題が発生しました。",
+    "body": "アプリのほかの部分は動作しています。もう一度試すか、サイドバーから別のページを開いてください。",
+    "retry": "もう一度試す",
+    "unknown": "不明なエラー"
   }
 }

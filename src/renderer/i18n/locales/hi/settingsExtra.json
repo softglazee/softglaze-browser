@@ -36,7 +36,8 @@
     "experimental": "प्रयोगात्मक",
     "savedIdle": "सभी बदलाव सेव हो गए",
     "saving": "बदलाव सेव हो रहे हैं…",
-    "saveError": "बदलाव सेव नहीं हो सके"
+    "saveError": "बदलाव सेव नहीं हो सके",
+    "sectionsLabel": "सेटिंग्स के सेक्शन"
   },
   "localRuntime": {
     "title": "लोकल रनटाइम",
@@ -407,5 +408,12 @@
     "updateScheduler": "शेड्यूलर अपडेट नहीं हो सका।",
     "loadGlobal": "ग्लोबल सेटिंग्स लोड नहीं हो सकीं।",
     "saveSetting": "सेटिंग सेव नहीं हो सकी।"
+  },
+  "resilienceToasts": {
+    "aProfile": "एक प्रोफ़ाइल",
+    "crashed": "{{profile}} अचानक बंद हो गई।",
+    "crashedRestarting": "{{profile}} अचानक बंद हो गई। फिर से शुरू हो रही है…",
+    "lowMemory_one": "मेमोरी कम है: {{count}} प्रोफ़ाइल बंद की गई (खाली मेमोरी {{free}}%)।",
+    "lowMemory_other": "मेमोरी कम है: {{count}} प्रोफ़ाइल बंद की गईं (खाली मेमोरी {{free}}%)।"
   }
 }

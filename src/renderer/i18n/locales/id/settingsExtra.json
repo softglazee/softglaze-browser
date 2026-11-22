@@ -36,7 +36,8 @@
     "experimental": "Eksperimental",
     "savedIdle": "Semua perubahan tersimpan",
     "saving": "Menyimpan perubahan…",
-    "saveError": "Tidak bisa menyimpan perubahan"
+    "saveError": "Tidak bisa menyimpan perubahan",
+    "sectionsLabel": "Bagian pengaturan"
   },
   "localRuntime": {
     "title": "Runtime lokal",
@@ -407,5 +408,11 @@
     "updateScheduler": "Gagal memperbarui penjadwal.",
     "loadGlobal": "Gagal memuat pengaturan umum.",
     "saveSetting": "Gagal menyimpan pengaturan."
+  },
+  "resilienceToasts": {
+    "aProfile": "Sebuah profil",
+    "crashed": "{{profile}} berhenti secara tak terduga.",
+    "crashedRestarting": "{{profile}} berhenti secara tak terduga. Memulai ulang…",
+    "lowMemory_other": "Memori menipis: {{count}} profil ditutup (memori bebas {{free}}%)."
   }
 }

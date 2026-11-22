@@ -21,6 +21,7 @@ import { softglazeApi } from '@/lib/softglazeApi.js';
 import { usePermissions } from '@/lib/usePermissions.js';
 import { formatDateTime } from '@/lib/utils.js';
 import { getStoredLang, setLang, SUPPORTED_LANGS, langOptionLabel } from '@/lib/lang.js';
+import { getStoredUrduFont, setUrduFont } from '@/lib/urduFont.js';
 import { SHOW_UNAPPLIED_SETTINGS, visibleSectionOrder } from '@/lib/unappliedSettings.mjs';
 import { showRatingEntry } from '@/lib/storeRating.mjs';
 
@@ -66,7 +67,7 @@ function buildSections(t, tx) {
     map[id] = { id, group, label, desc, kw: n(`${label} ${desc} ${extra}`) };
   };
 
-  add('language', 'general', t('settings.language.title'), t('settings.language.description'), 'language locale translate interface');
+  add('language', 'general', t('settings.language.title'), t('settings.language.description'), 'language locale translate interface urdu nastaliq font');
   // Keywords name only controls on screen; the unapplied ones (lib/unappliedSettings.mjs) add theirs when shown.
   const unapplied = (kw) => (SHOW_UNAPPLIED_SETTINGS ? ` ${kw}` : '');
   add('onstartup', 'general', tx('onStartup.title'), tx('onStartup.description'), `start page proxy launch${unapplied('extension country')}`);
@@ -374,7 +375,7 @@ function SettingsNav({ groups, active, query, setQuery, onJump, searchRef }) {
   const q = query.trim().toLowerCase();
   const all = groups.flatMap((g) => g.items);
   return (
-    <aside className="lg:sticky lg:top-0 lg:max-h-[calc(100vh-7rem)] lg:overflow-y-auto lg:pe-1" aria-label="Settings sections">
+    <aside className="lg:sticky lg:top-0 lg:max-h-[calc(100vh-7rem)] lg:overflow-y-auto lg:pe-1" aria-label={tx('ui.sectionsLabel')}>
       <div className="relative mb-4">
         <Search className="w-4 h-4 absolute inset-s-3 top-1/2 -translate-y-1/2 text-muted-foreground pointer-events-none" />
         <input
@@ -403,7 +404,7 @@ function SettingsNav({ groups, active, query, setQuery, onJump, searchRef }) {
         </CustomSelect>
       </label>
 
-      <nav className="hidden lg:block bg-card border border-border rounded-xl overflow-hidden" aria-label="Sections">
+      <nav className="hidden lg:block bg-card border border-border rounded-xl overflow-hidden" aria-label={tx('ui.sectionsLabel')}>
         {groups.map((g, gi) => {
           const groupHit = !q || g.items.some((it) => all.find((x) => x.id === it.id) && it.label.toLowerCase().includes(q));
           return (
@@ -742,6 +743,7 @@ function useGlobalSettings(tx, reportSave) {
 function LanguageSection({ sec }) {
   const { t } = useTranslation();
   const [lang, setLangState] = useState(getStoredLang());
+  const [urduFont, setUrduFontState] = useState(getStoredUrduFont());
   return (
     <SectionBox sec={sec} icon={Languages} accent="#6366f1">
       <Row
@@ -757,6 +759,21 @@ function LanguageSection({ sec }) {
           </CustomSelect>
         }
       />
+      {/* Urdu only: Nastaliq (bundled, loaded on first use) or the system font. */}
+      {lang === 'ur' && (
+        <Row
+          inline
+          align="start"
+          title={t('settings.language.urduFont.label')}
+          description={t('settings.language.urduFont.hint')}
+          control={
+            <CustomSelect id="settings-urdu-font-select" className="w-full sm:w-56" value={urduFont} onChange={(e) => setUrduFontState(setUrduFont(e.target.value, lang))}>
+              <option value="default">{t('settings.language.urduFont.default')}</option>
+              <option value="nastaliq">{t('settings.language.urduFont.nastaliq')}</option>
+            </CustomSelect>
+          }
+        />
+      )}
     </SectionBox>
   );
 }

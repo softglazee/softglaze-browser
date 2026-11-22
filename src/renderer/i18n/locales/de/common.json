@@ -223,7 +223,25 @@
     "resRunningVal": "{{count}} aktiv",
     "resStoredVal": "{{count}} gespeichert",
     "restoreDesc": "{{count}} Profile waren geöffnet, als Sie SoftGlaze zuletzt geschlossen haben.",
-    "runningCount": "{{count}} aktiv"
+    "runningCount": "{{count}} aktiv",
+    "update": {
+      "failedTitle": "Update-Download fehlgeschlagen",
+      "failedTitleVersion": "Update-Download fehlgeschlagen ({{version}})",
+      "checkingTitle": "Suche nach Updates…",
+      "readyTitle": "Update {{version}} bereit",
+      "downloadingTitle": "Update {{version}} wird heruntergeladen…",
+      "availableTitle": "Neues Update verfügbar: {{version}}",
+      "failedDesc": "Das Update konnte nicht heruntergeladen werden. Prüfen Sie Ihre Verbindung und versuchen Sie es erneut.",
+      "checkingDesc": "Verbindung zum Update-Server…",
+      "readyDesc": "Klicken Sie auf Installieren, um neu zu starten und die neue Version zu übernehmen.",
+      "downloadingDesc": "{{percent}} % heruntergeladen",
+      "availableDesc": "Es wird im Hintergrund heruntergeladen.",
+      "install": "Installieren & Neustart",
+      "retry": "Wiederholen",
+      "whatsNew": "Neuigkeiten",
+      "hideNotes": "Hinweise ausblenden",
+      "dismiss": "Update-Hinweis schließen"
+    }
   },
   "settings": {
     "eyebrow": "Anwendung",
@@ -233,7 +251,13 @@
       "title": "Sprache",
       "description": "Wählen Sie die Anzeigesprache der SoftGlaze-Oberfläche.",
       "label": "Anzeigesprache",
-      "hint": "Änderungen gelten sofort in der ganzen App."
+      "hint": "Änderungen gelten sofort in der ganzen App.",
+      "urduFont": {
+        "label": "Urdu-Schrift",
+        "hint": "Nastaliq ist der traditionelle Schreibstil des Urdu. Die Schrift ist in die App eingebaut und wird nur geladen, wenn Sie sie auswählen.",
+        "default": "Systemschrift (Standard)",
+        "nastaliq": "Nastaliq (Noto Nastaliq Urdu)"
+      }
     }
   },
   "startLinks": {
@@ -243,7 +267,24 @@
     "loadError": "Ihre Links konnten nicht geladen werden ({{error}}). Speichern ist deaktiviert, damit die gespeicherte Liste nicht überschrieben wird.",
     "retry": "Wiederholen",
     "droppedRows_one": "{{count}} Zeile wurde nicht gespeichert, weil ihre URL keine gültige http(s)-Adresse ist: {{rows}}",
-    "droppedRows_other": "{{count}} Zeilen wurden nicht gespeichert, weil ihre URL keine gültige http(s)-Adresse ist: {{rows}}"
+    "droppedRows_other": "{{count}} Zeilen wurden nicht gespeichert, weil ihre URL keine gültige http(s)-Adresse ist: {{rows}}",
+    "saved": "Gespeichert",
+    "save": "Speichern",
+    "links": "Links",
+    "autoLabel": "Auto-Beschriftung",
+    "autoLabelHint": "Leere Beschriftungen aus der URL ausfüllen",
+    "add": "Hinzufügen",
+    "loading": "Wird geladen…",
+    "empty": "Noch keine Links. Nutzen Sie Mehrere hinzufügen oder Hinzufügen.",
+    "labelPlaceholder": "Beschriftung",
+    "urlLabel": "Linkadresse",
+    "remove": "Entfernen",
+    "bulkTitle": "Mehrere hinzufügen",
+    "bulkHint": "Fügen Sie mehrere URLs ein, eine pro Zeile. Jede erhält eine Beschriftung aus ihrer Domain, die Sie in der Liste ändern können. Duplikate und Zeilen ohne http(s) werden übersprungen.",
+    "addAll": "Alle hinzufügen",
+    "clear": "Leeren",
+    "bulkResult": "Hinzugefügt: {{added}}. Übersprungen: {{skipped}} (doppelt oder nicht http/https).",
+    "saveFailed": "Speichern fehlgeschlagen."
   },
   "storeRating": {
     "cardTitle": "Gefällt Ihnen SoftGlaze Browser?",
@@ -283,5 +324,11 @@
     },
     "cta": "Zum Angebot",
     "dismiss": "Angebot ausblenden"
+  },
+  "errorBoundary": {
+    "title": "Auf dieser Seite ist ein Fehler aufgetreten.",
+    "body": "Der Rest der App läuft weiter. Versuchen Sie es erneut oder öffnen Sie eine andere Seite über die Seitenleiste.",
+    "retry": "Wiederholen",
+    "unknown": "Unbekannter Fehler"
   }
 }

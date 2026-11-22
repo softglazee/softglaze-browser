@@ -36,7 +36,8 @@
     "experimental": "Experimental",
     "savedIdle": "Todas as alterações salvas",
     "saving": "Salvando alterações…",
-    "saveError": "Não foi possível salvar as alterações"
+    "saveError": "Não foi possível salvar as alterações",
+    "sectionsLabel": "Seções das configurações"
   },
   "localRuntime": {
     "title": "Execução local",
@@ -407,5 +408,13 @@
     "updateScheduler": "Falha ao atualizar o agendador.",
     "loadGlobal": "Falha ao carregar as configurações gerais.",
     "saveSetting": "Falha ao salvar a configuração."
+  },
+  "resilienceToasts": {
+    "aProfile": "Um perfil",
+    "crashed": "{{profile}} parou inesperadamente.",
+    "crashedRestarting": "{{profile}} parou inesperadamente. Reiniciando…",
+    "lowMemory_one": "Pouca memória: {{count}} perfil foi fechado (memória livre {{free}}%).",
+    "lowMemory_many": "Pouca memória: {{count}} perfis foram fechados (memória livre {{free}}%).",
+    "lowMemory_other": "Pouca memória: {{count}} perfis foram fechados (memória livre {{free}}%)."
   }
 }

@@ -211,7 +211,25 @@
     "resRunningVal": "{{count}} berjalan",
     "resStoredVal": "{{count}} tersimpan",
     "restoreDesc": "{{count}} profil terbuka saat Anda terakhir menutup SoftGlaze.",
-    "runningCount": "{{count}} berjalan"
+    "runningCount": "{{count}} berjalan",
+    "update": {
+      "failedTitle": "Unduhan pembaruan gagal",
+      "failedTitleVersion": "Unduhan pembaruan gagal ({{version}})",
+      "checkingTitle": "Memeriksa pembaruan…",
+      "readyTitle": "Pembaruan {{version}} siap",
+      "downloadingTitle": "Mengunduh pembaruan {{version}}…",
+      "availableTitle": "Pembaruan baru tersedia {{version}}",
+      "failedDesc": "Pembaruan tidak bisa diunduh. Periksa koneksi Anda lalu coba lagi.",
+      "checkingDesc": "Menghubungi server pembaruan…",
+      "readyDesc": "Klik instal untuk memulai ulang dan memakai versi baru.",
+      "downloadingDesc": "{{percent}}% terunduh",
+      "availableDesc": "Pembaruan akan diunduh di latar belakang.",
+      "install": "Instal & mulai ulang",
+      "retry": "Coba lagi",
+      "whatsNew": "Yang baru",
+      "hideNotes": "Tutup catatan",
+      "dismiss": "Tutup info pembaruan"
+    }
   },
   "settings": {
     "eyebrow": "Aplikasi",
@@ -221,7 +239,13 @@
       "title": "Bahasa",
       "description": "Pilih bahasa tampilan untuk antarmuka SoftGlaze.",
       "label": "Bahasa tampilan",
-      "hint": "Perubahan langsung berlaku di seluruh aplikasi."
+      "hint": "Perubahan langsung berlaku di seluruh aplikasi.",
+      "urduFont": {
+        "label": "Font Urdu",
+        "hint": "Nastaliq adalah gaya tulisan tradisional bahasa Urdu. Font ini sudah ada di dalam aplikasi dan hanya dimuat saat Anda memilihnya.",
+        "default": "Font sistem (bawaan)",
+        "nastaliq": "Nastaliq (Noto Nastaliq Urdu)"
+      }
     }
   },
   "startLinks": {
@@ -230,7 +254,24 @@
     "loadFailed": "Tidak bisa memuat tautan tersimpan.",
     "loadError": "Tidak bisa memuat tautan Anda ({{error}}). Penyimpanan dinonaktifkan agar daftar yang tersimpan tidak tertimpa.",
     "retry": "Coba lagi",
-    "droppedRows_other": "{{count}} baris tidak disimpan karena URL-nya bukan alamat http(s) yang valid: {{rows}}"
+    "droppedRows_other": "{{count}} baris tidak disimpan karena URL-nya bukan alamat http(s) yang valid: {{rows}}",
+    "saved": "Tersimpan",
+    "save": "Simpan",
+    "links": "Tautan",
+    "autoLabel": "Label otomatis",
+    "autoLabelHint": "Isi label kosong dari URL-nya",
+    "add": "Tambah",
+    "loading": "Memuat…",
+    "empty": "Belum ada tautan. Pakai Tambah massal atau Tambah.",
+    "labelPlaceholder": "Label",
+    "urlLabel": "Alamat tautan",
+    "remove": "Hapus",
+    "bulkTitle": "Tambah massal",
+    "bulkHint": "Tempel beberapa URL, satu per baris. Masing-masing mendapat label dari domainnya, yang bisa Anda ubah di daftar. Duplikat dan baris yang bukan http(s) dilewati.",
+    "addAll": "Tambah semua",
+    "clear": "Kosongkan",
+    "bulkResult": "Ditambahkan: {{added}}. Dilewati: {{skipped}} (duplikat atau bukan http/https).",
+    "saveFailed": "Tidak bisa menyimpan."
   },
   "storeRating": {
     "cardTitle": "Suka dengan SoftGlaze Browser?",
@@ -270,5 +311,11 @@
     },
     "cta": "Lihat penawaran",
     "dismiss": "Sembunyikan penawaran ini"
+  },
+  "errorBoundary": {
+    "title": "Ada yang salah di halaman ini.",
+    "body": "Bagian lain aplikasi masih berjalan. Coba lagi, atau buka halaman lain dari sidebar.",
+    "retry": "Coba lagi",
+    "unknown": "Galat tidak dikenal"
   }
 }
