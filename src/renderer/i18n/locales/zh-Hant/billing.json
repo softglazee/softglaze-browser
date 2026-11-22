@@ -98,7 +98,7 @@
   },
   "redeem": {
     "label": "有購買碼？",
-    "apply": "應用程式",
+    "apply": "套用",
     "success": "購買碼已套用，謝謝！",
     "errors": {
       "empty": "請輸入你的購買碼。",
