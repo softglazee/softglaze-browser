@@ -1,0 +1,43 @@
+{
+  "_meta": {
+    "greetingNamed": "Halo {{name}},",
+    "greetingNoName": "Halo,",
+    "sentBy": "Email ini dikirim oleh {{company}} ke {{email}}.",
+    "unsub": "Tidak ingin menerima email ini?",
+    "unsubLink": "Berhenti berlangganan",
+    "essential": "Anda menerima email ini karena alamat ini dimasukkan di aplikasi.",
+    "purchase": "Anda menerima email ini karena alamat ini dipakai untuk pembelian di situs kami."
+  },
+  "verify_code": {
+    "subject": "Kode verifikasi SoftGlaze Anda",
+    "html": "<p>{{greeting}}</p>\n<p>Kode verifikasi Anda:</p>\n<p style=\"font-size:28px;font-weight:700;letter-spacing:6px;margin:16px 0;color:#111827;\">{{code}}</p>\n<p>Masukkan kode ini di {{appName}} untuk mengonfirmasi alamat email ini. Kode berlaku selama {{codeMinutes}} menit.</p>\n<p>Jika Anda tidak meminta kode ini, abaikan saja email ini. Tidak ada yang berubah selama kode belum dimasukkan.</p>"
+  },
+  "welcome": {
+    "subject": "Selamat datang di SoftGlaze Browser",
+    "html": "<p>{{greeting}}</p>\n<p>Terima kasih sudah mencoba {{appName}}. Masa uji coba gratis Anda aktif sampai {{trialEndsAt}}, dan selama uji coba Anda bisa memakai fitur {{plan}}.</p>\n<p>Langkah pertama yang bagus: buat profil, pasang proxy jika Anda memakainya, lalu buka profil itu. Setiap profil menyimpan cookie dan pengaturannya sendiri, terpisah dari profil lain.</p>\n<p>Jika ada yang kurang jelas atau tidak berfungsi, balas saja email ini. Kami membaca setiap balasan.</p>\n<p>Tim SoftGlaze</p>"
+  },
+  "tips": {
+    "subject": "Tiga hal yang patut dicoba di SoftGlaze Browser",
+    "html": "<p>{{greeting}}</p>\n<p>Berikut tiga hal yang dianggap berguna oleh banyak pengguna di minggu pertama:</p>\n<ol>\n<li><strong>Satu profil per akun.</strong> Simpan setiap akun di profilnya sendiri, supaya cookie dan login tidak pernah tercampur.</li>\n<li><strong>Cek proxy sebelum dipakai.</strong> Daftar proxy bisa menguji proxy dan menunjukkan dari mana proxy itu terhubung.</li>\n<li><strong>Undang tim Anda.</strong> Tambahkan anggota tim di aplikasi; setiap orang masuk dengan login masing-masing.</li>\n</ol>\n<p>Masa uji coba Anda berlaku sampai {{trialEndsAt}}. Silakan bertanya: cukup balas email ini.</p>"
+  },
+  "trial_ending": {
+    "subject": "Masa uji coba SoftGlaze Anda berakhir pada {{trialEndsAt}}",
+    "html": "<p>{{greeting}}</p>\n<p>Sekadar mengingatkan: masa uji coba gratis {{appName}} Anda berakhir pada {{trialEndsAt}}.</p>\n<p>Setelah itu Anda otomatis pindah ke paket Free. Tidak ada yang dikunci dan tidak ada yang dihapus: Anda tetap punya semua profil (25 bisa dibuka), proxy dan fingerprint Anda, serta aplikasi ponsel dan web.</p>\n<p>Untuk tetap mendapat profil tanpa batas, 3 profil berjalan sekaligus, kursi tim, sinkronisasi cloud, dan aksi AI tanpa batas, pilih Pro di aplikasi (buka Tagihan), mulai US$5 per bulan. Jika Anda lebih suka membayar lewat invoice, balas email ini dan kami akan mengirimkannya.</p>"
+  },
+  "trial_ended": {
+    "subject": "Anda sekarang memakai paket SoftGlaze Free",
+    "html": "<p>{{greeting}}</p>\n<p>Masa uji coba Anda sudah berakhir. Sekarang Anda memakai paket Free.</p>\n<p>Yang tetap Anda miliki: semua profil (25 bisa dibuka), proxy dan fingerprint Anda, aplikasi ponsel dan web.</p>\n<p>Pro menambahkan: profil tanpa batas, 3 profil berjalan sekaligus, kursi tim, sinkronisasi cloud, dan aksi AI tanpa batas, mulai US$5 per bulan. Untuk upgrade, buka Tagihan di aplikasi, atau balas email ini untuk membayar lewat invoice. Jika Anda sudah punya kode pembelian, masukkan di Tagihan.</p>\n<p>Terima kasih sudah mencoba {{appName}}.</p>"
+  },
+  "come_back": {
+    "subject": "Apakah SoftGlaze Browser masih ada di daftar Anda?",
+    "html": "<p>{{greeting}}</p>\n<p>Masa uji coba SoftGlaze Anda selesai seminggu lalu. Jika Anda masih mencari cara untuk memisahkan banyak akun, aplikasinya siap kapan pun Anda siap: profil Anda masih ada di komputer Anda.</p>\n<p>Jika ada yang membuat Anda berhenti, kami ingin tahu apa itu. Balas email ini; kami membaca setiap balasan.</p>\n<p>Versi terbaru ada di sini: <a href=\"{{downloadUrl}}\">{{downloadUrl}}</a></p>"
+  },
+  "activation_code": {
+    "subject": "Kode aktivasi SoftGlaze Browser Anda",
+    "html": "<p>{{greeting}}</p>\n<p>Terima kasih sudah membeli {{appName}}. Pembayaran Anda untuk paket {{plan}} ({{term}}) sudah selesai.</p>\n<p>Kode aktivasi Anda:</p>\n<p style=\"font-size:28px;font-weight:700;letter-spacing:6px;margin:16px 0;color:#111827;\">{{code}}</p>\n<p>Cara memakainya:</p>\n<ol>\n<li>Instal {{appName}} jika belum: <a href=\"{{downloadUrl}}\">{{downloadUrl}}</a></li>\n<li>Buka aplikasi dan masuk ke Tagihan.</li>\n<li>Di bagian \"Punya kode pembelian?\", tempel kode lalu klik Terapkan.</li>\n</ol>\n<p>Kode ini berlaku sekali, di komputer tempat Anda memasukkannya. Simpan email ini sampai kodenya Anda pakai.</p>\n<p>Jika ada yang tidak berfungsi, balas email ini atau tulis ke {{supportEmail}}. Kami akan membantu, mengirim ulang kodenya, atau mengembalikan dana Anda.</p>\n<p>Tim SoftGlaze</p>"
+  },
+  "free_plan_launch": {
+    "subject": "Kabar baik: SoftGlaze sekarang punya paket gratis",
+    "html": "<p>{{greeting}}</p>\n<p>Saat masa uji coba {{appName}} Anda berakhir, aplikasi berhenti membuka profil. Sekarang sudah berubah: SoftGlaze kini punya paket Free, dan paket itu langsung jadi milik Anda begitu aplikasi diperbarui.</p>\n<p>Di paket Free Anda bisa:</p>\n<ul>\n<li>menyimpan 25 profil browser dan menjalankan 1 profil dalam satu waktu</li>\n<li>memakai semua pengaturan fingerprint dan proxy Anda sendiri</li>\n<li>melihat profil dan menyetujui permintaan AI dari aplikasi ponsel dan web</li>\n<li>menjalankan 25 aksi AI per hari</li>\n</ul>\n<p>Profil, proxy, dan pengaturan Anda masih ada di komputer Anda. Unduh versi terbaru di sini: <a href=\"{{downloadUrl}}\">{{downloadUrl}}</a></p>\n<p>Jika butuh lebih, Pro menambahkan profil tanpa batas, 3 profil berjalan sekaligus, kursi tim, sinkronisasi cloud, dan aksi AI tanpa batas, mulai US$5 per bulan.</p>\n<p>Tim SoftGlaze</p>"
+  }
+}

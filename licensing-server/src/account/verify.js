@@ -26,9 +26,14 @@ function cleanName(v) {
   const s = v.replace(/[\u0000-\u001f\u007f<>]/g, '').replace(/\s+/g, ' ').trim();
   return s ? s.slice(0, 200) : null;
 }
+// The language the emails use: the two-letter code ("es-MX" -> "es", "pt-BR" -> "pt", "zh-Hans" -> "zh"),
+// except Traditional Chinese, kept as "zh-Hant" (zh-Hant, zh-TW, zh-HK, zh-MO) because it has its own copy.
 function cleanLang(v) {
   const s = typeof v === 'string' ? v.trim() : '';
-  return /^[a-z]{2}(?:[-_][A-Za-z]{2})?$/.test(s) ? s.slice(0, 2).toLowerCase() : null;
+  if (!/^[a-z]{2}(?:[-_][A-Za-z]{2,4})?$/.test(s)) return null;
+  const base = s.slice(0, 2).toLowerCase();
+  if (base === 'zh' && /[-_](hant|tw|hk|mo)$/i.test(s)) return 'zh-Hant';
+  return base;
 }
 // Country from an explicit ISO code, else from a locale like "es-MX".
 function cleanCountry(country, lang) {
