@@ -10,11 +10,13 @@
 //         bridge: { resolveMember, runAs, listProfiles, startProfile, stopProfile, approvals,
 //                   canAnswerApproval, logActivity },
 //         sync: (sync/local.js host contract) + { closeProfile(localId), notify(event) },
+//         relayEntitlement?: async (mailbox) -> { token, exp } (throws with .status on failure; see entitlement.js),
 //         WebSocketImpl? }
 const os = require('node:os');
 const config = require('./config');
 const { loadOrCreateIdentity, resetIdentity } = require('./identity');
 const { RelayClient } = require('./relayClient');
+const { createEntitlementSource } = require('./entitlement');
 const { MobileCompanion } = require('./companion');
 const { createPrismaDeviceStore, publicDevice } = require('./devices');
 const { MobileSync, cachedStore } = require('./sync/service');
@@ -112,7 +114,15 @@ async function connect() {
   });
   state.sync.on('changed', () => emitChanged({ what: 'sync' }));
 
-  state.relay = new RelayClient({ url: relayUrl, host: relayHost, identity, WebSocketImpl: h.WebSocketImpl, log: (...a) => console.warn('[mobile:relay]', ...a) });
+  const entitlement = typeof h.relayEntitlement === 'function' ? createEntitlementSource({ fetchToken: h.relayEntitlement }) : null;
+  state.relay = new RelayClient({
+    url: relayUrl,
+    host: relayHost,
+    identity,
+    WebSocketImpl: h.WebSocketImpl,
+    log: (...a) => console.warn('[mobile:relay]', ...a),
+    ...(entitlement ? { entitlement: (mailbox) => entitlement.get(mailbox), onEntitlementRejected: () => entitlement.invalidate() } : {})
+  });
   state.companion = new MobileCompanion({
     identity,
     relay: state.relay,

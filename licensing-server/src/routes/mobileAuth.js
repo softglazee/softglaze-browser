@@ -21,7 +21,8 @@
 //   POST /v1/mobile/auth/sign-out     (Bearer) -> 204 (also when the token is already gone)
 //   POST /v1/mobile/auth/sign-out-all (Bearer) -> 200 { ok, revoked }: every phone of the account
 //   POST /v1/mobile/entitlement { mailbox? } (Bearer) -> 200 { token, exp, payload } | 403 no_entitlement |
-//        503 entitlement_unavailable
+//        503 entitlement_unavailable. Bearer = a phone session, or the desktop app's account session (the PC's
+//        companion sends the token to the relay too).
 // <session> = { token, expiresAt (ms), account: { id, email, name, tier: trial | pro | enterprise,
 //   plan: trial | free | pro | enterprise, lifetime: boolean, planEndsAt: ISO date | null (lifetime, Free) } }.
 const express = require('express');
@@ -119,7 +120,7 @@ router.post('/auth/sign-out-all', asyncHandler(async (req, res) => {
 }));
 
 router.post('/entitlement', asyncHandler(async (req, res) => {
-  const found = await bearerSession(prisma, bearerOf(req), { kinds: ['mobile'] });
+  const found = await bearerSession(prisma, bearerOf(req), { kinds: ['mobile', 'desktop'] });
   if (!found) return send(res, SESSION_INVALID);
   send(res, await mobile.entitlement(prisma, found, req.body || {}, { settings: await getSettings(prisma, found.customer.tenantId) }));
 }));

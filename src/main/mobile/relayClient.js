@@ -7,8 +7,13 @@
 //   send {id, to, env, push?} -> ack {id, status: delivered | queued | rejected}
 //   msg {qid, from, env, ticket?} -> handler, then got {qid} (pairing messages use qid 'pair')
 //
-// Reconnects with jittered exponential back-off. Close codes: 4001 auth failed, 4002 replaced by
-// a newer socket of the same mailbox, 4003 revoked by the relay admin (no fast retry for these).
+// Reconnects with jittered exponential back-off. Close codes: 4001 auth failed (also: no valid
+// entitlement token while the relay enforces them), 4002 replaced by a newer socket of the same
+// mailbox, 4003 revoked by the relay admin (no fast retry for these); 4005 the entitlement token
+// ran out (fast retry: the next auth carries a fresh one).
+//
+// Entitlement (opts.entitlement, optional): an async (mailbox) -> token | undefined, asked on every
+// challenge and sent in `auth`. No token = auth without one (the relay's grace mode accepts it).
 const { EventEmitter } = require('node:events');
 const { P } = require('./protocol');
 
@@ -17,10 +22,20 @@ const PING_EVERY_MS = 25_000;
 const BACKOFF_MIN_MS = 1_000;
 const BACKOFF_MAX_MS = 60_000;
 const SLOW_CLOSE_CODES = new Set([4001, 4002, 4003]);
+// The relay closes a socket that has not signed in within 10 s: never wait longer for a token.
+const ENTITLEMENT_WAIT_MS = 5_000;
+
+function withTimeout(promise, ms) {
+  return new Promise((resolve) => {
+    const t = setTimeout(() => resolve(undefined), ms);
+    if (t.unref) t.unref();
+    Promise.resolve(promise).then((v) => { clearTimeout(t); resolve(v); }, () => { clearTimeout(t); resolve(undefined); });
+  });
+}
 
 class RelayClient extends EventEmitter {
   // opts: { url, host, identity, WebSocketImpl?, role?, ackTimeoutMs?, pingMs?, backoffMinMs?,
-  //         backoffMaxMs?, random?, setTimer?, clearTimer?, log? }
+  //         backoffMaxMs?, random?, setTimer?, clearTimer?, log?, entitlement?, onEntitlementRejected? }
   constructor(opts) {
     super();
     this.url = opts.url;
@@ -34,6 +49,9 @@ class RelayClient extends EventEmitter {
     this.backoffMaxMs = opts.backoffMaxMs || BACKOFF_MAX_MS;
     this.random = opts.random || Math.random;
     this.log = opts.log || (() => {});
+    this.entitlement = typeof opts.entitlement === 'function' ? opts.entitlement : null;
+    this.onEntitlementRejected = typeof opts.onEntitlementRejected === 'function' ? opts.onEntitlementRejected : null;
+    this.entitlementWaitMs = opts.entitlementWaitMs || ENTITLEMENT_WAIT_MS;
     this.ws = null;
     this.state = 'idle'; // idle | connecting | authenticating | ready | stopped
     this.attempt = 0;
@@ -97,12 +115,9 @@ class RelayClient extends EventEmitter {
     switch (f.t) {
       case 'challenge': {
         this.state = 'authenticating';
-        try {
-          this._write(P.buildAuthFrame(this.identity, f.nonce, this.role, this.host));
-        } catch (e) {
-          this.lastError = e.message;
-          this._teardown(1000, 'auth');
-        }
+        if (!this.entitlement) { this._sendAuth(ws, f.nonce, undefined); return; }
+        withTimeout(this.entitlement(this.identity.mailboxId), this.entitlementWaitMs)
+          .then((token) => this._sendAuth(ws, f.nonce, typeof token === 'string' && token ? token : undefined));
         return;
       }
       case 'ready':
@@ -128,6 +143,9 @@ class RelayClient extends EventEmitter {
       }
       case 'error':
         this.lastError = f.code || 'error';
+        if ((f.code === 'entitlement' || f.code === 'entitlement_expired') && this.onEntitlementRejected) {
+          try { this.onEntitlementRejected(f.code); } catch (e) { /* never block the client */ }
+        }
         this.emit('relay-error', f);
         return;
       case 'linked':
@@ -136,6 +154,16 @@ class RelayClient extends EventEmitter {
         this.emit(f.t, f);
         return;
       default:
+    }
+  }
+
+  _sendAuth(ws, nonce, entitlement) {
+    if (ws !== this.ws) return; // closed or replaced while the token was fetched
+    try {
+      this._write(P.buildAuthFrame(this.identity, nonce, this.role, this.host, entitlement));
+    } catch (e) {
+      this.lastError = e.message;
+      this._teardown(1000, 'auth');
     }
   }
 

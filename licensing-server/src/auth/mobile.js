@@ -242,7 +242,10 @@ function signEntitlement(payload, key) {
 }
 
 // POST /v1/mobile/entitlement { mailbox? }. -> { token, exp (unix seconds), payload } | 403 no_entitlement |
-// 503 entitlement_unavailable. type: trial while the trial runs, paid for a paid or complimentary licence.
+// 503 entitlement_unavailable. type: trial while the trial runs, paid for a paid or complimentary licence, free
+// for every other account (the Free plan includes the phone and web app: view and approve, D:\SoftGlaze-Browser-
+// Free-Plan\00-PLAN.md). MOBILE_ENTITLEMENT_FREE=0 turns the free tokens off (403 no_entitlement as before).
+// Callers: the phone (mobile session) and the desktop companion (its desktop account session), see mobileAuth.js.
 async function entitlement(db, found, input, { settings, now = Date.now() }) {
   const key = entitlementKey();
   if (!key) return err(503, 'entitlement_unavailable', 'The relay entitlement is not set up on the server yet.');
@@ -253,13 +256,14 @@ async function entitlement(db, found, input, { settings, now = Date.now() }) {
   const paidEnd = Math.max(customer.paidUntil ? ms(customer.paidUntil) + graceMs : 0, customer.complimentaryUntil ? ms(customer.complimentaryUntil) : 0);
   if (customer.tier && paidEnd > now) { type = 'paid'; ends.push(paidEnd); }
   else if (customer.status === 'trial' && customer.trialEndsAt && ms(customer.trialEndsAt) > now) { type = 'trial'; ends.push(ms(customer.trialEndsAt)); }
+  if (!type && liveEnv('MOBILE_ENTITLEMENT_FREE') !== '0') type = 'free';
   if (!type) return err(403, 'no_entitlement', 'This account has no active plan or trial.');
   const exp = Math.floor(Math.min(now + ENTITLEMENT_MAX_MS, ...ends) / 1000);
   const mailbox = input && typeof input.mailbox === 'string' && /^[A-Za-z0-9_-]{8,128}$/.test(input.mailbox) ? input.mailbox : undefined;
   const lic = await db.license.findMany({ where: { tenantId: customer.tenantId, customerId: customer.id, status: 'active' } });
   const seats = lic.filter((l) => l.currentPeriodEnd && ms(l.currentPeriodEnd) > now).length;
   const payload = {
-    v: 1, customer: customer.id, tier: customer.tier || 'pro', type, seats, phonesAllowed: phonesAllowed(),
+    v: 1, customer: customer.id, tier: type === 'free' ? 'free' : customer.tier || 'pro', type, seats, phonesAllowed: phonesAllowed(),
     iat: Math.floor(now / 1000), exp, ...(mailbox ? { mailbox } : {})
   };
   return { status: 200, body: { token: signEntitlement(payload, key), exp, payload } };

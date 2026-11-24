@@ -337,13 +337,21 @@ test('phone: email code sign-in (challengeId), wrong and used codes, and the pho
   delete process.env.MOBILE_PHONES_ALLOWED;
 });
 
-test('phone: the relay entitlement is an Ed25519 token the relay format accepts, only with an active trial or plan', async () => {
+test('phone: the relay entitlement is an Ed25519 token the relay format accepts; Free accounts get type free', async () => {
   const r = await phoneGoogle({ sub: '424242', email: 'ent@example.com' });
   assert.equal((await call('POST', '/v1/mobile/entitlement', { headers: bearer(r.json.token), body: {} })).json.error, 'entitlement_unavailable');
   const kp = crypto.generateKeyPairSync('ed25519');
   process.env.RELAY_ENTITLEMENT_SIGNING_KEY = kp.privateKey.export({ format: 'der', type: 'pkcs8' }).toString('base64');
   const pub = kp.publicKey.export({ format: 'jwk' }).x; // what the relay gets as RELAY_ENTITLEMENT_PUBKEY
+  // No plan, no trial: the Free plan (phone view + approve) gets a free token, unless switched off.
+  const free = await call('POST', '/v1/mobile/entitlement', { headers: bearer(r.json.token), body: {} });
+  assert.equal(free.status, 200, free.text);
+  assert.equal(free.json.payload.type, 'free');
+  assert.equal(free.json.payload.tier, 'free');
+  assert.ok(free.json.exp * 1000 <= Date.now() + 7 * 86400000 + 1000);
+  process.env.MOBILE_ENTITLEMENT_FREE = '0';
   assert.equal((await call('POST', '/v1/mobile/entitlement', { headers: bearer(r.json.token), body: {} })).json.error, 'no_entitlement');
+  delete process.env.MOBILE_ENTITLEMENT_FREE;
   const until = new Date(Date.now() + 30 * 86400000);
   await db.customer.update({ where: { id: r.json.account.id }, data: { status: 'paid', tier: 'enterprise', paidUntil: until } });
   const e = await call('POST', '/v1/mobile/entitlement', { headers: bearer(r.json.token), body: { mailbox: 'mbx_12345678' } });
@@ -359,6 +367,28 @@ test('phone: the relay entitlement is an Ed25519 token the relay format accepts,
   assert.equal(payload.mailbox, 'mbx_12345678');
   assert.ok(payload.exp * 1000 > Date.now() && payload.exp * 1000 <= Date.now() + 7 * 86400000 + 1000, 'at most the 7-day offline grace');
   assert.equal(typeof payload.phonesAllowed, 'number');
+  delete process.env.RELAY_ENTITLEMENT_SIGNING_KEY;
+});
+
+test('desktop: the account session of the app also gets a relay entitlement (the PC companion sends it); web tokens do not', async () => {
+  const kp = crypto.generateKeyPairSync('ed25519');
+  process.env.RELAY_ENTITLEMENT_SIGNING_KEY = kp.privateKey.export({ format: 'der', type: 'pkcs8' }).toString('base64');
+  const inst = await H.newInstall(T, 'relay-ent');
+  assert.equal((await H.verify(T, inst, 'pcent@example.com')).status, 200);
+  const install = await db.install.findUnique({ where: { id: inst.installId } });
+  const token = b64url(crypto.randomBytes(32));
+  const ended = b64url(crypto.randomBytes(32));
+  const sha = (x) => crypto.createHash('sha256').update(x).digest('hex');
+  const sess = { tenantId: T, customerId: install.customerId, installId: inst.installId, provider: 'google', emailKey: 'pcent@example.com', kind: 'desktop' };
+  await db.authSession.create({ data: { ...sess, tokenHash: sha(token), expiresAt: new Date(Date.now() + 86400000) } });
+  await db.authSession.create({ data: { ...sess, tokenHash: sha(ended), expiresAt: new Date(Date.now() - 1000) } });
+  const e = await call('POST', '/v1/mobile/entitlement', { headers: bearer(token), body: { mailbox: 'pcmailbox_1234' } });
+  assert.equal(e.status, 200, e.text);
+  assert.equal(e.json.payload.mailbox, 'pcmailbox_1234');
+  assert.equal(e.json.payload.customer, install.customerId);
+  assert.equal((await call('POST', '/v1/mobile/entitlement', { headers: bearer(ended), body: {} })).status, 401);
+  const w = await webGoogle({ sub: '7171', email: 'webent@example.com' });
+  assert.equal((await call('POST', '/v1/mobile/entitlement', { headers: bearer(w.json.access_token), body: {} })).status, 401);
   delete process.env.RELAY_ENTITLEMENT_SIGNING_KEY;
 });
 
