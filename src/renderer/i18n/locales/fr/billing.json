@@ -25,7 +25,8 @@
     "renews": "renouvellement le {{date}}",
     "noLicense": "Gestion des licences active : aucune licence payante pour cette installation pour l'instant.",
     "trialVerified": "Essai gratuit, vérifié",
-    "trialEnds": "se termine le {{date}}"
+    "trialEnds": "se termine le {{date}}",
+    "lifetime": "À vie"
   },
   "current": {
     "title": "Forfait actuel",
@@ -91,7 +92,8 @@
     "currentPlan": "Forfait actuel",
     "upgradeEnterprise": "Passer à Enterprise",
     "downgradePro": "Revenir à Pro",
-    "choosePlan": "Choisir {{name}}"
+    "choosePlan": "Choisir {{name}}",
+    "lifetimeOwned": "Forfait à vie actif"
   },
   "trial": {
     "started": "Votre essai gratuit avec accès complet est actif. Profitez-en !",

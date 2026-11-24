@@ -25,7 +25,8 @@
     "renews": "odnawia się {{date}}",
     "noLicense": "Licencjonowanie aktywne, ale brak jeszcze płatnej licencji dla tej instalacji.",
     "trialVerified": "Bezpłatny okres próbny, zweryfikowany",
-    "trialEnds": "kończy się {{date}}"
+    "trialEnds": "kończy się {{date}}",
+    "lifetime": "Dożywotnio"
   },
   "current": {
     "title": "Obecny plan",
@@ -95,7 +96,8 @@
     "currentPlan": "Obecny plan",
     "upgradeEnterprise": "Przejdź na Enterprise",
     "downgradePro": "Przejdź na Pro",
-    "choosePlan": "Wybierz {{name}}"
+    "choosePlan": "Wybierz {{name}}",
+    "lifetimeOwned": "Plan dożywotni aktywny"
   },
   "trial": {
     "started": "Bezpłatny okres próbny z pełnym dostępem jest aktywny. Miłego korzystania!",

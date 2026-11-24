@@ -25,7 +25,8 @@
     "renews": "{{date}} 續訂",
     "noLicense": "授權服務已啟用：此安裝尚無付費授權。",
     "trialVerified": "免費試用，已驗證",
-    "trialEnds": "{{date}} 結束"
+    "trialEnds": "{{date}} 結束",
+    "lifetime": "終身"
   },
   "current": {
     "title": "目前方案",
@@ -87,7 +88,8 @@
     "currentPlan": "目前方案",
     "upgradeEnterprise": "升級到 Enterprise",
     "downgradePro": "降級到 Pro",
-    "choosePlan": "選擇 {{name}}"
+    "choosePlan": "選擇 {{name}}",
+    "lifetimeOwned": "終身方案已生效"
   },
   "trial": {
     "started": "你的免費試用已開始，可使用全部功能。祝你使用愉快！",

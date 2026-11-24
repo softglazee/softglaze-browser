@@ -25,7 +25,8 @@
     "renews": "{{date}} 续订",
     "noLicense": "许可证服务已启用：此安装尚无付费许可证。",
     "trialVerified": "免费试用，已验证",
-    "trialEnds": "{{date}} 结束"
+    "trialEnds": "{{date}} 结束",
+    "lifetime": "终身"
   },
   "current": {
     "title": "当前套餐",
@@ -87,7 +88,8 @@
     "currentPlan": "当前套餐",
     "upgradeEnterprise": "升级到 Enterprise",
     "downgradePro": "降级到 Pro",
-    "choosePlan": "选择 {{name}}"
+    "choosePlan": "选择 {{name}}",
+    "lifetimeOwned": "终身方案已生效"
   },
   "trial": {
     "started": "你的免费试用已开始，可使用全部功能。祝你使用愉快！",

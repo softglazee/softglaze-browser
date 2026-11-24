@@ -25,7 +25,8 @@
     "renews": "يتجدد في {{date}}",
     "noLicense": "الترخيص يعمل، لكن لا يوجد ترخيص مدفوع لهذا التثبيت بعد.",
     "trialVerified": "تجربة مجانية، تم التحقق منها",
-    "trialEnds": "تنتهي في {{date}}"
+    "trialEnds": "تنتهي في {{date}}",
+    "lifetime": "مدى الحياة"
   },
   "current": {
     "title": "الخطة الحالية",
@@ -103,7 +104,8 @@
     "currentPlan": "الخطة الحالية",
     "upgradeEnterprise": "الترقية إلى Enterprise",
     "downgradePro": "الانتقال إلى Pro",
-    "choosePlan": "اختر {{name}}"
+    "choosePlan": "اختر {{name}}",
+    "lifetimeOwned": "خطة مدى الحياة مفعّلة"
   },
   "trial": {
     "started": "تجربتك المجانية نشطة مع وصول كامل. استمتع!",

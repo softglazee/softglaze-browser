@@ -81,3 +81,13 @@ export function initialPeriod(plans, current) {
   const cur = (Array.isArray(plans) ? plans : []).find((p) => p && p.kind !== 'trial' && isCurrentPlan(p, { ...current, plans }));
   return cur && billingPeriodOf(cur) === 'year' && current && current.currentPlanKey ? 'year' : 'month';
 }
+
+// A lifetime licence (Black Friday 2026 lifetime plans, lifetime codes): a "-lifetime" plan key or a term
+// more than 50 years out, the same test as the licensing server (licensing-server/src/plans/lifetimeGuard.js).
+// Billing shows "Lifetime" instead of "renews <2126 date>" and offers no subscription switch for it.
+const LIFETIME_AFTER_MS = 600 * 30 * 86400000;
+export function isLifetimeTerm({ planKey, endsAt } = {}, now = Date.now()) {
+  const end = endsAt ? new Date(endsAt).getTime() : 0;
+  if (!(end > now)) return false;
+  return end - now > LIFETIME_AFTER_MS || /-lifetime$/.test(String(planKey || ''));
+}

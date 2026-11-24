@@ -25,7 +25,8 @@
     "renews": "{{date}} tarihinde yenilenir",
     "noLicense": "Lisanslama etkin, ancak bu kurulum için henüz ücretli lisans yok.",
     "trialVerified": "Ücretsiz deneme, doğrulandı",
-    "trialEnds": "{{date}} tarihinde biter"
+    "trialEnds": "{{date}} tarihinde biter",
+    "lifetime": "Ömür boyu"
   },
   "current": {
     "title": "Mevcut plan",
@@ -87,7 +88,8 @@
     "currentPlan": "Mevcut plan",
     "upgradeEnterprise": "Enterprise'a yükselt",
     "downgradePro": "Pro'ya geç",
-    "choosePlan": "{{name}} seç"
+    "choosePlan": "{{name}} seç",
+    "lifetimeOwned": "Ömür boyu plan etkin"
   },
   "trial": {
     "started": "Tam erişimli ücretsiz denemeniz etkin. İyi kullanımlar!",

@@ -25,7 +25,8 @@
     "renews": "renews {{date}}",
     "noLicense": "Licensing active, no paid license yet for this install.",
     "trialVerified": "Free trial, verified",
-    "trialEnds": "ends {{date}}"
+    "trialEnds": "ends {{date}}",
+    "lifetime": "Lifetime"
   },
   "current": {
     "title": "Current plan",
@@ -87,7 +88,8 @@
     "currentPlan": "Current plan",
     "upgradeEnterprise": "Upgrade to Enterprise",
     "downgradePro": "Downgrade to Pro",
-    "choosePlan": "Choose {{name}}"
+    "choosePlan": "Choose {{name}}",
+    "lifetimeOwned": "Lifetime plan active"
   },
   "trial": {
     "started": "Your free trial is active of full access. Enjoy!",

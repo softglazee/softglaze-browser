@@ -25,7 +25,8 @@
     "renews": "verlängert sich am {{date}}",
     "noLicense": "Lizenzierung aktiv, aber noch keine bezahlte Lizenz für diese Installation.",
     "trialVerified": "Kostenlose Testphase, bestätigt",
-    "trialEnds": "endet am {{date}}"
+    "trialEnds": "endet am {{date}}",
+    "lifetime": "Lebenslang"
   },
   "current": {
     "title": "Aktueller Tarif",
@@ -87,7 +88,8 @@
     "currentPlan": "Aktueller Tarif",
     "upgradeEnterprise": "Auf Enterprise upgraden",
     "downgradePro": "Zu Pro wechseln",
-    "choosePlan": "{{name}} wählen"
+    "choosePlan": "{{name}} wählen",
+    "lifetimeOwned": "Lebenslanger Tarif aktiv"
   },
   "trial": {
     "started": "Ihre kostenlose Testphase mit vollem Zugriff ist aktiv. Viel Spaß!",

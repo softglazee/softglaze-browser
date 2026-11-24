@@ -12,6 +12,7 @@ import { useDialog } from '@/lib/useDialog.js';
 import { usePermissions } from '@/lib/usePermissions.js';
 import { DenyTip } from '@/components/ui/GuardedButton.jsx';
 import { fmtDate } from '@/lib/intl.mjs';
+import { isLifetimeTerm } from '@/lib/planPeriods.mjs';
 
 // Plan-limit refusals from main (SEAT_LIMIT, ENTERPRISE_REQUIRED) in the UI language; anything else
 // keeps main's message.
@@ -404,7 +405,7 @@ function SuperAdminLicensePanel() {
                 <div className="text-[11.5px] text-muted-foreground mt-1">
                   {lic.isTrial && t('license.detail.trial', { count: lic.daysLeftTrial })}
                   {lic.isGrace && t('license.detail.grace', { count: lic.daysLeftGrace })}
-                  {lic.isPaid && t('license.detail.paid', { date: lic.endsAt ? fmtDate(lic.endsAt) : '-' })}
+                  {lic.isPaid && (isLifetimeTerm({ endsAt: lic.endsAt }) ? t('backend.lifetime', { ns: 'billing' }) : t('license.detail.paid', { date: lic.endsAt ? fmtDate(lic.endsAt) : '-' }))}
                   {lic.isBanned && (r.banReason || t('status.banned'))}
                   {lic.clockTamper && <span className="ms-2 text-amber-400">{t('license.detail.clockAnomaly')}</span>}
                 </div>

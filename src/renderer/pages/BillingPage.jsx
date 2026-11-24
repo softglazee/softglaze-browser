@@ -11,7 +11,7 @@ import { useDialog } from '@/lib/useDialog.js';
 import billingEn from '@/i18n/locales/en/billing.json';
 import { errorText } from '@/lib/signupFlow.mjs';
 import { isStoreMethod, storeOutcome, storePrice, storeDowngradeBlocked, methodsForPlan, sellablePlans, storeHasBothPeriods, STORE_POLL, MANAGE_SUBSCRIPTIONS_URL } from '@/lib/storePurchase.mjs';
-import { BILLING_PERIODS, hasBothPeriods, plansForPeriod, yearlyDeal, isCurrentPlan, initialPeriod } from '@/lib/planPeriods.mjs';
+import { BILLING_PERIODS, hasBothPeriods, plansForPeriod, yearlyDeal, isCurrentPlan, initialPeriod, isLifetimeTerm } from '@/lib/planPeriods.mjs';
 import { FreePlanBillingSection } from '@/components/FreePlan.jsx';
 import { fmtDate } from '@/lib/intl.mjs';
 
@@ -243,6 +243,8 @@ export default function BillingPage() {
   const showPeriods = hasBothPeriods(allPlans);
   const activePeriod = period || initialPeriod(allPlans, current);
   const plans = plansForPeriod(allPlans, activePeriod);
+  // A lifetime licence is never switched by a subscription (the server answers 409 lifetime_active).
+  const isLifetime = isPaid && isLifetimeTerm({ planKey: backend?.lease?.plan, endsAt: backend?.lease?.currentPeriodEnd });
 
   function planCta(plan) {
     if (plan.kind === 'trial') {
@@ -255,6 +257,7 @@ export default function BillingPage() {
     }
     if (isExempt) return { label: t('cta.included'), disabled: true, icon: Crown };
     if (isCurrentPlan(plan, current)) return { label: t('cta.currentPlan'), disabled: true, icon: Check };
+    if (isLifetime) return { label: t('cta.lifetimeOwned'), disabled: true, icon: Crown };
     if (plan.tier === 'enterprise' && currentTier === 'pro') return { label: t('cta.upgradeEnterprise'), disabled: false, icon: ArrowUpRight };
     if (storeDowngradeBlocked({ storeOnly, isPaid, currentTier, planTier: plan.tier })) return { label: t('cta.downgradePro'), disabled: true, icon: Wallet, note: t('store.downgradeNote') };
     if (plan.tier === 'pro' && currentTier === 'enterprise' && isPaid) return { label: t('cta.downgradePro'), disabled: false, icon: Wallet };
@@ -277,7 +280,7 @@ export default function BillingPage() {
             {backend.lease && backend.lease.type === 'trial'
               ? <>{t('backend.trialVerified')}{backend.lease.currentPeriodEnd ? ` · ${t('backend.trialEnds', { date: fmtDate(backend.lease.currentPeriodEnd) })}` : ''}</>
               : backend.lease
-                ? <>{t('backend.licensedVerified')} · <span className="capitalize">{backend.lease.tier}</span>{backend.lease.currentPeriodEnd ? ` · ${t('backend.renews', { date: fmtDate(backend.lease.currentPeriodEnd) })}` : ''}</>
+                ? <>{t('backend.licensedVerified')} · <span className="capitalize">{backend.lease.tier}</span>{isLifetime ? ` · ${t('backend.lifetime')}` : backend.lease.currentPeriodEnd ? ` · ${t('backend.renews', { date: fmtDate(backend.lease.currentPeriodEnd) })}` : ''}</>
                 : <>{t('backend.noLicense')}</>}
           </span>
           <span className="ms-auto text-[10.5px] text-muted-foreground font-mono">{backend.tenantId}</span>

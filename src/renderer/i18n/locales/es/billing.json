@@ -25,7 +25,8 @@
     "renews": "se renueva el {{date}}",
     "noLicense": "Licencia activa, aún no hay una licencia de pago para esta instalación.",
     "trialVerified": "Prueba gratuita verificada",
-    "trialEnds": "termina el {{date}}"
+    "trialEnds": "termina el {{date}}",
+    "lifetime": "De por vida"
   },
   "current": {
     "title": "Plan actual",
@@ -87,7 +88,8 @@
     "currentPlan": "Plan actual",
     "upgradeEnterprise": "Mejorar a Enterprise",
     "downgradePro": "Cambiar a Pro",
-    "choosePlan": "Elegir {{name}}"
+    "choosePlan": "Elegir {{name}}",
+    "lifetimeOwned": "Plan de por vida activo"
   },
   "trial": {
     "started": "Tu prueba gratuita con acceso completo está activa. ¡Disfrútala!",

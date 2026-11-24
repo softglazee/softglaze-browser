@@ -25,7 +25,8 @@
     "renews": "diperpanjang {{date}}",
     "noLicense": "Lisensi aktif: belum ada lisensi berbayar untuk instalasi ini.",
     "trialVerified": "Uji coba gratis, terverifikasi",
-    "trialEnds": "berakhir {{date}}"
+    "trialEnds": "berakhir {{date}}",
+    "lifetime": "Seumur hidup"
   },
   "current": {
     "title": "Paket saat ini",
@@ -83,7 +84,8 @@
     "currentPlan": "Paket saat ini",
     "upgradeEnterprise": "Tingkatkan ke Enterprise",
     "downgradePro": "Turun ke Pro",
-    "choosePlan": "Pilih {{name}}"
+    "choosePlan": "Pilih {{name}}",
+    "lifetimeOwned": "Paket seumur hidup aktif"
   },
   "trial": {
     "started": "Uji coba gratis dengan akses penuh sudah aktif. Selamat mencoba!",
