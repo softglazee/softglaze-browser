@@ -16,6 +16,7 @@ const { renderFor, sendNow, VERIFY_KEY_PREFIX } = require('../email/outbox');
 const transport = require('../email/transport');
 const { cleanLead, leadUpdate } = require('./lead');
 const { signedInOnInstall } = require('../auth/accounts');
+const review = require('../auth/reviewLogin');
 
 const err = (status, error, message, extra = {}) => ({ status, body: { error, message, ...extra } });
 
@@ -94,6 +95,10 @@ async function startVerification(db, tenant, install, input, { ipHash = null, no
     }
   });
 
+  // The Play review address (src/auth/reviewLogin.js): no email; the same answer as a sent code.
+  if (review.reviewFor(parsed)) {
+    return { status: 200, body: { ok: true, sent: true, expiresInSec: v.codeTtlMinutes * 60, resendAfterSec: v.resendSeconds } };
+  }
   const rendered = await renderFor(db, tenantId, {
     customer: { email: parsed.email, name, lang }, templateKey: 'verify_code', category: 'essential', settings, now,
     extraVars: { code, codeMinutes: String(v.codeTtlMinutes) }, lang
@@ -124,18 +129,21 @@ async function checkVerification(db, tenant, install, input, { now = Date.now(),
   const tenantId = tenant.id;
   const row = await db.emailVerification.findFirst({ where: { tenantId, installId: install.id, emailKey: parsed.emailKey }, orderBy: { createdAt: 'desc' } });
   if (!row) return err(404, 'no_code', 'Ask for a code first.');
-  const matches = safeEqual(row.codeHash, codeHash(code, install.id, parsed.emailKey));
+  // The Play review address checks the fixed review code instead (constant time); everyone else their emailed code.
+  const reviewCfg = review.reviewFor(parsed);
+  const matches = () => (reviewCfg ? review.reviewCodeMatches(reviewCfg, code) : safeEqual(row.codeHash, codeHash(code, install.id, parsed.emailKey)));
   if (row.verifiedAt) {
     // A retry after a lost response: same answer again.
-    if (matches && row.customerId) return { status: 200, body: { verified: true, customerId: row.customerId } };
+    if (row.customerId && matches()) return { status: 200, body: { verified: true, customerId: row.customerId } };
     return err(410, 'code_expired', 'This code was already used. Ask for a new one.');
   }
   if (new Date(row.expiresAt).getTime() <= now) return err(410, 'code_expired', 'This code has expired. Ask for a new one.');
   const max = settings.verify.maxAttempts;
   if (row.attempts >= max) return err(429, 'too_many_attempts', 'Too many wrong codes. Ask for a new one.');
+  if (reviewCfg && await review.reviewLocked(db, tenant.id, parsed.emailKey, now)) return err(429, 'too_many_attempts', 'Too many wrong codes. Ask for a new one.');
   const claim = await db.emailVerification.updateMany({ where: { id: row.id, attempts: row.attempts, verifiedAt: null }, data: { attempts: { increment: 1 } } });
   if (claim.count !== 1) return err(429, 'too_many_attempts', 'Too many attempts at once. Ask for a new code.');
-  if (!matches) {
+  if (!matches()) {
     return err(400, 'invalid_code', 'That code is not right.', { attemptsLeft: Math.max(0, max - row.attempts - 1) });
   }
 
@@ -182,6 +190,7 @@ async function checkVerification(db, tenant, install, input, { now = Date.now(),
   const opts = { now, graceDays: settings.billing.renewalGraceDays };
   for (const other of moved) await recomputeCustomer(db, tenantId, other, opts);
   await recomputeCustomer(db, tenantId, c.id, opts);
+  if (reviewCfg) await review.logReviewSignIn(db, tenantId, c.id, 'desktop', now);
   return { status: 200, body: { verified: true, customerId: c.id } };
 }
 
