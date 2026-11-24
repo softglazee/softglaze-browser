@@ -184,7 +184,8 @@ test('the Free plan migration is the generator output, re-runnable, additive, gu
   const name = '20261120120000_free_plan_partner_deals';
   assert.equal(NAME, name);
   const dirs = migrationDirs();
-  assert.equal(dirs[dirs.length - 1], name, 'the newest migration');
+  // The newest of the 20 November ones (cloud sync, 25 November, only adds its own tables after it).
+  assert.equal(dirs.filter((d) => d < '20261125').pop(), name, 'the newest migration of its batch');
   assert.ok(dirs.indexOf(name) > dirs.indexOf('20261119120000_accounts_google_mobile_web'), 'after the accounts one');
   const sql = read(name);
   assert.equal(sql, build().replace(/\r\n/g, '\n'));
@@ -237,4 +238,24 @@ test('the Black Friday migration only adds three NULL Plan columns and one Payme
   assert.match(schema, /saleCap\s+Int\?/);
   assert.match(schema, /saleStartsAt\s+DateTime\?/);
   assert.match(schema, /@@index\(\[tenantId, plan, status\]\)/);
+});
+
+// Cloud sync phase 1: four new tables of its own, nothing else, re-runnable, and the schema matches.
+test('the cloud sync migration only creates its four tables, re-runnably, newest', () => {
+  const name = '20261125120000_cloud_sync_p1';
+  const sql = read(name);
+  const stmts = sql.split('\n').filter((l) => !l.trim().startsWith('--')).join('\n');
+  assert.ok(!/\bDROP\b|\bRENAME\b|\bMODIFY\b|\bCHANGE\s+COLUMN\b|\bALTER\s+TABLE\b|^\s*(UPDATE|DELETE|TRUNCATE|INSERT)\b/im.test(stmts), 'additive only');
+  assert.deepEqual([...sql.matchAll(/CREATE TABLE (IF NOT EXISTS )?`(\w+)`/g)].map((m) => [m[1], m[2]]),
+    ['SyncWorkspace', 'SyncDevice', 'SyncRecord', 'SyncEnrolment'].map((t) => ['IF NOT EXISTS ', t]));
+  assert.match(sql, /UNIQUE INDEX `SyncWorkspace_customerId_key`\(`customerId`\)/);
+  assert.match(sql, /UNIQUE INDEX `SyncDevice_workspaceId_tag_key`\(`workspaceId`, `tag`\)/);
+  assert.match(sql, /UNIQUE INDEX `SyncRecord_workspaceId_rid_key`\(`workspaceId`, `rid`\)/);
+  assert.match(sql, /INDEX `SyncRecord_workspaceId_seq_idx`\(`workspaceId`, `seq`\)/);
+  assert.match(sql, /`body` LONGBLOB NOT NULL/);
+  const dirs = migrationDirs();
+  assert.equal(dirs[dirs.length - 1], name, 'the newest migration');
+  const schema = fs.readFileSync(path.join(__dirname, '..', 'prisma', 'schema.prisma'), 'utf8').replace(/\r\n/g, '\n');
+  for (const m of ['SyncWorkspace', 'SyncDevice', 'SyncRecord', 'SyncEnrolment']) assert.match(schema, new RegExp(`model ${m} \\{`), m);
+  assert.match(schema, /body\s+Bytes\s+@db\.LongBlob/);
 });

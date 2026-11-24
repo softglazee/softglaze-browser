@@ -1,0 +1,30 @@
+{
+  "note": "Cloud sync (ws) v1 vectors. recordBody is random (sealed once); its signature and every other value are deterministic.",
+  "memberSeedHex": "000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f",
+  "deviceSeedHex": "a0a1a2a3a4a5a6a7a8a9aaabacadaeafb0b1b2b3b4b5b6b7b8b9babbbcbdbebf",
+  "recoverySecretHex": "ffeeddccbbaa99887766554433221100ffeeddccbbaa99887766554433221100",
+  "nameKeyHex": "5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a5a",
+  "sid": "01JD0000000000000000000000",
+  "ownerSignPub": "6JAv5Nl8GjstdI22GYNkQC9DL1cD5EKWs1hLC70LsQA",
+  "ownerDhPub": "wOVQ3Hi4KRdAGbZwTHkcOii-OgHtz_6QpxhDgOHy-SE",
+  "ownerKeyTag": "fe9FvO5s7-U",
+  "workspaceId": "xkGpQ01MRwgA0HbuGocC5A",
+  "recoveryWords": "zoo ivory industry jar praise service talk skirt during october lounge acid year humble cream inspire office dry sunset pride drip much dune arm",
+  "profileRid": "fRQ8TbhYnE5a1BwY5XQGKA",
+  "deviceCert": {
+    "v": 1,
+    "ws": "xkGpQ01MRwgA0HbuGocC5A",
+    "tag": "_Wgsh-XCpsw",
+    "signPub": "7ynIFtAbrIRnzI3aFsAO2UwsRdOyAc0rSMgZRVmR07w",
+    "dhPub": "PAAzjOS5wbuc_jlkFUrHmbknVl6n0BApjjWBHNssFRM",
+    "name": "Vector PC",
+    "platform": "pc",
+    "at": 1800000000000
+  },
+  "deviceCertSig": "O3G63mKX1o5HRQXe2CSX0bhqj2WXNdiDGRCOinojyLkjlRNIF4MbATi3Lf4ss-hwTxhibiptqUi03AkN0gNnBA",
+  "deviceSignPub": "7ynIFtAbrIRnzI3aFsAO2UwsRdOyAc0rSMgZRVmR07w",
+  "recordBody": "U0dXMQHaiqJOUbSI6wAAAAGCjv3J5wItatrUGoeb9kHbiG5hVB8Uk3vHbAdU1GhKFJQtrnEwUDtcrrdYsVZnyfyEXq4gP29ybniHuteKpmj87t8EJxV_pkBM5tt_SzVeIjRaV5SKE0BedGIJbsSjsCjeJ35PNoojwxzLmRAB1MUxZ60Rw9Nt6e7myxnHvbKVeFUZA_KY4tZ8huny_YvOhE-st_pkvAHJc6rr9i0gJp9U22FxQHSGujub_scWzKfYriqkRkkHLA3EXm9PL1Csp_cPIg8n86hSehWuzmacijsKPlIo_LENuooCteOiVXABwarTftIwZNnNKo-1c9YBzGCwsBY27u42M3zGZtsW-uZuK-XinMLkrH-sPl-t3yH4D-gZ_VupeIy1Nv5Eu2e0oIIRGkzq6WVWSXxJP2OMpa9qwLjQg0sxRX-1_gPmV3kK6z6MYeWIfaV-n0U7jh8IwgLw3OxW_DbNIkOGQjusrxuuBRpIlJVeF2uNlJRce6EYLEYBQ59b5-wpQtvFubo2TZWICPoR69ai3pXofp5zYvCnbEnazStLZh5zFzPywgKO1T4LQ5Yu81mymDkM_wvC6UPgqzqK-v2AAfw5divIY8xLHstegIDbEMdvoBVkLpHFVN3EfFajvxOJfBQztKGKxHkUby7oOhV78Dh4xL8w_7u9DuaL8n6pO60p8fQbXKnRtoYSZWVBoN8rac2VvwOSlVcKZRdjzPtSc2uATKMn6ywekOYHu3yT3JsXhyXXSsZFeMNj8a7GX73Vn7d7fA_g9xczHhAXU5ZNjJsgYhpz9lj8DnHTWUfRTFbgsQmvXHDpU9s8TiTujTRP-COneUxJ3UglSrspVFznkvLeccJ6LigmMU16x83TSXqWrq4wlSDbK8YJw6kY155d4yHpsaKSEF4T_nLQel3eZJzIXkXxz715KzPFQLQFk0kvyfZyalb2Q5sAdh4EfqnDllUkp15GZwy9E1SPmJ3Eb7U7Ge5LxtZLxsWuWFUVpZpsZxu8sRKXUGStAA_jVgWHU5O0E5nuQwiwVh1QqmOP-Xn6bTzyhRGJHyqjB-jjJUnGzIsSpZNU7wXaLPwBr8tZT2QuA0bRQrcenK9AYIQnI0iSBEs5CpGP_rJhRyAZE14kejlNf27_N_Ne5ZiK7EvzEi_3nCINrkVOv9NiE8vNMfVp9tYFvfu6UvHpF2mr5a5DRUi2Z-lJDyfomaBH7-NxLoayuri39b71zIlFssR_iWdCA6r_Km-kKwWDasx2mgUcg1bxYpPEOK8a-sB_91NUm4M_HzAMMeHe87nYLpfJ5cEqc6KglJEJkFTS53uiiERELxTQ6VKFZdR_VUf_1c5o7VhaKq1AMY23PrML4ziVEuO3NB6dn45YC4J-QGxjvOv4fRacEXznsB_EwRfXd35Q35p7diCH1ozKyEnDWfqmQ7fDSwQIWFCLrXJSwWOVUQnZ4UVSXEt7W_okChFgB4M74dc0HooCd61JcknV2Azjo2uy4heghVJIAHDB9C2fSLlhkfq6Po3-LQ",
+  "recordSig": "RyDio5kjT7qsRf8taZH37-wWjtoTn_pQ9iaYnLBjYb7f7tGiLNMAF89jotzbbNBBB1VQruFOuuO3aSkSmUL3Ag",
+  "createAt": 1800000000000,
+  "createSig": "1pjbsxv8GsyKBI8gg3kmnvvKsEEalc-qxAl_lWI0MdAfGgf3dUKCaNp5fWwzOWgRnwBSrIM_xeKRYLanNKfYAg"
+}

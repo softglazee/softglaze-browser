@@ -35,7 +35,11 @@ const UNIQUE = {
   authCode: [['codeHash']],
   authSession: [['tokenHash'], ['refreshHash']],
   mobileDevice: [['authSessionId']],
-  partnerDeal: []
+  partnerDeal: [],
+  syncWorkspace: [['customerId']],
+  syncDevice: [['workspaceId', 'tag']],
+  syncRecord: [['workspaceId', 'rid']],
+  syncEnrolment: []
 };
 const ID_FIELD = { jobLock: 'name' };
 
@@ -71,6 +75,9 @@ const DEFAULTS = {
     identityId: null, ipHash: null, lastUsedAt: null, revokedAt: null, kind: 'desktop', clientId: null, expiresAt: null, accessExpiresAt: null,
     refreshHash: null, prevRefreshHash: null, userAgent: null
   }),
+  syncWorkspace: () => ({ keyringVersion: 1, bytesUsed: 0, seq: 0, status: 'active' }),
+  syncDevice: () => ({ lastSeenAt: null, revokedAt: null }),
+  syncEnrolment: () => ({ approvalJson: null, status: 'pending' }),
   mobileDevice: () => ({ model: null, appVersion: null, installationId: null, lastSeenAt: null, revokedAt: null }),
   partnerDeal: () => ({ description: null, code: null, badge: null, logoUrl: null, active: true, startsAt: null, endsAt: null, sortOrder: 0, clicks: 0, lastClickAt: null }),
   storeEntitlement: () => ({
@@ -80,11 +87,12 @@ const DEFAULTS = {
     movedAt: null, firstClaimAt: new Date(), lastClaimAt: null, lastCheckedAt: null, lastCheckError: null
   })
 };
-const HAS_UPDATED_AT = new Set(['plan', 'license', 'customer', 'emailTemplate', 'emailOutbox', 'setting', 'segment', 'metricSnapshot', 'tenantPaymentConfig', 'storeEntitlement', 'partnerDeal']);
+const HAS_UPDATED_AT = new Set(['plan', 'license', 'customer', 'emailTemplate', 'emailOutbox', 'setting', 'segment', 'metricSnapshot', 'tenantPaymentConfig', 'storeEntitlement', 'partnerDeal', 'syncWorkspace', 'syncRecord']);
 const HAS_CREATED_AT = new Set(['tenant', 'plan', 'install', 'license', 'payment', 'licenseCode', 'customer', 'customerEvent', 'emailVerification',
-  'emailTemplate', 'emailOutbox', 'adminKey', 'segment', 'metricSnapshot', 'storeEntitlement', 'identity', 'authState', 'authCode', 'authSession', 'mobileDevice', 'partnerDeal']);
+  'emailTemplate', 'emailOutbox', 'adminKey', 'segment', 'metricSnapshot', 'storeEntitlement', 'identity', 'authState', 'authCode', 'authSession', 'mobileDevice', 'partnerDeal', 'syncWorkspace', 'syncDevice', 'syncEnrolment']);
 
-const isObj = (v) => v && typeof v === 'object' && !(v instanceof Date) && !Array.isArray(v);
+// Bytes columns (Buffer / Uint8Array) are plain values, not { increment } / { set } update objects.
+const isObj = (v) => v && typeof v === 'object' && !(v instanceof Date) && !Array.isArray(v) && !ArrayBuffer.isView(v);
 const val = (v) => (v instanceof Date ? v.getTime() : v);
 const eq = (a, b) => (a == null && b == null) || (a != null && b != null && val(a) === val(b));
 const ci = (s) => String(s).toLowerCase();

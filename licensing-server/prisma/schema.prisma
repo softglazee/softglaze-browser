@@ -736,3 +736,72 @@ model PartnerDeal {
 
   @@index([tenantId, active, sortOrder])
 }
+
+// Cloud sync phase 1 (end-to-end encrypted workspace, /v1/sync/*, src/sync/, migration 20261125120000). The server
+// stores ciphertext, public keys and signatures only: it can neither read a workspace nor add a device (device
+// certificates must be signed by the workspace's Member Key, whose public half is ownerSignPub). One workspace per
+// customer; id = base64url(SHA-256("sg-ws-space-v1" || ownerSignPub)[0..16]).
+model SyncWorkspace {
+  id             String   @id @db.VarChar(22)
+  tenantId       String   @db.VarChar(191)
+  customerId     String   @unique @db.VarChar(40)
+  ownerSignPub   String   @db.VarChar(43)
+  keyring        Bytes    @db.LongBlob // sealed keyring (opaque)
+  keyringVersion Int      @default(1)
+  recoveryWrap   Bytes    @db.Blob // Member Key wrapped under the 24-word recovery kit (opaque)
+  bytesUsed      Int      @default(0)
+  seq            Int      @default(0) // last change sequence number
+  status         String   @default("active") @db.VarChar(16)
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @default(now()) @updatedAt
+
+  @@index([tenantId])
+}
+
+// A device of a workspace: its Member-Key-signed certificate. Writes are accepted only from active devices.
+model SyncDevice {
+  id          Int       @id @default(autoincrement())
+  workspaceId String    @db.VarChar(22)
+  tag         String    @db.VarChar(11) // keyId(signPub)
+  signPub     String    @db.VarChar(43)
+  dhPub       String    @db.VarChar(43)
+  name        String    @db.VarChar(64)
+  platform    String    @db.VarChar(10) // pc | web | phone
+  certJson    String    @db.Text
+  certSig     String    @db.VarChar(100)
+  createdAt   DateTime  @default(now())
+  lastSeenAt  DateTime?
+  revokedAt   DateTime?
+
+  @@unique([workspaceId, tag])
+}
+
+// One sealed record (profile, proxy, group, ...): opaque id, version (compare-and-swap), change sequence.
+model SyncRecord {
+  id          Int      @id @default(autoincrement())
+  workspaceId String   @db.VarChar(22)
+  rid         String   @db.VarChar(22)
+  version     Int
+  seq         Int
+  body        Bytes    @db.LongBlob
+  sig         String   @db.VarChar(100)
+  dev         String   @db.VarChar(11)
+  size        Int
+  updatedAt   DateTime @default(now()) @updatedAt
+
+  @@unique([workspaceId, rid])
+  @@index([workspaceId, seq])
+}
+
+// A new device asking to join (10 minutes). The enrolment code's secret never reaches the server.
+model SyncEnrolment {
+  id           String   @id @db.VarChar(32)
+  workspaceId  String   @db.VarChar(22)
+  requestJson  String   @db.Text
+  approvalJson String?  @db.MediumText
+  status       String   @default("pending") @db.VarChar(10) // pending | approved | denied
+  createdAt    DateTime @default(now())
+  expiresAt    DateTime
+
+  @@index([workspaceId])
+}
