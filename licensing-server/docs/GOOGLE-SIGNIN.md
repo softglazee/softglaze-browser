@@ -138,6 +138,7 @@ The other new settings go in the same file (all optional; none is a secret excep
 | `WEB_APP_ORIGINS` | e.g. `https://app.softglaze.com` (comma list, https, no path) | web sign-in and CORS; empty = web sign-in off |
 | `MOBILE_PHONES_ALLOWED` | `3` (1 to 100) | phone limit per account |
 | `RELAY_ENTITLEMENT_SIGNING_KEY` | Ed25519 private key, see below (secret) | `POST /v1/mobile/entitlement`; empty = 503 |
+| `MOBILE_ENTITLEMENT_FREE` | `0` = Free accounts get `403 no_entitlement`; default: a `type: free` token | `POST /v1/mobile/entitlement` |
 | `ACCOUNT_API_RATE_PER_MIN` | `120` (read at start) | per-IP limit of `/v1/account/me` etc. |
 
 `PUBLIC_BASE_URL` must stay `https://api.softglaze.com` (the Google redirect URI is built from it, and the
@@ -223,7 +224,7 @@ Phone (`src/routes/mobileAuth.js`, client `softglaze-mobile`, redirect `softglaz
 | `POST /v1/mobile/auth/refresh` | Bearer | session with a new token |
 | `POST /v1/mobile/auth/sign-out` | Bearer | 204 |
 | `POST /v1/mobile/auth/sign-out-all` | Bearer | `{ ok, revoked }` (all phones of the account) |
-| `POST /v1/mobile/entitlement` | Bearer, `{ mailbox? }` | `{ token, exp, payload }`; `403 no_entitlement`, `503 entitlement_unavailable` |
+| `POST /v1/mobile/entitlement` | Bearer (phone session, or the desktop app's account session for the PC companion), `{ mailbox? }` | `{ token, exp, payload }` (`type` paid, trial or free); `403 no_entitlement`, `503 entitlement_unavailable` |
 
 Session = `{ token, expiresAt (ms), account: { id, email, name, tier } }`. `device` = `{ platform: ios|android|web,
 model, appVersion, id? }`; `id` (16 to 64 URL-safe characters, the app's own random install id) is optional but

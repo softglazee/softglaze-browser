@@ -17011,6 +17011,17 @@ function buildMobileHost() {
     open: (text) => secretStore.open(text),
     emit: emitToAllWindows,
     appVersion,
+    // Relay entitlement token (mobile/entitlement.js) with this workspace's SoftGlaze account session. A workspace
+    // that never signed in to an account has none: the companion then connects without a token.
+    relayEntitlement: async (mailbox) => {
+      const rec = accountSession().read();
+      if (!rec || !rec.session) {
+        const e = new Error('Not signed in to a SoftGlaze account.');
+        e.code = 'signed_out';
+        throw e;
+      }
+      return licenseClient.api.relayEntitlement({ session: rec.session, mailbox });
+    },
     bridge: {
       async resolveMember(memberId) {
         const r = await ai.resolveTokenMember(getPrisma(), { memberId: memberId == null ? null : Number(memberId) });

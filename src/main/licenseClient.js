@@ -142,9 +142,10 @@ function requestJson(method, pathName, body, opts = {}) {
     hostname: url.hostname,
     port: url.port || (url.protocol === 'http:' ? 80 : 443),
     path: url.pathname + url.search,
-    headers: payload
-      ? { 'content-type': 'application/json', 'content-length': payload.length }
-      : { accept: 'application/json' }
+    headers: {
+      ...(payload ? { 'content-type': 'application/json', 'content-length': payload.length } : { accept: 'application/json' }),
+      ...(opts.bearer ? { authorization: `Bearer ${opts.bearer}` } : {})
+    }
   };
   return new Promise((resolve, reject) => {
     const req = lib.request(options, (res) => {
@@ -240,7 +241,10 @@ const api = {
   authProfile: ({ installId, installSecret, session, useCase, useCaseOther }) => requestJson('POST', '/auth/profile', { tenantId: tenantConfig().tenantId, installId, installSecret, session, useCase, useCaseOther }, { timeoutMs: 8000 }),
   // -> { ok, moved, remaining } | 429 move_limit (2 moves per licence per 30 days).
   authMoveLicence: ({ installId, installSecret, session }) => postJson('/auth/licence/move', { tenantId: tenantConfig().tenantId, installId, installSecret, session, move: true }),
-  authLogout: ({ installId, installSecret, session }) => requestJson('POST', '/auth/logout', { tenantId: tenantConfig().tenantId, installId, installSecret, session }, { timeoutMs: 6000 })
+  authLogout: ({ installId, installSecret, session }) => requestJson('POST', '/auth/logout', { tenantId: tenantConfig().tenantId, installId, installSecret, session }, { timeoutMs: 6000 }),
+  // Relay entitlement token for the phone companion (src/main/mobile/entitlement.js), with the account session of
+  // this workspace. -> { token, exp (unix s), payload } | 401 session_invalid | 403 no_entitlement | 503.
+  relayEntitlement: ({ session, mailbox }) => requestJson('POST', '/v1/mobile/entitlement', { mailbox }, { timeoutMs: 5000, bearer: session })
 };
 
 module.exports = { verifyLease, api, postJson, machineHash, appVersion, licenseIssue, clearLicenseIssue };
