@@ -30,6 +30,7 @@ enum SystemProxyBehavior {
 
 model Proxy {
   id        Int       @id @default(autoincrement())
+  syncId    String?  @unique // cloud sync global id (ULID), set when cloud sync first sees the row
   name      String
   type      ProxyType @default(HTTP)
   host      String
@@ -76,6 +77,7 @@ model Proxy {
 // at most one group; profiles can be batch-created from a chosen group's proxies.
 model ProxyGroup {
   id        Int      @id @default(autoincrement())
+  syncId    String?  @unique // cloud sync global id (ULID), set when cloud sync first sees the row
   name      String
   color     String?  @default("#3b82f6")
   ownerMemberId Int?
@@ -103,6 +105,7 @@ model ProxyHealthEvent {
 
 model Group {
   id        Int      @id @default(autoincrement())
+  syncId    String?  @unique // cloud sync global id (ULID), set when cloud sync first sees the row
   name      String
   color     String?  @default("#3b82f6")
   ownerMemberId Int? // member who made it; scopes the Groups list (NULL = older group, Owner/Admin)
@@ -116,6 +119,7 @@ model Group {
 
 model Template {
   id        Int      @id @default(autoincrement())
+  syncId    String?  @unique // cloud sync global id (ULID), set when cloud sync first sees the row
   name      String
   dataJson  String // JSON snapshot of profile config fields
   ownerMemberId Int? // member who saved it; scopes the template list (NULL = older template, Owner/Admin)
@@ -344,6 +348,7 @@ model PersonaData {
 
 model Profile {
   id                  Int                 @id @default(autoincrement())
+  syncId    String?  @unique // cloud sync global id (ULID), set when cloud sync first sees the row
   title               String
   proxyId             Int?
   proxyInfoString     String?
@@ -506,4 +511,23 @@ model PairedDevice {
 
   @@index([keyId])
   @@index([memberId])
+}
+
+// Cloud sync (docs/CLOUD-SYNC.md): per record, the last state agreed with the server (base, at version) and
+// the stamped state last applied here (local), as JSON EntryMaps. Plain workspace data, same as the rows.
+model WsShadow {
+  sid       String   @id
+  kind      String
+  rid       String
+  version   Int
+  base      String
+  local     String
+  present   Boolean  @default(false)
+  updatedAt DateTime @default(now()) @updatedAt
+}
+
+// Cloud sync cursor and Lamport counter (key/value).
+model WsMeta {
+  key   String @id
+  value String
 }

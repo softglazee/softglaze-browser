@@ -12,7 +12,7 @@
 // Deleted: the customer row, verification codes, sent-email log rows, other timeline events, sign-in methods
 // and app sessions (one-click sign-in), and the details of admin audit entries about this customer. Installs
 // lose their email and customer link. One-time sign-in codes (AuthCode) are deleted by the retention cron
-// within a day anyway.
+// within a day anyway. The cloud sync workspace (ciphertext, device keys, enrolments) is deleted too.
 const crypto = require('node:crypto');
 
 async function eraseCustomer(db, tenantId, customerId) {
@@ -37,6 +37,7 @@ async function eraseCustomer(db, tenantId, customerId) {
     await tx.identity.deleteMany({ where });
     await tx.authSession.deleteMany({ where });
     await tx.mobileDevice.deleteMany({ where });
+    await require('../sync/store').eraseForCustomer(tx, tenantId, c.id);
     await tx.emailOutbox.deleteMany({ where: { tenantId, OR: [{ customerId: c.id }, { toEmail: c.email }] } });
     await tx.customerEvent.updateMany({ where: { tenantId, customerId: c.id, type: 'status' }, data: { customerId: anon } });
     await tx.customerEvent.deleteMany({ where: { tenantId, customerId: c.id } });

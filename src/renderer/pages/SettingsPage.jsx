@@ -8,6 +8,7 @@ import DeveloperApiSettings from '@/components/DeveloperApiSettings.jsx';
 import MigrationSettings from '@/components/MigrationSettings.jsx';
 import SyncSettings from '@/components/SyncSettings.jsx';
 import PhonesSettings from '@/components/PhonesSettings.jsx';
+import CloudSyncSettings from '@/components/CloudSyncSettings.jsx';
 import DbEncryptionSettings from '@/components/DbEncryptionSettings.jsx';
 import WorkspaceBackupSettings from '@/components/WorkspaceBackupSettings.jsx';
 import BrandingSettings from '@/components/BrandingSettings.jsx';
@@ -355,6 +356,7 @@ export default function SettingsPage() {
               <SearchGate sec={SEC.developerapi}><DeveloperApiSettings /></SearchGate>
               {/* Owner and Admins only (main refuses everyone else; the section renders nothing for them). */}
               <SearchGate sec={SEC.phones}><PhonesSettings /></SearchGate>
+              <SearchGate sec={SEC.phones}><CloudSyncSettings /></SearchGate>
             </GroupBlock>
 
             {q && !anyMatch && (

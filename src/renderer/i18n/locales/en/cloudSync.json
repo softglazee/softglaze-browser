@@ -1,0 +1,86 @@
+{
+  "title": "Cloud sync",
+  "description": "Manage profiles, proxies, groups, tags and templates from app.softglaze.com while this PC is off. End-to-end encrypted: SoftGlaze cannot read it.",
+  "beta": "Beta",
+  "loading": "Loading cloud sync",
+  "signIn": "Sign in to your SoftGlaze account in Settings > Account to use cloud sync.",
+  "noOsEncryption": "This computer's key store is not available, so cloud sync cannot keep its keys safe here.",
+  "planRequired": "Cloud sync comes with Pro and Enterprise. Your profiles stay on this PC.",
+  "serverError": "Could not reach the SoftGlaze server: {{message}}",
+  "off": {
+    "title": "Cloud sync is off",
+    "body": "Turning it on uploads an encrypted copy of your profiles, proxies (with passwords), groups, tags and templates. Browser data, cookies, launch flags and 2FA codes stay on this PC.",
+    "turnOn": "Turn on cloud sync",
+    "existsTitle": "Your account already has a cloud workspace",
+    "existsBody": "Connect this PC to it with the 24-word recovery kit you saved when you turned cloud sync on. Profiles on this PC are added to the workspace.",
+    "wordsLabel": "Recovery kit (24 words)",
+    "wordsPlaceholder": "Type or paste the 24 words, in order",
+    "connect": "Connect this PC"
+  },
+  "kit": {
+    "title": "Save your recovery kit",
+    "body": "These 24 words are the only way back into your cloud workspace if you lose every device. SoftGlaze does not have them and cannot reset them. Write them down or print them, and keep them offline.",
+    "copy": "Copy words",
+    "copied": "Copied",
+    "print": "Print",
+    "saved": "I have saved my recovery kit somewhere safe",
+    "checkTitle": "Check your copy",
+    "checkWord": "Word {{n}}",
+    "confirm": "Turn on cloud sync",
+    "cancel": "Cancel",
+    "printTitle": "SoftGlaze recovery kit",
+    "printNote": "Workspace {{id}}. Keep this page offline. Anyone with these words and your account can read your workspace."
+  },
+  "on": {
+    "title": "Cloud sync is on",
+    "lastSync": "Last synced {{time}}",
+    "never": "Not synced yet",
+    "summary": "{{pushed}} sent, {{applied}} received",
+    "issues": "Changes not applied here: {{count}}",
+    "conflicts": "Fields edited in two places (newest kept): {{count}}",
+    "syncNow": "Sync now",
+    "usage": "{{used}} of {{quota}} used",
+    "auto": "Syncs every 20 seconds while SoftGlaze is open."
+  },
+  "enrol": {
+    "title": "Add a web browser",
+    "help": "Open app.softglaze.com, sign in, choose Cloud sync and enter this code. It works once and for 10 minutes.",
+    "start": "Show a code",
+    "codeLabel": "One-time code",
+    "qrAlt": "QR code for the one-time code",
+    "expiresIn": "Code expires in {{time}}",
+    "waiting": "Waiting for the browser…",
+    "request": "{{name}} ({{platform}}) wants to join",
+    "approve": "Approve",
+    "deny": "Deny",
+    "approved": "{{name}} can now manage this workspace.",
+    "cancel": "Close"
+  },
+  "devices": {
+    "title": "Devices",
+    "thisPc": "This PC",
+    "added": "Added {{date}}",
+    "removed": "Removed",
+    "remove": "Remove",
+    "removeConfirm": "Remove {{name}}? It stops receiving changes at once. It may keep a copy of what it already downloaded.",
+    "platform_pc": "PC",
+    "platform_web": "Browser",
+    "platform_phone": "Phone"
+  },
+  "kitAgain": {
+    "button": "New recovery kit",
+    "confirm": "Make a new recovery kit? The old words stop working.",
+    "title": "Your new recovery kit",
+    "done": "I have saved it"
+  },
+  "turnOff": {
+    "button": "Turn off",
+    "confirm": "Turn cloud sync off on this PC? Your data stays on this PC.",
+    "deleteCloud": "Also delete the cloud copy (every device loses access; this PC keeps its data)",
+    "deleteConfirm": "Delete the encrypted cloud copy for every device? This cannot be undone."
+  },
+  "errors": {
+    "generic": "Something went wrong. Try again.",
+    "unavailable": "Cloud sync is not available in this build."
+  }
+}

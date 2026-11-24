@@ -28,6 +28,10 @@ app.use('/v1/webhooks', require('./routes/webhooks'));
 // Admin API (server-to-server from the website admin; Bearer admin key).
 app.use('/v1/admin', rateLimit({ windowMs: 60000, max: 600 }), require('./admin'));
 
+// Cloud sync (encrypted workspace store): before the global parser, because a batch of sealed records needs a
+// larger body than 256 KB; the router parses up to 8 MB itself and answers 404 while CLOUD_SYNC is off.
+app.use('/v1/sync', require('./routes/sync'));
+
 app.use(express.json({ limit: '256kb' }));
 
 // Basic abuse protection on the public, unauthenticated endpoints.

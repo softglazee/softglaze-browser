@@ -30,7 +30,8 @@ test('the vendored protocol bundle is the one VENDOR.json describes', () => {
   const sha = crypto.createHash('sha256').update(fs.readFileSync(file, 'utf8').replace(/\r\n/g, '\n')).digest('hex');
   assert.equal(sha, VENDOR.sha256, 'run scripts/vendor-softglaze-protocol.mjs instead of editing the bundle');
   assert.equal(VENDOR.package, '@softglaze/protocol');
-  assert.equal(VENDOR.protocolCommit, 'f6f1fa1b9bab1317cdb66dac649ef09413524062', 'protocol with approval_request.resolution and the push kind update');
+  assert.equal(VENDOR.protocolCommit, '3f5809cb285f1e8d68ac88aeea46eb3a990690a8', 'protocol 0.2.0 with the cloud sync (ws) module, on top of approval_request.resolution and the push kind update');
+  assert.equal(typeof P.WorkspaceSync, 'function');
   const ended = P.createMessage('approval_request', { approvalId: 'appr_000001', tool: 't', summary: 's', allowHour: true, expiresAt: 1, resolution: 'approved' });
   assert.equal(ended.body.resolution, 'approved', 'the bundle keeps resolution (an older bundle strips it)');
   assert.ok(P.PUSH_KINDS.includes('update'));

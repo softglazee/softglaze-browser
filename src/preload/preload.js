@@ -358,7 +358,28 @@ const MOBILE_CHANNELS = Object.freeze({
   CHANGED: 'mobile:changed'
 });
 
+// Cloud sync (Settings > Cloud sync). Must match CLOUD_SYNC_CHANNELS in src/main/workspaceSync/ipc.js.
+const CLOUD_SYNC_CHANNELS = Object.freeze({
+  STATUS: 'cloudsync:status',
+  TURN_ON_START: 'cloudsync:turn-on-start',
+  TURN_ON_CONFIRM: 'cloudsync:turn-on-confirm',
+  TURN_ON_CANCEL: 'cloudsync:turn-on-cancel',
+  RECOVER: 'cloudsync:recover',
+  SYNC_NOW: 'cloudsync:sync-now',
+  ENROL_START: 'cloudsync:enrol-start',
+  ENROL_POLL: 'cloudsync:enrol-poll',
+  ENROL_APPROVE: 'cloudsync:enrol-approve',
+  ENROL_DENY: 'cloudsync:enrol-deny',
+  ENROL_CANCEL: 'cloudsync:enrol-cancel',
+  DEVICES: 'cloudsync:devices',
+  DEVICE_REVOKE: 'cloudsync:device-revoke',
+  REISSUE_KIT: 'cloudsync:reissue-kit',
+  TURN_OFF: 'cloudsync:turn-off',
+  CHANGED: 'cloudsync:changed'
+});
+
 const ALLOWED_CHANNELS = new Set([...Object.values(CHANNELS), ...Object.values(AI_CHANNELS)]);
+for (const channel of Object.values(CLOUD_SYNC_CHANNELS)) ALLOWED_CHANNELS.add(channel);
 for (const channel of Object.values(MOBILE_CHANNELS)) ALLOWED_CHANNELS.add(channel);
 
 // One-way message, not an invoke(): main re-focuses the window after a native
@@ -937,6 +958,33 @@ const api = Object.freeze({
       const listener = (_event, data) => { try { callback(data); } catch (e) { /* ignore */ } };
       ipcRenderer.on(MOBILE_CHANNELS.CHANGED, listener);
       return () => ipcRenderer.removeListener(MOBILE_CHANNELS.CHANGED, listener);
+    }
+  }),
+  cloudSync: Object.freeze({
+    status: () => invoke(CLOUD_SYNC_CHANNELS.STATUS),
+    // -> { words[24], check: [a, b], workspaceId }; nothing leaves the PC until confirm.
+    turnOnStart: () => invoke(CLOUD_SYNC_CHANNELS.TURN_ON_START),
+    // answers { [position]: word }
+    turnOnConfirm: (answers) => invoke(CLOUD_SYNC_CHANNELS.TURN_ON_CONFIRM, { answers: answers && typeof answers === 'object' ? Object.fromEntries(Object.entries(answers).map(([k, v]) => [String(k), String(v || '')])) : {} }),
+    turnOnCancel: () => invoke(CLOUD_SYNC_CHANNELS.TURN_ON_CANCEL),
+    recover: (words) => invoke(CLOUD_SYNC_CHANNELS.RECOVER, { words: String(words || '') }),
+    syncNow: () => invoke(CLOUD_SYNC_CHANNELS.SYNC_NOW),
+    enrol: Object.freeze({
+      // -> { code, qr, qrImage, expiresAt }
+      start: () => invoke(CLOUD_SYNC_CHANNELS.ENROL_START),
+      poll: () => invoke(CLOUD_SYNC_CHANNELS.ENROL_POLL),
+      approve: (id) => invoke(CLOUD_SYNC_CHANNELS.ENROL_APPROVE, { id: String(id || '') }),
+      deny: (id) => invoke(CLOUD_SYNC_CHANNELS.ENROL_DENY, { id: String(id || '') }),
+      cancel: () => invoke(CLOUD_SYNC_CHANNELS.ENROL_CANCEL)
+    }),
+    devices: () => invoke(CLOUD_SYNC_CHANNELS.DEVICES),
+    revokeDevice: (tag) => invoke(CLOUD_SYNC_CHANNELS.DEVICE_REVOKE, { tag: String(tag || '') }),
+    reissueKit: () => invoke(CLOUD_SYNC_CHANNELS.REISSUE_KIT),
+    turnOff: (deleteCloud = false) => invoke(CLOUD_SYNC_CHANNELS.TURN_OFF, { deleteCloud: deleteCloud === true }),
+    onChanged: (callback) => {
+      const listener = (_event, data) => { try { callback(data); } catch (e) { /* ignore */ } };
+      ipcRenderer.on(CLOUD_SYNC_CHANNELS.CHANGED, listener);
+      return () => ipcRenderer.removeListener(CLOUD_SYNC_CHANNELS.CHANGED, listener);
     }
   }),
   updater: Object.freeze({
