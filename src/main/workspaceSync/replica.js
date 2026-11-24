@@ -218,7 +218,7 @@ function createDesktopReplica(deps) {
       }
       if (deps.fillNewProfile) {
         const fp = (await deps.fillNewProfile(data)) || {};
-        for (const [k, val] of Object.entries(fp)) if (data[k] === undefined && PROFILE_COLUMNS.includes(k)) data[k] = val;
+        for (const [k, val] of Object.entries(fp)) if ((data[k] === undefined || data[k] === null || data[k] === '') && PROFILE_COLUMNS.includes(k)) data[k] = val;
       }
       data.dataDirName = await deps.uniqueDataDirName(data.title);
     }

@@ -60,7 +60,7 @@ function buildService() {
       if (used + 1 > profileCap) throw Object.assign(new Error('limit'), { code: 'PLAN_LIMIT' });
     },
     isProfileRunning: (id) => running.has(id),
-    fillNewProfile: () => ({ os: 'Windows', osVersion: '11', userAgent: 'Mozilla/5.0 (generated)', webglVendor: 'Google Inc.' }),
+    fillNewProfile: () => ({ os: 'Windows', osVersion: '11', userAgent: 'Mozilla/5.0 (generated)', webglVendor: 'Google Inc.', deviceName: 'DESKTOP-GEN1', macAddress: '00-1A-2B-3C-4D-5E' }),
     log: quiet
   });
   return createWorkspaceSyncService({
@@ -197,7 +197,7 @@ test('PC turns on, a browser joins with the code, both edit, nothing readable on
   const newProxySid = P.newSid();
   web.replica.put('proxy', newProxySid, { name: 'DE 1', type: 'SOCKS5', host: 'de.provider.example', port: 1080, username: 'u-de', password: 'pw-de' });
   const newProfileSid = P.newSid();
-  web.replica.put('profile', newProfileSid, { title: 'Made on the web', proxySid: newProxySid, groupSid: wp.values.groupSid, tags: ['web'], deletedAt: null });
+  web.replica.put('profile', newProfileSid, { title: 'Made on the web', deviceNameType: 'Custom', deviceName: '', macAddress: null, proxySid: newProxySid, groupSid: wp.values.groupSid, tags: ['web'], deletedAt: null });
   // A forged field from a compromised browser is dropped by every device.
   web.replica.put('profile', newProfileSid, { launchArgs: '--no-sandbox' });
   const wr = await web.sync.sync();
@@ -216,6 +216,8 @@ test('PC turns on, a browser joins with the code, both edit, nothing readable on
   assert.equal(p2.launchArgs, null);
   assert.equal(p2.groupId, group.id);
   assert.equal(p2.os, 'Windows', 'generated fingerprint fills what the web left empty');
+  assert.equal(p2.deviceName, 'DESKTOP-GEN1', 'an empty custom device name gets a generated one');
+  assert.equal(p2.macAddress, '00-1A-2B-3C-4D-5E');
   const px = await db.proxy.findUnique({ where: { syncId: newProxySid } });
   assert.equal(px.password, 'pw-de', 'password arrives and is sealed again at rest by the app');
   assert.equal(p2.proxyId, px.id);
