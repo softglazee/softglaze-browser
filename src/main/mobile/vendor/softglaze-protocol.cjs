@@ -1,5 +1,5 @@
-// @softglaze/protocol 0.1.0 (vendored, do not edit: run scripts/vendor-softglaze-protocol.mjs)
-// Source: SoftGlaze-Mobile packages/protocol @ f6f1fa1b9bab1317cdb66dac649ef09413524062
+// @softglaze/protocol 0.2.0 (vendored, do not edit: run scripts/vendor-softglaze-protocol.mjs)
+// Source: SoftGlaze-Mobile packages/protocol @ 3f5809cb285f1e8d68ac88aeea46eb3a990690a8
 // Bundled dependencies (MIT): @noble/ciphers 2.4.0, @noble/curves 2.4.0, @noble/hashes 2.4.0, valibot 1.5.0
 // noble: Copyright (c) Paul Miller (https://paulmillr.com). valibot: Copyright (c) Fabian Hiller.
 Object.defineProperty(exports, Symbol.toStringTag, { value: "Module" });
@@ -7723,9 +7723,9 @@ function importKeyring(s) {
 //#region protocol/dist/sync/blob.js
 /** Max ciphertext size of one blob (the relay refuses larger bodies). */
 const SYNC_MAX_BLOB_BYTES = 2 * 1024 * 1024;
-const MAGIC = utf8Encode("SGB1");
+const MAGIC$1 = utf8Encode("SGB1");
 const HDR = 8;
-const NONCE = 24;
+const NONCE$3 = 24;
 const TAG = 16;
 function blobKey(key, spaceId) {
 	return hkdf(sha256, key.key, utf8Encode(spaceId), utf8Encode("sg-sync-blob-v1"), 32);
@@ -7743,37 +7743,37 @@ function paddedSize(n) {
 	}
 	return Math.ceil(n / 65536) * 65536;
 }
-function pad$1(json) {
+function pad$2(json) {
 	const out = new Uint8Array(paddedSize(json.length + 4));
 	out.set(u32be(json.length), 0);
 	out.set(json, 4);
 	return out;
 }
-function unpad$1(p) {
+function unpad$2(p) {
 	if (p.length < 4) throw new ProtocolError("invalid", "Short blob.");
 	const n = readU32be(p, 0);
 	if (n > p.length - 4) throw new ProtocolError("invalid", "Bad blob padding.");
 	return p.subarray(4, 4 + n);
 }
-function checkVersion(version) {
+function checkVersion$1(version) {
 	if (!Number.isSafeInteger(version) || version < 1) throw new ProtocolError("invalid", "Bad blob version.");
 }
 function sealBlob(opts) {
-	checkVersion(opts.version);
-	const hdr = concat(MAGIC, u32be(opts.key.epoch));
-	const body = pad$1(utf8Encode(JSON.stringify(opts.payload)));
-	if (body.length + HDR + NONCE + TAG > 2097152) throw new ProtocolError("invalid", "Blob too large.");
-	const nonce = randomBytes(NONCE);
+	checkVersion$1(opts.version);
+	const hdr = concat(MAGIC$1, u32be(opts.key.epoch));
+	const body = pad$2(utf8Encode(JSON.stringify(opts.payload)));
+	if (body.length + HDR + NONCE$3 + TAG > 2097152) throw new ProtocolError("invalid", "Blob too large.");
+	const nonce = randomBytes(NONCE$3);
 	return concat(hdr, nonce, xchacha20poly1305(blobKey(opts.key, opts.spaceId), nonce, aadFor(hdr, opts.spaceId, opts.blobId, opts.version)).encrypt(body));
 }
 /** Key epoch a blob was sealed with, or null when it is not a sync blob. */
 function blobEpoch(data) {
-	if (data.length < 48 || !equalBytes(data.subarray(0, 4), MAGIC)) return null;
+	if (data.length < 48 || !equalBytes(data.subarray(0, 4), MAGIC$1)) return null;
 	return readU32be(data, 4);
 }
 /** Open a blob. `keyFor(epoch)` returns the key of that epoch, or null (then `no_key`: fetch the newer key wrap). */
 function openBlob(opts) {
-	checkVersion(opts.version);
+	checkVersion$1(opts.version);
 	const epoch = blobEpoch(opts.data);
 	if (epoch == null) throw new ProtocolError("invalid", "Not a sync blob.");
 	const key = opts.keyFor(epoch);
@@ -7786,7 +7786,7 @@ function openBlob(opts) {
 		throw new ProtocolError("tampered", "Blob failed authentication.");
 	}
 	try {
-		return JSON.parse(utf8Decode(unpad$1(plain)));
+		return JSON.parse(utf8Decode(unpad$2(plain)));
 	} catch (e) {
 		if (e instanceof ProtocolError) throw e;
 		throw new ProtocolError("invalid", "Blob body is not JSON.");
@@ -9235,19 +9235,1588 @@ var SyncSpaceOwner = class {
 		return this.ring()?.current.epoch ?? 0;
 	}
 };
+const BIP39_ENGLISH = Object.freeze("abandon ability able about above absent absorb abstract absurd abuse access accident account accuse achieve acid acoustic acquire across act action actor actress actual adapt add addict address adjust admit adult advance advice aerobic affair afford afraid again age agent agree ahead aim air airport aisle alarm album alcohol alert alien all alley allow almost alone alpha already also alter always amateur amazing among amount amused analyst anchor ancient anger angle angry animal ankle announce annual another answer antenna antique anxiety any apart apology appear apple approve april arch arctic area arena argue arm armed armor army around arrange arrest arrive arrow art artefact artist artwork ask aspect assault asset assist assume asthma athlete atom attack attend attitude attract auction audit august aunt author auto autumn average avocado avoid awake aware away awesome awful awkward axis baby bachelor bacon badge bag balance balcony ball bamboo banana banner bar barely bargain barrel base basic basket battle beach bean beauty because become beef before begin behave behind believe below belt bench benefit best betray better between beyond bicycle bid bike bind biology bird birth bitter black blade blame blanket blast bleak bless blind blood blossom blouse blue blur blush board boat body boil bomb bone bonus book boost border boring borrow boss bottom bounce box boy bracket brain brand brass brave bread breeze brick bridge brief bright bring brisk broccoli broken bronze broom brother brown brush bubble buddy budget buffalo build bulb bulk bullet bundle bunker burden burger burst bus business busy butter buyer buzz cabbage cabin cable cactus cage cake call calm camera camp can canal cancel candy cannon canoe canvas canyon capable capital captain car carbon card cargo carpet carry cart case cash casino castle casual cat catalog catch category cattle caught cause caution cave ceiling celery cement census century cereal certain chair chalk champion change chaos chapter charge chase chat cheap check cheese chef cherry chest chicken chief child chimney choice choose chronic chuckle chunk churn cigar cinnamon circle citizen city civil claim clap clarify claw clay clean clerk clever click client cliff climb clinic clip clock clog close cloth cloud clown club clump cluster clutch coach coast coconut code coffee coil coin collect color column combine come comfort comic common company concert conduct confirm congress connect consider control convince cook cool copper copy coral core corn correct cost cotton couch country couple course cousin cover coyote crack cradle craft cram crane crash crater crawl crazy cream credit creek crew cricket crime crisp critic crop cross crouch crowd crucial cruel cruise crumble crunch crush cry crystal cube culture cup cupboard curious current curtain curve cushion custom cute cycle dad damage damp dance danger daring dash daughter dawn day deal debate debris decade december decide decline decorate decrease deer defense define defy degree delay deliver demand demise denial dentist deny depart depend deposit depth deputy derive describe desert design desk despair destroy detail detect develop device devote diagram dial diamond diary dice diesel diet differ digital dignity dilemma dinner dinosaur direct dirt disagree discover disease dish dismiss disorder display distance divert divide divorce dizzy doctor document dog doll dolphin domain donate donkey donor door dose double dove draft dragon drama drastic draw dream dress drift drill drink drip drive drop drum dry duck dumb dune during dust dutch duty dwarf dynamic eager eagle early earn earth easily east easy echo ecology economy edge edit educate effort egg eight either elbow elder electric elegant element elephant elevator elite else embark embody embrace emerge emotion employ empower empty enable enact end endless endorse enemy energy enforce engage engine enhance enjoy enlist enough enrich enroll ensure enter entire entry envelope episode equal equip era erase erode erosion error erupt escape essay essence estate eternal ethics evidence evil evoke evolve exact example excess exchange excite exclude excuse execute exercise exhaust exhibit exile exist exit exotic expand expect expire explain expose express extend extra eye eyebrow fabric face faculty fade faint faith fall false fame family famous fan fancy fantasy farm fashion fat fatal father fatigue fault favorite feature february federal fee feed feel female fence festival fetch fever few fiber fiction field figure file film filter final find fine finger finish fire firm first fiscal fish fit fitness fix flag flame flash flat flavor flee flight flip float flock floor flower fluid flush fly foam focus fog foil fold follow food foot force forest forget fork fortune forum forward fossil foster found fox fragile frame frequent fresh friend fringe frog front frost frown frozen fruit fuel fun funny furnace fury future gadget gain galaxy gallery game gap garage garbage garden garlic garment gas gasp gate gather gauge gaze general genius genre gentle genuine gesture ghost giant gift giggle ginger giraffe girl give glad glance glare glass glide glimpse globe gloom glory glove glow glue goat goddess gold good goose gorilla gospel gossip govern gown grab grace grain grant grape grass gravity great green grid grief grit grocery group grow grunt guard guess guide guilt guitar gun gym habit hair half hammer hamster hand happy harbor hard harsh harvest hat have hawk hazard head health heart heavy hedgehog height hello helmet help hen hero hidden high hill hint hip hire history hobby hockey hold hole holiday hollow home honey hood hope horn horror horse hospital host hotel hour hover hub huge human humble humor hundred hungry hunt hurdle hurry hurt husband hybrid ice icon idea identify idle ignore ill illegal illness image imitate immense immune impact impose improve impulse inch include income increase index indicate indoor industry infant inflict inform inhale inherit initial inject injury inmate inner innocent input inquiry insane insect inside inspire install intact interest into invest invite involve iron island isolate issue item ivory jacket jaguar jar jazz jealous jeans jelly jewel job join joke journey joy judge juice jump jungle junior junk just kangaroo keen keep ketchup key kick kid kidney kind kingdom kiss kit kitchen kite kitten kiwi knee knife knock know lab label labor ladder lady lake lamp language laptop large later latin laugh laundry lava law lawn lawsuit layer lazy leader leaf learn leave lecture left leg legal legend leisure lemon lend length lens leopard lesson letter level liar liberty library license life lift light like limb limit link lion liquid list little live lizard load loan lobster local lock logic lonely long loop lottery loud lounge love loyal lucky luggage lumber lunar lunch luxury lyrics machine mad magic magnet maid mail main major make mammal man manage mandate mango mansion manual maple marble march margin marine market marriage mask mass master match material math matrix matter maximum maze meadow mean measure meat mechanic medal media melody melt member memory mention menu mercy merge merit merry mesh message metal method middle midnight milk million mimic mind minimum minor minute miracle mirror misery miss mistake mix mixed mixture mobile model modify mom moment monitor monkey monster month moon moral more morning mosquito mother motion motor mountain mouse move movie much muffin mule multiply muscle museum mushroom music must mutual myself mystery myth naive name napkin narrow nasty nation nature near neck need negative neglect neither nephew nerve nest net network neutral never news next nice night noble noise nominee noodle normal north nose notable note nothing notice novel now nuclear number nurse nut oak obey object oblige obscure observe obtain obvious occur ocean october odor off offer office often oil okay old olive olympic omit once one onion online only open opera opinion oppose option orange orbit orchard order ordinary organ orient original orphan ostrich other outdoor outer output outside oval oven over own owner oxygen oyster ozone pact paddle page pair palace palm panda panel panic panther paper parade parent park parrot party pass patch path patient patrol pattern pause pave payment peace peanut pear peasant pelican pen penalty pencil people pepper perfect permit person pet phone photo phrase physical piano picnic picture piece pig pigeon pill pilot pink pioneer pipe pistol pitch pizza place planet plastic plate play please pledge pluck plug plunge poem poet point polar pole police pond pony pool popular portion position possible post potato pottery poverty powder power practice praise predict prefer prepare present pretty prevent price pride primary print priority prison private prize problem process produce profit program project promote proof property prosper protect proud provide public pudding pull pulp pulse pumpkin punch pupil puppy purchase purity purpose purse push put puzzle pyramid quality quantum quarter question quick quit quiz quote rabbit raccoon race rack radar radio rail rain raise rally ramp ranch random range rapid rare rate rather raven raw razor ready real reason rebel rebuild recall receive recipe record recycle reduce reflect reform refuse region regret regular reject relax release relief rely remain remember remind remove render renew rent reopen repair repeat replace report require rescue resemble resist resource response result retire retreat return reunion reveal review reward rhythm rib ribbon rice rich ride ridge rifle right rigid ring riot ripple risk ritual rival river road roast robot robust rocket romance roof rookie room rose rotate rough round route royal rubber rude rug rule run runway rural sad saddle sadness safe sail salad salmon salon salt salute same sample sand satisfy satoshi sauce sausage save say scale scan scare scatter scene scheme school science scissors scorpion scout scrap screen script scrub sea search season seat second secret section security seed seek segment select sell seminar senior sense sentence series service session settle setup seven shadow shaft shallow share shed shell sheriff shield shift shine ship shiver shock shoe shoot shop short shoulder shove shrimp shrug shuffle shy sibling sick side siege sight sign silent silk silly silver similar simple since sing siren sister situate six size skate sketch ski skill skin skirt skull slab slam sleep slender slice slide slight slim slogan slot slow slush small smart smile smoke smooth snack snake snap sniff snow soap soccer social sock soda soft solar soldier solid solution solve someone song soon sorry sort soul sound soup source south space spare spatial spawn speak special speed spell spend sphere spice spider spike spin spirit split spoil sponsor spoon sport spot spray spread spring spy square squeeze squirrel stable stadium staff stage stairs stamp stand start state stay steak steel stem step stereo stick still sting stock stomach stone stool story stove strategy street strike strong struggle student stuff stumble style subject submit subway success such sudden suffer sugar suggest suit summer sun sunny sunset super supply supreme sure surface surge surprise surround survey suspect sustain swallow swamp swap swarm swear sweet swift swim swing switch sword symbol symptom syrup system table tackle tag tail talent talk tank tape target task taste tattoo taxi teach team tell ten tenant tennis tent term test text thank that theme then theory there they thing this thought three thrive throw thumb thunder ticket tide tiger tilt timber time tiny tip tired tissue title toast tobacco today toddler toe together toilet token tomato tomorrow tone tongue tonight tool tooth top topic topple torch tornado tortoise toss total tourist toward tower town toy track trade traffic tragic train transfer trap trash travel tray treat tree trend trial tribe trick trigger trim trip trophy trouble truck true truly trumpet trust truth try tube tuition tumble tuna tunnel turkey turn turtle twelve twenty twice twin twist two type typical ugly umbrella unable unaware uncle uncover under undo unfair unfold unhappy uniform unique unit universe unknown unlock until unusual unveil update upgrade uphold upon upper upset urban urge usage use used useful useless usual utility vacant vacuum vague valid valley valve van vanish vapor various vast vault vehicle velvet vendor venture venue verb verify version very vessel veteran viable vibrant vicious victory video view village vintage violin virtual virus visa visit visual vital vivid vocal voice void volcano volume vote voyage wage wagon wait walk wall walnut want warfare warm warrior wash wasp waste water wave way wealth weapon wear weasel weather web wedding weekend weird welcome west wet whale what wheat wheel when where whip whisper wide width wife wild will win window wine wing wink winner winter wire wisdom wise wish witness wolf woman wonder wood wool word work world worry worth wrap wreck wrestle wrist write wrong yard year yellow you young youth zebra zero zone zoo".split(" "));
+//#endregion
+//#region protocol/dist/ws/recovery.js
+const RECOVERY_WORD_COUNT = 24;
+function generateRecoverySecret() {
+	return randomBytes(32);
+}
+/** 32 bytes -> 24 BIP39 words. */
+function recoveryToWords(rs) {
+	if (rs.length !== 32) throw new Error("Recovery secret must be 32 bytes.");
+	const bits = [];
+	for (const byte of rs) for (let i = 7; i >= 0; i--) bits.push(byte >> i & 1);
+	const check = sha256(rs)[0];
+	for (let i = 7; i >= 0; i--) bits.push(check >> i & 1);
+	const words = [];
+	for (let w = 0; w < 24; w++) {
+		let idx = 0;
+		for (let b = 0; b < 11; b++) idx = idx << 1 | bits[w * 11 + b];
+		words.push(BIP39_ENGLISH[idx]);
+	}
+	return words;
+}
+let prefixIndex = null;
+function lookupWord(word) {
+	if (!prefixIndex) {
+		prefixIndex = /* @__PURE__ */ new Map();
+		BIP39_ENGLISH.forEach((w, i) => {
+			prefixIndex.set(w, i);
+			if (w.length > 4) prefixIndex.set(w.slice(0, 4), i);
+		});
+	}
+	const exact = prefixIndex.get(word);
+	if (exact !== void 0) return exact;
+	if (word.length > 4) {
+		const p = prefixIndex.get(word.slice(0, 4));
+		if (p !== void 0) return p;
+	}
+	return -1;
+}
+/** Splits a typed or pasted kit into words (spaces, commas, new lines, numbering like "1." are ignored). */
+function splitRecoveryWords(input) {
+	return (typeof input === "string" ? input : input.join(" ")).toLowerCase().replace(/\b\d+[.)]/g, " ").split(/[^a-z]+/).filter(Boolean);
+}
+/**
+* 24 words (full words or their first 4 letters) -> the 32-byte RS. Throws ProtocolError('invalid')
+* with `unknown word N`, `need 24 words` or `checksum` in the message.
+*/
+function wordsToRecovery(input) {
+	const words = splitRecoveryWords(input);
+	if (words.length !== 24) throw new ProtocolError("invalid", `need 24 words, got ${words.length}`);
+	const bits = [];
+	words.forEach((w, n) => {
+		const idx = lookupWord(w);
+		if (idx < 0) throw new ProtocolError("invalid", `unknown word ${n + 1}`);
+		for (let b = 10; b >= 0; b--) bits.push(idx >> b & 1);
+	});
+	const rs = /* @__PURE__ */ new Uint8Array(32);
+	for (let i = 0; i < 32; i++) {
+		let byte = 0;
+		for (let b = 0; b < 8; b++) byte = byte << 1 | bits[i * 8 + b];
+		rs[i] = byte;
+	}
+	let check = 0;
+	for (let b = 0; b < 8; b++) check = check << 1 | bits[256 + b];
+	if (check !== sha256(rs)[0]) throw new ProtocolError("invalid", "checksum");
+	return rs;
+}
+/** Key that wraps the Member Key seed for recovery. */
+function recoveryKey(rs, workspaceId) {
+	if (rs.length !== 32) throw new Error("Recovery secret must be 32 bytes.");
+	return hkdf(sha256, rs, utf8Encode(workspaceId), utf8Encode("sg-ws-recovery-v1"), 32);
+}
+//#endregion
+//#region protocol/dist/ws/keys.js
+const WS_ID_RE = /^[A-Za-z0-9_-]{22}$/;
+const NO_SALT = /* @__PURE__ */ new Uint8Array(0);
+function generateMemberSeed() {
+	return randomBytes(32);
+}
+function workspaceIdOf(ownerSignPub) {
+	if (ownerSignPub.length !== 32) throw new Error("Ed25519 public key must be 32 bytes.");
+	return toBase64Url(sha256(concat(utf8Encode("sg-ws-space-v1"), ownerSignPub)).subarray(0, 16));
+}
+function deriveMemberKeys(seed) {
+	if (seed.length !== 32) throw new Error("Member key seed must be 32 bytes.");
+	const sign = generateEd25519(hkdf(sha256, seed, NO_SALT, utf8Encode("sg-ws-mk-sign-v1"), 32));
+	const dh = generateX25519(hkdf(sha256, seed, NO_SALT, utf8Encode("sg-ws-mk-dh-v1"), 32));
+	const wrapKey = hkdf(sha256, seed, NO_SALT, utf8Encode("sg-ws-mk-wrap-v1"), 32);
+	return {
+		seed: Uint8Array.from(seed),
+		sign,
+		dh,
+		wrapKey,
+		workspaceId: workspaceIdOf(sign.publicKey)
+	};
+}
+/** Collections of Phase 1. Phase 4 adds one per group, one per member ("private:<id>") and "roster". */
+const WS_COLLECTIONS = ["admin"];
+/** Secret categories (spec 2.3). Phase 1 syncs proxy passwords only. */
+const WS_SECRET_CATEGORIES = [
+	"proxyPasswords",
+	"twoFactor",
+	"dataVault",
+	"cookies"
+];
+function generateKeyring(workspaceId) {
+	return {
+		workspaceId,
+		nameKey: randomBytes(32),
+		collections: { admin: [{
+			epoch: 1,
+			key: randomBytes(32)
+		}] },
+		secrets: { proxyPasswords: [{
+			epoch: 1,
+			key: randomBytes(32)
+		}] },
+		enabledSecrets: ["proxyPasswords"]
+	};
+}
+function currentKey(list) {
+	if (!list || !list.length) return null;
+	return list.reduce((a, b) => b.epoch > a.epoch ? b : a);
+}
+function keyAt(list, epoch) {
+	return list?.find((k) => k.epoch === epoch) ?? null;
+}
+const KR_MAGIC = utf8Encode("SGWK");
+const KR_HDR = 8;
+const NONCE$2 = 24;
+function keyringKey(mk) {
+	return hkdf(sha256, mk.wrapKey, utf8Encode(mk.workspaceId), utf8Encode("sg-ws-keyring-v1"), 32);
+}
+function encodeList(list) {
+	return list.map((k) => ({
+		epoch: k.epoch,
+		key: toBase64Url(k.key)
+	}));
+}
+function decodeList(list) {
+	if (!Array.isArray(list)) throw new ProtocolError("invalid", "Bad keyring list.");
+	return list.map((k) => {
+		if (typeof k?.epoch !== "number" || !Number.isSafeInteger(k.epoch) || k.epoch < 1) throw new ProtocolError("invalid", "Bad key epoch.");
+		const key = fromBase64Url(String(k.key));
+		if (key.length !== 32) throw new ProtocolError("invalid", "Bad key length.");
+		return {
+			epoch: k.epoch,
+			key
+		};
+	});
+}
+/** Seals the keyring. `version` is bound into the blob: the server cannot serve an older keyring as new. */
+function sealKeyring(mk, ring, version) {
+	if (ring.workspaceId !== mk.workspaceId) throw new Error("Keyring of another workspace.");
+	if (!Number.isSafeInteger(version) || version < 1) throw new Error("Bad keyring version.");
+	const body = {
+		v: 1,
+		ws: ring.workspaceId,
+		nameKey: toBase64Url(ring.nameKey),
+		collections: Object.fromEntries(Object.entries(ring.collections).map(([c, l]) => [c, encodeList(l)])),
+		secrets: Object.fromEntries(Object.entries(ring.secrets).map(([c, l]) => [c, encodeList(l ?? [])])),
+		enabledSecrets: [...ring.enabledSecrets]
+	};
+	const hdr = concat(KR_MAGIC, u32be(version));
+	const nonce = randomBytes(NONCE$2);
+	return concat(hdr, nonce, xchacha20poly1305(keyringKey(mk), nonce, concat(hdr, utf8Encode(mk.workspaceId))).encrypt(utf8Encode(JSON.stringify(body))));
+}
+function keyringVersion(blob) {
+	if (blob.length < 48 || !equalBytes(blob.subarray(0, 4), KR_MAGIC)) return null;
+	return readU32be(blob, 4);
+}
+function openKeyring(mk, blob) {
+	const version = keyringVersion(blob);
+	if (version === null) throw new ProtocolError("invalid", "Not a keyring.");
+	let plain;
+	try {
+		plain = xchacha20poly1305(keyringKey(mk), blob.subarray(KR_HDR, 32), concat(blob.subarray(0, KR_HDR), utf8Encode(mk.workspaceId))).decrypt(blob.subarray(32));
+	} catch {
+		throw new ProtocolError("tampered", "Keyring failed authentication.");
+	}
+	const o = JSON.parse(utf8Decode(plain));
+	if (o.v !== 1 || o.ws !== mk.workspaceId) throw new ProtocolError("invalid", "Bad keyring body.");
+	const nameKey = fromBase64Url(o.nameKey);
+	if (nameKey.length !== 32) throw new ProtocolError("invalid", "Bad name key.");
+	const collections = {};
+	for (const [c, l] of Object.entries(o.collections ?? {})) collections[c] = decodeList(l);
+	const secrets = {};
+	for (const [c, l] of Object.entries(o.secrets ?? {})) if (WS_SECRET_CATEGORIES.includes(c)) secrets[c] = decodeList(l);
+	const enabledSecrets = (Array.isArray(o.enabledSecrets) ? o.enabledSecrets : []).filter((c) => WS_SECRET_CATEGORIES.includes(c));
+	if (!currentKey(collections.admin)) throw new ProtocolError("invalid", "Keyring has no admin key.");
+	return {
+		ring: {
+			workspaceId: o.ws,
+			nameKey,
+			collections,
+			secrets,
+			enabledSecrets
+		},
+		version
+	};
+}
+//#endregion
+//#region protocol/dist/ws/wrap.js
+const R_MAGIC = utf8Encode("SGWR");
+const D_MAGIC = utf8Encode("SGWD");
+const NONCE$1 = 24;
+const D_HDR = 44;
+function checkSeed(seed, workspaceId) {
+	if (seed.length !== 32) throw new ProtocolError("invalid", "Bad member key length.");
+	const mk = deriveMemberKeys(seed);
+	if (mk.workspaceId !== workspaceId) throw new ProtocolError("tampered", "Member key of another workspace.");
+	return mk;
+}
+function wrapSeedForRecovery(seed, rs, workspaceId) {
+	const nonce = randomBytes(NONCE$1);
+	const k = recoveryKey(rs, workspaceId);
+	const ct = xchacha20poly1305(k, nonce, concat(R_MAGIC, utf8Encode(workspaceId))).encrypt(seed);
+	wipe(k);
+	return concat(R_MAGIC, nonce, ct);
+}
+/** -> the Member Keys, or throws ProtocolError('tampered') for a wrong kit or a swapped wrap. */
+function unwrapSeedWithRecovery(blob, rs, workspaceId) {
+	if (blob.length < 44 || !equalBytes(blob.subarray(0, 4), R_MAGIC)) throw new ProtocolError("invalid", "Not a recovery wrap.");
+	const k = recoveryKey(rs, workspaceId);
+	let seed;
+	try {
+		seed = xchacha20poly1305(k, blob.subarray(4, 28), concat(R_MAGIC, utf8Encode(workspaceId))).decrypt(blob.subarray(28));
+	} catch {
+		throw new ProtocolError("tampered", "Recovery words do not open this workspace.");
+	} finally {
+		wipe(k);
+	}
+	return checkSeed(seed, workspaceId);
+}
+function devKey(shared, ePub, rPub) {
+	return hkdf(sha256, shared, sha256(concat(ePub, rPub)), utf8Encode("sg-ws-devwrap-v1"), 32);
+}
+function wrapSeedForDevice(seed, recipientDhPub, workspaceId) {
+	const e = generateX25519();
+	const shared = dh(e.secretKey, recipientDhPub);
+	const k = devKey(shared, e.publicKey, recipientDhPub);
+	const hdr = concat(D_MAGIC, fromBase64Url(keyId(recipientDhPub)), e.publicKey);
+	const nonce = randomBytes(NONCE$1);
+	const ct = xchacha20poly1305(k, nonce, concat(hdr, utf8Encode(workspaceId))).encrypt(seed);
+	wipe(shared, k, e.secretKey);
+	return concat(hdr, nonce, ct);
+}
+function unwrapSeedForDevice(blob, recipient, workspaceId) {
+	if (blob.length < 84 || !equalBytes(blob.subarray(0, 4), D_MAGIC)) throw new ProtocolError("invalid", "Not a device wrap.");
+	if (toBase64Url(blob.subarray(4, 12)) !== keyId(recipient.publicKey)) throw new ProtocolError("wrong_session", "Wrap for another device.");
+	const ePub = blob.subarray(12, D_HDR);
+	let shared;
+	try {
+		shared = dh(recipient.secretKey, ePub);
+	} catch {
+		throw new ProtocolError("tampered", "Bad ephemeral key.");
+	}
+	const k = devKey(shared, ePub, recipient.publicKey);
+	let seed;
+	try {
+		seed = xchacha20poly1305(k, blob.subarray(D_HDR, 68), concat(blob.subarray(0, D_HDR), utf8Encode(workspaceId))).decrypt(blob.subarray(68));
+	} catch {
+		throw new ProtocolError("tampered", "Device wrap failed authentication.");
+	} finally {
+		wipe(shared, k);
+	}
+	return checkSeed(seed, workspaceId);
+}
+//#endregion
+//#region protocol/dist/ws/device.js
+const WS_PLATFORMS = [
+	"pc",
+	"web",
+	"phone"
+];
+const DEVICE_TAG_RE = /^[A-Za-z0-9_-]{11}$/;
+function deviceTagOf(signPub) {
+	return keyId(signPub);
+}
+/** Cleans a device name for a certificate (1 to 64 printable characters). */
+function cleanDeviceName(name) {
+	return String(name ?? "").replace(/[\u0000-\u001f\u007f<>]/g, " ").replace(/\s+/g, " ").trim().slice(0, 64) || "Device";
+}
+function makeDeviceCert(opts) {
+	return {
+		v: 1,
+		ws: opts.workspaceId,
+		tag: deviceTagOf(opts.signPub),
+		signPub: toBase64Url(opts.signPub),
+		dhPub: toBase64Url(opts.dhPub),
+		name: cleanDeviceName(opts.name),
+		platform: opts.platform,
+		at: opts.at ?? Date.now()
+	};
+}
+function certMessage(cert) {
+	return utf8Encode(`sg-ws-cert-v1\n${stableJson(cert)}`);
+}
+function revocationMessage(r) {
+	return utf8Encode(`sg-ws-revoke-v1\n${stableJson(r)}`);
+}
+function signDeviceCert(mk, cert) {
+	if (cert.ws !== mk.workspaceId) throw new Error("Certificate for another workspace.");
+	return toBase64Url(sign(certMessage(cert), mk.sign.secretKey));
+}
+/** Shape, workspace, tag and MK signature. */
+function verifyDeviceCert(ownerSignPub, workspaceId, cert, sig) {
+	try {
+		if (!cert || cert.v !== 1 || cert.ws !== workspaceId) return false;
+		if (!WS_PLATFORMS.includes(cert.platform) || typeof cert.name !== "string" || typeof cert.at !== "number") return false;
+		const signPub = fromBase64Url(cert.signPub);
+		if (signPub.length !== 32 || fromBase64Url(cert.dhPub).length !== 32) return false;
+		if (deviceTagOf(signPub) !== cert.tag) return false;
+		return verify(fromBase64Url(sig), certMessage(cert), ownerSignPub);
+	} catch {
+		return false;
+	}
+}
+function signRevocation(mk, tag, at = Date.now()) {
+	const revocation = {
+		v: 1,
+		ws: mk.workspaceId,
+		tag,
+		at
+	};
+	return {
+		revocation,
+		sig: toBase64Url(sign(revocationMessage(revocation), mk.sign.secretKey))
+	};
+}
+function verifyRevocation(ownerSignPub, workspaceId, r, sig) {
+	try {
+		if (!r || r.v !== 1 || r.ws !== workspaceId || !DEVICE_TAG_RE.test(r.tag)) return false;
+		return verify(fromBase64Url(sig), revocationMessage(r), ownerSignPub);
+	} catch {
+		return false;
+	}
+}
+/** Signature of a workspace-level action by the MK (create, delete, recovery re-issue). */
+function actionMessage(action, workspaceId, at, extra = "") {
+	return utf8Encode(`sg-ws-action-v1\n${action}\n${workspaceId}\n${at}\n${extra}`);
+}
+function signAction(mk, action, at, extra = "") {
+	return toBase64Url(sign(actionMessage(action, mk.workspaceId, at, extra), mk.sign.secretKey));
+}
+//#endregion
+//#region protocol/dist/ws/enrol.js
+const ENROL_SECRET_BYTES = 16;
+/** How long a code and a pending request stay usable. */
+const ENROL_TTL_MS = 10 * 6e4;
+function createEnrolOffer() {
+	const secret = randomBytes(16);
+	const b32 = base32Encode(secret).replace(/=+$/, "");
+	return {
+		secret,
+		code: `SG${b32}`.match(/.{1,4}/g).join("-"),
+		qr: `sgenrol:1:${b32}`
+	};
+}
+/** Reads a typed, pasted or scanned code. Throws ProtocolError('invalid'). */
+function parseEnrolCode(input) {
+	let s = String(input || "").trim();
+	if (/^sgenrol:1:/i.test(s)) s = s.slice(10);
+	s = s.toUpperCase().replace(/[\s-]/g, "");
+	if (s.startsWith("SG")) s = s.slice(2);
+	s = s.replace(/0/g, "O").replace(/1/g, "I").replace(/8/g, "B");
+	if (!/^[A-Z2-7]{26}$/.test(s)) throw new ProtocolError("invalid", "Not an enrolment code.");
+	let out;
+	try {
+		out = base32Decode(s);
+	} catch {
+		throw new ProtocolError("invalid", "Not an enrolment code.");
+	}
+	if (out.length !== 16) throw new ProtocolError("invalid", "Not an enrolment code.");
+	return out;
+}
+function enrolKey(secret) {
+	return hkdf(sha256, secret, /* @__PURE__ */ new Uint8Array(0), utf8Encode("sg-ws-enrol-v1"), 32);
+}
+function requestMac(secret, body) {
+	const b = {
+		signPub: body.signPub,
+		dhPub: body.dhPub,
+		name: body.name,
+		platform: body.platform
+	};
+	return toBase64Url(hmac(sha256, enrolKey(secret), utf8Encode(`sg-ws-enrol-req-v1\n${stableJson(b)}`)));
+}
+function makeEnrolRequest(secret, device, name, platform) {
+	const body = {
+		signPub: toBase64Url(device.sign.publicKey),
+		dhPub: toBase64Url(device.dh.publicKey),
+		name: cleanDeviceName(name),
+		platform
+	};
+	return {
+		...body,
+		mac: requestMac(secret, body)
+	};
+}
+/** True when the request was made with this code. */
+function checkEnrolRequest(secret, req) {
+	try {
+		return typeof req?.mac === "string" && equalStrings(requestMac(secret, req), req.mac);
+	} catch {
+		return false;
+	}
+}
+function approvalMac(secret, ws, reqMac, mkWrap, cert, certSig) {
+	const wrapHash = toBase64Url(sha256(fromBase64Url(mkWrap)));
+	return toBase64Url(hmac(sha256, enrolKey(secret), utf8Encode(`sg-ws-enrol-ok-v1\n${ws}\n${reqMac}\n${wrapHash}\n${stableJson(cert)}\n${certSig}`)));
+}
+/** Run by the enrolled device after `checkEnrolRequest` passed (and the user confirmed). */
+function approveEnrolRequest(secret, mk, req, now = Date.now()) {
+	if (!checkEnrolRequest(secret, req)) throw new ProtocolError("tampered", "Enrolment request was not made with this code.");
+	const cert = makeDeviceCert({
+		workspaceId: mk.workspaceId,
+		signPub: fromBase64Url(req.signPub),
+		dhPub: fromBase64Url(req.dhPub),
+		name: req.name,
+		platform: req.platform,
+		at: now
+	});
+	const certSig = signDeviceCert(mk, cert);
+	const mkWrap = toBase64Url(wrapSeedForDevice(mk.seed, fromBase64Url(req.dhPub), mk.workspaceId));
+	return {
+		mkWrap,
+		cert,
+		certSig,
+		mac: approvalMac(secret, mk.workspaceId, req.mac, mkWrap, cert, certSig)
+	};
+}
+/** Run by the new device. -> the Member Keys. Throws ProtocolError('tampered') on any mismatch. */
+function acceptEnrolApproval(opts) {
+	const { secret, request, approval, device } = opts;
+	const ws = approval?.cert?.ws;
+	if (typeof ws !== "string") throw new ProtocolError("invalid", "Bad approval.");
+	if (!equalStrings(approvalMac(secret, ws, request.mac, approval.mkWrap, approval.cert, approval.certSig), approval.mac)) throw new ProtocolError("tampered", "Approval was not made by a device holding this code.");
+	const mk = unwrapSeedForDevice(fromBase64Url(approval.mkWrap), device.dh, ws);
+	if (!verifyDeviceCert(mk.sign.publicKey, ws, approval.cert, approval.certSig)) throw new ProtocolError("tampered", "Bad device certificate.");
+	if (approval.cert.signPub !== toBase64Url(device.sign.publicKey) || approval.cert.dhPub !== toBase64Url(device.dh.publicKey)) throw new ProtocolError("tampered", "Certificate for another device.");
+	return mk;
+}
+//#endregion
+//#region protocol/dist/ws/record.js
+const WS_RECORD_KINDS = [
+	"profile",
+	"proxy",
+	"proxyGroup",
+	"group",
+	"template"
+];
+const WS_RID_RE = /^[A-Za-z0-9_-]{22}$/;
+/** Max size of one sealed record (the server refuses larger). */
+const WS_MAX_RECORD_BYTES = 512 * 1024;
+const MAGIC = utf8Encode("SGW1");
+const NONCE = 24;
+const WRAP_LEN = 84;
+function recordId(ring, kind, sid) {
+	return toBase64Url(hmac(sha256, ring.nameKey, utf8Encode(`sg-ws-name-v1\n${kind}\n${sid}`)).subarray(0, 16));
+}
+function colTag(col) {
+	return sha256(concat(utf8Encode("sg-ws-col-v1"), utf8Encode(col))).subarray(0, 8);
+}
+function wrapAad(ws, rid, tag, epoch) {
+	return concat(utf8Encode(`sg-ws-dek-v1\n${ws}\n${rid}\n`), tag, u32be(epoch));
+}
+function pad$1(json) {
+	const out = new Uint8Array(paddedSize(json.length + 4));
+	out.set(u32be(json.length), 0);
+	out.set(json, 4);
+	return out;
+}
+function unpad$1(p) {
+	if (p.length < 4) throw new ProtocolError("invalid", "Short record.");
+	const n = readU32be(p, 0);
+	if (n > p.length - 4) throw new ProtocolError("invalid", "Bad record padding.");
+	return p.subarray(4, 4 + n);
+}
+function checkVersion(version) {
+	if (!Number.isSafeInteger(version) || version < 1) throw new ProtocolError("invalid", "Bad record version.");
+}
+function sealRecord(opts) {
+	checkVersion(opts.version);
+	const ws = opts.ring.workspaceId;
+	const cols = opts.collections ?? ["admin"];
+	const dek = randomBytes(32);
+	const wraps = [];
+	for (const col of cols) {
+		const ck = currentKey(opts.ring.collections[col]);
+		if (!ck) throw new ProtocolError("no_key", `No key for collection ${col}.`);
+		const tag = colTag(col);
+		const nonce = randomBytes(NONCE);
+		wraps.push(concat(tag, u32be(ck.epoch), nonce, xchacha20poly1305(ck.key, nonce, wrapAad(ws, opts.rid, tag, ck.epoch)).encrypt(dek)));
+	}
+	if (!wraps.length || wraps.length > 255) throw new Error("Bad collection count.");
+	const head = concat(MAGIC, Uint8Array.of(wraps.length), ...wraps);
+	const nonce = randomBytes(NONCE);
+	const ct = xchacha20poly1305(dek, nonce, concat(head, utf8Encode(`${ws}\n${opts.rid}\n${opts.version}`))).encrypt(pad$1(utf8Encode(JSON.stringify(opts.record))));
+	wipe(dek);
+	const out = concat(head, nonce, ct);
+	if (out.length > 524288) throw new ProtocolError("invalid", "Record too large.");
+	return out;
+}
+function openRecord(opts) {
+	checkVersion(opts.version);
+	const { blob, ring } = opts;
+	const ws = ring.workspaceId;
+	if (blob.length < 5 || !equalBytes(blob.subarray(0, 4), MAGIC)) throw new ProtocolError("invalid", "Not a record.");
+	const count = blob[4];
+	const headLen = 5 + count * WRAP_LEN;
+	if (count < 1 || blob.length < headLen + NONCE + 16) throw new ProtocolError("invalid", "Short record.");
+	let dek = null;
+	let sawKnownCol = false;
+	for (let i = 0; i < count && !dek; i++) {
+		const w = blob.subarray(5 + i * WRAP_LEN, 5 + (i + 1) * WRAP_LEN);
+		const tag = w.subarray(0, 8);
+		const epoch = readU32be(w, 8);
+		for (const [col, keys] of Object.entries(ring.collections)) {
+			if (!equalBytes(colTag(col), tag)) continue;
+			sawKnownCol = true;
+			const ck = keyAt(keys, epoch);
+			if (!ck) continue;
+			try {
+				dek = xchacha20poly1305(ck.key, w.subarray(12, 36), wrapAad(ws, opts.rid, tag, epoch)).decrypt(w.subarray(36));
+			} catch {
+				throw new ProtocolError("tampered", "Record key failed authentication.");
+			}
+		}
+	}
+	if (!dek) throw new ProtocolError("no_key", sawKnownCol ? "Record sealed with a newer key epoch." : "No key for this record.");
+	const aad = concat(blob.subarray(0, headLen), utf8Encode(`${ws}\n${opts.rid}\n${opts.version}`));
+	let padded;
+	try {
+		padded = xchacha20poly1305(dek, blob.subarray(headLen, headLen + NONCE), aad).decrypt(blob.subarray(headLen + NONCE));
+	} catch {
+		throw new ProtocolError("tampered", "Record failed authentication.");
+	} finally {
+		wipe(dek);
+	}
+	let rec;
+	try {
+		rec = JSON.parse(utf8Decode(unpad$1(padded)));
+	} catch {
+		throw new ProtocolError("invalid", "Record body is not JSON.");
+	}
+	if (!rec || rec.v !== 1 || typeof rec.sid !== "string" || !WS_RECORD_KINDS.includes(rec.kind) || typeof rec.fields !== "object") throw new ProtocolError("invalid", "Bad record body.");
+	if (recordId(ring, rec.kind, rec.sid) !== opts.rid) throw new ProtocolError("tampered", "Record stored under another id.");
+	return rec;
+}
+function recordSignMessage(ws, rid, version, blob) {
+	return concat(utf8Encode(`sg-ws-rec-v1\n${ws}\n${rid}\n${version}\n`), sha256(blob));
+}
+function signRecord(deviceSignSecret, ws, rid, version, blob) {
+	return toBase64Url(sign(recordSignMessage(ws, rid, version, blob), deviceSignSecret));
+}
+function verifyRecord(deviceSignPub, sig, ws, rid, version, blob) {
+	try {
+		return verify(fromBase64Url(sig), recordSignMessage(ws, rid, version, blob), deviceSignPub);
+	} catch {
+		return false;
+	}
+}
+function isSealedSecret(v) {
+	return typeof v === "string" && /^sgs1\.\d+\.[A-Za-z0-9_-]+$/.test(v);
+}
+function secretAad(ws, sid, field) {
+	return utf8Encode(`sg-ws-secret-v1\n${ws}\n${sid}\n${field}`);
+}
+function sealSecret(ring, cat, value, ctx) {
+	const sk = currentKey(ring.secrets[cat]);
+	if (!sk) throw new ProtocolError("no_key", `No key for secrets ${cat}.`);
+	const nonce = randomBytes(NONCE);
+	const ct = xchacha20poly1305(sk.key, nonce, secretAad(ring.workspaceId, ctx.sid, ctx.field)).encrypt(utf8Encode(value));
+	return `sgs1.${sk.epoch}.${toBase64Url(concat(nonce, ct))}`;
+}
+function openSecret(ring, cat, sealed, ctx) {
+	if (!isSealedSecret(sealed)) throw new ProtocolError("invalid", "Not a sealed secret.");
+	const [, epochStr, data] = sealed.split(".");
+	const sk = keyAt(ring.secrets[cat], Number(epochStr));
+	if (!sk) throw new ProtocolError("no_key", "No key for this secret.");
+	const raw = fromBase64Url(data);
+	if (raw.length < 40) throw new ProtocolError("invalid", "Short secret.");
+	try {
+		return utf8Decode(xchacha20poly1305(sk.key, raw.subarray(0, NONCE), secretAad(ring.workspaceId, ctx.sid, ctx.field)).decrypt(raw.subarray(NONCE)));
+	} catch {
+		throw new ProtocolError("tampered", "Secret failed authentication.");
+	}
+}
+const CROCKFORD = "0123456789ABCDEFGHJKMNPQRSTVWXYZ";
+/** ULID (26 characters): 48-bit time + 80 random bits, Crockford base32. Sorts by creation time. */
+function newSid(now = Date.now()) {
+	let t = now;
+	let time = "";
+	for (let i = 0; i < 10; i++) {
+		time = CROCKFORD[t % 32] + time;
+		t = Math.floor(t / 32);
+	}
+	const r = randomBytes(16);
+	let rand = "";
+	for (let i = 0; i < 16; i++) rand += CROCKFORD[r[i] % 32];
+	return time + rand;
+}
+const SID_RE = /^[0-9A-HJKMNP-TV-Z]{26}$/;
+//#endregion
+//#region protocol/dist/ws/schema.js
+const S = (max = 200) => ({
+	t: "str",
+	max
+});
+const B = { t: "bool" };
+const J = (max = 65536) => ({
+	t: "json",
+	max
+});
+/** Profile fields that sync (spec 2.2). Not here, so never synced: dataDirName, launchArgs, advancedExt,
+* advancedSync, advancedBrowser, twoFactorSeed (Phase 6 opt-in), platformAccounts (saved passwords,
+* Phase 6), lastUsedAt, launchCount, owner/assigned member (Phase 4 teams). */
+const PROFILE_FIELDS = {
+	title: S(200),
+	notes: S(2e4),
+	tags: { t: "tags" },
+	groupSid: { t: "sid" },
+	proxySid: { t: "sid" },
+	proxyInfoString: S(1e3),
+	systemProxyBehavior: {
+		t: "enum",
+		values: [
+			"DIRECT",
+			"PROFILE_PROXY",
+			"SYSTEM_PROXY"
+		]
+	},
+	browserCore: S(40),
+	browserBrand: S(40),
+	browserVersion: S(40),
+	os: S(40),
+	osVersion: S(40),
+	deviceClass: S(20),
+	userAgent: S(1e3),
+	userAgentMode: S(20),
+	startupUrls: { t: "urls" },
+	webrtc: S(40),
+	timezoneType: S(40),
+	timezoneCustom: S(80),
+	locationType: S(40),
+	locationPrompt: S(40),
+	locationLat: S(40),
+	locationLng: S(40),
+	locationAcc: S(40),
+	languageType: S(40),
+	languageCustom: S(200),
+	displayLangType: S(40),
+	displayLangCustom: S(80),
+	resolutionType: S(40),
+	resolutionW: S(10),
+	resolutionH: S(10),
+	fontsType: S(40),
+	fontsList: J(65536),
+	canvasNoise: B,
+	webglImageNoise: B,
+	audioContextNoise: B,
+	clientRectsNoise: B,
+	speechVoicesNoise: B,
+	mediaDevice: S(40),
+	mediaDeviceCounts: J(1e3),
+	webglMetadata: S(40),
+	webglVendor: S(300),
+	webglRenderer: S(500),
+	webgpu: S(40),
+	cpuType: S(40),
+	cpuCores: S(10),
+	ramType: S(40),
+	ramGb: S(10),
+	deviceNameType: S(40),
+	deviceName: S(100),
+	macAddressType: S(40),
+	macAddress: S(40),
+	doNotTrack: S(40),
+	portScanProtection: S(40),
+	hardwareAcceleration: S(40),
+	disableTls: S(400),
+	enableQuic: B,
+	antidetectEngine: B,
+	randomFingerprint: B,
+	browserSettingsJson: J(65536),
+	syncItemsJson: J(65536),
+	createdAt: { t: "ms" },
+	/** Trash: set = in the trash since then; null = live. Purge = the record's "_del" tombstone. */
+	deletedAt: { t: "ms" }
+};
+const PROXY_TYPES = [
+	"HTTP",
+	"HTTPS",
+	"SOCKS5",
+	"SOCKS4"
+];
+const PROXY_FIELDS = {
+	name: S(200),
+	type: {
+		t: "enum",
+		values: PROXY_TYPES
+	},
+	host: S(253),
+	port: {
+		t: "int",
+		min: 1,
+		max: 65535
+	},
+	username: S(512),
+	/** Sealed with the proxyPasswords secrets key (spec 2.3). */
+	password: { t: "secret" },
+	rotationUrl: { t: "https" },
+	proxyGroupSid: { t: "sid" },
+	provider: S(64),
+	/** Last check from a PC (status hint, written by PCs only). */
+	check: { t: "check" },
+	createdAt: { t: "ms" }
+};
+const PROXY_GROUP_FIELDS = {
+	name: S(200),
+	color: { t: "color" },
+	autoCreated: B,
+	createdAt: { t: "ms" }
+};
+const GROUP_FIELDS = {
+	name: S(200),
+	color: { t: "color" },
+	createdAt: { t: "ms" }
+};
+const TEMPLATE_FIELDS = {
+	name: S(200),
+	/** JSON snapshot of profile settings; PC-only keys are removed (see sanitizeTemplateData). */
+	dataJson: J(131072),
+	createdAt: { t: "ms" }
+};
+const WS_FIELDS = {
+	profile: PROFILE_FIELDS,
+	proxy: PROXY_FIELDS,
+	proxyGroup: PROXY_GROUP_FIELDS,
+	group: GROUP_FIELDS,
+	template: TEMPLATE_FIELDS
+};
+/** Fields whose losing value goes to the Conflicts inbox (spec 4.3: not notes or tags). */
+const CONFLICT_FIELDS = {
+	profile: Object.keys(PROFILE_FIELDS).filter((f) => ![
+		"notes",
+		"tags",
+		"title",
+		"createdAt",
+		"deletedAt"
+	].includes(f)),
+	proxy: [
+		"type",
+		"host",
+		"port",
+		"username",
+		"password",
+		"rotationUrl"
+	],
+	proxyGroup: [],
+	group: [],
+	template: ["dataJson"]
+};
+/** Keys never kept inside a template snapshot (they could run code or point at local files). */
+const TEMPLATE_BLOCKED_KEYS = [
+	"launchArgs",
+	"dataDirName",
+	"advancedExt",
+	"advancedSync",
+	"advancedBrowser",
+	"twoFactorSeed",
+	"platformAccounts",
+	"extensions",
+	"extensionPaths",
+	"id",
+	"proxyId",
+	"groupId",
+	"ownerMemberId",
+	"assignedMemberId",
+	"password"
+];
+const SID_RE$1 = /^[0-9A-HJKMNP-TV-Z]{26}$/;
+const SECRET_RE = /^sgs1\.\d+\.[A-Za-z0-9_-]+$/;
+const COLOR_RE = /^#[0-9a-fA-F]{3,8}$/;
+const HOST_RE = /^[A-Za-z0-9._:\-[\]]{1,253}$/;
+function safeHttpUrl(u, httpsOnly = false) {
+	if (typeof u !== "string" || u.length > 2048) return null;
+	const m = /^(https?):\/\/((?:[A-Za-z0-9-]+\.)*[A-Za-z0-9-]+|\[[0-9A-Fa-f:.]+\])(:\d{1,5})?([/?#][^\s\u0000-\u001f\u007f]*)?$/i.exec(u.trim());
+	if (!m) return null;
+	const scheme = m[1].toLowerCase();
+	if (scheme !== "https" && (httpsOnly || scheme !== "http")) return null;
+	if (m[3] && Number(m[3].slice(1)) > 65535) return null;
+	const rest = m[4] ?? "/";
+	return `${scheme}://${m[2].toLowerCase()}${m[3] ?? ""}${rest.startsWith("/") ? rest : `/${rest}`}`;
+}
+function cleanStartUrls(v) {
+	if (v == null) return null;
+	if (typeof v !== "string") return null;
+	const urls = v.split(/[\r\n]+/).map((u) => safeHttpUrl(u)).filter((u) => !!u).slice(0, 20);
+	return urls.length ? urls.join("\n") : null;
+}
+function cleanCheck(v) {
+	if (!v || typeof v !== "object" || Array.isArray(v)) return null;
+	const o = v;
+	const out = {};
+	if (o.status === "ok" || o.status === "fail") out.status = o.status;
+	if (Number.isInteger(o.latencyMs) && o.latencyMs >= 0 && o.latencyMs < 6e5) out.latencyMs = o.latencyMs;
+	for (const k of [
+		"country",
+		"region",
+		"city",
+		"isp"
+	]) if (typeof o[k] === "string") out[k] = o[k].slice(0, 100);
+	if (typeof o.error === "string") out.error = o.error.slice(0, 300);
+	if (typeof o.blacklisted === "boolean") out.blacklisted = o.blacklisted;
+	if (Number.isSafeInteger(o.checkedAt)) out.checkedAt = o.checkedAt;
+	return Object.keys(out).length ? out : null;
+}
+/** Removes PC-only keys from a template snapshot and keeps its start pages to http(s). */
+function sanitizeTemplateData(json) {
+	let o;
+	try {
+		o = JSON.parse(json);
+	} catch {
+		return null;
+	}
+	if (!o || typeof o !== "object" || Array.isArray(o)) return null;
+	const out = { ...o };
+	for (const k of TEMPLATE_BLOCKED_KEYS) delete out[k];
+	if ("startupUrls" in out) {
+		const s = out.startupUrls;
+		out.startupUrls = Array.isArray(s) ? cleanStartUrls(s.join("\n"))?.split("\n") ?? [] : cleanStartUrls(s);
+	}
+	return JSON.stringify(out);
+}
+/** -> the cleaned value, or `undefined` to drop it. `null` is kept (field cleared). */
+function sanitizeValue(spec, v, field = "") {
+	if (v === null) return null;
+	switch (spec.t) {
+		case "str": return typeof v === "string" ? v.slice(0, spec.max ?? 200) : typeof v === "number" ? String(v) : void 0;
+		case "bool": return typeof v === "boolean" ? v : void 0;
+		case "int": return Number.isInteger(v) && v >= (spec.min ?? -(2 ** 31)) && v <= (spec.max ?? 2 ** 31) ? v : void 0;
+		case "ms": return Number.isSafeInteger(v) && v >= 0 ? v : void 0;
+		case "json":
+			if (typeof v !== "string" || v.length > (spec.max ?? 65536)) return void 0;
+			if (field === "dataJson") return sanitizeTemplateData(v) ?? void 0;
+			try {
+				JSON.parse(v);
+				return v;
+			} catch {
+				return;
+			}
+		case "urls": return cleanStartUrls(v);
+		case "https": return safeHttpUrl(v, true) ?? void 0;
+		case "enum": return typeof v === "string" && spec.values.includes(v) ? v : void 0;
+		case "sid": return typeof v === "string" && SID_RE$1.test(v) ? v : void 0;
+		case "tags":
+			if (!Array.isArray(v)) return void 0;
+			return [...new Set(v.filter((t) => typeof t === "string").map((t) => t.trim().slice(0, 60)).filter(Boolean))].slice(0, 100);
+		case "secret": return typeof v === "string" && SECRET_RE.test(v) && v.length < 4096 ? v : void 0;
+		case "color": return typeof v === "string" && COLOR_RE.test(v) ? v : void 0;
+		case "check": return cleanCheck(v) ?? void 0;
+	}
+}
+/**
+* Keeps only the fields of `kind` with valid values. -> { values, dropped } where `dropped` names every
+* field that was removed (unknown field or bad value), so the caller can log it (spec 2.5).
+*/
+function sanitizeValues(kind, values) {
+	const specs = WS_FIELDS[kind];
+	const out = {};
+	const dropped = [];
+	for (const [k, v] of Object.entries(values ?? {})) {
+		const spec = specs[k];
+		if (!spec) {
+			dropped.push(k);
+			continue;
+		}
+		const clean = sanitizeValue(spec, v, k);
+		if (clean === void 0) dropped.push(k);
+		else out[k] = clean;
+	}
+	if (kind === "proxy" && typeof out.host === "string" && !HOST_RE.test(out.host)) {
+		delete out.host;
+		dropped.push("host");
+	}
+	return {
+		values: out,
+		dropped
+	};
+}
+//#endregion
+//#region protocol/dist/ws/engine.js
+/** Secret fields: field -> secrets category (spec 2.3). */
+const WS_SECRET_FIELDS = { proxy: { password: "proxyPasswords" } };
+/** A sender's clock may run at most this far ahead (spec 4.2); later stamps are capped when stamping. */
+const WS_CLOCK_SKEW_MS = 5 * 6e4;
+const DEL = "_del";
+function emptyShadow() {
+	return {
+		v: 1,
+		cursor: 0,
+		lamport: 0,
+		entries: {}
+	};
+}
+function plainOf(map) {
+	const out = {};
+	for (const [k, e] of Object.entries(map)) if (k !== DEL) out[k] = e.v;
+	return out;
+}
+function isDeleted(map) {
+	return map?.[DEL]?.v === true;
+}
+function sameMap(a, b) {
+	const ka = Object.keys(a);
+	if (ka.length !== Object.keys(b).length) return false;
+	for (const k of ka) {
+		const x = a[k];
+		const y = b[k];
+		if (!x || !y || compareStamp(x.s, y.s) !== 0 || !sameValue(x.v, y.v)) return false;
+	}
+	return true;
+}
+function topWriter(map) {
+	let best = null;
+	for (const e of Object.values(map)) if (!best || compareStamp(e.s, best) > 0) best = e.s;
+	return best ? best.dev : null;
+}
+var WorkspaceSync = class {
+	o;
+	state = null;
+	devicePubs = /* @__PURE__ */ new Map();
+	devicesAt = 0;
+	running = null;
+	constructor(opts) {
+		this.o = {
+			...opts,
+			now: opts.now ?? Date.now,
+			batchSize: opts.batchSize ?? 100,
+			pageSize: opts.pageSize ?? 500
+		};
+	}
+	/** Runs one cycle; concurrent calls share the running one. */
+	sync() {
+		if (!this.running) this.running = this.cycle().finally(() => this.running = null);
+		return this.running;
+	}
+	async shadowState() {
+		if (!this.state) this.state = await this.o.shadow.load() ?? emptyShadow();
+		return this.state;
+	}
+	async refreshDevices(force = false) {
+		if (!force && this.o.now() - this.devicesAt < 6e4 && this.devicePubs.size) return;
+		const rows = await this.o.api.devices();
+		const ws = this.o.ring.workspaceId;
+		const map = /* @__PURE__ */ new Map();
+		for (const r of rows) {
+			if (r.revokedAt) continue;
+			if (!verifyDeviceCert(this.o.ownerSignPub, ws, r.cert, r.certSig) || r.cert.tag !== r.tag) continue;
+			map.set(r.tag, fromBase64Url(r.cert.signPub));
+		}
+		this.devicePubs = map;
+		this.devicesAt = this.o.now();
+	}
+	stamper(state) {
+		return () => ({
+			at: this.o.now(),
+			dev: this.o.device.tag,
+			lc: ++state.lamport
+		});
+	}
+	/** Verifies and opens a server row. -> the record or a reason. */
+	async openRow(row, retriedDevices) {
+		let pub = this.devicePubs.get(row.dev);
+		if (!pub && !retriedDevices.done) {
+			retriedDevices.done = true;
+			await this.refreshDevices(true);
+			pub = this.devicePubs.get(row.dev);
+		}
+		if (!pub) return "unknown_device";
+		let blob;
+		try {
+			blob = fromBase64Url(row.body);
+		} catch {
+			return "invalid";
+		}
+		if (!verifyRecord(pub, row.sig, this.o.ring.workspaceId, row.rid, row.version, blob)) return "bad_signature";
+		try {
+			return openRecord({
+				ring: this.o.ring,
+				rid: row.rid,
+				version: row.version,
+				blob
+			});
+		} catch (e) {
+			return e instanceof ProtocolError ? e.code : "invalid";
+		}
+	}
+	/** Local values -> stamped entries (sealing secrets, keeping stamps of unchanged values). */
+	stampLocal(kind, sid, ref, values, stamp) {
+		const ring = this.o.ring;
+		const secrets = WS_SECRET_FIELDS[kind] ?? {};
+		const prepared = {};
+		for (const [k, v] of Object.entries(values)) {
+			const cat = secrets[k];
+			if (!cat) {
+				prepared[k] = v;
+				continue;
+			}
+			if (!ring.enabledSecrets.includes(cat)) continue;
+			const prev = ref[k]?.v;
+			if (v === null || v === void 0 || v === "") prepared[k] = null;
+			else if (v === prev) prepared[k] = prev;
+			else if (isSealedSecret(prev) && this.tryOpenSecret(cat, prev, sid, k) === v) prepared[k] = prev;
+			else prepared[k] = sealSecret(ring, cat, String(v), {
+				sid,
+				field: k
+			});
+		}
+		const clean = sanitizeValues(kind, prepared).values;
+		const out = { ...ref };
+		for (const [k, v] of Object.entries(clean)) {
+			const r = ref[k];
+			if (r ? sameValue(r.v ?? null, v ?? null) : v === null) continue;
+			out[k] = {
+				v,
+				s: stamp()
+			};
+		}
+		return out;
+	}
+	tryOpenSecret(cat, sealed, sid, field) {
+		if (!isSealedSecret(sealed)) return null;
+		try {
+			return openSecret(this.o.ring, cat, sealed, {
+				sid,
+				field
+			});
+		} catch {
+			return null;
+		}
+	}
+	/** Merged entries -> sanitized plain values for the replica (secrets opened). */
+	valuesForReplica(kind, sid, merged) {
+		const { values } = sanitizeValues(kind, plainOf(merged));
+		const secrets = WS_SECRET_FIELDS[kind] ?? {};
+		for (const [k, cat] of Object.entries(secrets)) {
+			if (!(k in values)) continue;
+			if (values[k] === null) continue;
+			const open = this.tryOpenSecret(cat, values[k], sid, k);
+			if (open === null) delete values[k];
+			else values[k] = open;
+		}
+		return values;
+	}
+	async cycle() {
+		const state = await this.shadowState();
+		const report = {
+			pulled: 0,
+			applied: 0,
+			pushed: 0,
+			conflicts: [],
+			rejected: [],
+			retries: 0,
+			cursor: state.cursor
+		};
+		const ws = this.o.ring.workspaceId;
+		await this.refreshDevices();
+		const stamp = this.stamper(state);
+		const changed = /* @__PURE__ */ new Set();
+		const ridToSid = /* @__PURE__ */ new Map();
+		for (const e of Object.values(state.entries)) ridToSid.set(e.rid, e.sid);
+		const remote = /* @__PURE__ */ new Map();
+		const devRetry = { done: false };
+		let cursor = state.cursor;
+		let holdAt = Number.MAX_SAFE_INTEGER;
+		for (let page = 0; page < 1e4; page++) {
+			const res = await this.o.api.changes(cursor, this.o.pageSize);
+			for (const row of res.records) {
+				report.pulled++;
+				const known = ridToSid.get(row.rid);
+				const prev = known ? state.entries[known] : void 0;
+				if (prev && row.version <= prev.version) {
+					if (row.version < prev.version) report.rejected.push({
+						rid: row.rid,
+						reason: "rollback"
+					});
+					continue;
+				}
+				const rec = await this.openRow(row, devRetry);
+				if (typeof rec === "string") {
+					report.rejected.push({
+						rid: row.rid,
+						reason: rec
+					});
+					holdAt = Math.min(holdAt, row.seq - 1);
+					continue;
+				}
+				const have = remote.get(rec.sid);
+				if (!have || row.version > have.version) remote.set(rec.sid, {
+					rec,
+					version: row.version,
+					rid: row.rid
+				});
+			}
+			cursor = Math.max(cursor, res.seq);
+			if (!res.more) break;
+		}
+		cursor = Math.max(state.cursor, Math.min(cursor, holdAt));
+		for (const r of remote.values()) state.lamport = Math.max(state.lamport, maxLamport(r.rec.fields));
+		const local = /* @__PURE__ */ new Map();
+		for (const r of await this.o.replica.list()) if (WS_RECORD_KINDS.includes(r.kind)) local.set(r.sid, {
+			kind: r.kind,
+			values: r.values
+		});
+		const sids = /* @__PURE__ */ new Set([
+			...Object.keys(state.entries),
+			...remote.keys(),
+			...local.keys()
+		]);
+		const applies = [];
+		const uploads = /* @__PURE__ */ new Map();
+		const localBefore = /* @__PURE__ */ new Map();
+		const reconcile = (sid, remoteRec) => {
+			const prev = state.entries[sid];
+			const loc = local.get(sid);
+			const kind = prev?.kind ?? remoteRec?.rec.kind ?? loc?.kind;
+			const rid = prev?.rid ?? remoteRec?.rid ?? recordId(this.o.ring, kind, sid);
+			const base = prev?.base ?? {};
+			const localRef = prev?.local ?? base;
+			const remoteFields = remoteRec?.rec.fields ?? base;
+			const remoteVersion = remoteRec?.version ?? prev?.version ?? 0;
+			let localStamped;
+			if (loc) {
+				localStamped = this.stampLocal(kind, sid, localRef, loc.values, stamp);
+				if (isDeleted(localRef) && !sameMap(localStamped, localRef)) localStamped[DEL] = {
+					v: false,
+					s: stamp()
+				};
+			} else if (prev?.present && !isDeleted(localRef)) localStamped = {
+				...localRef,
+				[DEL]: {
+					v: true,
+					s: stamp()
+				}
+			};
+			else localStamped = localRef;
+			localBefore.set(sid, localStamped);
+			const m = mergeEntries(base, localStamped, remoteFields);
+			const merged = m.merged;
+			const deleted = isDeleted(merged);
+			const watch = CONFLICT_FIELDS[kind] ?? [];
+			for (const c of m.conflicts) if (watch.includes(c.id)) report.conflicts.push({
+				sid,
+				kind,
+				field: c.id,
+				kept: c.kept,
+				other: c.other
+			});
+			let present = prev?.present ?? !!loc;
+			if (loc) present = true;
+			const localChanged = m.changedLocally.some((f) => f !== DEL);
+			if (deleted && loc) applies.push({
+				sid,
+				kind,
+				values: null,
+				by: topWriter(merged)
+			});
+			else if (!deleted && (!loc || localChanged)) {
+				const all = this.valuesForReplica(kind, sid, merged);
+				const values = loc ? Object.fromEntries(Object.entries(all).filter(([k]) => m.changedLocally.includes(k))) : all;
+				applies.push({
+					sid,
+					kind,
+					values,
+					by: topWriter(merged)
+				});
+			}
+			if (deleted) present = false;
+			const needUpload = !sameMap(merged, remoteFields) && Object.keys(merged).length > 0;
+			const entry = {
+				sid,
+				kind,
+				rid,
+				version: remoteVersion,
+				base: needUpload ? remoteFields : merged,
+				local: merged,
+				present
+			};
+			if (!prev || !sameMap(prev.local, merged) || prev.version !== remoteVersion || !sameMap(prev.base, entry.base) || prev.present !== present) changed.add(sid);
+			state.entries[sid] = entry;
+			if (needUpload) uploads.set(sid, {
+				entry,
+				merged,
+				remoteFields
+			});
+			else uploads.delete(sid);
+		};
+		for (const sid of sids) reconcile(sid, remote.get(sid));
+		const applyChanges = async (list) => {
+			if (!list.length) return;
+			const res = await this.o.replica.apply(list) || {};
+			const refused = new Map((res.rejected ?? []).map((r) => [r.sid, r.reason]));
+			for (const ch of list) {
+				const e = state.entries[ch.sid];
+				if (!e) continue;
+				if (refused.has(ch.sid)) {
+					report.rejected.push({
+						sid: ch.sid,
+						reason: refused.get(ch.sid)
+					});
+					e.local = localBefore.get(ch.sid) ?? e.base;
+					e.present = local.has(ch.sid);
+				} else {
+					report.applied++;
+					e.present = ch.values !== null;
+				}
+				changed.add(ch.sid);
+			}
+		};
+		await applyChanges(applies);
+		for (let attempt = 0; attempt < 4 && uploads.size; attempt++) {
+			const pending = [...uploads.values()];
+			uploads.clear();
+			const retry = [];
+			for (let i = 0; i < pending.length; i += this.o.batchSize) {
+				const batch = pending.slice(i, i + this.o.batchSize);
+				const writes = batch.map(({ entry, merged }) => {
+					const version = entry.version + 1;
+					const blob = sealRecord({
+						ring: this.o.ring,
+						rid: entry.rid,
+						version,
+						record: {
+							v: 1,
+							sid: entry.sid,
+							kind: entry.kind,
+							fields: merged
+						}
+					});
+					return {
+						rid: entry.rid,
+						version,
+						body: toBase64Url(blob),
+						sig: signRecord(this.o.device.signSecret, ws, entry.rid, version, blob),
+						dev: this.o.device.tag
+					};
+				});
+				const results = await this.o.api.write(writes);
+				const byRid = new Map(results.map((r) => [r.rid, r]));
+				for (const { entry, merged } of batch) {
+					const r = byRid.get(entry.rid);
+					if (r?.ok) {
+						report.pushed++;
+						entry.version += 1;
+						entry.base = merged;
+						if (typeof r.seq === "number" && r.seq === cursor + 1) cursor = r.seq;
+						changed.add(entry.sid);
+					} else if (r?.error === "conflict") retry.push(entry.sid);
+					else report.rejected.push({
+						rid: entry.rid,
+						sid: entry.sid,
+						reason: r?.error ?? "no_answer"
+					});
+				}
+			}
+			if (!retry.length) break;
+			report.retries += retry.length;
+			const reapply = [];
+			const before = applies.length;
+			for (const sid of retry) {
+				const e = state.entries[sid];
+				const row = await this.o.api.record(e.rid);
+				if (!row) continue;
+				const rec = await this.openRow(row, devRetry);
+				if (typeof rec === "string") {
+					report.rejected.push({
+						rid: e.rid,
+						sid,
+						reason: rec
+					});
+					continue;
+				}
+				state.lamport = Math.max(state.lamport, maxLamport(rec.fields));
+				local.delete(sid);
+				if (e.present) local.set(sid, {
+					kind: e.kind,
+					values: plainForStamp(e.local)
+				});
+				reconcile(sid, {
+					rec,
+					version: row.version,
+					rid: row.rid
+				});
+			}
+			reapply.push(...applies.slice(before));
+			await applyChanges(reapply);
+		}
+		state.cursor = cursor;
+		report.cursor = cursor;
+		await this.o.shadow.save(state, [...changed]);
+		return report;
+	}
+};
+/** Plain values of a stamped map as the replica would list them (secrets left sealed; stampLocal keeps them). */
+function plainForStamp(map) {
+	return plainOf(map);
+}
+var MemoryShadowStore = class {
+	state = null;
+	async load() {
+		return this.state ? JSON.parse(JSON.stringify(this.state)) : null;
+	}
+	async save(state) {
+		this.state = JSON.parse(JSON.stringify(state));
+	}
+};
+var MemoryReplica = class {
+	records = /* @__PURE__ */ new Map();
+	refuse = null;
+	async list() {
+		return [...this.records.values()].map((r) => ({
+			...r,
+			values: { ...r.values }
+		}));
+	}
+	async apply(changes) {
+		const rejected = [];
+		for (const c of changes) {
+			const why = this.refuse?.(c) ?? null;
+			if (why) {
+				rejected.push({
+					sid: c.sid,
+					reason: why
+				});
+				continue;
+			}
+			if (c.values === null) this.records.delete(c.sid);
+			else this.records.set(c.sid, {
+				sid: c.sid,
+				kind: c.kind,
+				values: {
+					...this.records.get(c.sid)?.values ?? {},
+					...c.values
+				}
+			});
+		}
+		return { rejected };
+	}
+	put(kind, sid, values) {
+		this.records.set(sid, {
+			sid,
+			kind,
+			values: {
+				...this.records.get(sid)?.values ?? {},
+				...values
+			}
+		});
+	}
+};
+//#endregion
+//#region protocol/dist/ws/api.js
+var WsHttpError = class extends Error {
+	status;
+	code;
+	constructor(status, code, message) {
+		super(message ?? `${status} ${code}`);
+		this.status = status;
+		this.code = code;
+		this.name = "WsHttpError";
+	}
+};
+/** What a device signs to replace the keyring. */
+function keyringSignMessage(ws, version, keyring) {
+	return concat(utf8Encode(`sg-ws-keyring-v1\n${ws}\n${version}\n`), sha256(keyring));
+}
+function signKeyringUpdate(deviceSignSecret, ws, version, keyring) {
+	return toBase64Url(sign(keyringSignMessage(ws, version, keyring), deviceSignSecret));
+}
+var WsHttpApi = class {
+	base;
+	fetch;
+	constructor(opts) {
+		this.base = opts.baseUrl.replace(/\/+$/, "") + "/v1/sync";
+		this.auth = opts.auth;
+		this.fetch = opts.fetch ?? globalThis.fetch.bind(globalThis);
+	}
+	auth;
+	async call(method, path, body) {
+		for (let attempt = 0; attempt < 2; attempt++) {
+			const token = await this.auth.token();
+			const headers = { Accept: "application/json" };
+			if (token) headers.Authorization = `Bearer ${token}`;
+			if (body !== void 0) headers["Content-Type"] = "application/json";
+			const res = await this.fetch(this.base + path, {
+				method,
+				headers,
+				body: body === void 0 ? void 0 : JSON.stringify(body),
+				credentials: "omit"
+			});
+			if (res.status === 401 && attempt === 0 && this.auth.refresh && await this.auth.refresh()) continue;
+			let data = null;
+			try {
+				data = await res.json();
+			} catch {
+				data = null;
+			}
+			if (!res.ok) {
+				const d = data ?? {};
+				throw new WsHttpError(res.status, d.error ?? "http_error", d.message);
+			}
+			return data;
+		}
+		throw new WsHttpError(401, "session_invalid");
+	}
+	status() {
+		return this.call("GET", "/workspace");
+	}
+	create(body) {
+		return this.call("POST", "/workspace", body);
+	}
+	remove(body) {
+		return this.call("DELETE", "/workspace", body);
+	}
+	putKeyring(body) {
+		return this.call("PUT", "/workspace/keyring", body);
+	}
+	putRecovery(body) {
+		return this.call("PUT", "/workspace/recovery", body);
+	}
+	async devices() {
+		return (await this.call("GET", "/devices")).devices;
+	}
+	addDevice(body) {
+		return this.call("POST", "/devices", body);
+	}
+	revokeDevice(tag, body) {
+		return this.call("POST", `/devices/${encodeURIComponent(tag)}/revoke`, body);
+	}
+	enrol(request) {
+		return this.call("POST", "/enrol", { request });
+	}
+	async pendingEnrolments() {
+		return (await this.call("GET", "/enrol")).requests;
+	}
+	enrolStatus(id) {
+		return this.call("GET", `/enrol/${encodeURIComponent(id)}`);
+	}
+	approveEnrolment(id, approval) {
+		return this.call("POST", `/enrol/${encodeURIComponent(id)}/approve`, { approval });
+	}
+	denyEnrolment(id) {
+		return this.call("POST", `/enrol/${encodeURIComponent(id)}/deny`, {});
+	}
+	changes(since, limit) {
+		return this.call("GET", `/records?since=${encodeURIComponent(String(since))}&limit=${encodeURIComponent(String(limit))}`);
+	}
+	async record(rid) {
+		try {
+			return (await this.call("GET", `/records/${encodeURIComponent(rid)}`)).record;
+		} catch (e) {
+			if (e instanceof WsHttpError && e.status === 404) return null;
+			throw e;
+		}
+	}
+	async write(writes) {
+		return (await this.call("POST", "/records", { writes })).results;
+	}
+};
+//#endregion
+//#region protocol/dist/ws/setup.js
+function deviceCertFor(mk, device, name, platform, at = Date.now()) {
+	const cert = makeDeviceCert({
+		workspaceId: mk.workspaceId,
+		signPub: device.sign.publicKey,
+		dhPub: device.dh.publicKey,
+		name,
+		platform,
+		at
+	});
+	return {
+		cert,
+		certSig: signDeviceCert(mk, cert)
+	};
+}
+/** First device: make the MK, the keyring and the recovery kit, and the body for POST /v1/sync/workspace. */
+function createWorkspace(opts) {
+	const now = opts.now ?? Date.now();
+	const mk = deriveMemberKeys(generateMemberSeed());
+	const ring = generateKeyring(mk.workspaceId);
+	const rs = generateRecoverySecret();
+	const words = recoveryToWords(rs);
+	const ownerSignPub = toBase64Url(mk.sign.publicKey);
+	const body = {
+		id: mk.workspaceId,
+		ownerSignPub,
+		keyring: toBase64Url(sealKeyring(mk, ring, 1)),
+		keyringVersion: 1,
+		recoveryWrap: toBase64Url(wrapSeedForRecovery(mk.seed, rs, mk.workspaceId)),
+		at: now,
+		sig: signAction(mk, "create", now, ownerSignPub),
+		device: deviceCertFor(mk, opts.device, opts.deviceName, opts.platform, now)
+	};
+	rs.fill(0);
+	return {
+		mk,
+		ring,
+		words,
+		body
+	};
+}
+/** Checks the server's workspace against the MK this device holds, then opens the keyring. */
+function openWorkspace(info, mk) {
+	if (!equalStrings(info.id, mk.workspaceId) || !equalStrings(info.ownerSignPub, toBase64Url(mk.sign.publicKey))) throw new ProtocolError("tampered", "The server returned another workspace.");
+	const opened = openKeyring(mk, fromBase64Url(info.keyring));
+	if (opened.version !== info.keyringVersion) throw new ProtocolError("tampered", "Keyring version mismatch.");
+	return opened;
+}
+/** New device with the recovery kit. Throws ProtocolError('invalid') for a mistyped kit, 'tampered' for a wrong one. */
+function recoverWorkspace(info, words) {
+	const rs = wordsToRecovery(words);
+	try {
+		const mk = unwrapSeedWithRecovery(fromBase64Url(info.recoveryWrap), rs, info.id);
+		const { ring } = openWorkspace(info, mk);
+		return {
+			mk,
+			ring
+		};
+	} finally {
+		rs.fill(0);
+	}
+}
+/** A new kit replaces the old one (the old words stop working). Body for PUT /v1/sync/workspace/recovery. */
+function reissueRecovery(mk, now = Date.now()) {
+	const rs = generateRecoverySecret();
+	const words = recoveryToWords(rs);
+	const recoveryWrap = toBase64Url(wrapSeedForRecovery(mk.seed, rs, mk.workspaceId));
+	rs.fill(0);
+	return {
+		words,
+		body: {
+			recoveryWrap,
+			at: now,
+			sig: signAction(mk, "recovery", now, toBase64Url(sha256(fromBase64Url(recoveryWrap))))
+		}
+	};
+}
+/** Body for DELETE /v1/sync/workspace. */
+function deleteWorkspaceProof(mk, now = Date.now()) {
+	return {
+		at: now,
+		sig: signAction(mk, "delete", now)
+	};
+}
+/** Two random word positions (1-based) the user must type back before sync turns on (spec 3.4). */
+function kitCheckPositions(random = Math.random) {
+	const a = 1 + Math.floor(random() * 24);
+	let b = 1 + Math.floor(random() * 24);
+	if (b === a) b = a % 24 + 1;
+	return a < b ? [a, b] : [b, a];
+}
 //#endregion
 exports.ALERT_KINDS = ALERT_KINDS;
 exports.APPROVAL_DECISIONS = APPROVAL_DECISIONS;
 exports.APPROVAL_RESOLUTIONS = APPROVAL_RESOLUTIONS;
+exports.BIP39_ENGLISH = BIP39_ENGLISH;
 exports.COMMAND_MAX_AGE_MS = COMMAND_MAX_AGE_MS;
 exports.COMMAND_SCOPES = COMMAND_SCOPES;
 exports.COMMAND_TYPES = COMMAND_TYPES;
+exports.CONFLICT_FIELDS = CONFLICT_FIELDS;
 exports.CipherState = CipherState;
 exports.ClientFrameSchema = ClientFrameSchema;
 exports.CommandSchema = CommandSchema;
+exports.DEVICE_TAG_RE = DEVICE_TAG_RE;
 exports.DeviceInfoSchema = DeviceInfoSchema;
+exports.ENROL_SECRET_BYTES = ENROL_SECRET_BYTES;
+exports.ENROL_TTL_MS = ENROL_TTL_MS;
 exports.ENVELOPE_VERSION = ENVELOPE_VERSION;
 exports.EnvelopeKind = EnvelopeKind;
+exports.GROUP_FIELDS = GROUP_FIELDS;
 exports.Handshake = Handshake;
 exports.LEASE_OPS = LEASE_OPS;
 exports.LEASE_RENEW_EVERY_MS = LEASE_RENEW_EVERY_MS;
@@ -9265,20 +10834,27 @@ exports.MAX_RELAY_FRAME_BYTES = MAX_RELAY_FRAME_BYTES;
 exports.MAX_TABS = MAX_TABS;
 exports.META_FIELDS = META_FIELDS;
 exports.MIN_SUPPORTED_VERSION = MIN_SUPPORTED_VERSION;
+exports.MemoryReplica = MemoryReplica;
+exports.MemoryShadowStore = MemoryShadowStore;
 exports.MessageSchema = MessageSchema;
 exports.OWNER_DEFAULT_SCOPES = OWNER_DEFAULT_SCOPES;
 exports.PAD_BUCKETS = PAD_BUCKETS;
 exports.PAIRING_MAX_ATTEMPTS = PAIRING_MAX_ATTEMPTS;
 exports.PAIRING_TTL_MS = PAIRING_TTL_MS;
 exports.PLATFORMS = PLATFORMS;
+exports.PROFILE_FIELDS = PROFILE_FIELDS;
 exports.PROFILE_STATUSES = PROFILE_STATUSES;
 exports.PROTOCOL_VERSION = PROTOCOL_VERSION;
+exports.PROXY_FIELDS = PROXY_FIELDS;
+exports.PROXY_GROUP_FIELDS = PROXY_GROUP_FIELDS;
+exports.PROXY_TYPES = PROXY_TYPES;
 exports.PUSH_KINDS = PUSH_KINDS;
 exports.PairingOffer = PairingOffer;
 exports.ProfileSummarySchema = ProfileSummarySchema;
 exports.ProtocolError = ProtocolError;
 exports.QR_PREFIX = QR_PREFIX;
 exports.QR_VERSION = QR_VERSION;
+exports.RECOVERY_WORD_COUNT = RECOVERY_WORD_COUNT;
 exports.REKEY_AFTER_MESSAGES = REKEY_AFTER_MESSAGES;
 exports.REKEY_AFTER_MS = REKEY_AFTER_MS;
 exports.RELAY_PROTOCOL_VERSION = RELAY_PROTOCOL_VERSION;
@@ -9288,6 +10864,7 @@ exports.ReplayWindow = ReplayWindow;
 exports.SCOPES = SCOPES;
 exports.SEALED_MAX_AGE_MS = SEALED_MAX_AGE_MS;
 exports.SEEN_ID_TTL_MS = SEEN_ID_TTL_MS;
+exports.SID_RE = SID_RE;
 exports.SYNC_AUTH_MAX_SKEW_MS = SYNC_AUTH_MAX_SKEW_MS;
 exports.SYNC_HEADERS = SYNC_HEADERS;
 exports.SYNC_ID_RE = SYNC_ID_RE;
@@ -9304,10 +10881,28 @@ exports.SyncPayloadError = SyncPayloadError;
 exports.SyncRelayClient = SyncRelayClient;
 exports.SyncSpaceOwner = SyncSpaceOwner;
 exports.TEAM_REQUEST_KINDS = TEAM_REQUEST_KINDS;
+exports.TEMPLATE_BLOCKED_KEYS = TEMPLATE_BLOCKED_KEYS;
+exports.TEMPLATE_FIELDS = TEMPLATE_FIELDS;
 exports.ValidationError = ValidationError;
+exports.WS_CLOCK_SKEW_MS = WS_CLOCK_SKEW_MS;
+exports.WS_COLLECTIONS = WS_COLLECTIONS;
+exports.WS_FIELDS = WS_FIELDS;
+exports.WS_ID_RE = WS_ID_RE;
+exports.WS_MAX_RECORD_BYTES = WS_MAX_RECORD_BYTES;
+exports.WS_PLATFORMS = WS_PLATFORMS;
+exports.WS_RECORD_KINDS = WS_RECORD_KINDS;
+exports.WS_RID_RE = WS_RID_RE;
+exports.WS_SECRET_CATEGORIES = WS_SECRET_CATEGORIES;
+exports.WS_SECRET_FIELDS = WS_SECRET_FIELDS;
+exports.WorkspaceSync = WorkspaceSync;
+exports.WsHttpApi = WsHttpApi;
+exports.WsHttpError = WsHttpError;
+exports.acceptEnrolApproval = acceptEnrolApproval;
 exports.acceptSession = acceptSession;
+exports.actionMessage = actionMessage;
 exports.aeadDecrypt = aeadDecrypt;
 exports.aeadEncrypt = aeadEncrypt;
+exports.approveEnrolRequest = approveEnrolRequest;
 exports.authPayload = authPayload;
 exports.base32Decode = base32Decode;
 exports.base32Encode = base32Encode;
@@ -9315,18 +10910,29 @@ exports.blobEpoch = blobEpoch;
 exports.buildAuthFrame = buildAuthFrame;
 exports.bytesToHex = bytesToHex;
 exports.capEntries = capEntries;
+exports.certMessage = certMessage;
+exports.checkEnrolRequest = checkEnrolRequest;
 exports.checkFreshness = checkFreshness;
 exports.checkPayload = checkPayload;
 exports.checkScope = checkScope;
+exports.cleanDeviceName = cleanDeviceName;
 exports.commandAllowed = commandAllowed;
 exports.compareStamp = compareStamp;
 exports.computeSas = computeSas;
 exports.concat = concat;
+exports.createEnrolOffer = createEnrolOffer;
 exports.createMessage = createMessage;
+exports.createWorkspace = createWorkspace;
+exports.currentKey = currentKey;
 exports.decodeMessage = decodeMessage;
 exports.decodePairingPayload = decodePairingPayload;
+exports.deleteWorkspaceProof = deleteWorkspaceProof;
+exports.deriveMemberKeys = deriveMemberKeys;
+exports.deviceCertFor = deviceCertFor;
+exports.deviceTagOf = deviceTagOf;
 exports.dh = dh;
 exports.emptyLease = emptyLease;
+exports.emptyShadow = emptyShadow;
 exports.emptySyncState = emptySyncState;
 exports.encodeMessage = encodeMessage;
 exports.encodePairingPayload = encodePairingPayload;
@@ -9337,6 +10943,9 @@ exports.exportKeyring = exportKeyring;
 exports.fromBase64Url = fromBase64Url;
 exports.generateEd25519 = generateEd25519;
 exports.generateIdentity = generateIdentity;
+exports.generateKeyring = generateKeyring;
+exports.generateMemberSeed = generateMemberSeed;
+exports.generateRecoverySecret = generateRecoverySecret;
 exports.generateSyncKey = generateSyncKey;
 exports.generateX25519 = generateX25519;
 exports.header = header;
@@ -9345,14 +10954,19 @@ exports.hotp = hotp;
 exports.importIdentity = importIdentity;
 exports.importKeyring = importKeyring;
 exports.isScope = isScope;
+exports.isSealedSecret = isSealedSecret;
 exports.isValidMessage = isValidMessage;
 exports.jarAccepted = jarAccepted;
 exports.keepBoth = keepBoth;
+exports.keyAt = keyAt;
 exports.keyId = keyId;
 exports.keyWrapBlobId = keyWrapBlobId;
 exports.keyWrapSender = keyWrapSender;
 exports.keyringAdd = keyringAdd;
 exports.keyringLookup = keyringLookup;
+exports.keyringSignMessage = keyringSignMessage;
+exports.keyringVersion = keyringVersion;
+exports.kitCheckPositions = kitCheckPositions;
 exports.leaseAcquire = leaseAcquire;
 exports.leaseCheckpoint = leaseCheckpoint;
 exports.leaseHolder = leaseHolder;
@@ -9360,18 +10974,26 @@ exports.leaseRelease = leaseRelease;
 exports.leaseRenew = leaseRenew;
 exports.leaseTakeover = leaseTakeover;
 exports.mailboxIdFromSignKey = mailboxIdFromSignKey;
+exports.makeDeviceCert = makeDeviceCert;
+exports.makeEnrolRequest = makeEnrolRequest;
 exports.maxLamport = maxLamport;
 exports.mergeEntries = mergeEntries;
 exports.newMessageId = newMessageId;
+exports.newSid = newSid;
 exports.newestEntry = newestEntry;
 exports.noiseNonce = noiseNonce;
 exports.openBlob = openBlob;
+exports.openKeyring = openKeyring;
+exports.openRecord = openRecord;
 exports.openSealed = openSealed;
+exports.openSecret = openSecret;
+exports.openWorkspace = openWorkspace;
 exports.pad = pad;
 exports.paddedSize = paddedSize;
 exports.pairingIdFromSecret = pairingIdFromSecret;
 exports.pairingIdOfEnvelope = pairingIdOfEnvelope;
 exports.parseClientFrame = parseClientFrame;
+exports.parseEnrolCode = parseEnrolCode;
 exports.parseOtpauthUri = parseOtpauthUri;
 exports.parseScopes = parseScopes;
 exports.peekEnvelope = peekEnvelope;
@@ -9380,16 +11002,36 @@ exports.pruneTombstones = pruneTombstones;
 exports.randomBytes = randomBytes;
 exports.readU32be = readU32be;
 exports.readU64be = readU64be;
+exports.recordId = recordId;
+exports.recordSignMessage = recordSignMessage;
+exports.recoverWorkspace = recoverWorkspace;
+exports.recoveryKey = recoveryKey;
+exports.recoveryToWords = recoveryToWords;
+exports.reissueRecovery = reissueRecovery;
 exports.requiredScope = requiredScope;
+exports.revocationMessage = revocationMessage;
+exports.safeHttpUrl = safeHttpUrl;
 exports.sameStamp = sameStamp;
 exports.sameValue = sameValue;
+exports.sanitizeTemplateData = sanitizeTemplateData;
+exports.sanitizeValue = sanitizeValue;
+exports.sanitizeValues = sanitizeValues;
 exports.sasMatches = sasMatches;
 exports.sealBlob = sealBlob;
+exports.sealKeyring = sealKeyring;
+exports.sealRecord = sealRecord;
+exports.sealSecret = sealSecret;
 exports.sealTo = sealTo;
 exports.sealedSenderKeyId = sealedSenderKeyId;
 exports.setRandomSource = setRandomSource;
 exports.sign = sign;
+exports.signAction = signAction;
+exports.signDeviceCert = signDeviceCert;
+exports.signKeyringUpdate = signKeyringUpdate;
+exports.signRecord = signRecord;
+exports.signRevocation = signRevocation;
 exports.signSyncRequest = signSyncRequest;
+exports.splitRecoveryWords = splitRecoveryWords;
 exports.stableJson = stableJson;
 exports.stampLocal = stampLocal;
 exports.startPairing = startPairing;
@@ -9407,6 +11049,8 @@ exports.totpToken = totpToken;
 exports.u32be = u32be;
 exports.u64be = u64be;
 exports.unpad = unpad;
+exports.unwrapSeedForDevice = unwrapSeedForDevice;
+exports.unwrapSeedWithRecovery = unwrapSeedWithRecovery;
 exports.unwrapSyncKey = unwrapSyncKey;
 exports.utf8Decode = utf8Decode;
 exports.utf8Encode = utf8Encode;
@@ -9415,5 +11059,12 @@ exports.validateMessage = validateMessage;
 exports.validateRelayUrl = validateRelayUrl;
 exports.valuesOf = valuesOf;
 exports.verify = verify;
+exports.verifyDeviceCert = verifyDeviceCert;
+exports.verifyRecord = verifyRecord;
+exports.verifyRevocation = verifyRevocation;
 exports.wipe = wipe;
+exports.wordsToRecovery = wordsToRecovery;
+exports.workspaceIdOf = workspaceIdOf;
+exports.wrapSeedForDevice = wrapSeedForDevice;
+exports.wrapSeedForRecovery = wrapSeedForRecovery;
 exports.wrapSyncKey = wrapSyncKey;

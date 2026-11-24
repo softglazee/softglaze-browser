@@ -54,6 +54,7 @@ const ai = require('./ai');
 const { registerAiIpc, createWindowEmitter, canAnswerApproval } = require('./ai/ipc');
 const mobile = require('./mobile');
 const { registerMobileIpc } = require('./mobile/ipc');
+const workspaceSync = require('./workspaceSync');
 const { deviceKind: mobileDeviceKindOf } = require('./mobile/devices');
 const autofillBridge = require('./autofillBridge');
 const { siteKeyOf } = require('./siteKey');
@@ -12431,6 +12432,7 @@ async function afterDbReady() {
   getStoreRating().noteUse().catch(() => {});
   try { await ai.load(); } catch (e) { /* AI stays off */ }
   mobile.start().catch(() => {}); // phone companion: off until turned on in Settings > Phones
+  workspaceSync.start().catch(() => {}); // cloud sync: off until the Owner turns it on
   try { await localApi.startIfEnabled(); } catch (e) { /* off by default */ }
   // Licensing backend (when a tenant config is baked): refresh the signed lease on
   // startup + every 6h. Best-effort - offline keeps running on the cached lease.
@@ -17151,6 +17153,27 @@ function buildMobileHost() {
   };
 }
 
+function buildWorkspaceSyncHost() {
+  const { app, safeStorage, BrowserWindow } = require('electron');
+  return {
+    registerHandler,
+    getPrisma,
+    safeStorage,
+    userDataDir: () => app.getPath('userData'),
+    apiBaseUrl: () => (tenantConfig().enabled ? tenantConfig().apiBaseUrl : ''),
+    account: () => accountSession().read(),
+    getWindowMember: () => getActiveMember(),
+    uniqueDataDirName: (title) => ensureUniqueDataDirName(getPrisma(), title),
+    assertProfileCapacity: () => assertPlanProfileCapacity(1),
+    isProfileRunning: (id) => listAllSessions().some((s) => String(s.sessionId) === String(id)),
+    // A profile made on the web gets a generated fingerprint for the fields it left empty.
+    fillNewProfile: (data) => generateFingerprint({ deviceClass: data.deviceClass || undefined, os: data.os || undefined, browserVersion: data.browserVersion || undefined }),
+    broadcast: (channel, data) => {
+      try { for (const w of BrowserWindow.getAllWindows()) { try { w.webContents.send(channel, data); } catch (e) { /* window gone */ } } } catch (e) { /* no windows */ }
+    }
+  };
+}
+
 function buildMobileIpcHost() {
   return {
     getWindowMember: () => getActiveMember(),
@@ -17589,6 +17612,8 @@ function registerIpcHandlers() {
   // SoftGlaze phone companion (Settings > Phones): pairing, relay, approvals on the phone, sync.
   mobile.configure(buildMobileHost());
   registerMobileIpc(registerHandler, mobile, buildMobileIpcHost());
+  // Cloud sync (Settings > Cloud sync): encrypted workspace copy for the web app (docs/CLOUD-SYNC.md).
+  workspaceSync.setup(buildWorkspaceSyncHost());
   ai.onApprovalEvent((channel, data) => mobile.onApprovalEvent(channel, data));
   try {
     const { powerMonitor } = require('electron');

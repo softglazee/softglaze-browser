@@ -1,0 +1,86 @@
+{
+  "title": "Sincronización en la nube",
+  "description": "Gestiona perfiles, proxies, grupos, etiquetas y plantillas desde app.softglaze.com con este PC apagado. Cifrado de extremo a extremo: SoftGlaze no puede leerlo.",
+  "beta": "Beta",
+  "loading": "Cargando la sincronización en la nube",
+  "signIn": "Inicia sesión en tu cuenta de SoftGlaze en Configuración > Cuenta para usar la sincronización en la nube.",
+  "noOsEncryption": "El almacén de claves de este equipo no está disponible, así que la sincronización no puede guardar sus claves aquí con seguridad.",
+  "planRequired": "La sincronización en la nube viene con Pro y Enterprise. Tus perfiles siguen en este PC.",
+  "serverError": "No se pudo conectar con el servidor de SoftGlaze: {{message}}",
+  "off": {
+    "title": "La sincronización en la nube está desactivada",
+    "body": "Al activarla se sube una copia cifrada de tus perfiles, proxies (con contraseñas), grupos, etiquetas y plantillas. Los datos del navegador, las cookies, los parámetros de inicio y los códigos 2FA se quedan en este PC.",
+    "turnOn": "Activar la sincronización",
+    "existsTitle": "Tu cuenta ya tiene un espacio en la nube",
+    "existsBody": "Conecta este PC con el kit de recuperación de 24 palabras que guardaste al activar la sincronización. Los perfiles de este PC se añaden al espacio.",
+    "wordsLabel": "Kit de recuperación (24 palabras)",
+    "wordsPlaceholder": "Escribe o pega las 24 palabras, en orden",
+    "connect": "Conectar este PC"
+  },
+  "kit": {
+    "title": "Guarda tu kit de recuperación",
+    "body": "Estas 24 palabras son la única forma de volver a tu espacio en la nube si pierdes todos tus dispositivos. SoftGlaze no las tiene y no puede restablecerlas. Escríbelas o imprímelas y guárdalas sin conexión.",
+    "copy": "Copiar palabras",
+    "copied": "Copiado",
+    "print": "Imprimir",
+    "saved": "He guardado mi kit de recuperación en un lugar seguro",
+    "checkTitle": "Comprueba tu copia",
+    "checkWord": "Palabra {{n}}",
+    "confirm": "Activar la sincronización",
+    "cancel": "Cancelar",
+    "printTitle": "Kit de recuperación de SoftGlaze",
+    "printNote": "Espacio {{id}}. Guarda esta página sin conexión. Quien tenga estas palabras y tu cuenta puede leer tu espacio."
+  },
+  "on": {
+    "title": "La sincronización en la nube está activada",
+    "lastSync": "Última sincronización: {{time}}",
+    "never": "Aún no se ha sincronizado",
+    "summary": "{{pushed}} enviados, {{applied}} recibidos",
+    "issues": "Cambios no aplicados aquí: {{count}}",
+    "conflicts": "Campos editados en dos sitios (se conservó el más reciente): {{count}}",
+    "syncNow": "Sincronizar ahora",
+    "usage": "{{used}} de {{quota}} usados",
+    "auto": "Se sincroniza cada 20 segundos mientras SoftGlaze está abierto."
+  },
+  "enrol": {
+    "title": "Añadir un navegador web",
+    "help": "Abre app.softglaze.com, inicia sesión, elige Sincronización en la nube e introduce este código. Sirve una vez y durante 10 minutos.",
+    "start": "Mostrar un código",
+    "codeLabel": "Código de un solo uso",
+    "qrAlt": "Código QR del código de un solo uso",
+    "expiresIn": "El código caduca en {{time}}",
+    "waiting": "Esperando al navegador…",
+    "request": "{{name}} ({{platform}}) quiere unirse",
+    "approve": "Aprobar",
+    "deny": "Rechazar",
+    "approved": "{{name}} ya puede gestionar este espacio.",
+    "cancel": "Cerrar"
+  },
+  "devices": {
+    "title": "Dispositivos",
+    "thisPc": "Este PC",
+    "added": "Añadido el {{date}}",
+    "removed": "Eliminado",
+    "remove": "Eliminar",
+    "removeConfirm": "¿Eliminar {{name}}? Deja de recibir cambios al momento. Puede conservar una copia de lo que ya descargó.",
+    "platform_pc": "PC",
+    "platform_web": "Navegador",
+    "platform_phone": "Teléfono"
+  },
+  "kitAgain": {
+    "button": "Nuevo kit de recuperación",
+    "confirm": "¿Crear un nuevo kit de recuperación? Las palabras antiguas dejan de funcionar.",
+    "title": "Tu nuevo kit de recuperación",
+    "done": "Ya lo he guardado"
+  },
+  "turnOff": {
+    "button": "Desactivar",
+    "confirm": "¿Desactivar la sincronización en este PC? Tus datos se quedan en este PC.",
+    "deleteCloud": "Eliminar también la copia en la nube (todos los dispositivos pierden el acceso; este PC conserva sus datos)",
+    "deleteConfirm": "¿Eliminar la copia cifrada en la nube para todos los dispositivos? No se puede deshacer."
+  },
+  "errors": {
+    "generic": "Algo salió mal. Inténtalo de nuevo.",
+    "unavailable": "La sincronización en la nube no está disponible en esta versión."
+  }
+}

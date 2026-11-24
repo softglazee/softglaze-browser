@@ -39,6 +39,12 @@ function mobileCall(run) {
   try { return Promise.resolve(run(m)); } catch (e) { return Promise.reject(e); }
 }
 
+function cloudCall(run) {
+  const c = window.softglaze && window.softglaze.cloudSync;
+  if (!c) return Promise.reject(Object.assign(new Error('Cloud sync is not available in this build.'), { code: 'CLOUD_SYNC_UNAVAILABLE' }));
+  try { return Promise.resolve(run(c)); } catch (e) { return Promise.reject(e); }
+}
+
 function planCall(run) {
   const p = window.softglaze && window.softglaze.plan;
   if (!p) return Promise.reject(Object.assign(new Error('Plans are not available in this build.'), { code: 'PLAN_UNAVAILABLE' }));
@@ -518,6 +524,31 @@ export const softglazeApi = {
       const m = window.softglaze && window.softglaze.mobile;
       if (!m || typeof m.onChanged !== 'function') return () => {};
       return m.onChanged(cb);
+    }
+  },
+  // Cloud sync (Settings > Cloud sync). An older preload rejects with CLOUD_SYNC_UNAVAILABLE.
+  cloudSync: {
+    status: () => cloudCall((c) => c.status()),
+    turnOnStart: () => cloudCall((c) => c.turnOnStart()),
+    turnOnConfirm: (answers) => cloudCall((c) => c.turnOnConfirm(answers)),
+    turnOnCancel: () => cloudCall((c) => c.turnOnCancel()),
+    recover: (words) => cloudCall((c) => c.recover(words)),
+    syncNow: () => cloudCall((c) => c.syncNow()),
+    enrol: {
+      start: () => cloudCall((c) => c.enrol.start()),
+      poll: () => cloudCall((c) => c.enrol.poll()),
+      approve: (id) => cloudCall((c) => c.enrol.approve(id)),
+      deny: (id) => cloudCall((c) => c.enrol.deny(id)),
+      cancel: () => cloudCall((c) => c.enrol.cancel())
+    },
+    devices: () => cloudCall((c) => c.devices()),
+    revokeDevice: (tag) => cloudCall((c) => c.revokeDevice(tag)),
+    reissueKit: () => cloudCall((c) => c.reissueKit()),
+    turnOff: (deleteCloud) => cloudCall((c) => c.turnOff(deleteCloud)),
+    onChanged: (cb) => {
+      const c = window.softglaze && window.softglaze.cloudSync;
+      if (!c || typeof c.onChanged !== 'function') return () => {};
+      return c.onChanged(cb);
     }
   },
   updater: {
