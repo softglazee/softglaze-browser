@@ -27,6 +27,7 @@ const { randomToken, sha256Hex, isOpaqueToken } = require('./tokens');
 const { accountSignIn } = require('./accounts');
 const { revokeSession } = require('./sessions');
 const { accountOf, phonesAllowed, activePhones } = require('./accountApi');
+const review = require('./reviewLogin');
 
 const err = (status, error, message, extra = {}) => ({ status, body: { error, message, ...extra } });
 
@@ -155,6 +156,8 @@ async function emailStart(db, tenant, input, { ipHash = null, now = Date.now(), 
       codeHash: codeHash(code, challengeHash, parsed.emailKey), expiresAt, ipHash, createdAt: new Date(now)
     }
   });
+  // The Play review address (src/auth/reviewLogin.js): no email; the same answer as a sent code.
+  if (review.reviewFor(parsed)) return { status: 200, body: { challengeId, resendAfterSec: v.resendSeconds, expiresAt: expiresAt.getTime() } };
   const rendered = await renderFor(db, tenantId, {
     customer: { email: parsed.email, name: null, lang }, templateKey: 'verify_code', category: 'essential', settings, now,
     extraVars: { code, codeMinutes: String(v.codeTtlMinutes) }, lang
@@ -181,9 +184,13 @@ async function emailVerify(db, tenant, input, { client, device = null, ipHash = 
   if (row.verifiedAt || ms(row.expiresAt) <= now) return err(400, 'code_expired', 'This code has expired. Ask for a new one.');
   const max = settings.verify.maxAttempts;
   if (row.attempts >= max) return err(429, 'too_many_attempts', 'Too many wrong codes. Ask for a new one.');
+  // The Play review address checks the fixed review code instead (constant time), under a strict daily lock.
+  const reviewCfg = review.reviewFor(row);
+  if (reviewCfg && await review.reviewLocked(db, tenant.id, row.emailKey, now)) return err(429, 'too_many_attempts', 'Too many wrong codes. Ask for a new one.');
   const claim = await db.emailVerification.updateMany({ where: { id: row.id, attempts: row.attempts, verifiedAt: null }, data: { attempts: { increment: 1 } } });
   if (claim.count !== 1) return err(429, 'too_many_attempts', 'Too many attempts at once. Ask for a new code.');
-  if (!safeEqual(row.codeHash, codeHash(code, challengeHash, row.emailKey))) {
+  const matches = reviewCfg ? review.reviewCodeMatches(reviewCfg, code) : safeEqual(row.codeHash, codeHash(code, challengeHash, row.emailKey));
+  if (!matches) {
     return err(400, 'invalid_code', 'That code is not right.', { attemptsLeft: Math.max(0, max - row.attempts - 1) });
   }
   const used = await db.emailVerification.updateMany({ where: { id: row.id, verifiedAt: null }, data: { verifiedAt: new Date(now) } });
@@ -193,6 +200,7 @@ async function emailVerify(db, tenant, input, { client, device = null, ipHash = 
   if (r.status === 200) {
     const customer = await db.customer.findUnique({ where: { tenantId_emailKey: { tenantId: tenant.id, emailKey: row.emailKey } } });
     if (customer) await db.emailVerification.update({ where: { id: row.id }, data: { customerId: customer.id } }).catch(() => {});
+    if (reviewCfg) await review.logReviewSignIn(db, tenant.id, customer ? customer.id : null, client === 'softglaze-mobile' ? 'mobile' : 'web', now);
   }
   return r;
 }

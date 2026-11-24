@@ -22,12 +22,18 @@ function findConfigEnv() {
   return null;
 }
 const configEnvPath = findConfigEnv();
+// Names whose process.env value was copied from config/.env at startup (see liveEnvFresh).
+const copiedFromFile = new Set();
 
 if (dotenv) {
   // 1) the standard local .env (next to the process cwd). 2) config/.env. dotenv never overrides
   // set vars, so the process env or local .env wins at startup.
   dotenv.config({ quiet: true });
-  if (configEnvPath) dotenv.config({ path: configEnvPath, quiet: true });
+  if (configEnvPath) {
+    const before = new Set(Object.keys(process.env));
+    dotenv.config({ path: configEnvPath, quiet: true });
+    for (const k of Object.keys(process.env)) if (!before.has(k)) copiedFromFile.add(k);
+  }
 }
 
 // Prisma's MySQL connector resolves "localhost" to IPv6 ::1, where MySQL usually
@@ -72,6 +78,17 @@ function liveEnv(name) {
   return v === undefined || v === '' ? undefined : v;
 }
 
+// Like liveEnv, but a value that came from config/.env at startup ends when its line is removed from the
+// file: the stale process copy is ignored. A value set in the real process environment still counts.
+// Used where removing the line must switch a feature off at once (REVIEW_LOGIN_*, src/auth/reviewLogin.js).
+function liveEnvFresh(name) {
+  const fromFile = liveFileValues()[name];
+  if (fromFile !== undefined && fromFile !== '') return fromFile;
+  if (copiedFromFile.has(name)) return undefined;
+  const v = process.env[name];
+  return v === undefined || v === '' ? undefined : v;
+}
+
 module.exports = {
   port,
   publicBaseUrl: process.env.PUBLIC_BASE_URL || `http://localhost:${port}`,
@@ -79,5 +96,6 @@ module.exports = {
   masterKey,
   databaseUrl: required('DATABASE_URL'),
   configEnvPath,
-  liveEnv
+  liveEnv,
+  liveEnvFresh
 };
