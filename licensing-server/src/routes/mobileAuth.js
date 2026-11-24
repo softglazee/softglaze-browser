@@ -22,7 +22,8 @@
 //   POST /v1/mobile/auth/sign-out-all (Bearer) -> 200 { ok, revoked }: every phone of the account
 //   POST /v1/mobile/entitlement { mailbox? } (Bearer) -> 200 { token, exp, payload } | 403 no_entitlement |
 //        503 entitlement_unavailable
-// <session> = { token, expiresAt (ms), account: { id, email, name, tier: trial | pro | enterprise } }.
+// <session> = { token, expiresAt (ms), account: { id, email, name, tier: trial | pro | enterprise,
+//   plan: trial | free | pro | enterprise, lifetime: boolean, planEndsAt: ISO date | null (lifetime, Free) } }.
 const express = require('express');
 const prisma = require('../db');
 const asyncHandler = require('../middleware/asyncHandler');
@@ -31,7 +32,7 @@ const { availableProviders } = require('../auth/providers');
 const flow = require('../auth/flow');
 const { MOBILE_CLIENT_ID } = require('../auth/tokens');
 const { bearerSession, bearerOf, rotateMobile, revokeSession } = require('../auth/sessions');
-const { accountTenant, signOutAll } = require('../auth/accountApi');
+const { accountTenant, accountFacts, signOutAll } = require('../auth/accountApi');
 const mobile = require('../auth/mobile');
 const { sendPage, ipHashOf, setNonceCookie, redirectTo } = require('./authHttp');
 
@@ -102,7 +103,7 @@ const SESSION_INVALID = { status: 401, body: { error: 'session_invalid', message
 router.post('/auth/refresh', asyncHandler(async (req, res) => {
   const r = await rotateMobile(prisma, bearerOf(req));
   if (!r.ok) return send(res, SESSION_INVALID);
-  send(res, { status: 200, body: mobile.mobileBody(r.customer, r.token, r.expiresAt) });
+  send(res, { status: 200, body: mobile.mobileBody(r.customer, r.token, r.expiresAt, await accountFacts(prisma, r.customer)) });
 }));
 
 router.post('/auth/sign-out', asyncHandler(async (req, res) => {

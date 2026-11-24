@@ -9,7 +9,7 @@
 //   verify { challengeId, code, device? } -> a session. 400 invalid_code, 400 code_expired, 429 too_many_attempts
 // Provider sign-in: the browser leg is src/auth/flow.js (startClientSignIn); the client trades the one-time
 // code with its PKCE verifier (takeClientCode) and gets a session.
-// Phone sessions: { token, expiresAt (ms), account: { id, email, name, tier } }, 30 days sliding, one
+// Phone sessions: { token, expiresAt (ms), account: { id, email, name, tier, plan, lifetime, planEndsAt } }, 30 days sliding, one
 // MobileDevice row each. A new phone over MOBILE_PHONES_ALLOWED is refused with 403 phone_limit.
 // Entitlement: an Ed25519-signed token for the relay (D:\SoftGlaze-Mobile\relay\src\entitlement.ts):
 //   base64url(JSON payload) + "." + base64url(Ed25519 signature over the ASCII of the first part)
@@ -26,7 +26,7 @@ const { ms } = require('../util/time');
 const { randomToken, sha256Hex, isOpaqueToken } = require('./tokens');
 const { accountSignIn } = require('./accounts');
 const { revokeSession } = require('./sessions');
-const { accountOf, phonesAllowed, activePhones } = require('./accountApi');
+const { accountOf, accountFacts, phonesAllowed, activePhones } = require('./accountApi');
 const review = require('./reviewLogin');
 
 const err = (status, error, message, extra = {}) => ({ status, body: { error, message, ...extra } });
@@ -78,18 +78,24 @@ async function registerDevice(db, tenantId, customerId, sessionRow, device, now)
   });
 }
 
-function mobileBody(customer, token, expiresAt) {
-  return { token, expiresAt: ms(expiresAt), account: { id: customer.id, email: customer.email, name: customer.name || null, tier: accountOf(customer).tier } };
+// The phone's account object: the original { id, email, name, tier } plus plan (trial | free | pro | enterprise),
+// lifetime and planEndsAt (null for lifetime and Free). `facts` = accountFacts(db, customer) when the caller has it.
+function mobileBody(customer, token, expiresAt, facts = null) {
+  const a = accountOf(customer, facts);
+  return {
+    token, expiresAt: ms(expiresAt),
+    account: { id: a.id, email: a.email, name: a.name, tier: a.tier, plan: a.plan, lifetime: a.lifetime, planEndsAt: a.planEndsAt }
+  };
 }
 
-function webBody(customer, s, now = Date.now()) {
+function webBody(customer, s, now = Date.now(), facts = null) {
   return {
     access_token: s.token,
     token_type: 'Bearer',
     expires_in: Math.max(0, Math.round((ms(s.accessExpiresAt) - now) / 1000)),
     refresh_token: s.refreshToken,
     refresh_expires_at: ms(s.expiresAt),
-    account: accountOf(customer)
+    account: accountOf(customer, facts, now)
   };
 }
 
@@ -103,9 +109,9 @@ async function clientSignIn(db, tenant, provider, profile, { client, device = nu
   if (!r.ok) return r;
   if (mobile) {
     await registerDevice(db, tenant.id, r.customer.id, r.session.row, device, now);
-    return { status: 200, body: mobileBody(r.customer, r.session.token, r.session.expiresAt) };
+    return { status: 200, body: mobileBody(r.customer, r.session.token, r.session.expiresAt, await accountFacts(db, r.customer, now)) };
   }
-  return { status: 200, body: webBody(r.customer, r.session, now) };
+  return { status: 200, body: webBody(r.customer, r.session, now, await accountFacts(db, r.customer, now)) };
 }
 
 // --- Email code without an install ---

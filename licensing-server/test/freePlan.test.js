@@ -253,6 +253,25 @@ test('account summaries report the plan: free after a trial, trial during one', 
   assert.equal(accountPlan({ status: 'lead', tier: null }), 'free');
   assert.equal(accountPlan({ status: 'trial', tier: 'enterprise' }), 'trial');
   assert.equal(accountPlan({ status: 'paid', tier: 'pro' }), 'pro');
+  // The paid term ended but customer.tier was not recomputed yet (cron lag, or no cron): Free, never Pro.
+  const D = 86400000;
+  const now = Date.now();
+  const { accountTier, accountOf } = require('../src/auth/accountApi');
+  assert.equal(accountPlan({ status: 'paid', tier: 'pro', paidUntil: new Date(now - 10 * D) }, now), 'free');
+  assert.equal(accountTier({ status: 'paid', tier: 'pro', paidUntil: new Date(now - 10 * D) }, now), 'trial');
+  assert.equal(accountPlan({ status: 'paid', tier: 'pro', paidUntil: new Date(now - D) }, now), 'pro', 'inside the 3-day renewal grace');
+  assert.equal(accountPlan({ status: 'paid', tier: 'enterprise', paidUntil: new Date(now - 10 * D), complimentaryUntil: new Date(now + 9 * D) }, now), 'enterprise', 'a running complimentary term');
+  assert.equal(accountPlan({ status: 'lead', tier: 'pro', complimentaryUntil: new Date(now - D) }, now), 'free');
+  assert.equal(accountPlan({ status: 'trial', tier: 'enterprise', trialEndsAt: new Date(now + D) }, now), 'trial');
+  assert.equal(accountPlan({ status: 'trial', tier: 'enterprise', trialEndsAt: new Date(now - D) }, now), 'free');
+  // lifetime / planEndsAt from the customer row alone (no db).
+  const far = new Date(now + 36500 * D);
+  assert.equal(accountOf({ id: 'c', email: 'e', status: 'paid', tier: 'pro', paidUntil: far }, null, now).lifetime, true);
+  assert.equal(accountOf({ id: 'c', email: 'e', status: 'paid', tier: 'pro', paidUntil: far }, null, now).planEndsAt, null);
+  const m = new Date(now + 30 * D);
+  const a = accountOf({ id: 'c', email: 'e', status: 'paid', tier: 'pro', paidUntil: m }, null, now);
+  assert.deepEqual([a.plan, a.lifetime, new Date(a.planEndsAt).getTime()], ['pro', false, m.getTime()]);
+  assert.equal(accountOf({ id: 'c', email: 'e', status: 'trial_expired', tier: null }, null, now).planEndsAt, null);
 });
 
 test('metrics: the free block counts Free users, weekly active, free to paid, deal clicks and 12-month inactive', async () => {
