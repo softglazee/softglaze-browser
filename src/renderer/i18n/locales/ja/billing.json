@@ -25,7 +25,8 @@
     "renews": "{{date}}に更新",
     "noLicense": "ライセンス機能は有効です。このインストールにはまだ有料ライセンスがありません。",
     "trialVerified": "無料トライアル（認証済み）",
-    "trialEnds": "{{date}}に終了"
+    "trialEnds": "{{date}}に終了",
+    "lifetime": "永久"
   },
   "current": {
     "title": "現在のプラン",
@@ -83,7 +84,8 @@
     "currentPlan": "現在のプラン",
     "upgradeEnterprise": "Enterpriseにアップグレード",
     "downgradePro": "Proにダウングレード",
-    "choosePlan": "{{name}}を選択"
+    "choosePlan": "{{name}}を選択",
+    "lifetimeOwned": "永久プラン有効"
   },
   "trial": {
     "started": "無料トライアルが有効になり、すべての機能を利用できます。どうぞお楽しみください！",

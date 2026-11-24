@@ -25,7 +25,8 @@
     "renews": "{{date}} کو تجدید",
     "noLicense": "لائسنسنگ فعال ہے، لیکن اس انسٹال کے لیے ابھی کوئی پیڈ لائسنس نہیں۔",
     "trialVerified": "مفت ٹرائل، تصدیق شدہ",
-    "trialEnds": "{{date}} کو ختم"
+    "trialEnds": "{{date}} کو ختم",
+    "lifetime": "تاحیات"
   },
   "current": {
     "title": "موجودہ پلان",
@@ -87,7 +88,8 @@
     "currentPlan": "موجودہ پلان",
     "upgradeEnterprise": "Enterprise پر اپ گریڈ کریں",
     "downgradePro": "Pro پر ڈاؤن گریڈ کریں",
-    "choosePlan": "{{name}} منتخب کریں"
+    "choosePlan": "{{name}} منتخب کریں",
+    "lifetimeOwned": "تاحیات پلان فعال ہے"
   },
   "trial": {
     "started": "آپ کا مفت ٹرائل فعال ہے، مکمل رسائی کے ساتھ۔ لطف اٹھائیں!",

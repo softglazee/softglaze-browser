@@ -25,7 +25,8 @@
     "renews": "gia hạn {{date}}",
     "noLicense": "Cấp phép đang hoạt động. Bản cài này chưa có giấy phép trả phí.",
     "trialVerified": "Dùng thử miễn phí, đã xác minh",
-    "trialEnds": "kết thúc {{date}}"
+    "trialEnds": "kết thúc {{date}}",
+    "lifetime": "Trọn đời"
   },
   "current": {
     "title": "Gói hiện tại",
@@ -87,7 +88,8 @@
     "currentPlan": "Gói hiện tại",
     "upgradeEnterprise": "Nâng cấp lên Enterprise",
     "downgradePro": "Hạ xuống Pro",
-    "choosePlan": "Chọn {{name}}"
+    "choosePlan": "Chọn {{name}}",
+    "lifetimeOwned": "Gói trọn đời đang hoạt động"
   },
   "trial": {
     "started": "Bản dùng thử miễn phí đã kích hoạt với toàn quyền truy cập. Chúc bạn trải nghiệm vui!",

@@ -25,7 +25,8 @@
     "renews": "{{date}} को रिन्यू",
     "noLicense": "लाइसेंसिंग चालू है, पर इस इंस्टॉल के लिए अभी कोई पेड लाइसेंस नहीं।",
     "trialVerified": "मुफ़्त ट्रायल, सत्यापित",
-    "trialEnds": "{{date}} को खत्म"
+    "trialEnds": "{{date}} को खत्म",
+    "lifetime": "आजीवन"
   },
   "current": {
     "title": "मौजूदा प्लान",
@@ -87,7 +88,8 @@
     "currentPlan": "मौजूदा प्लान",
     "upgradeEnterprise": "Enterprise में अपग्रेड करें",
     "downgradePro": "Pro पर जाएं",
-    "choosePlan": "{{name}} चुनें"
+    "choosePlan": "{{name}} चुनें",
+    "lifetimeOwned": "आजीवन प्लान सक्रिय"
   },
   "trial": {
     "started": "आपका मुफ़्त ट्रायल पूरे एक्सेस के साथ चालू है। आनंद लें!",

@@ -37,6 +37,7 @@ function fakePrisma() {
         }
         return list[0] || null;
       },
+      findMany: async ({ where } = {}) => rows().filter((r) => matches(r, where)).map((r) => ({ ...r })),
       create: async ({ data }) => {
         hook(`${name}.create`, data);
         if (data.id && rows().some((r) => r.id === data.id)) {

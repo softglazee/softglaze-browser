@@ -25,7 +25,8 @@ const { isDisposableDomain } = require('../customers/disposable');
 const { rateLimit } = require('../middleware/rateLimit');
 const { WEB_METHOD, isWebPayment, kickCodeEmail } = require('../webPurchase');
 const { isPurchasable } = require('../plans/service');
-const { saleBlock, invalidateOffers } = require('../plans/sales');
+const { saleBlock, invalidateOffers, isLifetime } = require('../plans/sales');
+const lifetimeGuard = require('../plans/lifetimeGuard');
 
 const router = express.Router();
 const SUPPORTED = new Set(CHECKOUT_IDS);
@@ -101,6 +102,14 @@ router.post('/', webCheckoutGate, asyncHandler(async (req, res) => {
   if (!plan || !plan.active) return res.status(404).json({ error: 'Unknown or inactive plan.' });
   // The Free plan (or any US$0 plan) is never sold: there is nothing to pay and no licence to grant.
   if (!isPurchasable(plan)) return res.status(409).json({ error: 'plan_not_purchasable', message: 'This plan is free and cannot be bought.' });
+  // Lifetime guard: an install with a lifetime licence buys nothing but a higher-tier lifetime plan.
+  // 409 lifetime_active before any provider call or Payment row (src/plans/lifetimeGuard.js).
+  if (installId) {
+    const life = await lifetimeGuard.findLifetimeLicence(prisma, tenant.id, installId);
+    if (life && !lifetimeGuard.allowedOnLifetime(life, { tier: plan.tier, lifetime: isLifetime(plan) })) {
+      return res.status(409).json(lifetimeGuard.blockedBody(life, 'checkout'));
+    }
+  }
   // Sale window and cap (lifetime offers): 409 sale_not_open | sale_ended | sold_out (src/plans/sales.js).
   const blocked = await saleBlock(prisma, tenant.id, plan);
   if (blocked) return res.status(409).json({ error: blocked.error, message: blocked.message, remaining: blocked.availability.remaining });

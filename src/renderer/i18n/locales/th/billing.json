@@ -25,7 +25,8 @@
     "renews": "ต่ออายุ {{date}}",
     "noLicense": "ระบบไลเซนส์ทำงานอยู่ ยังไม่มีไลเซนส์แบบชำระเงินสำหรับการติดตั้งนี้",
     "trialVerified": "ทดลองใช้ฟรี ยืนยันแล้ว",
-    "trialEnds": "สิ้นสุด {{date}}"
+    "trialEnds": "สิ้นสุด {{date}}",
+    "lifetime": "ตลอดชีพ"
   },
   "current": {
     "title": "แพ็กเกจปัจจุบัน",
@@ -83,7 +84,8 @@
     "currentPlan": "แพ็กเกจปัจจุบัน",
     "upgradeEnterprise": "อัปเกรดเป็น Enterprise",
     "downgradePro": "ดาวน์เกรดเป็น Pro",
-    "choosePlan": "เลือก {{name}}"
+    "choosePlan": "เลือก {{name}}",
+    "lifetimeOwned": "แผนตลอดชีพใช้งานอยู่"
   },
   "trial": {
     "started": "การทดลองใช้ฟรีแบบเข้าถึงเต็มรูปแบบของคุณเริ่มแล้ว ขอให้สนุก!",

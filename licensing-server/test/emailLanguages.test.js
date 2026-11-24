@@ -1,6 +1,9 @@
 'use strict';
 // Built-in emails in all 18 app languages: every translation is complete and safe to send, the
 // customer's language picks it, and an admin's edit of the English row still wins.
+process.env.MASTER_KEY = process.env.MASTER_KEY || require('node:crypto').randomBytes(32).toString('base64');
+process.env.DATABASE_URL = process.env.DATABASE_URL || 'postgresql://test';
+
 const test = require('node:test');
 const assert = require('node:assert/strict');
 

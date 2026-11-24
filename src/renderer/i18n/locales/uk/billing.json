@@ -25,7 +25,8 @@
     "renews": "поновлення {{date}}",
     "noLicense": "Ліцензування активне, але для цієї інсталяції ще немає платної ліцензії.",
     "trialVerified": "Пробний період, перевірено",
-    "trialEnds": "закінчується {{date}}"
+    "trialEnds": "закінчується {{date}}",
+    "lifetime": "Довічно"
   },
   "current": {
     "title": "Поточний тариф",
@@ -95,7 +96,8 @@
     "currentPlan": "Поточний тариф",
     "upgradeEnterprise": "Перейти на Enterprise",
     "downgradePro": "Перейти на Pro",
-    "choosePlan": "Обрати {{name}}"
+    "choosePlan": "Обрати {{name}}",
+    "lifetimeOwned": "Довічний тариф активний"
   },
   "trial": {
     "started": "Ваш безкоштовний пробний період з повним доступом активний. Гарної роботи!",

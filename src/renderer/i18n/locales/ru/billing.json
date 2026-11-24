@@ -25,7 +25,8 @@
     "renews": "продление {{date}}",
     "noLicense": "Лицензирование работает, но платной лицензии для этой установки пока нет.",
     "trialVerified": "Пробный период, проверен",
-    "trialEnds": "до {{date}}"
+    "trialEnds": "до {{date}}",
+    "lifetime": "Навсегда"
   },
   "current": {
     "title": "Текущий тариф",
@@ -95,7 +96,8 @@
     "currentPlan": "Текущий тариф",
     "upgradeEnterprise": "Перейти на Enterprise",
     "downgradePro": "Перейти на Pro",
-    "choosePlan": "Выбрать {{name}}"
+    "choosePlan": "Выбрать {{name}}",
+    "lifetimeOwned": "Пожизненный тариф активен"
   },
   "trial": {
     "started": "Пробный период с полным доступом активен. Приятной работы!",
