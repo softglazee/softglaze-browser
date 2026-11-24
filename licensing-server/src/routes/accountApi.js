@@ -3,13 +3,13 @@
 // token>). Mounted at /v1/account next to the desktop's install-authenticated /v1/account/verify/*; only the
 // paths below are handled here. CORS: the origins in WEB_APP_ORIGINS.
 //
-//   GET  /v1/account/me                      -> { account: { id, email, name, tier, status, plan }, methods }
+//   GET  /v1/account/me                      -> { account: { id, email, name, tier, status, plan, lifetime, planEndsAt }, methods }
 //   GET  /v1/account/sessions                -> { sessions: [{ id, kind, provider, client, device, userAgent,
 //                                                createdAt, lastUsedAt, expiresAt, current, live }] }
 //   POST /v1/account/sessions/:id/revoke     -> { ok, revoked } | 404 not_found
 //   POST /v1/account/sign-out-all            -> { ok, revoked }: desktop, phone and web, this session included
 //   POST /v1/account/delete-request { reason? } -> 202 { ok, requested, alreadyRequestedToday }
-//   GET  /v1/account/licence                 -> { tier, status, paidUntil, trialEndsAt, complimentaryUntil, seats,
+//   GET  /v1/account/licence                 -> { tier, plan, free, lifetime, planEndsAt, status, paidUntil, trialEndsAt, complimentaryUntil, seats,
 //                                                phonesAllowed, phonesUsed, licences: [...] }
 // 401 session_invalid when the token is unknown, ended or (web) past its 15 minutes: refresh, then retry.
 const express = require('express');

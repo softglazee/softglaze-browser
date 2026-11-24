@@ -33,7 +33,9 @@ function statusTone(license, t) {
   if (!license) return { color: '#9ca3af', label: t('status.loading') };
   if (license.isExempt) return { color: '#10b981', label: t('status.sourceOwner') };
   switch (license.state) {
-    case 'paid': return { color: '#10b981', label: license.endsAt ? t('status.activeRenews', { date: fmtDate(license.endsAt) }) : t('status.active') };
+    case 'paid':
+      if (isLifetimeTerm({ planKey: license.plan, endsAt: license.endsAt })) return { color: '#10b981', label: `${t('status.active')} · ${t('backend.lifetime')}` };
+      return { color: '#10b981', label: license.endsAt ? t('status.activeRenews', { date: fmtDate(license.endsAt) }) : t('status.active') };
     case 'free': return { color: '#3b82f6', label: t('status.free') };
     case 'trialing': return { color: '#3b82f6', label: t('status.trialDaysLeft', { days: license.daysLeftTrial }) };
     case 'grace': return { color: '#f59e0b', label: t('status.graceDaysLeft', { days: license.daysLeftGrace }) };

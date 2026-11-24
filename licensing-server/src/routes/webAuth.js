@@ -10,7 +10,7 @@
 //        { grant_type: 'authorization_code', client_id, redirect_uri, code, code_verifier }
 //        { grant_type: 'refresh_token', client_id, refresh_token }
 //        -> 200 { access_token, token_type: 'Bearer', expires_in (s, 900), refresh_token, refresh_expires_at (ms),
-//                 account: { id, email, name, tier, status, plan } }
+//                 account: { id, email, name, tier, status, plan, lifetime, planEndsAt } }
 //        | 400 invalid_grant | unsupported_grant_type, 403 email_not_verified | email_missing
 //        The refresh token rotates on every use; using an old one again ends the session.
 //   POST /v1/web/auth/email/start  { email, lang? }        -> { challengeId, resendAfterSec, expiresAt }
@@ -31,7 +31,7 @@ const { availableProviders } = require('../auth/providers');
 const flow = require('../auth/flow');
 const { WEB_CLIENT_ID } = require('../auth/tokens');
 const { bearerSession, bearerOf, refreshWeb, revokeSession } = require('../auth/sessions');
-const { accountTenant } = require('../auth/accountApi');
+const { accountTenant, accountFacts } = require('../auth/accountApi');
 const mobile = require('../auth/mobile');
 const {
   sendPage, ipHashOf, setNonceCookie, redirectTo, webCors, setWebRefreshCookie, clearWebRefreshCookie, readWebRefreshCookie
@@ -88,7 +88,7 @@ router.post('/token', asyncHandler(async (req, res) => {
       if (!fromBody) clearWebRefreshCookie(res);
       return send(res, flow.INVALID_GRANT);
     }
-    return sendTokens(req, res, { status: 200, body: mobile.webBody(r.customer, r) });
+    return sendTokens(req, res, { status: 200, body: mobile.webBody(r.customer, r, Date.now(), await accountFacts(prisma, r.customer)) });
   }
   if (b.grant_type !== 'authorization_code') return send(res, { status: 400, body: { error: 'unsupported_grant_type', message: 'Use authorization_code or refresh_token.' } });
   const tenant = await tenantOr503(res);

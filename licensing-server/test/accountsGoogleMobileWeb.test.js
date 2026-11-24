@@ -242,7 +242,10 @@ test('phone: Google sign-in, session body, refresh rotation, sign-out', async ()
   assert.match(r.json.token, /^[A-Za-z0-9_-]{43}$/);
   assert.equal(typeof r.json.expiresAt, 'number');
   assert.ok(r.json.expiresAt > Date.now() + 29 * 86400000);
-  assert.deepEqual(Object.keys(r.json.account).sort(), ['email', 'id', 'name', 'tier']);
+  assert.deepEqual(Object.keys(r.json.account).sort(), ['email', 'id', 'lifetime', 'name', 'plan', 'planEndsAt', 'tier']);
+  assert.equal(r.json.account.plan, 'free', 'a new account with no trial is on Free');
+  assert.equal(r.json.account.lifetime, false);
+  assert.equal(r.json.account.planEndsAt, null);
   assert.equal(r.json.account.email, 'phone@example.com');
   assert.equal(r.json.account.tier, 'trial');
   const dev = await db.mobileDevice.findFirst({ where: { customerId: r.json.account.id } });
@@ -465,4 +468,68 @@ test('the phone and web endpoints answer 503 when the account tenant cannot be d
   assert.equal((await call('POST', '/v1/web/auth/email/start', { body: { email: 'tenant-ok@example.com' } })).status, 200);
   delete process.env.ACCOUNT_TENANT_ID;
   assert.ok(github.id);
+});
+
+test('account plan fields: free, trial, monthly Pro, Pro Lifetime (plan key and 50-year term), ended Pro on phone, web, /me and /licence', async () => {
+  const DAYMS = 86400000;
+  const now = Date.now();
+  const r = await phoneGoogle({ sub: '515151', email: 'plans@example.com' });
+  const id = r.json.account.id;
+  const h = bearer(r.json.token);
+  const me = async () => (await call('GET', '/v1/account/me', { headers: h })).json.account;
+  const lic = async () => (await call('GET', '/v1/account/licence', { headers: h })).json;
+
+  // Trial: plan trial, planEndsAt = the trial end; tier stays 'trial' for older apps.
+  const trialEnd = new Date(now + 5 * DAYMS);
+  await db.customer.update({ where: { id }, data: { status: 'trial', tier: 'enterprise', trialEndsAt: trialEnd } });
+  let a = await me();
+  assert.deepEqual([a.tier, a.plan, a.lifetime], ['trial', 'trial', false]);
+  assert.equal(new Date(a.planEndsAt).getTime(), trialEnd.getTime());
+  // A trial row whose end passed (before the next recompute) is Free.
+  await db.customer.update({ where: { id }, data: { trialEndsAt: new Date(now - DAYMS) } });
+  assert.equal((await me()).plan, 'free');
+
+  // Monthly Pro: planEndsAt = the licence end.
+  const monthEnd = new Date(now + 30 * DAYMS);
+  const l1 = await db.license.create({ data: { tenantId: T, customerId: id, tier: 'pro', plan: 'pro', status: 'active', currentPeriodEnd: monthEnd } });
+  await db.customer.update({ where: { id }, data: { status: 'paid', tier: 'pro', paidUntil: monthEnd } });
+  a = await me();
+  assert.deepEqual([a.tier, a.plan, a.lifetime], ['pro', 'pro', false]);
+  assert.equal(new Date(a.planEndsAt).getTime(), monthEnd.getTime());
+  let L = await lic();
+  assert.deepEqual([L.plan, L.lifetime, L.free], ['pro', false, false]);
+  assert.equal(new Date(L.planEndsAt).getTime(), monthEnd.getTime());
+
+  // Pro Lifetime by plan key (an end under 50 years): lifetime, no planEndsAt.
+  await db.plan.create({ data: { tenantId: T, key: 'pro-lifetime', name: 'Pro Lifetime', tier: 'pro', amount: 10000, currency: 'USD', interval: 'once', months: 1200, sortOrder: 9 } });
+  await db.license.update({ where: { id: l1.id }, data: { plan: 'pro-lifetime' } });
+  a = await me();
+  assert.deepEqual([a.plan, a.lifetime, a.planEndsAt], ['pro', true, null]);
+
+  // Pro Lifetime by term (a redeemed lifetime code: no plan key, ends ~2126), on the phone refresh and the web body too.
+  const far = new Date(now + 36500 * DAYMS);
+  await db.license.update({ where: { id: l1.id }, data: { plan: null, currentPeriodEnd: far } });
+  await db.customer.update({ where: { id }, data: { paidUntil: far } });
+  const ref = await call('POST', '/v1/mobile/auth/refresh', { headers: h });
+  assert.equal(ref.status, 200, ref.text);
+  assert.deepEqual([ref.json.account.tier, ref.json.account.plan, ref.json.account.lifetime, ref.json.account.planEndsAt], ['pro', 'pro', true, null]);
+  const w = await webGoogle({ sub: '515151', email: 'plans@example.com' });
+  assert.deepEqual([w.json.account.plan, w.json.account.lifetime, w.json.account.planEndsAt], ['pro', true, null]);
+  L = await (await call('GET', '/v1/account/licence', { headers: bearer(ref.json.token) })).json;
+  assert.deepEqual([L.plan, L.lifetime, L.planEndsAt], ['pro', true, null]);
+
+  // A refunded (canceled) lifetime licence never counts as lifetime: the active monthly Enterprise decides.
+  await db.license.update({ where: { id: l1.id }, data: { status: 'canceled' } });
+  const entEnd = new Date(now + 20 * DAYMS);
+  await db.license.create({ data: { tenantId: T, customerId: id, tier: 'enterprise', plan: 'enterprise', status: 'active', currentPeriodEnd: entEnd } });
+  await db.customer.update({ where: { id }, data: { tier: 'enterprise' } });
+  const wme = await call('GET', '/v1/account/me', { headers: bearer(w.json.access_token) });
+  assert.deepEqual([wme.json.account.plan, wme.json.account.lifetime], ['enterprise', false]);
+  assert.equal(new Date(wme.json.account.planEndsAt).getTime(), entEnd.getTime());
+
+  // The paid term ended but the row still says paid / enterprise (no recompute yet): Free, tier back to 'trial'.
+  await db.license.updateMany({ where: { customerId: id }, data: { currentPeriodEnd: new Date(now - 10 * DAYMS) } });
+  await db.customer.update({ where: { id }, data: { paidUntil: new Date(now - 10 * DAYMS) } });
+  const ref2 = await call('POST', '/v1/mobile/auth/refresh', { headers: bearer(ref.json.token) });
+  assert.deepEqual([ref2.json.account.tier, ref2.json.account.plan, ref2.json.account.lifetime, ref2.json.account.planEndsAt], ['trial', 'free', false, null]);
 });
