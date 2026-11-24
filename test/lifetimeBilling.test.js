@@ -47,3 +47,16 @@ test('all 18 locales translate backend.lifetime and cta.lifetimeOwned', () => {
     if (l !== 'en') assert.notEqual(b.cta.lifetimeOwned, 'Lifetime plan active', `${l} is translated`);
   }
 });
+
+test('Settings > Billing card and the Billing status pill say "Active · Lifetime", never "until 2126"', async () => {
+  const { settingsStatusTone } = await import(pathToFileURL(path.join(R, 'lib', 'licenseStatus.mjs')).href);
+  const fakeT = (key, opts = {}) => `${opts.ns || 'cmpSettingsA'}:${key}${opts.date ? `@${opts.date}` : ''}`;
+  const in2126 = new Date(Date.now() + 36500 * DAY).toISOString();
+  const lifetime = settingsStatusTone({ state: 'paid', isPaid: true, endsAt: in2126 }, fakeT);
+  assert.equal(lifetime.label, 'cmpSettingsA:billing.status.active · billing:backend.lifetime');
+  const monthly = settingsStatusTone({ state: 'paid', isPaid: true, endsAt: new Date(Date.now() + 30 * DAY).toISOString() }, fakeT);
+  assert.match(monthly.label, /^cmpSettingsA:billing\.status\.activeUntil@/);
+  const billing = read('pages', 'BillingPage.jsx');
+  const tone = billing.slice(billing.indexOf('function statusTone'), billing.indexOf('export default function BillingPage'));
+  assert.ok(tone.indexOf("isLifetimeTerm({ planKey: license.plan, endsAt: license.endsAt })") < tone.indexOf("t('status.activeRenews'"), 'lifetime before renews');
+});

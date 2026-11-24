@@ -6,6 +6,7 @@
 // every language) in the same blue the Billing page uses for it.
 
 import { fmtDate } from './intl.mjs';
+import { isLifetimeTerm } from './planPeriods.mjs';
 
 export const LICENSE_TONE_COLORS = Object.freeze({
   loading: '#9ca3af',
@@ -42,7 +43,10 @@ export function settingsStatusTone(license, t) {
   switch (kind) {
     case 'loading': return { kind, color, label: t('billing.status.loading') };
     case 'sourceOwner': return { kind, color, label: t('billing.status.sourceOwner') };
-    case 'paid': return { kind, color, label: license.endsAt ? t('billing.status.activeUntil', { date: fmtDate(license.endsAt) }) : t('billing.status.active') };
+    case 'paid':
+      // A lifetime licence (end over 50 years out, or a -lifetime plan key) says "Active · Lifetime", not "until 2126".
+      if (isLifetimeTerm({ planKey: license.plan, endsAt: license.endsAt })) return { kind, color, label: `${t('billing.status.active')} · ${t('backend.lifetime', { ns: 'billing' })}` };
+      return { kind, color, label: license.endsAt ? t('billing.status.activeUntil', { date: fmtDate(license.endsAt) }) : t('billing.status.active') };
     case 'free': return { kind, color, label: t('status.free', { ns: 'billing' }) };
     case 'trialing': return { kind, color, label: t('billing.status.trialDaysLeft', { count: license.daysLeftTrial }) };
     case 'grace': return { kind, color, label: t('billing.status.graceDaysLeft', { count: license.daysLeftGrace }) };
