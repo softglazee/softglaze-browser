@@ -5,11 +5,41 @@
 const prisma = require('./db');
 const { termMs } = require('./util/time');
 const { isWebPayment, issueWebCode, voidWebCode } = require('./webPurchase');
+const { isLifetime } = require('./plans/sales');
+const guard = require('./plans/lifetimeGuard');
+
+// A paid purchase that the lifetime guard did not apply (the buyer already has a lifetime licence):
+// the payment stays paid (the money was taken) and gets a note for a manual refund, found in the admin
+// with GET /v1/admin/payments?flag=lifetime_guard, and a warning goes to the server log.
+async function flagLifetimeConflict(db, payment, lic, what) {
+  const line = `${guard.FLAG} NEEDS MANUAL REFUND: ${what} was paid for install ${lic.installId || '?'}, which already has ` +
+    `${lic.tier} lifetime (licence ${lic.id}). The lifetime licence was left unchanged; nothing was granted.`;
+  console.warn(`[licensing] payment ${payment && payment.id ? payment.id : '?'}: ${line}`);
+  if (!payment || !payment.id) return;
+  const fresh = (await db.payment.findUnique({ where: { id: payment.id } })) || payment;
+  if (String(fresh.note || '').includes(guard.FLAG)) return;
+  await db.payment.update({ where: { id: payment.id }, data: { note: [fresh.note, line].filter(Boolean).join('\n').slice(0, 5000) } });
+}
 
 // Match an existing licence by installId only, never by account: the account comes from checkout
 // metadata, so matching on it lets a purchase with someone else's email take over their licence.
-async function grantMonths(tenant, { account, installId, tier, plan, months, providerRef }, db = prisma) {
+// Lifetime guard (src/plans/lifetimeGuard.js): when the install has a lifetime licence, nothing changes
+// unless this grant is a higher-tier lifetime, which upgrades that licence in place (its end stays the
+// later of the two, never stacked). A blocked grant returns the lifetime licence with lifetimeGuard: true.
+async function grantMonths(tenant, { account, installId, tier, plan, months, providerRef, lifetime = false }, db = prisma) {
   const now = Date.now();
+  const life = await guard.findLifetimeLicence(db, tenant.id, installId, now);
+  if (life) {
+    if (!guard.allowedOnLifetime(life, { tier, lifetime })) return { ...life, lifetimeGuard: true };
+    const end = Math.max(new Date(life.currentPeriodEnd).getTime(), now + termMs(months || 1));
+    return db.license.update({
+      where: { id: life.id },
+      data: {
+        status: 'active', tier, plan: plan || null, currentPeriodEnd: new Date(end),
+        providerRef: providerRef || life.providerRef, account: life.account || account || null
+      }
+    });
+  }
   const existing = installId
     ? await db.license.findFirst({ where: { tenantId: tenant.id, installId }, orderBy: { updatedAt: 'desc' } })
     : null;
@@ -66,14 +96,19 @@ async function provisionFromPaymentRef(tenant, provider, providerRef, fallback =
     const { outboxId } = await issueWebCode(tenant, payment, plan, db);
     return { provisioned: true, webCode: { paymentId: payment.id, outboxId } };
   }
-  await grantMonths(tenant, {
+  const lic = await grantMonths(tenant, {
     account: payment.account || fallback.account || null,
     installId: payment.installId || fallback.installId || null,
     tier: (plan && plan.tier) || fallback.tier || 'pro',
     plan: planKey,
     months: (plan && plan.months) || fallback.months || 1,
-    providerRef: String(providerRef)
+    providerRef: String(providerRef),
+    lifetime: isLifetime(plan)
   }, db);
+  if (lic && lic.lifetimeGuard) {
+    await flagLifetimeConflict(db, payment, lic, `plan ${planKey || '?'} (${provider} ${providerRef})`);
+    return { provisioned: false, lifetimeGuard: true };
+  }
   return { provisioned: true };
 }
 
@@ -82,11 +117,22 @@ async function provisionFromPaymentRef(tenant, provider, providerRef, fallback =
 async function setSubscriptionPeriod(tenant, { subscriptionId, account, installId, tier, plan, periodEnd, status = 'active' }, db = prisma) {
   // Match by the subscription first (renewals), then by installId. Never by account: see
   // grantMonths. An existing licence keeps the install it is already bound to.
-  let existing = subscriptionId
+  const bySubscription = subscriptionId
     ? await db.license.findFirst({ where: { tenantId: tenant.id, providerRef: String(subscriptionId) }, orderBy: { updatedAt: 'desc' } })
     : null;
+  let existing = bySubscription;
   if (!existing && installId) {
     existing = await db.license.findFirst({ where: { tenantId: tenant.id, installId }, orderBy: { updatedAt: 'desc' } });
+  }
+  // Lifetime guard: a subscription never changes a lifetime licence, nor starts on an install that has
+  // one. A renewal of a subscription's own (non-lifetime) licence row is left alone. The caller flags
+  // a paid first charge for a manual refund; a blocked renewal is logged.
+  const now = Date.now();
+  const life = (existing && guard.isLifetimeLicence(existing, null, now) ? existing : null)
+    || (!bySubscription ? await guard.findLifetimeLicence(db, tenant.id, installId, now) : null);
+  if (life) {
+    console.warn(`[licensing] subscription ${subscriptionId || '?'} not applied: install ${life.installId || '?'} has ${life.tier} lifetime (licence ${life.id}). Cancel the subscription and refund it by hand.`);
+    return { ...life, lifetimeGuard: true };
   }
   const data = {
     status,
@@ -126,6 +172,8 @@ async function revokeForRefund(tenant, { provider, sessionRef, subscriptionId },
       const months = (plan && plan.months) || 1;
       // A website purchase has no licence of its own: its activation code stops working if unused.
       if (isWebPayment(payment)) { await voidWebCode(db, tenant.id, payment); return { changed: true }; }
+      // The lifetime guard granted nothing for this payment: its refund takes nothing back.
+      if (String(payment.note || '').includes(guard.FLAG)) return { changed: true };
       let lic = await db.license.findFirst({ where: { tenantId: tenant.id, providerRef: String(sessionRef) }, orderBy: { updatedAt: 'desc' } });
       if (!lic && payment.installId) {
         lic = await db.license.findFirst({ where: { tenantId: tenant.id, installId: payment.installId }, orderBy: { updatedAt: 'desc' } });
@@ -165,4 +213,4 @@ function pickLeaseLicence(licences, now = Date.now()) {
   return list.sort((a, b) => new Date(b.updatedAt || 0).getTime() - new Date(a.updatedAt || 0).getTime())[0];
 }
 
-module.exports = { pickLeaseLicence, grantMonths, claimPendingPayment, provisionFromPaymentRef, setSubscriptionPeriod, cancelSubscription, revokeForRefund };
+module.exports = { pickLeaseLicence, grantMonths, flagLifetimeConflict, claimPendingPayment, provisionFromPaymentRef, setSubscriptionPeriod, cancelSubscription, revokeForRefund };

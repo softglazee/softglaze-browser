@@ -8,6 +8,7 @@ const asyncHandler = require('../middleware/asyncHandler');
 const { authenticateInstall } = require('../installAuth');
 const { syncInstall } = require('../customers/sync');
 const { termMs } = require('../util/time');
+const lifetimeGuard = require('../plans/lifetimeGuard');
 
 const router = express.Router();
 
@@ -28,6 +29,14 @@ router.post('/', asyncHandler(async (req, res) => {
   if (!rec) return res.status(404).json({ error: 'Invalid code.' });
   if (rec.redeemedAt) return res.status(409).json({ error: 'This code has already been redeemed.' });
 
+  // Lifetime guard (src/plans/lifetimeGuard.js): on an install with a lifetime licence only a
+  // higher-tier lifetime code applies. Checked before the claim, so a refused code stays unused.
+  const life = await lifetimeGuard.findLifetimeLicence(prisma, tenant.id, install.id);
+  const lifetimeCode = lifetimeGuard.isLifetimeCode(rec);
+  if (life && !lifetimeGuard.allowedOnLifetime(life, { tier: rec.tier, lifetime: lifetimeCode })) {
+    return res.status(409).json(lifetimeGuard.blockedBody(life, 'code'));
+  }
+
   // Atomic claim: only the request whose WHERE still sees redeemedAt: null wins, so two concurrent
   // requests cannot both redeem a single-use code.
   const claim = await prisma.licenseCode.updateMany({
@@ -37,6 +46,13 @@ router.post('/', asyncHandler(async (req, res) => {
   if (claim.count === 0) return res.status(409).json({ error: 'This code has already been redeemed.' });
 
   const now = Date.now();
+  if (life) {
+    // Lifetime -> higher-tier lifetime: upgrade that licence in place; its end is the later one, not stacked.
+    const end = Math.max(new Date(life.currentPeriodEnd).getTime(), now + termMs(rec.months || 1));
+    await prisma.license.update({ where: { id: life.id }, data: { status: 'active', tier: rec.tier, plan: null, currentPeriodEnd: new Date(end) } });
+    await syncInstall(prisma, tenant.id, install.id).catch((e) => console.warn('[redeem] customer sync skipped:', e && e.message));
+    return res.json({ ok: true, tier: rec.tier, months: rec.months });
+  }
   const existing = await prisma.license.findFirst({ where: { tenantId: tenant.id, installId: install.id }, orderBy: { updatedAt: 'desc' } });
   const base = existing && existing.currentPeriodEnd && new Date(existing.currentPeriodEnd).getTime() > now
     ? new Date(existing.currentPeriodEnd).getTime() : now;

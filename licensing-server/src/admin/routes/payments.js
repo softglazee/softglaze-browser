@@ -12,6 +12,7 @@ const { addEvent, recomputeCustomer } = require('../../customers/sync');
 const { termMs } = require('../../util/time');
 const { resendWebCode } = require('../../webPurchase');
 const { LIFETIME_MONTHS, saleBlock, invalidateOffers } = require('../../plans/sales');
+const { FLAG: LIFETIME_GUARD_FLAG } = require('../../plans/lifetimeGuard');
 
 const router = express.Router();
 const DAY = 86400000;
@@ -25,6 +26,8 @@ router.get('/', asyncHandler(async (req, res) => {
   if (q.method) where.method = { in: csvList(q.method) };
   if (q.currency) where.currency = { in: csvList(q.currency).map((c) => c.toUpperCase()) };
   if (q.customerId) where.customerId = String(q.customerId);
+  // ?flag=lifetime_guard: paid purchases the lifetime guard did not apply, waiting for a manual refund.
+  if (q.flag === 'lifetime_guard') where.note = { contains: LIFETIME_GUARD_FLAG };
   const r = dateRange(q, 'from', 'to');
   if (r.error) return invalid(res, { [r.error]: 'invalid_date' });
   if (r.range) where.paidAt = r.range;

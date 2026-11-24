@@ -9,7 +9,7 @@ const stripeProvider = require('../providers/stripe');
 const paypalProvider = require('../providers/paypal');
 const cryptomusProvider = require('../providers/cryptomus');
 const safepayProvider = require('../providers/safepay');
-const { provisionFromPaymentRef, claimPendingPayment, setSubscriptionPeriod, cancelSubscription, revokeForRefund } = require('../licensing');
+const { provisionFromPaymentRef, claimPendingPayment, setSubscriptionPeriod, cancelSubscription, revokeForRefund, flagLifetimeConflict } = require('../licensing');
 const { handleOnce } = require('../webhookOnce');
 const { termMs } = require('../util/time');
 
@@ -39,7 +39,7 @@ function stripeSessionApply(tenant, s) {
       const planKey = payment.plan || md.planKey || null;
       const plan = planKey ? await tx.plan.findUnique({ where: { tenantId_key: { tenantId: tenant.id, key: planKey } } }) : null;
       const months = (plan && plan.interval === 'year') ? 12 : 1;
-      await setSubscriptionPeriod(tenant, {
+      const lic = await setSubscriptionPeriod(tenant, {
         subscriptionId: idOf(s.subscription),
         account: payment.account || md.account || (s.customer_details && s.customer_details.email) || null,
         installId: payment.installId || md.installId || s.client_reference_id || null,
@@ -47,6 +47,7 @@ function stripeSessionApply(tenant, s) {
         plan: planKey,
         periodEnd: new Date(Date.now() + termMs(months)) // provisional until invoice.paid
       }, tx);
+      if (lic && lic.lifetimeGuard) await flagLifetimeConflict(tx, payment, lic, `subscription ${idOf(s.subscription)} (stripe ${s.id}, plan ${planKey || '?'})`);
     };
   }
   return (tx) => provisionFromPaymentRef(tenant, 'stripe', s.id, {
@@ -200,7 +201,7 @@ async function safepayApply(tenant, event) {
       return async (tx) => {
         const claimed = await claimPendingPayment(tenant, 'safepay', ref, tx);
         if (claimed) {
-          await setSubscriptionPeriod(tenant, {
+          const lic = await setSubscriptionPeriod(tenant, {
             subscriptionId,
             account: claimed.account || data.customer_email || null,
             installId: claimed.installId || null,
@@ -208,6 +209,7 @@ async function safepayApply(tenant, event) {
             plan: claimed.plan || null,
             periodEnd
           }, tx);
+          if (lic && lic.lifetimeGuard) await flagLifetimeConflict(tx, claimed, lic, `subscription ${subscriptionId} (safepay ${ref}, plan ${claimed.plan || '?'})`);
           return;
         }
         // Renewal: only for a subscription whose first charge was provisioned here.
