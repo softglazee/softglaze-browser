@@ -15,6 +15,9 @@ let sessionN = 0;
 class FakeStripe {
   constructor(key, opts) {
     fakeStripe.constructed.push({ key, opts });
+    this.products = {
+      retrieve: async (id) => (fakeStripe.products || {})[id] || { id, name: 'SoftGlaze Browser', tax_code: null }
+    };
     this.prices = {
       list: async ({ lookup_keys: keys }) => ({ data: keys.map((k) => fakeStripe.prices[k]).filter((p) => p && p.active !== false) })
     };
@@ -66,10 +69,14 @@ test.before(async () => {
   Object.assign(fakeStripe.prices, {
     pro_monthly: price('price_pm', 'pro_monthly', 500, 'month'),
     pro_yearly: price('price_py', 'pro_yearly', 5000, 'year'),
-    pro_lifetime: price('price_pl', 'pro_lifetime', 4900, null),
+    pro_lifetime: { ...price('price_pl', 'pro_lifetime', 4900, null), product: 'prod_pro' },
     enterprise_monthly: price('price_em', 'enterprise_monthly', 2900, 'month'),
-    enterprise_lifetime: price('price_el', 'enterprise_lifetime', 24900, null)
+    enterprise_lifetime: { ...price('price_el', 'enterprise_lifetime', 24900, null), product: 'prod_ent' }
   });
+  fakeStripe.products = {
+    prod_pro: { id: 'prod_pro', name: 'SoftGlaze Browser Pro', tax_code: 'txcd_10202000' },
+    prod_ent: { id: 'prod_ent', name: 'SoftGlaze Browser Enterprise', tax_code: { id: 'txcd_10202000' } }
+  };
 });
 test.after(() => H.stop());
 
@@ -117,7 +124,8 @@ test('app: a lifetime plan is a one-time Managed Payments payment', async () => 
   const p = lastCreate();
   assert.equal(p.mode, 'payment');
   assert.deepEqual(p.managed_payments, { enabled: true });
-  assert.deepEqual(p.line_items, [{ price: 'price_pl', quantity: 1 }]);
+  // Named "SoftGlaze Browser Pro Lifetime" on Stripe's page, at the lifetime Price's amount.
+  assert.deepEqual(p.line_items, [{ quantity: 1, price_data: { currency: 'usd', unit_amount: 4900, product_data: { name: 'SoftGlaze Browser Pro Lifetime', tax_code: 'txcd_10202000' } } }]);
   assert.equal(p.subscription_data, undefined);
   assert.equal(p.payment_intent_data.metadata.planKey, 'pro-lifetime');
 });
@@ -172,6 +180,8 @@ test('website: a lifetime plan by Stripe returns to the site with the session id
   assert.equal(p.success_url, `${SITE}/buy/thanks?provider=stripe&session_id={CHECKOUT_SESSION_ID}`);
   assert.equal(p.cancel_url, `${SITE}/buy?cancelled=1`);
   assert.equal(p.customer_email, 'web.buyer@example.com');
+  assert.equal(p.line_items[0].price_data.product_data.name, 'SoftGlaze Browser Enterprise Lifetime');
+  assert.equal(p.line_items[0].price_data.unit_amount, 24900);
   assert.equal(p.client_reference_id, undefined);
   assert.equal(p.metadata.method, 'web');
   const pay = await H.db.payment.findFirst({ where: { providerRef: r.json.ref } });
@@ -328,4 +338,15 @@ test('refund on basil: a charge with no Checkout Session is traced to its subscr
   const disputed = await stripeProvider.resolveChargeRefs({ secretKey: 'sk_test_abc', paymentIntent: null, invoice: null, charge: 'ch_1' });
   assert.equal(disputed.subscriptionId, 'sub_from_invoice');
   assert.equal(fakeStripe.invoicePaymentCalls.at(-1).payment.payment_intent, 'pi_from_charge');
+});
+
+test('a lifetime Price whose Product has no tax code is sold on the Price as it is', async () => {
+  const keep = fakeStripe.products.prod_pro;
+  fakeStripe.products.prod_pro = { id: 'prod_pro', name: 'SoftGlaze Browser Pro', tax_code: null };
+  try {
+    const inst = await newInstall();
+    const r = await appCheckout(inst.installId, 'pro-lifetime');
+    assert.equal(r.status, 200, JSON.stringify(r.json));
+    assert.deepEqual(lastCreate().line_items, [{ price: 'price_pl', quantity: 1 }]);
+  } finally { fakeStripe.products.prod_pro = keep; }
 });
