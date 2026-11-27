@@ -28,6 +28,17 @@ const DEFAULT_LOOKUP_KEYS = Object.freeze({
   'enterprise-lifetime': 'enterprise_lifetime'
 });
 
+// Website only: a monthly or yearly plan bought on the website is one payment for one term (an activation
+// code, no renewal), so it needs a ONE-TIME Price with the plan's amount. Without that Price the website
+// answers install_required ("buy it in the app"). Override per plan with checkout.stripeLookupKeys
+// "web:<plan key>".
+const DEFAULT_WEB_LOOKUP_KEYS = Object.freeze({
+  pro: 'pro_month_once',
+  'pro-yearly': 'pro_year_once',
+  enterprise: 'enterprise_month_once',
+  'enterprise-yearly': 'enterprise_year_once'
+});
+
 class StripeCheckoutError extends Error {
   constructor(code, message, status = 409) {
     super(message);
@@ -42,22 +53,53 @@ function lookupKeyFor(plan, overrides) {
   return own || DEFAULT_LOOKUP_KEYS[plan.key] || null;
 }
 
+function webLookupKeyFor(plan, overrides) {
+  const o = overrides && typeof overrides === 'object' ? overrides : {};
+  const k = `web:${plan.key}`;
+  const own = typeof o[k] === 'string' ? o[k].trim() : '';
+  return own || DEFAULT_WEB_LOOKUP_KEYS[plan.key] || null;
+}
+
+// A plan billed per month or year (as opposed to a one-time plan such as a lifetime offer).
+const isTermPlan = (plan) => String(plan.interval || 'month').toLowerCase() !== 'once';
+
 // Anything non-yearly maps to Stripe's 'month' interval.
 function stripeInterval(interval) {
   return String(interval || 'month').toLowerCase() === 'year' ? 'year' : 'month';
 }
 
-async function resolvePrice(stripe, plan, overrides) {
-  const lookupKey = lookupKeyFor(plan, overrides);
-  if (!lookupKey) throw new StripeCheckoutError('stripe_price_missing', `No Stripe price is set up for the plan "${plan.key}".`);
+async function findPrice(stripe, lookupKey) {
+  if (!lookupKey) return null;
   const list = await stripe.prices.list({ lookup_keys: [lookupKey], active: true, limit: 1 });
-  const price = list && list.data && list.data[0];
-  if (!price) throw new StripeCheckoutError('stripe_price_missing', `No active Stripe price has the lookup key "${lookupKey}".`);
+  return (list && list.data && list.data[0]) || null;
+}
+
+function checkAmount(price, plan, lookupKey) {
   const currency = String(plan.currency || 'usd').toLowerCase();
   if (price.unit_amount !== plan.amount || String(price.currency).toLowerCase() !== currency) {
     throw new StripeCheckoutError('stripe_price_mismatch',
       `The Stripe price "${lookupKey}" (${price.unit_amount} ${price.currency}) does not match the plan "${plan.key}" (${plan.amount} ${currency}).`);
   }
+}
+
+// Website, monthly or yearly plan: the one-time Price for one term, or install_required when there is none.
+async function resolveWebTermPrice(stripe, plan, overrides) {
+  const lookupKey = webLookupKeyFor(plan, overrides);
+  const price = await findPrice(stripe, lookupKey);
+  if (!price) throw new StripeCheckoutError('install_required', 'This plan can only be bought in the app.', 400);
+  if (price.type === 'recurring') {
+    throw new StripeCheckoutError('stripe_price_mismatch', `The Stripe price "${lookupKey}" must be a one-time price (it is sold on the website as one term).`);
+  }
+  checkAmount(price, plan, lookupKey);
+  return price;
+}
+
+async function resolvePrice(stripe, plan, overrides) {
+  const lookupKey = lookupKeyFor(plan, overrides);
+  if (!lookupKey) throw new StripeCheckoutError('stripe_price_missing', `No Stripe price is set up for the plan "${plan.key}".`);
+  const price = await findPrice(stripe, lookupKey);
+  if (!price) throw new StripeCheckoutError('stripe_price_missing', `No active Stripe price has the lookup key "${lookupKey}".`);
+  checkAmount(price, plan, lookupKey);
   if (price.type === 'recurring' && price.recurring && price.recurring.interval !== stripeInterval(plan.interval)) {
     throw new StripeCheckoutError('stripe_price_mismatch',
       `The Stripe price "${lookupKey}" bills per ${price.recurring.interval}, the plan "${plan.key}" per ${plan.interval}.`);
@@ -66,10 +108,12 @@ async function resolvePrice(stripe, plan, overrides) {
 }
 
 // web: a website purchase (no install). It takes one-time Prices only (the buyer gets an activation
-// code by email, a fixed term), returns to the website, and pre-fills the buyer's email.
+// code by email, a fixed term): a lifetime offer's own Price, or for a monthly/yearly plan its one-time
+// web Price (one term, no renewal). It returns to the website. The email is pre-filled when the site
+// sent one; otherwise Stripe's page asks for it and the webhook takes it from the paid session.
 async function createCheckout({ secretKey, tenantId, plan, installId, account, web = false, siteBaseUrl = '', lookupKeys }) {
   const stripe = client(secretKey);
-  const price = await resolvePrice(stripe, plan, lookupKeys);
+  const price = web && isTermPlan(plan) ? await resolveWebTermPrice(stripe, plan, lookupKeys) : await resolvePrice(stripe, plan, lookupKeys);
   const recurring = price.type === 'recurring';
   if (web && recurring) throw new StripeCheckoutError('install_required', 'This plan can only be bought in the app.', 400);
 
@@ -161,6 +205,6 @@ async function resolveChargeRefs({ secretKey, paymentIntent, invoice, charge }) 
 }
 
 module.exports = {
-  API_VERSION, DEFAULT_LOOKUP_KEYS, StripeCheckoutError,
+  API_VERSION, DEFAULT_LOOKUP_KEYS, DEFAULT_WEB_LOOKUP_KEYS, StripeCheckoutError, webLookupKeyFor,
   createCheckout, retrieveSession, isSessionId, verifyEvent, stripeInterval, invoiceSubscriptionId, resolveChargeRefs, lookupKeyFor
 };

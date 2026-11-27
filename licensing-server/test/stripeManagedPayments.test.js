@@ -188,6 +188,83 @@ test('website: a subscription Price is app only; nothing is recorded', async () 
   assert.equal((await H.db.payment.findMany({})).length, before);
 });
 
+test('website: one click to Stripe without an email; the code goes to the email Stripe collected', async () => {
+  const r = await webCheckout({ planKey: 'enterprise-lifetime' }, { origin: SITE });
+  assert.equal(r.status, 200, JSON.stringify(r.json));
+  const p = lastCreate();
+  assert.equal(p.mode, 'payment');
+  assert.equal(p.customer_email, undefined, 'Stripe asks for the email on its own page');
+  assert.equal(p.metadata.account, '');
+  const sid = r.json.ref;
+  const pay = await H.db.payment.findFirst({ where: { providerRef: sid } });
+  assert.equal(pay.account, null);
+  assert.equal(pay.method, 'web');
+
+  const email = 'oneclick.buyer@example.com';
+  const ev = { id: 'evt_oneclick', type: 'checkout.session.completed', data: { object: { id: sid, mode: 'payment', payment_status: 'paid', metadata: p.metadata, customer_details: { email: 'OneClick.Buyer@Example.com' } } } };
+  const w = await H.call('POST', `/v1/webhooks/stripe/${T}`, { body: JSON.stringify(ev), headers: { 'content-type': 'application/json', 'stripe-signature': 'x' } });
+  assert.equal(w.status, 200);
+  const paid = await H.db.payment.findFirst({ where: { providerRef: sid } });
+  assert.equal(paid.status, 'paid');
+  assert.equal(paid.account, email);
+  assert.match(paid.note || '', /SG-[0-9A-F]{12}/);
+  const queued = await H.db.emailOutbox.findMany({ where: { tenantId: T, toEmail: email } });
+  assert.equal(queued.length, 1, 'the activation email is queued for the address Stripe collected');
+  // The thanks page's status check sends it at once (else the cron does).
+  await H.call('GET', `/v1/checkout/status?tenantId=${T}&session=${encodeURIComponent(sid)}`, { headers: { origin: SITE } });
+  const mails = await waitFor(() => H.mail.sent.filter((m) => m.to === email).length && H.mail.sent.filter((m) => m.to === email));
+  assert.equal(mails.length, 1);
+});
+
+test('website: the status check also takes the email from the paid session', async () => {
+  const r = await webCheckout({ planKey: 'enterprise-lifetime' });
+  assert.equal(r.status, 200, JSON.stringify(r.json));
+  const sid = r.json.ref;
+  fakeStripe.sessions[sid] = { id: sid, status: 'complete', payment_status: 'paid', metadata: lastCreate().metadata, customer_details: { email: 'status.buyer@example.com' } };
+  const s = await H.call('GET', `/v1/checkout/status?tenantId=${T}&session=${encodeURIComponent(sid)}`, { headers: { origin: SITE } });
+  assert.deepEqual(s.json, { status: 'paid' });
+  assert.equal((await H.db.payment.findFirst({ where: { providerRef: sid } })).account, 'status.buyer@example.com');
+});
+
+test('website: a bad email is still refused when one is sent; Safepay still needs one', async () => {
+  assert.equal((await webCheckout({ planKey: 'pro-lifetime', account: 'not-an-email' })).json.error, 'invalid_email');
+  assert.equal((await H.call('POST', '/v1/checkout', { body: { tenantId: T, planKey: 'pro-lifetime', provider: 'safepay' } })).json.error, 'invalid_email');
+});
+
+test('website: a monthly or yearly plan sells as one term when its one-time web Price exists', async () => {
+  fakeStripe.prices.pro_year_once = price('price_pyo', 'pro_year_once', 5000, null);
+  try {
+    const r = await webCheckout({ planKey: 'pro-yearly' }, { origin: SITE });
+    assert.equal(r.status, 200, JSON.stringify(r.json));
+    const p = lastCreate();
+    assert.equal(p.mode, 'payment');
+    assert.deepEqual(p.line_items, [{ price: 'price_pyo', quantity: 1 }]);
+    assert.equal(p.metadata.recurring, 'false');
+    assert.equal(p.metadata.months, '12');
+    assert.equal(p.subscription_data, undefined);
+    const sid = r.json.ref;
+    const ev = { id: 'evt_yearly_web', type: 'checkout.session.completed', data: { object: { id: sid, mode: 'payment', payment_status: 'paid', metadata: p.metadata, customer_details: { email: 'yearly.web@example.com' } } } };
+    await H.call('POST', `/v1/webhooks/stripe/${T}`, { body: JSON.stringify(ev), headers: { 'content-type': 'application/json', 'stripe-signature': 'x' } });
+    const pay = await H.db.payment.findFirst({ where: { providerRef: sid } });
+    assert.equal(pay.status, 'paid');
+    const code = (pay.note || '').match(/SG-[0-9A-F]{12}/)[0];
+    const row = await H.db.licenseCode.findFirst({ where: { tenantId: T, code } });
+    assert.equal(row.months, 12, 'one year, no renewal');
+    assert.equal(row.tier, 'pro');
+  } finally { delete fakeStripe.prices.pro_year_once; }
+});
+
+test('website: a web Price that is recurring, or has another amount, is refused', async () => {
+  fakeStripe.prices.pro_year_once = price('price_bad', 'pro_year_once', 5000, 'year');
+  try {
+    const r = await webCheckout({ planKey: 'pro-yearly' });
+    assert.equal(r.status, 409);
+    assert.equal(r.json.error, 'stripe_price_mismatch');
+    fakeStripe.prices.pro_year_once = price('price_bad2', 'pro_year_once', 4000, null);
+    assert.equal((await webCheckout({ planKey: 'pro-yearly' })).json.error, 'stripe_price_mismatch');
+  } finally { delete fakeStripe.prices.pro_year_once; }
+});
+
 test('website: /status?session= says pending, then paid once Stripe says so; one code is emailed', async () => {
   const email = 'lifetime.buyer@example.com';
   const r = await webCheckout({ planKey: 'pro-lifetime', account: email });
