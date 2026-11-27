@@ -28,7 +28,17 @@ function isLifetimeLicence(lic, plan, now = Date.now()) {
 // The install's active lifetime licence (highest tier first), or null.
 async function findLifetimeLicence(db, tenantId, installId, now = Date.now()) {
   if (!installId) return null;
-  const rows = await db.license.findMany({ where: { tenantId, installId: String(installId), status: 'active' } });
+  return lifetimeAmong(db, tenantId, await db.license.findMany({ where: { tenantId, installId: String(installId), status: 'active' } }), now);
+}
+
+// The account's lifetime licence (any active licence carrying the customer, on a computer or on the account
+// itself), for an account purchase (src/accountCheckout.js).
+async function findCustomerLifetimeLicence(db, tenantId, customerId, now = Date.now()) {
+  if (!customerId) return null;
+  return lifetimeAmong(db, tenantId, await db.license.findMany({ where: { tenantId, customerId: String(customerId), status: 'active' } }), now);
+}
+
+async function lifetimeAmong(db, tenantId, rows, now) {
   const hits = [];
   for (const lic of rows || []) {
     let plan = null;
@@ -62,5 +72,5 @@ function blockedBody(lic, kind = 'checkout') {
 
 module.exports = {
   LIFETIME_AFTER_MS, LIFETIME_ACTIVE, FLAG, TIER_RANK,
-  isLifetimeLicence, findLifetimeLicence, allowedOnLifetime, isLifetimeCode, blockedBody
+  isLifetimeLicence, findLifetimeLicence, findCustomerLifetimeLicence, allowedOnLifetime, isLifetimeCode, blockedBody
 };
