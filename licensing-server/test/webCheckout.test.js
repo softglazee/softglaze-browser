@@ -118,9 +118,9 @@ test('a website checkout needs a real, permanent email, a one-time plan and card
   const sub = await webCheckout({ planKey: 'pro-sub', account: 'buyer@example.com' });
   assert.equal(sub.status, 400);
   assert.equal(sub.json.error, 'install_required');
-  const stripe = await webCheckout({ planKey: 'pro', account: 'buyer@example.com', provider: 'stripe' });
-  assert.equal(stripe.status, 400);
-  assert.equal(stripe.json.error, 'install_required');
+  const paypal = await webCheckout({ planKey: 'pro', account: 'buyer@example.com', provider: 'paypal' });
+  assert.equal(paypal.status, 400);
+  assert.equal(paypal.json.error, 'install_required');
   assert.equal(http.calls.length, 0, 'nothing reached Safepay');
   assert.equal((await H.db.payment.findMany({})).length, before);
 });
@@ -145,12 +145,12 @@ test('CORS: only the website origin (and localhost for development) may call che
 
 test('/methods tells the website whether card checkout is on and whether it is a test (sandbox) setup', async () => {
   const r = await H.call('GET', `/v1/checkout/methods?tenantId=${T}`);
-  assert.deepEqual(r.json.web, { card: true, test: true });
+  assert.deepEqual(r.json.web, { card: true, test: true, provider: 'safepay' });
   assert.ok(!JSON.stringify(r.json).includes('sec_x'));
   const cfg = await H.db.tenantPaymentConfig.findFirst({ where: { tenantId: T, provider: 'safepay' } });
   await H.db.tenantPaymentConfig.update({ where: { id: cfg.id }, data: { secretsSealed: sealJson({ publicKey: 'pub_x', secretKey: 'sec_x', webhookSecret: 'wh', env: 'live' }) } });
   try {
-    assert.deepEqual((await H.call('GET', `/v1/checkout/methods?tenantId=${T}`)).json.web, { card: true, test: false });
+    assert.deepEqual((await H.call('GET', `/v1/checkout/methods?tenantId=${T}`)).json.web, { card: true, test: false, provider: 'safepay' });
   } finally {
     await H.db.tenantPaymentConfig.update({ where: { id: cfg.id }, data: { secretsSealed: cfg.secretsSealed } });
   }

@@ -42,7 +42,9 @@ const DEFAULTS = Object.freeze({
   // Website payment providers the app offers (GET /v1/checkout/methods, app 1.0.23+). providers null =
   // every provider whose keys are saved and enabled (POST /v1/tenant/payment-config); a list = only those
   // of them, in that order ([] offers none). labels renames a provider in the app, e.g. { "stripe": "Card" }.
-  checkout: { providers: null, labels: {} },
+  // stripeLookupKeys: { "<plan key>": "<Stripe Price lookup key>" } over the built-in map in
+  // src/providers/stripe.js (pro -> pro_monthly, pro-yearly -> pro_yearly, ...).
+  checkout: { providers: null, labels: {}, stripeLookupKeys: {} },
   privacy: { unverifiedRetentionDays: 30, outboxBodyRetentionDays: 90, trialAttemptRetentionDays: 180 },
   automations: {
     welcome: { enabled: true, offsetHours: 0 },
@@ -73,6 +75,10 @@ const providerLabels = (v) => v && typeof v === 'object' && !Array.isArray(v) &&
 const productPlans = (v) => v && typeof v === 'object' && !Array.isArray(v) && Object.keys(v).length <= 20
   && Object.entries(v).every(([k, p]) => /^[A-Za-z0-9._-]{1,100}$/.test(k) && typeof p === 'string' && /^[A-Za-z0-9._-]{1,60}$/.test(p));
 
+// { "<plan key>": "<Stripe Price lookup key>" }: Stripe lookup keys are up to 200 characters.
+const lookupKeys = (v) => v && typeof v === 'object' && !Array.isArray(v) && Object.keys(v).length <= 50
+  && Object.entries(v).every(([k, l]) => /^[A-Za-z0-9._-]{1,60}$/.test(k) && typeof l === 'string' && /^[A-Za-z0-9._-]{1,200}$/.test(l));
+
 const RULES = {
   trial: { days: int(1, 60), tier: (v) => v === 'pro' || v === 'enterprise', networkLimit: int(0, 100), networkWindowDays: int(1, 365) },
   verify: {
@@ -85,7 +91,7 @@ const RULES = {
   },
   billing: { renewalGraceDays: int(0, 60), reportingCurrency: (v) => typeof v === 'string' && /^[A-Z]{3}$/.test(v) },
   store: { salesEnabled: bool, productPlans, acceptUnverified: bool, unverifiedDays: int(1, 35), renewalGraceDays: int(0, 30), maxMovesPer30Days: int(0, 20) },
-  checkout: { providers: providerList, labels: providerLabels },
+  checkout: { providers: providerList, labels: providerLabels, stripeLookupKeys: lookupKeys },
   privacy: { unverifiedRetentionDays: int(1, 3650), outboxBodyRetentionDays: int(1, 3650), trialAttemptRetentionDays: int(1, 3650) }
 };
 

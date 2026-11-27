@@ -1,12 +1,45 @@
 'use strict';
-// Per-tenant Stripe; the secret key comes from the tenant's sealed payment config. Supports one-time
-// payments (N months each) and recurring subscriptions (plan.recurring), keyed to the plan's interval.
+// Per-tenant Stripe; the secret key comes from the tenant's sealed payment config.
+//
+// Checkout runs on Stripe Managed Payments (Stripe sells as merchant of record and handles sales tax),
+// which needs API version 2025-03-31.basil or later, managed_payments[enabled]=true on the Checkout
+// Session, and line items that are Prices of Products carrying an eligible tax code. So a plan is sold
+// through the Stripe Price that has the plan's lookup key (DEFAULT_LOOKUP_KEYS, or settings
+// checkout.stripeLookupKeys), never through inline price_data. The Price must charge exactly the plan's
+// amount and currency, or the checkout is refused: what the app or site shows is what the card pays.
+// A recurring Price opens a subscription, a one-time Price a single payment.
 const Stripe = require('stripe');
 const { publicBaseUrl } = require('../env');
 
+const API_VERSION = '2025-08-27.basil';
+
 function client(secretKey) {
   if (!secretKey) throw new Error('Tenant has no Stripe secret key configured.');
-  return new Stripe(secretKey, { apiVersion: '2024-06-20' });
+  return new Stripe(secretKey, { apiVersion: API_VERSION });
+}
+
+// Plan key on this server -> lookup key of the Price in the Stripe Product catalog.
+const DEFAULT_LOOKUP_KEYS = Object.freeze({
+  pro: 'pro_monthly',
+  'pro-yearly': 'pro_yearly',
+  'pro-lifetime': 'pro_lifetime',
+  enterprise: 'enterprise_monthly',
+  'enterprise-yearly': 'enterprise_yearly',
+  'enterprise-lifetime': 'enterprise_lifetime'
+});
+
+class StripeCheckoutError extends Error {
+  constructor(code, message, status = 409) {
+    super(message);
+    this.code = code;
+    this.status = status;
+  }
+}
+
+function lookupKeyFor(plan, overrides) {
+  const o = overrides && typeof overrides === 'object' ? overrides : {};
+  const own = typeof o[plan.key] === 'string' ? o[plan.key].trim() : '';
+  return own || DEFAULT_LOOKUP_KEYS[plan.key] || null;
 }
 
 // Anything non-yearly maps to Stripe's 'month' interval.
@@ -14,29 +47,60 @@ function stripeInterval(interval) {
   return String(interval || 'month').toLowerCase() === 'year' ? 'year' : 'month';
 }
 
-async function createCheckout({ secretKey, tenantId, plan, installId, account }) {
-  const stripe = client(secretKey);
-  const recurring = Boolean(plan.recurring);
-  const price_data = {
-    currency: String(plan.currency || 'usd').toLowerCase(),
-    unit_amount: plan.amount,
-    product_data: { name: plan.name }
-  };
-  if (recurring) price_data.recurring = { interval: stripeInterval(plan.interval) };
+async function resolvePrice(stripe, plan, overrides) {
+  const lookupKey = lookupKeyFor(plan, overrides);
+  if (!lookupKey) throw new StripeCheckoutError('stripe_price_missing', `No Stripe price is set up for the plan "${plan.key}".`);
+  const list = await stripe.prices.list({ lookup_keys: [lookupKey], active: true, limit: 1 });
+  const price = list && list.data && list.data[0];
+  if (!price) throw new StripeCheckoutError('stripe_price_missing', `No active Stripe price has the lookup key "${lookupKey}".`);
+  const currency = String(plan.currency || 'usd').toLowerCase();
+  if (price.unit_amount !== plan.amount || String(price.currency).toLowerCase() !== currency) {
+    throw new StripeCheckoutError('stripe_price_mismatch',
+      `The Stripe price "${lookupKey}" (${price.unit_amount} ${price.currency}) does not match the plan "${plan.key}" (${plan.amount} ${currency}).`);
+  }
+  if (price.type === 'recurring' && price.recurring && price.recurring.interval !== stripeInterval(plan.interval)) {
+    throw new StripeCheckoutError('stripe_price_mismatch',
+      `The Stripe price "${lookupKey}" bills per ${price.recurring.interval}, the plan "${plan.key}" per ${plan.interval}.`);
+  }
+  return price;
+}
 
-  const session = await stripe.checkout.sessions.create({
+// web: a website purchase (no install). It takes one-time Prices only (the buyer gets an activation
+// code by email, a fixed term), returns to the website, and pre-fills the buyer's email.
+async function createCheckout({ secretKey, tenantId, plan, installId, account, web = false, siteBaseUrl = '', lookupKeys }) {
+  const stripe = client(secretKey);
+  const price = await resolvePrice(stripe, plan, lookupKeys);
+  const recurring = price.type === 'recurring';
+  if (web && recurring) throw new StripeCheckoutError('install_required', 'This plan can only be bought in the app.', 400);
+
+  const metadata = {
+    tenantId, planKey: plan.key, tier: plan.tier,
+    months: String(plan.months), recurring: String(recurring),
+    installId: installId || '', account: account || '', ...(web ? { method: 'web' } : {})
+  };
+  const params = {
     mode: recurring ? 'subscription' : 'payment',
-    line_items: [{ quantity: 1, price_data }],
-    success_url: `${publicBaseUrl}/v1/checkout/return?status=success`,
-    cancel_url: `${publicBaseUrl}/v1/checkout/return?status=cancel`,
+    managed_payments: { enabled: true },
+    line_items: [{ price: price.id, quantity: 1 }],
+    success_url: web ? `${siteBaseUrl}/buy/thanks?provider=stripe&session_id={CHECKOUT_SESSION_ID}` : `${publicBaseUrl}/v1/checkout/return?status=success`,
+    cancel_url: web ? `${siteBaseUrl}/buy?cancelled=1` : `${publicBaseUrl}/v1/checkout/return?status=cancel`,
     client_reference_id: installId || undefined,
-    metadata: {
-      tenantId, planKey: plan.key, tier: plan.tier,
-      months: String(plan.months), recurring: String(recurring),
-      installId: installId || '', account: account || ''
-    }
-  });
+    metadata
+  };
+  if (recurring) params.subscription_data = { metadata };
+  else params.payment_intent_data = { metadata };
+  if (web && account) params.customer_email = account;
+
+  const session = await stripe.checkout.sessions.create(params);
   return { url: session.url, ref: session.id };
+}
+
+// A Checkout Session id as Stripe makes them (cs_test_... / cs_live_...), for the website's status check.
+const isSessionId = (v) => typeof v === 'string' && /^cs_(test|live)_[A-Za-z0-9]{10,200}$/.test(v);
+
+// The session as Stripe has it now, for a status check that does not wait for the webhook.
+async function retrieveSession({ secretKey, sessionId }) {
+  return client(secretKey).checkout.sessions.retrieve(sessionId);
 }
 
 // Verify + parse an inbound Stripe webhook using the tenant's webhook signing
@@ -61,11 +125,19 @@ const idOf = (v) => (v && typeof v === 'object' ? v.id : v) || null;
 
 // Map a refunded or disputed charge to what it paid for: a one-time purchase via its Checkout
 // Session (listed by payment_intent), a subscription via its invoice. Either ref may be null.
+// On basil a Charge no longer names its invoice: the invoice is found by listing the invoice
+// payments of the PaymentIntent (docs: billing/subscriptions/webhooks, refunds on basil).
 async function resolveChargeRefs({ secretKey, paymentIntent, invoice, charge }) {
   const stripe = client(secretKey);
   let sessionRef = null;
   let subscriptionId = null;
-  const pi = idOf(paymentIntent);
+  let pi = idOf(paymentIntent);
+  let inv = invoice || null;
+  if (!pi && charge) {
+    const ch = typeof charge === 'object' ? charge : await stripe.charges.retrieve(String(charge));
+    pi = idOf(ch && ch.payment_intent);
+    if (!inv && ch && ch.invoice) inv = ch.invoice;
+  }
   if (pi) {
     const list = await stripe.checkout.sessions.list({ payment_intent: pi, limit: 1 });
     const s = list && list.data && list.data[0];
@@ -75,10 +147,10 @@ async function resolveChargeRefs({ secretKey, paymentIntent, invoice, charge }) 
     }
   }
   if (!sessionRef && !subscriptionId) {
-    let inv = invoice || null;
-    if (!inv && charge) {
-      const ch = typeof charge === 'object' ? charge : await stripe.charges.retrieve(String(charge));
-      inv = ch && ch.invoice;
+    if (!inv && pi && stripe.invoicePayments) {
+      const ip = await stripe.invoicePayments.list({ payment: { type: 'payment_intent', payment_intent: pi }, status: 'paid', limit: 1 });
+      const row = ip && ip.data && ip.data[0];
+      if (row && row.invoice) inv = row.invoice;
     }
     if (inv) {
       const invObj = typeof inv === 'object' ? inv : await stripe.invoices.retrieve(String(inv));
@@ -88,4 +160,7 @@ async function resolveChargeRefs({ secretKey, paymentIntent, invoice, charge }) 
   return { sessionRef, subscriptionId };
 }
 
-module.exports = { createCheckout, verifyEvent, stripeInterval, invoiceSubscriptionId, resolveChargeRefs };
+module.exports = {
+  API_VERSION, DEFAULT_LOOKUP_KEYS, StripeCheckoutError,
+  createCheckout, retrieveSession, isSessionId, verifyEvent, stripeInterval, invoiceSubscriptionId, resolveChargeRefs, lookupKeyFor
+};

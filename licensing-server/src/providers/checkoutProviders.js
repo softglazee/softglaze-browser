@@ -12,14 +12,21 @@ const CHECKOUT_PROVIDERS = Object.freeze({
 const CHECKOUT_IDS = Object.freeze(Object.keys(CHECKOUT_PROVIDERS));
 const { openJson } = require('../crypto/secrets');
 
-// The website's card checkout (browser.softglaze.com/buy, src/webPurchase.js) runs on Safepay. The site
-// shows it only when card is true, and with test true (Safepay sandbox keys) only to a tester who asks.
+// The website's card checkout (browser.softglaze.com/buy, src/webPurchase.js): Stripe when its keys are
+// saved and enabled, else Safepay. The site shows it only when card is true, and with test true (Stripe
+// test keys, Safepay sandbox) only to a tester who asks. provider tells the site which one to post.
 function webCheckout(rows) {
+  const stripe = rows.find((r) => r.provider === 'stripe');
+  if (stripe) {
+    let key = '';
+    try { key = String(openJson(stripe.secretsSealed).secretKey || ''); } catch (_) { /* unreadable keys: treat as test */ }
+    return { card: true, test: !/^(sk|rk)_live_/.test(key), provider: 'stripe' };
+  }
   const row = rows.find((r) => r.provider === 'safepay');
-  if (!row) return { card: false, test: false };
+  if (!row) return { card: false, test: false, provider: null };
   let env = 'sandbox';
   try { env = String(openJson(row.secretsSealed).env || 'sandbox'); } catch (_) { /* unreadable keys: treat as test */ }
-  return { card: true, test: env !== 'live' };
+  return { card: true, test: env !== 'live', provider: 'safepay' };
 }
 
 // -> { providers: [{ id, label, kind: 'automated' }], store: { salesEnabled }, web: { card, test } }
