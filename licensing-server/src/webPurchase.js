@@ -68,6 +68,12 @@ async function issueWebCode(tenant, payment, plan, db) {
     const line = `${NOTE_PREFIX} ${code} (website purchase, ${tier}, ${termText(months)}, emailed to the buyer)`;
     await db.payment.update({ where: { id: fresh.id }, data: { note: [fresh.note, line].filter(Boolean).join('\n').slice(0, 5000) } });
   }
+  // No email at all (should not happen: Stripe and Safepay both collect one): the code is saved on the
+  // Payment for the admin to send by hand.
+  if (!fresh.account) {
+    console.warn(`[web-purchase] payment ${fresh.id} has no email: its activation code is saved on the payment; send it from the admin.`);
+    return { code, outboxId: null };
+  }
   const outboxId = await queueCodeEmail(db, tenant.id, { payment: fresh, code, plan, months, dedupeKey: dedupeKeyFor(fresh.id) });
   if (!transport.isConfigured()) {
     console.warn(`[web-purchase] SMTP is not configured: the activation code for payment ${fresh.id} is saved and its email is queued; it goes out once SMTP is set (or resend it from the admin).`);

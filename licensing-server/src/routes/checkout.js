@@ -92,11 +92,18 @@ router.post('/', webCheckoutGate, asyncHandler(async (req, res) => {
   const web = !installId;
   let webEmail = null;
   if (web) {
-    // Website checkout: card payments (Safepay) only, and the activation code goes to this email.
+    // Website checkout: card payments only, and the activation code goes to the buyer's email. Safepay
+    // needs it here. Stripe may get it here or ask for it on its own page (the webhook then takes it from
+    // the paid session), so the site can send the buyer straight to Stripe with one click.
     if (!WEB_PROVIDERS.has(provider)) return res.status(400).json({ error: 'install_required', message: 'This payment method is only available in the app.' });
-    webEmail = parseEmail(typeof account === 'string' ? account : '');
-    if (!webEmail) return res.status(400).json({ error: 'invalid_email', message: 'Enter a valid email address. Your activation code is sent there.' });
-    account = webEmail.email;
+    const raw = typeof account === 'string' ? account.trim() : '';
+    if (raw || provider !== 'stripe') {
+      webEmail = parseEmail(raw);
+      if (!webEmail) return res.status(400).json({ error: 'invalid_email', message: 'Enter a valid email address. Your activation code is sent there.' });
+      account = webEmail.email;
+    } else {
+      account = null;
+    }
   }
 
   const tenant = await prisma.tenant.findUnique({ where: { id: String(tenantId) } });
@@ -118,10 +125,11 @@ router.post('/', webCheckoutGate, asyncHandler(async (req, res) => {
   const blocked = await saleBlock(prisma, tenant.id, plan);
   if (blocked) return res.status(409).json({ error: blocked.error, message: blocked.message, remaining: blocked.availability.remaining });
   if (web) {
-    // A code is a fixed term; a subscription needs an install to renew.
-    if (plan.recurring) return res.status(400).json({ error: 'install_required', message: 'This plan can only be bought in the app.' });
+    // A code is a fixed term; a subscription needs an install to renew. Stripe sells a monthly or yearly
+    // plan on the website as one term when its one-time web Price exists (providers/stripe.js decides).
+    if (plan.recurring && provider !== 'stripe') return res.status(400).json({ error: 'install_required', message: 'This plan can only be bought in the app.' });
     const em = (await getSettings(prisma, tenant.id)).email;
-    if (isDisposableDomain(webEmail.domain, { allow: em.domainAllowlist, block: em.domainBlocklist })) {
+    if (webEmail && isDisposableDomain(webEmail.domain, { allow: em.domainAllowlist, block: em.domainBlocklist })) {
       return res.status(400).json({ error: 'disposable_email', message: 'Please use a permanent email address, not a temporary one.' });
     }
   }
@@ -193,7 +201,7 @@ async function stripeWebStatus(tenantId, sessionId) {
       if (s && s.status === 'complete' && s.payment_status === 'paid') {
         const md = s.metadata || {};
         await handleOnce(tenantId, 'stripe', `verify:${sessionId}`, 'checkout.session.verified', async () => (tx) => provisionFromPaymentRef({ id: tenantId }, 'stripe', sessionId, {
-          account: md.account || null, planKey: md.planKey || null, tier: md.tier, months: Number(md.months) || undefined
+          account: md.account || (s.customer_details && s.customer_details.email) || null, planKey: md.planKey || null, tier: md.tier, months: Number(md.months) || undefined
         }, tx));
       }
     } catch (e) {

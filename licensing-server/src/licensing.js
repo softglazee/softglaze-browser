@@ -93,7 +93,14 @@ async function provisionFromPaymentRef(tenant, provider, providerRef, fallback =
     ? await db.plan.findUnique({ where: { tenantId_key: { tenantId: tenant.id, key: planKey } } })
     : null;
   if (isWebPayment(payment)) {
-    const { outboxId } = await issueWebCode(tenant, payment, plan, db);
+    // A Stripe website checkout may start without an email (Stripe's page asks for it): take the one the
+    // paid session carries, so the activation code has somewhere to go.
+    const fromSession = typeof fallback.account === 'string' ? fallback.account.trim().toLowerCase() : '';
+    let webPayment = payment;
+    if (!payment.account && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(fromSession)) {
+      webPayment = await db.payment.update({ where: { id: payment.id }, data: { account: fromSession.slice(0, 254) } });
+    }
+    const { outboxId } = await issueWebCode(tenant, webPayment, plan, db);
     return { provisioned: true, webCode: { paymentId: payment.id, outboxId } };
   }
   const lic = await grantMonths(tenant, {

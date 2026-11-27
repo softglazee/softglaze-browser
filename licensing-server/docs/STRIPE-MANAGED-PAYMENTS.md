@@ -22,6 +22,27 @@ catalog that has its **lookup key**:
 
 The admin setting `checkout.stripeLookupKeys` (`{ "<plan key>": "<lookup key>" }`) overrides a row.
 
+### Monthly and yearly on the website (optional)
+
+The website can also sell a monthly or yearly plan as **one payment for one term** (an activation code,
+no renewal). It does so only when a one-time Price with the plan's amount has this lookup key; without
+it the website answers `install_required` and the plan is bought in the app (a subscription).
+
+| Plan key | Website lookup key | Stripe Price (one time) |
+| --- | --- | --- |
+| `pro` | `pro_month_once` | US$5 |
+| `pro-yearly` | `pro_year_once` | US$50 |
+| `enterprise` | `enterprise_month_once` | US$29 |
+| `enterprise-yearly` | `enterprise_year_once` | US$290 |
+
+Override one with `checkout.stripeLookupKeys` `"web:<plan key>"`. To stop selling a term on the website,
+archive its one-time Price.
+
+### The buyer's email
+
+The website may send the buyer straight to Stripe without asking for an email first: Stripe's page asks
+for it, and the server takes it from the paid session to send the activation code.
+
 - The Price must charge exactly the plan's amount and currency, and bill per the plan's interval.
   Otherwise checkout is refused (409 `stripe_price_mismatch` / `stripe_price_missing`, logged as
   `[checkout:stripe]`): what the app shows is what the card pays. Change a price in both places.
