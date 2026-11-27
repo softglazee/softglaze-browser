@@ -107,6 +107,32 @@ async function resolvePrice(stripe, plan, overrides) {
   return price;
 }
 
+// The Stripe page shows the Product's name, and a lifetime Price sits on the same Product as the monthly
+// plan ("SoftGlaze Browser Pro"). So a lifetime checkout names its line inline ("SoftGlaze Browser Pro
+// Lifetime") with the Price's own amount and currency and the Product's tax code, which Managed Payments
+// needs for an inline product. The Price still gates the sale (archive it and the offer is closed). With
+// no tax code on the Product the Price is used as it is.
+const LIFETIME_MONTHS = 1200;
+const isLifetimePlan = (plan) => Boolean(plan) && plan.interval === 'once' && Number(plan.months) >= LIFETIME_MONTHS;
+async function lineItemFor(stripe, plan, price) {
+  const plain = { price: price.id, quantity: 1 };
+  if (!isLifetimePlan(plan) || price.type === 'recurring' || !price.product || !plan.name) return plain;
+  try {
+    const product = typeof price.product === 'object' ? price.product : await stripe.products.retrieve(String(price.product));
+    const taxCode = product && (typeof product.tax_code === 'object' ? product.tax_code && product.tax_code.id : product.tax_code);
+    if (!taxCode) return plain;
+    const base = String(product.name || '').replace(/\s+(Pro|Enterprise)\s*$/i, '').trim() || 'SoftGlaze Browser';
+    return {
+      quantity: 1,
+      price_data: {
+        currency: price.currency,
+        unit_amount: price.unit_amount,
+        product_data: { name: `${base} ${plan.name}`.slice(0, 250), tax_code: taxCode }
+      }
+    };
+  } catch (_) { return plain; }
+}
+
 // web: a website purchase (no install). It takes one-time Prices only (the buyer gets an activation
 // code by email, a fixed term): a lifetime offer's own Price, or for a monthly/yearly plan its one-time
 // web Price (one term, no renewal). It returns to the website. The email is pre-filled when the site
@@ -128,7 +154,7 @@ async function createCheckout({ secretKey, tenantId, plan, installId, account, w
   const params = {
     mode: recurring ? 'subscription' : 'payment',
     managed_payments: { enabled: true },
-    line_items: [{ price: price.id, quantity: 1 }],
+    line_items: [await lineItemFor(stripe, plan, price)],
     success_url: successUrl || (web ? `${siteBaseUrl}/buy/thanks?provider=stripe&session_id={CHECKOUT_SESSION_ID}` : `${publicBaseUrl}/v1/checkout/return?status=success`),
     cancel_url: cancelUrl || (web ? `${siteBaseUrl}/buy?cancelled=1` : `${publicBaseUrl}/v1/checkout/return?status=cancel`),
     client_reference_id: installId || undefined,
