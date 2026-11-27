@@ -22,7 +22,7 @@ const { authenticateInstall } = require('../installAuth');
 const { checkMachine, transferMachine } = require('../machineBinding');
 const { trialLeaseFor } = require('../trials/ledger');
 const { touchInstall } = require('../customers/sync');
-const { pickLeaseLicence } = require('../licensing');
+const { pickLeaseLicence, accountLicencesFor } = require('../licensing');
 const { freeLimits } = require('../plans/service');
 const { limitsForLicence, lockReasonFor, parseUsage, checkFreeUsage } = require('../plans/entitlement');
 
@@ -46,7 +46,11 @@ router.post('/', asyncHandler(async (req, res) => {
   await touchInstall(prisma, install, { appVersion, channel }, now).catch(() => {});
   // An install can hold more than one licence (an invoice licence and a Microsoft Store subscription,
   // or Pro then Enterprise in the Store): the active one with the best tier wins.
-  const lic = pickLeaseLicence(await prisma.license.findMany({ where: { tenantId: tenant.id, installId: install.id } }), now);
+  // A computer signed in to an account also gets the account's active plan (bought on app.softglaze.com,
+  // licensing.js accountLicencesFor), on up to that plan's number of computers.
+  const own = await prisma.license.findMany({ where: { tenantId: tenant.id, installId: install.id } });
+  const fromAccount = await accountLicencesFor(prisma, tenant.id, install, now, (l) => limitsForLicence(prisma, tenant.id, l));
+  const lic = pickLeaseLicence([...own, ...fromAccount], now);
 
   const active = lic && lic.status === 'active' && lic.currentPeriodEnd && new Date(lic.currentPeriodEnd).getTime() > now;
   if (!active) {

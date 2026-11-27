@@ -9,6 +9,8 @@
 //   POST /v1/account/sessions/:id/revoke     -> { ok, revoked } | 404 not_found
 //   POST /v1/account/sign-out-all            -> { ok, revoked }: desktop, phone and web, this session included
 //   POST /v1/account/delete-request { reason? } -> 202 { ok, requested, alreadyRequestedToday }
+//   POST /v1/account/checkout { planKey }    -> { url, ref }: Stripe checkout for a plan ON THIS ACCOUNT (src/accountCheckout.js);
+//                                                errors 400 unknown_plan, 409 lifetime_active | already_subscribed | sale_*, 503 card_unavailable
 //   GET  /v1/account/licence                 -> { tier, plan, free, lifetime, planEndsAt, status, paidUntil, trialEndsAt, complimentaryUntil, seats,
 //                                                phonesAllowed, phonesUsed, licences: [...] }
 // 401 session_invalid when the token is unknown, ended or (web) past its 15 minutes: refresh, then retry.
@@ -20,9 +22,10 @@ const { getSettings } = require('../settings');
 const { bearerSession, bearerOf } = require('../auth/sessions');
 const api = require('../auth/accountApi');
 const { webCors } = require('./authHttp');
+const { startAccountCheckout } = require('../accountCheckout');
 
 const router = express.Router();
-const PATHS = ['/me', '/sessions', '/sessions/:id/revoke', '/sign-out-all', '/delete-request', '/licence'];
+const PATHS = ['/me', '/sessions', '/sessions/:id/revoke', '/sign-out-all', '/delete-request', '/licence', '/checkout'];
 const limiter = rateLimit({ windowMs: 60000, max: Number(process.env.ACCOUNT_API_RATE_PER_MIN) || 120 });
 router.use(PATHS, webCors('GET, POST, OPTIONS'), limiter);
 
@@ -42,5 +45,9 @@ router.post('/sessions/:id/revoke', handler((found, req) => api.revoke(prisma, f
 router.post('/sign-out-all', handler((found) => api.signOutAll(prisma, found)));
 router.post('/delete-request', handler(async (found, req) => api.deleteRequest(prisma, found, req.body || {}, { settings: await getSettings(prisma, found.customer.tenantId) })));
 router.get('/licence', handler((found) => api.licenceSummary(prisma, found)));
+// Web sessions only: a phone buys nothing in this release.
+router.post('/checkout', handler((found, req) => (found.session && found.session.kind === 'web'
+  ? startAccountCheckout(prisma, found, req.body || {})
+  : { status: 403, body: { error: 'web_only', message: 'Buy on app.softglaze.com.' } })));
 
 module.exports = router;

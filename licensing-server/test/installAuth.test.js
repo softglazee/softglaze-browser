@@ -89,7 +89,11 @@ test('the licence route authenticates the install and never looks a licence up b
   assert.match(src, /authenticateInstall\(prisma, tenant, \{ installId, installSecret \}\)/);
   assert.match(src, /status\(401\)/);
   assert.match(src, /where: \{ tenantId: tenant\.id, installId: install\.id \}/);
-  assert.ok(!/account/.test(src.replace(/\/\/.*$/gm, '')), 'no account lookup may remain in code');
+  const code = src.replace(/\/\/.*$/gm, '');
+  // Never by email: no where-clause on the account (email) field. A plan bought on the account reaches a
+  // computer only through accountLicencesFor, which needs a live desktop sign-in for this install.
+  assert.ok(!/account\s*:/.test(code), 'no licence lookup by account email');
+  assert.match(code, /accountLicencesFor\(prisma, tenant\.id, install, now/);
 });
 
 test('redeem authenticates before claiming the code and cannot re-bind by email', () => {

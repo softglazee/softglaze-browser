@@ -8,6 +8,12 @@ const { isWebPayment, issueWebCode, voidWebCode } = require('./webPurchase');
 const { isLifetime } = require('./plans/sales');
 const guard = require('./plans/lifetimeGuard');
 
+// Account licences (27 Nov 2026, src/accountCheckout.js): a plan bought while signed in on the web app sits on
+// the account (customerId set, installId null, source 'account'). /v1/license leases it to the account's
+// computers (routes/license.js), and /v1/account/me reports it. ACCOUNT_SOURCE marks those rows.
+const ACCOUNT_SOURCE = 'account';
+const accountLicenceWhere = (tenantId, customerId) => ({ tenantId, customerId: String(customerId), installId: null, source: ACCOUNT_SOURCE });
+
 // A paid purchase that the lifetime guard did not apply (the buyer already has a lifetime licence):
 // the payment stays paid (the money was taken) and gets a note for a manual refund, found in the admin
 // with GET /v1/admin/payments?flag=lifetime_guard, and a warning goes to the server log.
@@ -26,9 +32,13 @@ async function flagLifetimeConflict(db, payment, lic, what) {
 // Lifetime guard (src/plans/lifetimeGuard.js): when the install has a lifetime licence, nothing changes
 // unless this grant is a higher-tier lifetime, which upgrades that licence in place (its end stays the
 // later of the two, never stacked). A blocked grant returns the lifetime licence with lifetimeGuard: true.
-async function grantMonths(tenant, { account, installId, tier, plan, months, providerRef, lifetime = false }, db = prisma) {
+async function grantMonths(tenant, { account, installId, customerId, tier, plan, months, providerRef, lifetime = false }, db = prisma) {
   const now = Date.now();
-  const life = await guard.findLifetimeLicence(db, tenant.id, installId, now);
+  // No install but an account: the grant goes on the account's own licence.
+  const onAccount = !installId && Boolean(customerId);
+  const life = onAccount
+    ? await guard.findCustomerLifetimeLicence(db, tenant.id, customerId, now)
+    : await guard.findLifetimeLicence(db, tenant.id, installId, now);
   if (life) {
     if (!guard.allowedOnLifetime(life, { tier, lifetime })) return { ...life, lifetimeGuard: true };
     const end = Math.max(new Date(life.currentPeriodEnd).getTime(), now + termMs(months || 1));
@@ -42,7 +52,11 @@ async function grantMonths(tenant, { account, installId, tier, plan, months, pro
   }
   const existing = installId
     ? await db.license.findFirst({ where: { tenantId: tenant.id, installId }, orderBy: { updatedAt: 'desc' } })
-    : null;
+    : onAccount
+      // A one-time term stacks on the account's one-time licence, never on its subscription (that one
+      // follows Stripe's billing periods).
+      ? await db.license.findFirst({ where: { ...accountLicenceWhere(tenant.id, customerId), NOT: { providerRef: { startsWith: 'sub_' } } }, orderBy: { updatedAt: 'desc' } })
+      : null;
   const base = existing && existing.currentPeriodEnd && new Date(existing.currentPeriodEnd).getTime() > now
     ? new Date(existing.currentPeriodEnd).getTime() : now;
   const currentPeriodEnd = new Date(base + termMs(months || 1));
@@ -60,7 +74,8 @@ async function grantMonths(tenant, { account, installId, tier, plan, months, pro
   return db.license.create({
     data: {
       tenantId: tenant.id, account: account || null, installId: installId || null,
-      tier: tier || 'pro', plan: plan || null, status: 'active', currentPeriodEnd, providerRef: providerRef || null
+      tier: tier || 'pro', plan: plan || null, status: 'active', currentPeriodEnd, providerRef: providerRef || null,
+      ...(onAccount ? { customerId: String(customerId), source: ACCOUNT_SOURCE } : {})
     }
   });
 }
@@ -106,6 +121,7 @@ async function provisionFromPaymentRef(tenant, provider, providerRef, fallback =
   const lic = await grantMonths(tenant, {
     account: payment.account || fallback.account || null,
     installId: payment.installId || fallback.installId || null,
+    customerId: payment.method === ACCOUNT_SOURCE ? payment.customerId : null,
     tier: (plan && plan.tier) || fallback.tier || 'pro',
     plan: planKey,
     months: (plan && plan.months) || fallback.months || 1,
@@ -116,12 +132,17 @@ async function provisionFromPaymentRef(tenant, provider, providerRef, fallback =
     await flagLifetimeConflict(db, payment, lic, `plan ${planKey || '?'} (${provider} ${providerRef})`);
     return { provisioned: false, lifetimeGuard: true };
   }
+  if (payment.method === ACCOUNT_SOURCE && payment.customerId) {
+    // The account's cached plan (GET /v1/account/me) follows at once, not at the next cron run.
+    await require('./customers/sync').recomputeCustomer(db, tenant.id, payment.customerId).catch(() => {});
+  }
   return { provisioned: true };
 }
 
 // A subscription sets the period end to an absolute date (the Stripe billing-period end), keyed by
 // the Stripe subscription id so renewals are idempotent; grantMonths is additive instead.
-async function setSubscriptionPeriod(tenant, { subscriptionId, account, installId, tier, plan, periodEnd, status = 'active' }, db = prisma) {
+async function setSubscriptionPeriod(tenant, { subscriptionId, account, installId, customerId, tier, plan, periodEnd, status = 'active' }, db = prisma) {
+  const onAccount = !installId && Boolean(customerId);
   // Match by the subscription first (renewals), then by installId. Never by account: see
   // grantMonths. An existing licence keeps the install it is already bound to.
   const bySubscription = subscriptionId
@@ -136,7 +157,9 @@ async function setSubscriptionPeriod(tenant, { subscriptionId, account, installI
   // a paid first charge for a manual refund; a blocked renewal is logged.
   const now = Date.now();
   const life = (existing && guard.isLifetimeLicence(existing, null, now) ? existing : null)
-    || (!bySubscription ? await guard.findLifetimeLicence(db, tenant.id, installId, now) : null);
+    || (!bySubscription
+      ? (onAccount ? await guard.findCustomerLifetimeLicence(db, tenant.id, customerId, now) : await guard.findLifetimeLicence(db, tenant.id, installId, now))
+      : null);
   if (life) {
     console.warn(`[licensing] subscription ${subscriptionId || '?'} not applied: install ${life.installId || '?'} has ${life.tier} lifetime (licence ${life.id}). Cancel the subscription and refund it by hand.`);
     return { ...life, lifetimeGuard: true };
@@ -151,7 +174,7 @@ async function setSubscriptionPeriod(tenant, { subscriptionId, account, installI
     installId: (existing && existing.installId) || installId || null
   };
   if (existing) return db.license.update({ where: { id: existing.id }, data });
-  return db.license.create({ data: { tenantId: tenant.id, ...data } });
+  return db.license.create({ data: { tenantId: tenant.id, ...data, ...(onAccount ? { customerId: String(customerId), source: ACCOUNT_SOURCE } : {}) } });
 }
 
 // Subscription ended / canceled at Stripe — stop issuing leases.
@@ -184,6 +207,14 @@ async function revokeForRefund(tenant, { provider, sessionRef, subscriptionId },
       let lic = await db.license.findFirst({ where: { tenantId: tenant.id, providerRef: String(sessionRef) }, orderBy: { updatedAt: 'desc' } });
       if (!lic && payment.installId) {
         lic = await db.license.findFirst({ where: { tenantId: tenant.id, installId: payment.installId }, orderBy: { updatedAt: 'desc' } });
+      }
+      // An account subscription (src/accountCheckout.js) has no install: its licence is keyed by the
+      // subscription, and refunding its charge ends it, as a refunded subscription does below.
+      if (!lic && subscriptionId) {
+        const sub = await db.license.findFirst({ where: { tenantId: tenant.id, providerRef: String(subscriptionId) }, orderBy: { updatedAt: 'desc' } });
+        if (sub && sub.status !== 'canceled') await db.license.update({ where: { id: sub.id }, data: { status: 'canceled', currentPeriodEnd: new Date(now) } });
+        if (payment.customerId) await require('./customers/sync').recomputeCustomer(db, tenant.id, payment.customerId).catch(() => {});
+        return { changed: true };
       }
       if (!lic) return { changed: true };
       const end = lic.currentPeriodEnd ? new Date(lic.currentPeriodEnd).getTime() : now;
@@ -220,4 +251,34 @@ function pickLeaseLicence(licences, now = Date.now()) {
   return list.sort((a, b) => new Date(b.updatedAt || 0).getTime() - new Date(a.updatedAt || 0).getTime())[0];
 }
 
-module.exports = { pickLeaseLicence, grantMonths, flagLifetimeConflict, claimPendingPayment, provisionFromPaymentRef, setSubscriptionPeriod, cancelSubscription, revokeForRefund };
+// The account's ACTIVE licences (src/accountCheckout.js) for a computer SIGNED IN to that account, on at most
+// the plan's `devices` signed-in computers (the ones seen most recently). Signed in means a live desktop
+// AuthSession for this install and customer (one-click or email-code sign-in): Install.customerId alone is
+// not enough, because the cron links an install to a customer from the email it merely claims
+// (customers/sync.js reconcileTenant). Never an ended or refunded licence, so an account licence can make a
+// computer paid but never lock it.
+async function liveDesktopInstallIds(db, tenantId, customerId, now) {
+  const rows = await db.authSession.findMany({
+    where: { tenantId, customerId: String(customerId), kind: 'desktop', revokedAt: null, NOT: { installId: '' } },
+    select: { installId: true, expiresAt: true }
+  });
+  return new Set(rows.filter((r) => !r.expiresAt || new Date(r.expiresAt).getTime() > now).map((r) => r.installId));
+}
+
+async function accountLicencesFor(db, tenantId, install, now = Date.now(), limitsOf = null) {
+  if (!install || !install.customerId) return [];
+  const signedIn = await liveDesktopInstallIds(db, tenantId, install.customerId, now);
+  if (!signedIn.has(install.id)) return [];
+  const rows = (await db.license.findMany({ where: accountLicenceWhere(tenantId, install.customerId) }))
+    .filter((l) => l.status === 'active' && l.currentPeriodEnd && new Date(l.currentPeriodEnd).getTime() > now);
+  if (!rows.length) return [];
+  const best = pickLeaseLicence(rows, now);
+  const limits = limitsOf ? await limitsOf(best) : null;
+  const devices = Math.max(1, Number(limits && limits.devices) || (best.tier === 'enterprise' ? 10 : 3));
+  const recent = await db.install.findMany({
+    where: { tenantId, customerId: install.customerId, id: { in: [...signedIn] } }, orderBy: { lastSeenAt: 'desc' }, take: devices, select: { id: true }
+  });
+  return recent.some((i) => i.id === install.id) ? rows : [];
+}
+
+module.exports = { accountLicencesFor, ACCOUNT_SOURCE, accountLicenceWhere, pickLeaseLicence, grantMonths, flagLifetimeConflict, claimPendingPayment, provisionFromPaymentRef, setSubscriptionPeriod, cancelSubscription, revokeForRefund };

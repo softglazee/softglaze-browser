@@ -111,7 +111,9 @@ async function resolvePrice(stripe, plan, overrides) {
 // code by email, a fixed term): a lifetime offer's own Price, or for a monthly/yearly plan its one-time
 // web Price (one term, no renewal). It returns to the website. The email is pre-filled when the site
 // sent one; otherwise Stripe's page asks for it and the webhook takes it from the paid session.
-async function createCheckout({ secretKey, tenantId, plan, installId, account, web = false, siteBaseUrl = '', lookupKeys }) {
+// customerId (account purchase, src/accountCheckout.js): the plan goes on the signed-in account, not on a
+// computer: subscriptions are allowed without an install, and successUrl / cancelUrl return to the web app.
+async function createCheckout({ secretKey, tenantId, plan, installId, account, web = false, siteBaseUrl = '', lookupKeys, customerId, successUrl, cancelUrl }) {
   const stripe = client(secretKey);
   const price = web && isTermPlan(plan) ? await resolveWebTermPrice(stripe, plan, lookupKeys) : await resolvePrice(stripe, plan, lookupKeys);
   const recurring = price.type === 'recurring';
@@ -120,20 +122,21 @@ async function createCheckout({ secretKey, tenantId, plan, installId, account, w
   const metadata = {
     tenantId, planKey: plan.key, tier: plan.tier,
     months: String(plan.months), recurring: String(recurring),
-    installId: installId || '', account: account || '', ...(web ? { method: 'web' } : {})
+    installId: installId || '', account: account || '', ...(web ? { method: 'web' } : {}),
+    ...(customerId ? { customerId: String(customerId), method: 'account' } : {})
   };
   const params = {
     mode: recurring ? 'subscription' : 'payment',
     managed_payments: { enabled: true },
     line_items: [{ price: price.id, quantity: 1 }],
-    success_url: web ? `${siteBaseUrl}/buy/thanks?provider=stripe&session_id={CHECKOUT_SESSION_ID}` : `${publicBaseUrl}/v1/checkout/return?status=success`,
-    cancel_url: web ? `${siteBaseUrl}/buy?cancelled=1` : `${publicBaseUrl}/v1/checkout/return?status=cancel`,
+    success_url: successUrl || (web ? `${siteBaseUrl}/buy/thanks?provider=stripe&session_id={CHECKOUT_SESSION_ID}` : `${publicBaseUrl}/v1/checkout/return?status=success`),
+    cancel_url: cancelUrl || (web ? `${siteBaseUrl}/buy?cancelled=1` : `${publicBaseUrl}/v1/checkout/return?status=cancel`),
     client_reference_id: installId || undefined,
     metadata
   };
   if (recurring) params.subscription_data = { metadata };
   else params.payment_intent_data = { metadata };
-  if (web && account) params.customer_email = account;
+  if ((web || customerId) && account) params.customer_email = account;
 
   const session = await stripe.checkout.sessions.create(params);
   return { url: session.url, ref: session.id };

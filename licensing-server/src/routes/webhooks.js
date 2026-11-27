@@ -9,7 +9,8 @@ const stripeProvider = require('../providers/stripe');
 const paypalProvider = require('../providers/paypal');
 const cryptomusProvider = require('../providers/cryptomus');
 const safepayProvider = require('../providers/safepay');
-const { provisionFromPaymentRef, claimPendingPayment, setSubscriptionPeriod, cancelSubscription, revokeForRefund, flagLifetimeConflict } = require('../licensing');
+const { ACCOUNT_SOURCE, provisionFromPaymentRef, claimPendingPayment, setSubscriptionPeriod, cancelSubscription, revokeForRefund, flagLifetimeConflict } = require('../licensing');
+const { recomputeCustomer } = require('../customers/sync');
 const { handleOnce } = require('../webhookOnce');
 const { termMs } = require('../util/time');
 
@@ -43,10 +44,12 @@ function stripeSessionApply(tenant, s) {
         subscriptionId: idOf(s.subscription),
         account: payment.account || md.account || (s.customer_details && s.customer_details.email) || null,
         installId: payment.installId || md.installId || s.client_reference_id || null,
+        customerId: payment.method === ACCOUNT_SOURCE ? payment.customerId : null,
         tier: (plan && plan.tier) || md.tier || 'pro',
         plan: planKey,
         periodEnd: new Date(Date.now() + termMs(months)) // provisional until invoice.paid
       }, tx);
+      if (payment.method === ACCOUNT_SOURCE && payment.customerId) await recomputeCustomer(tx, tenant.id, payment.customerId).catch(() => {});
       if (lic && lic.lifetimeGuard) await flagLifetimeConflict(tx, payment, lic, `subscription ${idOf(s.subscription)} (stripe ${s.id}, plan ${planKey || '?'})`);
     };
   }
