@@ -141,7 +141,7 @@ async function provisionFromPaymentRef(tenant, provider, providerRef, fallback =
 
 // A subscription sets the period end to an absolute date (the Stripe billing-period end), keyed by
 // the Stripe subscription id so renewals are idempotent; grantMonths is additive instead.
-async function setSubscriptionPeriod(tenant, { subscriptionId, account, installId, customerId, tier, plan, periodEnd, status = 'active' }, db = prisma) {
+async function setSubscriptionPeriod(tenant, { subscriptionId, account, installId, customerId, tier, plan, periodEnd, status = 'active', onlyExisting = false }, db = prisma) {
   const onAccount = !installId && Boolean(customerId);
   // Match by the subscription first (renewals), then by installId. Never by account: see
   // grantMonths. An existing licence keeps the install it is already bound to.
@@ -149,6 +149,8 @@ async function setSubscriptionPeriod(tenant, { subscriptionId, account, installI
     ? await db.license.findFirst({ where: { tenantId: tenant.id, providerRef: String(subscriptionId) }, orderBy: { updatedAt: 'desc' } })
     : null;
   let existing = bySubscription;
+  // invoice.paid changes an existing subscription licence and never creates one (see routes/webhooks.js).
+  if (onlyExisting && !existing) return null;
   if (!existing && installId) {
     existing = await db.license.findFirst({ where: { tenantId: tenant.id, installId }, orderBy: { updatedAt: 'desc' } });
   }
@@ -179,8 +181,17 @@ async function setSubscriptionPeriod(tenant, { subscriptionId, account, installI
 
 // Subscription ended / canceled at Stripe — stop issuing leases.
 async function cancelSubscription(tenant, subscriptionId, db = prisma) {
-  const lic = await db.license.findFirst({ where: { tenantId: tenant.id, providerRef: String(subscriptionId) }, orderBy: { updatedAt: 'desc' } });
-  if (lic) await db.license.update({ where: { id: lic.id }, data: { status: 'expired' } });
+  // Every licence of the subscription (older data can hold two); a refunded one stays 'canceled'.
+  await db.license.updateMany({ where: { tenantId: tenant.id, providerRef: String(subscriptionId), status: { notIn: ['canceled', 'expired'] } }, data: { status: 'expired' } });
+}
+
+// Refund or dispute of a subscription charge: every licence of that subscription ends now. -> how many.
+async function endSubscriptionLicences(db, tenantId, subscriptionId, now) {
+  const r = await db.license.updateMany({
+    where: { tenantId, providerRef: String(subscriptionId), status: { not: 'canceled' } },
+    data: { status: 'canceled', currentPeriodEnd: new Date(now) }
+  });
+  return (r && r.count) || 0;
 }
 
 // No per-purchase ledger exists, only one licence per install stacking every purchase. One-time:
@@ -204,6 +215,12 @@ async function revokeForRefund(tenant, { provider, sessionRef, subscriptionId },
       if (isWebPayment(payment)) { await voidWebCode(db, tenant.id, payment); return { changed: true }; }
       // The lifetime guard granted nothing for this payment: its refund takes nothing back.
       if (String(payment.note || '').includes(guard.FLAG)) return { changed: true };
+      // A subscription's licences are keyed by the subscription id: end all of them (account or install).
+      if (subscriptionId && await db.license.findFirst({ where: { tenantId: tenant.id, providerRef: String(subscriptionId) } })) {
+        await endSubscriptionLicences(db, tenant.id, subscriptionId, now);
+        if (payment.customerId) await require('./customers/sync').recomputeCustomer(db, tenant.id, payment.customerId).catch(() => {});
+        return { changed: true };
+      }
       let lic = await db.license.findFirst({ where: { tenantId: tenant.id, providerRef: String(sessionRef) }, orderBy: { updatedAt: 'desc' } });
       if (!lic && payment.installId) {
         lic = await db.license.findFirst({ where: { tenantId: tenant.id, installId: payment.installId }, orderBy: { updatedAt: 'desc' } });
@@ -227,10 +244,7 @@ async function revokeForRefund(tenant, { provider, sessionRef, subscriptionId },
     }
   }
   if (subscriptionId) {
-    const lic = await db.license.findFirst({ where: { tenantId: tenant.id, providerRef: String(subscriptionId) }, orderBy: { updatedAt: 'desc' } });
-    if (!lic || lic.status === 'canceled') return { changed: false };
-    await db.license.update({ where: { id: lic.id }, data: { status: 'canceled', currentPeriodEnd: new Date(now) } });
-    return { changed: true };
+    return { changed: (await endSubscriptionLicences(db, tenant.id, subscriptionId, now)) > 0 };
   }
   return { changed: false };
 }

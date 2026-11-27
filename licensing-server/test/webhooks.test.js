@@ -26,6 +26,9 @@ const CM_KEY = 'cmus_api_key';
 // Stripe: the signature check itself is Stripe's SDK; here the body is the event.
 stripeProvider.verifyEvent = ({ rawBody }) => JSON.parse(Buffer.from(rawBody).toString('utf8'));
 paypalProvider.verifyWebhook = async () => true;
+// Subscription cancels at Stripe are recorded, never sent.
+const stripeCancels = [];
+stripeProvider.cancelSubscription = async ({ subscriptionId }) => { stripeCancels.push(subscriptionId); return 'canceled'; };
 
 let base;
 let server;
@@ -319,4 +322,63 @@ test('yearly: a yearly subscription is provisional for 365 days until invoice.pa
   assert.equal(licenses().length, 1);
   assert.equal(licenses()[0].tier, 'enterprise');
   assert.equal(daysLeft(licenses()[0]), 365);
+});
+
+// --- 27 Nov 2026: live test findings ------------------------------------------
+test('race: invoice.paid before checkout.session.completed gives one licence, not two', async () => {
+  reset();
+  addPayment('stripe', 'cs_race');
+  const end = Math.floor(Date.now() / 1000) + 31 * 86400;
+  const inv = { id: 'in_race', parent: { subscription_details: { subscription: 'sub_race' } }, lines: { data: [{ period: { end } }] } };
+  await post('stripe', stripeEvent('race1', 'invoice.paid', inv));
+  assert.equal(licenses().length, 0, 'invoice.paid never creates a licence');
+  await post('stripe', stripeEvent('race2', 'checkout.session.completed', paidSession('cs_race', { mode: 'subscription', subscription: 'sub_race' })));
+  assert.equal(licenses().length, 1);
+  assert.equal(licenses()[0].providerRef, 'sub_race');
+  // A renewal finds it by the subscription and sets the exact end.
+  await post('stripe', stripeEvent('race3', 'invoice.paid', { ...inv, id: 'in_race2' }));
+  assert.equal(licenses().length, 1);
+  assert.equal(new Date(licenses()[0].currentPeriodEnd).getTime(), end * 1000);
+});
+
+test('refund of a subscription charge ends every licence of it and cancels the subscription at Stripe', async () => {
+  reset();
+  stripeCancels.length = 0;
+  addPayment('stripe', 'cs_acc', { installId: null, customerId: 'cust1', method: 'account' });
+  await post('stripe', stripeEvent('a1', 'checkout.session.completed', paidSession('cs_acc', { mode: 'subscription', subscription: 'sub_acc' })));
+  // An orphan duplicate as the 27 Nov race left one.
+  db.tables.license.push({ id: 'orphan', tenantId: 't1', providerRef: 'sub_acc', status: 'active', tier: 'pro', currentPeriodEnd: new Date(Date.now() + 30 * DAY), updatedAt: new Date(0) });
+  stripeProvider.resolveChargeRefs = async () => ({ sessionRef: 'cs_acc', subscriptionId: 'sub_acc' });
+  await post('stripe', stripeEvent('a2', 'charge.refunded', { id: 'ch_a', payment_intent: 'pi_a', amount: 500, amount_refunded: 500, refunded: true }));
+  assert.equal(payment('cs_acc').status, 'refunded');
+  assert.deepEqual(licenses().map((l) => l.status), ['canceled', 'canceled']);
+  assert.deepEqual(stripeCancels, ['sub_acc']);
+  // Stripe then reports the subscription deleted: a refunded licence stays 'canceled'.
+  await post('stripe', stripeEvent('a3', 'customer.subscription.deleted', { id: 'sub_acc' }));
+  assert.deepEqual(licenses().map((l) => l.status), ['canceled', 'canceled']);
+});
+
+test('a partial refund neither ends the licence nor cancels the subscription', async () => {
+  reset();
+  stripeCancels.length = 0;
+  addPayment('stripe', 'cs_p');
+  await post('stripe', stripeEvent('p1', 'checkout.session.completed', paidSession('cs_p', { mode: 'subscription', subscription: 'sub_p' })));
+  stripeProvider.resolveChargeRefs = async () => ({ sessionRef: 'cs_p', subscriptionId: 'sub_p' });
+  await post('stripe', stripeEvent('p2', 'charge.refunded', { id: 'ch_p', payment_intent: 'pi_p', amount: 500, amount_refunded: 200, refunded: false }));
+  assert.equal(licenses()[0].status, 'active');
+  assert.deepEqual(stripeCancels, []);
+});
+
+test('when Stripe refuses the cancel, the licence is still revoked', async () => {
+  reset();
+  addPayment('stripe', 'cs_f');
+  await post('stripe', stripeEvent('f1', 'checkout.session.completed', paidSession('cs_f', { mode: 'subscription', subscription: 'sub_f' })));
+  const keep = stripeProvider.cancelSubscription;
+  stripeProvider.cancelSubscription = async () => { throw new Error('managed payments: not allowed'); };
+  stripeProvider.resolveChargeRefs = async () => ({ sessionRef: 'cs_f', subscriptionId: 'sub_f' });
+  try {
+    const r = await quiet(() => post('stripe', stripeEvent('f2', 'charge.refunded', { id: 'ch_f', payment_intent: 'pi_f', amount: 500, amount_refunded: 500, refunded: true })));
+    assert.equal(r.status, 200);
+    assert.equal(licenses()[0].status, 'canceled');
+  } finally { stripeProvider.cancelSubscription = keep; }
 });

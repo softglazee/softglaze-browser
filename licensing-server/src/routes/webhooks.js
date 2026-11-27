@@ -85,7 +85,10 @@ router.post('/stripe/:tenantId', express.raw({ type: '*/*' }), async (req, res) 
           const periodEnd = line && line.period && line.period.end ? new Date(line.period.end * 1000) : null;
           const subscriptionId = stripeProvider.invoiceSubscriptionId(obj);
           if (!subscriptionId || !periodEnd) return null;
-          return (tx) => setSubscriptionPeriod(tenant, { subscriptionId, periodEnd, status: 'active' }, tx);
+          // Update only: the first invoice.paid can arrive in the same millisecond as checkout.session.completed,
+          // and creating a licence here gave one subscription two licences (27 Nov 2026). The checkout session
+          // creates the licence (provisional end); this sets the exact end, and renewals find it by subscription id.
+          return (tx) => setSubscriptionPeriod(tenant, { subscriptionId, periodEnd, status: 'active', onlyExisting: true }, tx);
         }
         case 'customer.subscription.deleted':
           return obj.id ? (tx) => cancelSubscription(tenant, obj.id, tx) : null;
@@ -103,6 +106,16 @@ router.post('/stripe/:tenantId', express.raw({ type: '*/*' }), async (req, res) 
           if (!refs.sessionRef && !refs.subscriptionId) {
             console.warn(`[webhook:stripe] ${event.type} ${event.id}: no matching purchase found; licence left unchanged.`);
             return null;
+          }
+          // A refund never ends a subscription in Stripe by itself: end it there too, or it charges again next
+          // period. Best effort: a failure is logged (cancel it in the Dashboard); the licence is revoked anyway.
+          if (refs.subscriptionId) {
+            try {
+              const r = await stripeProvider.cancelSubscription({ secretKey: secrets.secretKey, subscriptionId: refs.subscriptionId });
+              console.log(`[webhook:stripe] ${event.type} ${event.id}: subscription ${refs.subscriptionId} ${r === 'already' ? 'was already ended' : 'canceled at Stripe'}.`);
+            } catch (e) {
+              console.error(`[webhook:stripe] ${event.type} ${event.id}: could not cancel subscription ${refs.subscriptionId} at Stripe (${e && e.message}). Cancel it in the Dashboard.`);
+            }
           }
           return (tx) => revokeForRefund(tenant, { provider: 'stripe', sessionRef: refs.sessionRef, subscriptionId: refs.subscriptionId }, tx);
         }

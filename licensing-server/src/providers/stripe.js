@@ -207,7 +207,17 @@ async function resolveChargeRefs({ secretKey, paymentIntent, invoice, charge }) 
   return { sessionRef, subscriptionId };
 }
 
+// End a subscription at Stripe now (after a full refund or a dispute), so it never charges again.
+// A refund alone never cancels a subscription in Stripe. Already ended -> 'already'; else 'canceled'.
+async function cancelSubscription({ secretKey, subscriptionId }) {
+  const stripe = client(secretKey);
+  const sub = await stripe.subscriptions.retrieve(String(subscriptionId));
+  if (!sub || ['canceled', 'incomplete_expired'].includes(sub.status)) return 'already';
+  await stripe.subscriptions.cancel(String(subscriptionId), { prorate: false });
+  return 'canceled';
+}
+
 module.exports = {
-  API_VERSION, DEFAULT_LOOKUP_KEYS, DEFAULT_WEB_LOOKUP_KEYS, StripeCheckoutError, webLookupKeyFor,
+  API_VERSION, cancelSubscription, DEFAULT_LOOKUP_KEYS, DEFAULT_WEB_LOOKUP_KEYS, StripeCheckoutError, webLookupKeyFor,
   createCheckout, retrieveSession, isSessionId, verifyEvent, stripeInterval, invoiceSubscriptionId, resolveChargeRefs, lookupKeyFor
 };
