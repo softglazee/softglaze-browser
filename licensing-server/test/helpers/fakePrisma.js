@@ -8,6 +8,9 @@ function matches(row, where) {
     const v = row[k];
     if (cond && typeof cond === 'object' && !(cond instanceof Date)) {
       if ('lt' in cond && !(v instanceof Date && v.getTime() < new Date(cond.lt).getTime())) return false;
+      if ('not' in cond && v === cond.not) return false;
+      if ('in' in cond && !cond.in.includes(v)) return false;
+      if ('notIn' in cond && cond.notIn.includes(v)) return false;
       continue;
     }
     if (cond === null ? v != null : v !== cond) return false;
