@@ -4,9 +4,10 @@
 // GET /v1/checkout/methods?tenantId=... (no auth) -> { providers: [{ id, label, kind }], store: { salesEnabled } }:
 // the payment methods the app offers (src/providers/checkoutProviders.js). CORS open, cached 60 s.
 // Website checkout (browser.softglaze.com/buy): POST /v1/checkout WITHOUT installId, with the buyer's
-// email in `account` and provider 'safepay'. Safepay sends the buyer back to the website
-// (SITE_BASE_URL/buy/thanks), whose page asks GET /v1/checkout/status?tenantId&tracker -> { status:
-// 'paid' | 'pending' | 'unknown' } (never the code or the email). The paid Payment gets an activation
+// email in `account` and provider 'stripe' (one-time Prices only) or 'safepay'. The provider sends the
+// buyer back to the website (SITE_BASE_URL/buy/thanks), whose page asks GET /v1/checkout/status?tenantId
+// &session=cs_... (Stripe) or &tracker=track_... (Safepay) -> { status: 'paid' | 'pending' | 'unknown' }
+// (never the code or the email). The paid Payment gets an activation
 // code by email instead of a licence (src/webPurchase.js). CORS: the website origin (and localhost).
 const express = require('express');
 const prisma = require('../db');
@@ -27,9 +28,12 @@ const { WEB_METHOD, isWebPayment, kickCodeEmail } = require('../webPurchase');
 const { isPurchasable } = require('../plans/service');
 const { saleBlock, invalidateOffers, isLifetime } = require('../plans/sales');
 const lifetimeGuard = require('../plans/lifetimeGuard');
+const { provisionFromPaymentRef } = require('../licensing');
+const { handleOnce } = require('../webhookOnce');
 
 const router = express.Router();
 const SUPPORTED = new Set(CHECKOUT_IDS);
+const WEB_PROVIDERS = new Set(['stripe', 'safepay']);
 
 // The website that sells without the app. Its origin (and a local dev server) may call the checkout
 // and status endpoints from the browser; other origins get no CORS headers (the app is not a browser).
@@ -89,7 +93,7 @@ router.post('/', webCheckoutGate, asyncHandler(async (req, res) => {
   let webEmail = null;
   if (web) {
     // Website checkout: card payments (Safepay) only, and the activation code goes to this email.
-    if (provider !== 'safepay') return res.status(400).json({ error: 'install_required', message: 'This payment method is only available in the app.' });
+    if (!WEB_PROVIDERS.has(provider)) return res.status(400).json({ error: 'install_required', message: 'This payment method is only available in the app.' });
     webEmail = parseEmail(typeof account === 'string' ? account : '');
     if (!webEmail) return res.status(400).json({ error: 'invalid_email', message: 'Enter a valid email address. Your activation code is sent there.' });
     account = webEmail.email;
@@ -131,7 +135,18 @@ router.post('/', webCheckoutGate, asyncHandler(async (req, res) => {
 
   let url; let ref;
   if (provider === 'stripe') {
-    ({ url, ref } = await stripeProvider.createCheckout({ secretKey: secrets.secretKey, tenantId: tenant.id, plan, installId, account }));
+    const lookupKeys = (await getSettings(prisma, tenant.id)).checkout.stripeLookupKeys;
+    try {
+      ({ url, ref } = await stripeProvider.createCheckout({
+        secretKey: secrets.secretKey, tenantId: tenant.id, plan, installId, account, web, siteBaseUrl: SITE_BASE_URL, lookupKeys
+      }));
+    } catch (e) {
+      if (!(e instanceof stripeProvider.StripeCheckoutError)) throw e;
+      if (e.code === 'install_required') return res.status(e.status).json({ error: e.code, message: e.message });
+      // A missing or mismatched Stripe Price is a set-up fault: logged for the owner, plain words for the buyer.
+      console.error(`[checkout:stripe] ${e.code}: ${e.message}`);
+      return res.status(e.status).json({ error: e.code, message: 'Card checkout is not available for this plan right now. Please contact support.' });
+    }
   } else if (provider === 'paypal') {
     ({ url, ref } = await paypalProvider.createCheckout({ secrets, plan, returnUrl, cancelUrl }));
   } else if (provider === 'safepay') {
@@ -162,6 +177,35 @@ router.post('/', webCheckoutGate, asyncHandler(async (req, res) => {
   res.json({ url, ref, provider });
 }));
 
+// A website Stripe purchase, by its Checkout Session id (GET /status?session=cs_...). The webhook
+// provisions it; while the Payment is still pending, Stripe is asked whether the session is paid, and a
+// paid one is provisioned the way the webhook does it. Both claim the pending Payment, so only one of
+// them ever issues the activation code.
+async function stripeWebStatus(tenantId, sessionId) {
+  if (!stripeProvider.isSessionId(sessionId)) return 'unknown';
+  const find = () => prisma.payment.findFirst({ where: { tenantId, provider: 'stripe', providerRef: sessionId }, orderBy: { createdAt: 'desc' } });
+  let payment = await find();
+  if (!payment || !isWebPayment(payment)) return 'unknown';
+  if (payment.status === 'pending') {
+    try {
+      const cfg = await prisma.tenantPaymentConfig.findUnique({ where: { tenantId_provider: { tenantId, provider: 'stripe' } } });
+      const s = cfg ? await stripeProvider.retrieveSession({ secretKey: openJson(cfg.secretsSealed).secretKey, sessionId }) : null;
+      if (s && s.status === 'complete' && s.payment_status === 'paid') {
+        const md = s.metadata || {};
+        await handleOnce(tenantId, 'stripe', `verify:${sessionId}`, 'checkout.session.verified', async () => (tx) => provisionFromPaymentRef({ id: tenantId }, 'stripe', sessionId, {
+          account: md.account || null, planKey: md.planKey || null, tier: md.tier, months: Number(md.months) || undefined
+        }, tx));
+      }
+    } catch (e) {
+      console.warn('[checkout:status] Stripe check failed:', e && e.message ? e.message : e);
+    }
+    payment = await find();
+  }
+  // Settled: make sure its activation email is not waiting for the next cron run.
+  if (payment && payment.status === 'paid') kickCodeEmail(prisma, tenantId, payment.id).catch(() => {});
+  return payment && payment.status === 'paid' ? 'paid' : payment && payment.status === 'pending' ? 'pending' : 'unknown';
+}
+
 // GET /v1/checkout/status?tenantId=...&tracker=track_... (no auth): the website's thanks page. A pending
 // website payment is checked with Safepay first (same check as the return page and the cron). Answers
 // only { status: 'paid' | 'pending' | 'unknown' }: never the code, the email or the amount.
@@ -174,8 +218,11 @@ router.get('/status', asyncHandler(async (req, res) => {
   siteCors(req, res, 'GET, OPTIONS');
   res.set('Cache-Control', 'no-store');
   const tenantId = typeof req.query.tenantId === 'string' ? req.query.tenantId : '';
+  if (!tenantId || tenantId.length > 64) return res.json({ status: 'unknown' });
+  const session = typeof req.query.session === 'string' ? req.query.session.trim() : '';
+  if (session) return res.json({ status: await stripeWebStatus(tenantId, session) });
   const tracker = typeof req.query.tracker === 'string' ? req.query.tracker.trim() : '';
-  if (!tenantId || tenantId.length > 64 || !safepayProvider.isTrackerToken(tracker)) return res.json({ status: 'unknown' });
+  if (!safepayProvider.isTrackerToken(tracker)) return res.json({ status: 'unknown' });
   const find = () => prisma.payment.findFirst({ where: { tenantId, provider: 'safepay', providerRef: tracker }, orderBy: { createdAt: 'desc' } });
   let payment = await find();
   if (!payment || !isWebPayment(payment)) return res.json({ status: 'unknown' });

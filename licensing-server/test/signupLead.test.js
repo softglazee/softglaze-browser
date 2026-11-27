@@ -183,7 +183,7 @@ const methods = () => call('GET', `/v1/checkout/methods?tenantId=${T}`);
 test('checkout methods: none until a provider is enabled; Store sales are off by default', async () => {
   const r = await methods();
   assert.equal(r.status, 200);
-  assert.deepEqual(r.json, { providers: [], store: { salesEnabled: false }, web: { card: false, test: false } });
+  assert.deepEqual(r.json, { providers: [], store: { salesEnabled: false }, web: { card: false, test: false, provider: null } });
   assert.equal(r.headers.get('access-control-allow-origin'), '*');
   assert.equal(r.headers.get('cache-control'), 'public, max-age=60');
   assert.equal((await call('GET', '/v1/checkout/methods')).status, 400);
